@@ -9,6 +9,6 @@ public interface IFlowInputControl
     /// <summary>此刻等待外部输入的步骤。</summary>
     IReadOnlyList<FlowPendingStep> Pending();
 
-    /// <summary>向等待中的步骤交付一次外部输入。</summary>
+    /// <summary>向等待中的步骤交付一次外部输入并放行后续推进。要求持有任务 Gate 之外的调用。</summary>
     ErrorOr<Success> Deliver(FlowStepPath step, string text);
 }

@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
-using Kuroe.Flow.Code.Records.Shared;
+using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
@@ -179,9 +179,6 @@ public sealed class FlowProviderSourceTests
             throw new NotSupportedException();
 
         public void ResumeTask(ITaskFlowContext task, bool continueRestores = true) =>
-            throw new NotSupportedException();
-
-        public void Advance(ITaskFlowContext task, IReadOnlyList<FlowStepPath> steps) =>
             throw new NotSupportedException();
 
         public int Rerun(ITaskFlowContext task) => throw new NotSupportedException();

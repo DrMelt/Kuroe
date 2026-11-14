@@ -22,7 +22,7 @@ public sealed class ConstantChainTests
         Assert.Equal(2, executions.Count);
         Assert.Equal("第一步", executions[0].Input.Node.Label.Value);
         Assert.Equal("第二步", executions[1].Input.Node.Label.Value);
-InputValue goal = Assert.Single(executions[0].Input.Inputs, value => value.Port.Value == "目标");
+        InputValue goal = Assert.Single(executions[0].Input.Inputs, value => value.Port.Value == "目标");
         Assert.Equal("目标内容", goal.Text);
         Assert.Equal(new PortName("目标"), Assert.IsType<StartSource>(goal.Origin).Port);
 

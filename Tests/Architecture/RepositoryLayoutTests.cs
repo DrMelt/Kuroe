@@ -647,7 +647,6 @@ public sealed class RepositoryLayoutTests
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
-        string codeRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Code", "Records", "Shared");
         string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
 
         foreach (string project in ProjectFiles(persistence))
@@ -655,7 +654,6 @@ public sealed class RepositoryLayoutTests
             IReadOnlyList<string> references = [.. ProjectReferences(project)
                 .Where(reference => IsUnder(reference, SourceRoot))];
             bool graphCodec = IsUnder(project, Path.Combine(persistence, "Serialization", "Graph"));
-            bool codeCodec = IsUnder(project, Path.Combine(persistence, "Serialization", "Code"));
 
             Assert.All(references, reference =>
                 Assert.True(
@@ -667,8 +665,7 @@ public sealed class RepositoryLayoutTests
                         || IsUnder(reference, taskRecords)
                         || graphCodec && IsUnder(reference, flowContracts)
                         || graphCodec && IsUnder(reference, graphRecords)
-                        || graphCodec && IsUnder(reference, nodeContracts)
-                        || codeCodec && IsUnder(reference, codeRecords),
+                        || graphCodec && IsUnder(reference, nodeContracts),
                     $"{Path.GetFileName(project)} 引用了持久化边界之外的 {reference}。"));
         }
     }
@@ -770,10 +767,11 @@ public sealed class RepositoryLayoutTests
     public void Flow_record_codecs_live_outside_central_serialization()
     {
         string persistence = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence", "Serialization");
+        string code = Path.Combine(SourceRoot, "Kuroe.CodeFlow", "Persistence", "Core");
 
         Assert.True(File.Exists(Path.Combine(persistence, "Graph", "Core", "GraphFlowRecordCodec.cs")));
-        Assert.True(File.Exists(Path.Combine(persistence, "Code", "Core", "CodeFlowRecordCodec.cs")));
-        Assert.True(File.Exists(Path.Combine(persistence, "Shared", "FlowRecordCodec.cs")));
+        Assert.True(File.Exists(Path.Combine(code, "CodeFlowRecordCodec.cs")));
+        Assert.False(File.Exists(Path.Combine(persistence, "Shared", "FlowRecordCodec.cs")));
     }
 
     [Fact]
@@ -1542,6 +1540,18 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
+    public void Flow_control_port_excludes_process_specific_commands()
+    {
+        string control = Path.Combine(KernelRoot, "Control", "Shared", "IFlowControl.cs");
+        string rerun = Path.Combine(KernelRoot, "Control", "Shared", "IFlowRerun.cs");
+        string controlText = File.ReadAllText(control);
+
+        Assert.DoesNotContain("Advance", controlText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Rerun", controlText, StringComparison.Ordinal);
+        Assert.Contains("Rerun", File.ReadAllText(rerun), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Flow_template_catalog_uses_provider_sources()
     {
         string catalog = Path.Combine(SourceRoot, "Kuroe", "Core", "Workflows", "Flows", "FlowTemplateCatalog.cs");
@@ -1655,8 +1665,7 @@ public sealed class RepositoryLayoutTests
             "GraphFlowKind.cs");
         string code = Path.Combine(
             SourceRoot,
-            "Kuroe.Flow",
-            "Code",
+            "Kuroe.CodeFlow",
             "Records",
             "Shared",
             "CodeFlowKind.cs");
@@ -1665,6 +1674,171 @@ public sealed class RepositoryLayoutTests
         Assert.True(File.Exists(graph));
         Assert.True(File.Exists(code));
         Assert.DoesNotContain("FlowRecordKinds", File.ReadAllText(taskRecord), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Maf_control_references_only_kernel_and_maf_records()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Maf",
+            "Control",
+            "Core",
+            "Kuroe.Maf.Control.csproj");
+        string control = Path.Combine(KernelRoot, "Control", "Shared");
+        string execution = Path.Combine(KernelRoot, "Execution", "Shared");
+        string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
+        string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
+        string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
+        string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
+        string mafRecords = Path.Combine(SourceRoot, "Kuroe.Maf", "Records", "Shared");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, control)
+                    || IsUnder(reference, execution)
+                    || IsUnder(reference, executionRecords)
+                    || IsUnder(reference, presentation)
+                    || IsUnder(reference, tasks)
+                    || IsUnder(reference, taskRecords)
+                    || IsUnder(reference, mafRecords),
+                $"Kuroe.Maf.Control 引用了契约层与 MAF 记录之外的 {reference}。"));
+    }
+
+    [Fact]
+    public void Maf_types_stay_out_of_kernel_and_hosts()
+    {
+        Assert.NotEmpty(SourceFiles(KernelRoot));
+        foreach (string file in SourceFiles(KernelRoot))
+        {
+            string text = File.ReadAllText(file);
+
+            Assert.DoesNotContain("Microsoft.Agents.AI.Workflows", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("MafFlow", text, StringComparison.Ordinal);
+        }
+
+        string[] hosts =
+        [
+            Path.Combine(SourceRoot, "Kuroe.Console"),
+            Path.Combine(SourceRoot, "Kuroe.Cli"),
+            Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core"),
+        ];
+
+        foreach (string directory in hosts)
+        {
+            Assert.NotEmpty(SourceFiles(directory));
+            foreach (string file in SourceFiles(directory))
+            {
+                Assert.DoesNotContain(
+                    "using Kuroe.Maf.Control",
+                    File.ReadAllText(file),
+                    StringComparison.Ordinal);
+            }
+        }
+    }
+
+    [Fact]
+    public void Maf_record_kind_lives_with_its_implementation()
+    {
+        string kind = Path.Combine(
+            SourceRoot,
+            "Kuroe.Maf",
+            "Records",
+            "Shared",
+            "MafFlowKind.cs");
+        string taskRecord = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "TaskRecord.cs");
+
+        Assert.True(File.Exists(kind));
+        Assert.DoesNotContain("MafFlowKind", File.ReadAllText(taskRecord), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Maf_projects_stay_free_of_flow_area()
+    {
+        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+
+        Assert.NotEmpty(ProjectFiles(maf));
+        foreach (string project in ProjectFiles(maf))
+        {
+            Assert.DoesNotContain(
+                ProjectReferences(project),
+                reference => IsUnder(reference, flow));
+        }
+    }
+
+    [Fact]
+    public void Flow_area_stays_free_of_maf()
+    {
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+
+        Assert.NotEmpty(ProjectFiles(flow));
+        foreach (string project in ProjectFiles(flow))
+        {
+            Assert.DoesNotContain(
+                ProjectReferences(project),
+                reference => IsUnder(reference, maf));
+        }
+
+        foreach (string file in SourceFiles(flow))
+        {
+            string text = File.ReadAllText(file);
+
+            Assert.DoesNotContain("MafFlow", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Microsoft.Agents.AI.Workflows", text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Flow_area_stays_free_of_code_flow()
+    {
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string code = Path.Combine(SourceRoot, "Kuroe.CodeFlow");
+
+        Assert.NotEmpty(ProjectFiles(flow));
+        foreach (string project in ProjectFiles(flow))
+        {
+            Assert.DoesNotContain(
+                ProjectReferences(project),
+                reference => IsUnder(reference, code));
+        }
+
+        foreach (string file in SourceFiles(flow))
+        {
+            Assert.DoesNotContain("Kuroe.CodeFlow", File.ReadAllText(file), StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Code_flow_area_stays_free_of_graph_and_node()
+    {
+        string code = Path.Combine(SourceRoot, "Kuroe.CodeFlow");
+
+        Assert.NotEmpty(ProjectFiles(code));
+        foreach (string file in SourceFiles(code))
+        {
+            string text = File.ReadAllText(file);
+
+            Assert.DoesNotContain("Kuroe.Flow.Node", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Kuroe.Flow.Graph", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Kuroe.Flow.Control", text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Flow_record_codec_port_lives_in_kernel()
+    {
+        string port = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "FlowRecordCodec.cs");
+        string serialization = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence", "Serialization", "Shared");
+
+        Assert.True(File.Exists(port));
+        Assert.Contains("interface IFlowRecordCodec", File.ReadAllText(port), StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "interface IFlowRecordCodec",
+            string.Concat(SourceFiles(serialization).Select(File.ReadAllText)),
+            StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<string> InternalsVisibleTo(string project) =>

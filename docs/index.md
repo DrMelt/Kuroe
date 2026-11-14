@@ -26,6 +26,7 @@
 - [概念](reference/概念.md)
 - [项目边界](reference/项目边界.md)
 - [流程定义](reference/流程定义.md)
+- [MAF 流程](reference/MAF流程.md)
 - [宿主开始输入](reference/宿主开始输入.md)
 - [流程示例](reference/流程示例.md)
 - [工具配置](reference/工具配置.md)

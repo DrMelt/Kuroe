@@ -90,12 +90,8 @@ public sealed class FlowRuntime(
     public void ResumeTask(ITaskFlowContext task, bool continueRestores = true) =>
         Find(task)?.Resume(continueRestores);
 
-    /// <summary>要求持有任务 Gate 之外的调用：给定步骤的产出已变，推进它的下游与祖先容器。</summary>
-    public void Advance(ITaskFlowContext task, IReadOnlyList<FlowStepPath> steps) =>
-        Find(task)?.Advance(steps);
-
-    /// <summary>要求持有任务 Gate：对阻塞的步骤重新执行，返回实际发出的重新执行目标数。</summary>
-    public int Rerun(ITaskFlowContext task) => Find(task)?.Rerun() ?? 0;
+    /// <summary>要求持有任务 Gate：对阻塞的步骤重新执行，流程实现不提供重跑能力时为零。</summary>
+    public int Rerun(ITaskFlowContext task) => (Find(task) as IFlowRerun)?.Rerun() ?? 0;
 
     /// <summary>终止任务：控制实例停止全部执行，推进循环随之终止。推进循环已收口时只终止任务状态。</summary>
     public ErrorOr<Success> Terminate(ITaskFlowContext task)

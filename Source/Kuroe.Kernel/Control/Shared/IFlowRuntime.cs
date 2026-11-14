@@ -22,10 +22,7 @@ public interface IFlowRuntime
     /// <summary>要求持有任务 Gate：恢复推进循环，continueRestores 为真时恢复可恢复的阻塞。</summary>
     void ResumeTask(ITaskFlowContext task, bool continueRestores = true);
 
-    /// <summary>要求持有任务 Gate 之外的调用：给定步骤的产出已变，推进它的下游与祖先容器。</summary>
-    void Advance(ITaskFlowContext task, IReadOnlyList<FlowStepPath> steps);
-
-    /// <summary>要求持有任务 Gate：对阻塞的步骤重新执行，返回实际发出的重新执行目标数。</summary>
+    /// <summary>要求持有任务 Gate：对阻塞的步骤重新执行，返回实际发出的重新执行目标数。流程实现不提供重跑能力时为零。</summary>
     int Rerun(ITaskFlowContext task);
 
     /// <summary>要求持有任务 Gate：终止任务并结束流程运行。</summary>

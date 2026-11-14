@@ -52,19 +52,11 @@ internal sealed class DialogueFlowControl(
     }
 
     /// <inheritdoc/>
-    public void Advance(IReadOnlyList<FlowStepPath> steps)
-    {
-    }
-
-    /// <inheritdoc/>
     public void Resume(bool continueRestores = true)
     {
         _awaiting = true;
         task.NotifyChanged();
     }
-
-    /// <inheritdoc/>
-    public int Rerun() => 0;
 
     /// <inheritdoc/>
     public ErrorOr<Success> Terminate()

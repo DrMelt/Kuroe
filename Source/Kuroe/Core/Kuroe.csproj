@@ -47,7 +47,7 @@
         <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Files\Core\Kuroe.Flow.Persistence.Files.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Json\Core\Kuroe.Flow.Persistence.Json.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Graph\Core\Kuroe.Flow.Persistence.Graph.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Code\Core\Kuroe.Flow.Persistence.Code.csproj" />
+        <ProjectReference Include="..\..\Kuroe.CodeFlow\Persistence\Core\Kuroe.CodeFlow.Persistence.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Runtime\Core\Kuroe.Flow.Runtime.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />

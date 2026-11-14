@@ -30,14 +30,8 @@ public interface IFlowControl
     /// <summary>暂停推进并中断在跑执行。要求持有任务 Gate。</summary>
     void Pause();
 
-    /// <summary>给定步骤的产出已变，推进它的下游与祖先容器。要求持有任务 Gate 之外的调用。</summary>
-    void Advance(IReadOnlyList<FlowStepPath> steps);
-
     /// <summary>恢复推进循环，continueRestores 为真时恢复可恢复的阻塞。要求持有任务 Gate。</summary>
     void Resume(bool continueRestores = true);
-
-    /// <summary>对阻塞的步骤重新执行，返回实际发出的重新执行目标数。要求持有任务 Gate。</summary>
-    int Rerun();
 
     /// <summary>终止任务并结束推进循环。要求持有任务 Gate。</summary>
     ErrorOr<Success> Terminate();

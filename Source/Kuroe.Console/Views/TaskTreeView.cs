@@ -140,7 +140,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         int count = step.ExecutionCount;
         int limit = step.MaxExecutions;
-        bool configured = limit != FlowStepView.DefaultMaxExecutions;
+        bool configured = limit != FlowStepView.DefaultMaxExecutions && limit != int.MaxValue;
         bool capped = count >= limit;
         if (count > 0 || configured)
         {

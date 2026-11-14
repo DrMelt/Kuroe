@@ -106,7 +106,7 @@ internal static class PlainFlowView
             parts.Add($"输出 {string.Join('、', step.Outputs.Select(port => port.Name))}");
         }
 
-        if (step.MaxExecutions != FlowStepView.DefaultMaxExecutions)
+        if (step.MaxExecutions != FlowStepView.DefaultMaxExecutions && step.MaxExecutions != int.MaxValue)
         {
             parts.Add($"上限 {step.MaxExecutions}");
         }

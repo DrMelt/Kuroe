@@ -1,7 +1,6 @@
 using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
-using Kuroe.Flow.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Records.Shared;
 
 namespace Kuroe.Flow.Persistence.Graph;

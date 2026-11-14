@@ -225,7 +225,7 @@ internal static class FlowRuntimeTestDoubles
             new ExecutionRestorerRegistry());
 }
 
-internal sealed class TestControl : IFlowControl
+internal sealed class TestControl : IFlowControl, IFlowRerun
 {
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -262,10 +262,6 @@ internal sealed class TestControl : IFlowControl
     }
 
     public void Pause() => Pauses++;
-
-    public void Advance(IReadOnlyList<FlowStepPath> steps)
-    {
-    }
 
     public void Resume(bool continueRestores = true) => Resumes++;
 

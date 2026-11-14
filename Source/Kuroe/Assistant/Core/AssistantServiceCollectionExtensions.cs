@@ -40,9 +40,7 @@ public static class AssistantServiceCollectionExtensions
         {
             // 对话任务自有任务域，不注册为 TaskRegistry，避免覆盖用户任务域
             TaskRegistry registry = new(sp.GetRequiredService<ExecutionIndex>(), pauseOnRestore: false);
-            DialogueRound round = new(registry, new PendingService(
-                registry,
-                sp.GetRequiredService<IFlowRuntime>()));
+            DialogueRound round = new(registry, new PendingService(registry));
 
             ModelService models = sp.GetRequiredService<ModelService>();
 

@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Persistence.Code;
+namespace Kuroe.CodeFlow.Persistence;
 
 /// <summary>代码流程定义的存档形状。</summary>
 internal sealed record CodeFlowDefinitionData(

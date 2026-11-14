@@ -1,8 +1,7 @@
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
-using Kuroe.Tasks.Records.Shared;
 
-namespace Kuroe.Flow.Persistence.Serialization.Shared;
+namespace Kuroe.Tasks.Records.Shared;
 
 /// <summary>流程记录在存档中的定义与状态片段。片段由流程实现自己写出与读取。</summary>
 public sealed record FlowRecordData(JsonElement Definition, JsonElement State);

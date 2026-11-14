@@ -384,7 +384,7 @@ public sealed class PortToolTests
         Assert.Equal("端口值不合法。", result.FirstError.Description);
     }
 
-private static ExecutionOutputPort Port(ExecutionPortName name) =>
+    private static ExecutionOutputPort Port(ExecutionPortName name) =>
         new(name, ExecutionPortKind.Text, true, false);
 
     private static ExecutionOutputPort TextTrigger(ExecutionPortName name) =>
@@ -412,7 +412,7 @@ private static ExecutionOutputPort Port(ExecutionPortName name) =>
 
         public Error? Failure { get; init; }
 
-public IReadOnlyList<ExecutionOutputValue>? Submitted { get; private set; }
+        public IReadOnlyList<ExecutionOutputValue>? Submitted { get; private set; }
 
         public ErrorOr<ExecutionStatus> Submit(
             ExecutionId id,

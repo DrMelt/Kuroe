@@ -8,10 +8,9 @@ namespace Kuroe.Pending;
 /// <summary>一个待处理节点：步骤路径、等待种类与等待时的提问。</summary>
 public readonly record struct PendingNode(FlowStepPath Step, PendingKind Kind, string? Question);
 
-/// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并唤醒推进。</summary>
-public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner)
+/// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入。</summary>
+public sealed class PendingService(TaskRegistry registry)
 {
-    private readonly IFlowRuntime _runner = runner;
     /// <summary>任务里此刻待处理的节点，按流程视图顺序，带等待时的提问。</summary>
     public ErrorOr<List<PendingNode>> Pending(TaskId id)
     {
@@ -51,6 +50,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner)
         }
 
         WorkTask task = found.Value;
+        IFlowInputControl? control = null;
         ErrorOr<List<PendingNode>> accepted = task.UnderLock<ErrorOr<List<PendingNode>>>(() =>
         {
             if (task.Lifecycle == TaskLifecycle.Terminated)
@@ -63,10 +63,12 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner)
                 return [PendingErrors.Paused(id, kind)];
             }
 
-            if (task.Control is not IFlowInputControl control)
+            if (task.Control is not IFlowInputControl awaitingControl)
             {
                 return [PendingErrors.NoAwaiting(id, kind)];
             }
+
+            control = awaitingControl;
 
             List<PendingNode> awaiting = [.. Pending(task).Where(entry => entry.Kind == kind)];
             if (nodes is { Count: > 0 })
@@ -93,15 +95,6 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner)
                 return [PendingErrors.AmbiguousInput(id, awaiting.Count)];
             }
 
-            foreach (PendingNode entry in awaiting)
-            {
-                ErrorOr<Success> delivered = control.Deliver(entry.Step, input);
-                if (delivered.IsError)
-                {
-                    return delivered.ErrorsOrEmptyList;
-                }
-            }
-
             return awaiting;
         });
 
@@ -110,7 +103,19 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner)
             return accepted.ErrorsOrEmptyList;
         }
 
-        _runner.Advance(task, [.. accepted.Value.Select(node => node.Step)]);
+        if (control is null)
+        {
+            return [PendingErrors.NoAwaiting(id, kind)];
+        }
+
+        foreach (PendingNode entry in accepted.Value)
+        {
+            ErrorOr<Success> delivered = control.Deliver(entry.Step, input);
+            if (delivered.IsError)
+            {
+                return delivered.ErrorsOrEmptyList;
+            }
+        }
 
         return Result.Success;
     }

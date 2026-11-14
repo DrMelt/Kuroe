@@ -1,41 +1,40 @@
-using Kuroe.Flow.Code.Records.Shared;
-using Kuroe.Tasks.Shared;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using Kuroe.Flow.Persistence.Serialization.Shared;
+using Kuroe.Maf.Records.Shared;
 using Kuroe.Tasks.Records.Shared;
+using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Flow.Persistence.Code;
+namespace Kuroe.Maf.Persistence;
 
-/// <summary>代码流程记录的存档编解码：定义与状态各自成为一段 JSON 片段。</summary>
-public sealed class CodeFlowRecordCodec : IFlowRecordCodec
+/// <summary>MAF 流程记录的存档编解码：定义与状态各自成为一段 JSON 片段。</summary>
+public sealed class MafFlowRecordCodec : IFlowRecordCodec
 {
     /// <inheritdoc/>
-    public bool Handles(FlowIdentity identity) => identity.Kind == CodeFlowKind.Value;
+    public bool Handles(FlowIdentity identity) => identity.Kind == MafFlowKind.Value;
 
     /// <inheritdoc/>
     public IFlowDefinitionRecord ReadDefinition(FlowRecordData data)
     {
-        CodeFlowDefinitionData dto = Read(
+        MafFlowDefinitionData dto = Read(
             data.Definition,
-            CodeFlowRecordJson.Default.CodeFlowDefinitionData,
-            "代码流程定义");
+            MafFlowRecordJson.Default.MafFlowDefinitionData,
+            "MAF 流程定义");
 
-        return new CodeFlowDefinitionRecord(
-            RequiredText(dto.Implementation, "代码流程实现"),
-            dto.Values ?? []);
+        return new MafFlowDefinitionRecord(
+            RequiredText(dto.Implementation, "MAF 流程实现"),
+            RequiredText(dto.Flow, "MAF 流程名"));
     }
 
     /// <inheritdoc/>
     public IFlowStateRecord ReadState(FlowRecordData data)
     {
-        CodeFlowStateData dto = Read(
+        MafFlowStateData dto = Read(
             data.State,
-            CodeFlowRecordJson.Default.CodeFlowStateData,
-            "代码流程状态");
+            MafFlowRecordJson.Default.MafFlowStateData,
+            "MAF 流程状态");
         TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
 
-        return new CodeFlowStateRecord(
+        return new MafFlowStateRecord(
             new StartInputs(
             [
                 .. (start.Inputs ?? []).Select(input => new StartInput(
@@ -43,29 +42,37 @@ public sealed class CodeFlowRecordCodec : IFlowRecordCodec
                     RequiredText(input.Text, "开始输入文本"))),
             ]),
             new FlowTexts(ReadTexts(start.StartTexts)),
-            dto.Values ?? []);
+            dto.Model,
+            dto.CheckpointSession,
+            dto.CheckpointId,
+            dto.CheckpointData,
+            dto.PendingSteps ?? []);
     }
 
     /// <inheritdoc/>
     public FlowRecordData Write(IFlowDefinitionRecord definition, IFlowStateRecord state)
     {
-        if (definition is not CodeFlowDefinitionRecord codeDefinition
-            || state is not CodeFlowStateRecord codeState)
+        if (definition is not MafFlowDefinitionRecord mafDefinition
+            || state is not MafFlowStateRecord mafState)
         {
-            throw new NotSupportedException("代码流程编解码收到非代码流程记录。");
+            throw new NotSupportedException("MAF 流程编解码收到非 MAF 流程记录。");
         }
 
         return new FlowRecordData(
             JsonSerializer.SerializeToElement(
-                new CodeFlowDefinitionData(codeDefinition.Implementation, ToData(codeDefinition.Values)),
-                CodeFlowRecordJson.Default.CodeFlowDefinitionData),
+                new MafFlowDefinitionData(mafDefinition.Implementation, mafDefinition.Flow),
+                MafFlowRecordJson.Default.MafFlowDefinitionData),
             JsonSerializer.SerializeToElement(
-                new CodeFlowStateData(
+                new MafFlowStateData(
                     new TaskStartData(
-                        [.. codeState.Inputs.Values.Select(input => new StartInputData(input.Port.Value, input.Text))],
-                        codeState.StartTexts.Texts.ToDictionary(pair => pair.Key.Value, pair => pair.Value)),
-                    ToData(codeState.Values)),
-                CodeFlowRecordJson.Default.CodeFlowStateData));
+                        [.. mafState.Inputs.Values.Select(input => new StartInputData(input.Port.Value, input.Text))],
+                        mafState.StartTexts.Texts.ToDictionary(pair => pair.Key.Value, pair => pair.Value)),
+                    mafState.Model,
+                    mafState.CheckpointSession,
+                    mafState.CheckpointId,
+                    mafState.CheckpointData,
+                    [.. mafState.PendingSteps]),
+                MafFlowRecordJson.Default.MafFlowStateData));
     }
 
     private static T Read<T>(JsonElement element, JsonTypeInfo<T> info, string field)
@@ -79,9 +86,6 @@ public sealed class CodeFlowRecordCodec : IFlowRecordCodec
             throw new FormatException($"{field}不合法：{ex.Message}");
         }
     }
-
-    private static Dictionary<string, string> ToData(IReadOnlyDictionary<string, string> values) =>
-        values.ToDictionary(pair => pair.Key, pair => pair.Value);
 
     private static Dictionary<PortName, string> ReadTexts(Dictionary<string, string>? values) =>
         values is null

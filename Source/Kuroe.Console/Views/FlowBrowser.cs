@@ -203,7 +203,7 @@ internal sealed class FlowBrowser(
             line.Add($"输出 {string.Join('、', step.Outputs.Select(port => port.Name))}", Styles.Hint);
         }
 
-        if (step.MaxExecutions != FlowStepView.DefaultMaxExecutions)
+        if (step.MaxExecutions != FlowStepView.DefaultMaxExecutions && step.MaxExecutions != int.MaxValue)
         {
             line.Add($"上限 {step.MaxExecutions}", Styles.Hint);
         }

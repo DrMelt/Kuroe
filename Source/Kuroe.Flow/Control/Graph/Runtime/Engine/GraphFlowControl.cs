@@ -19,7 +19,7 @@ internal sealed class GraphFlowControl(
     GraphFlowState state,
     IExecutionTargetResolver targetResolver,
     IInputDelivery inputDelivery,
-    IFlowExecutionGateway gateway) : IFlowControl, IFlowInputControl
+    IFlowExecutionGateway gateway) : IFlowControl, IFlowInputControl, IFlowRerun
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
@@ -76,8 +76,8 @@ internal sealed class GraphFlowControl(
         Loop = Task.Run(RunAsync);
     }
 
-    /// <summary>产出已变的目标入队，由推进循环重新评估。要求持有任务 Gate 之外的调用。</summary>
-    public void Advance(IReadOnlyList<FlowStepPath> steps)
+    /// <summary>交付或产出变化后推进：取受影响目标入队，放弃其恢复。要求持有任务 Gate 之外的调用。</summary>
+    private void Advance(IReadOnlyList<FlowStepPath> steps)
     {
         List<NodePath> targets;
         lock (task.Gate)
@@ -170,21 +170,24 @@ internal sealed class GraphFlowControl(
         }
     }
 
-    /// <summary>向等待中的步骤交付一次外部输入。要求持有任务 Gate。</summary>
+    /// <summary>向等待中的步骤交付一次外部输入并放行后续推进。要求持有任务 Gate 之外的调用。</summary>
     public ErrorOr<Success> Deliver(FlowStepPath step, string text)
     {
+        NodePath node;
         lock (task.Gate)
         {
-            NodePath node = FlowStepPaths.ToNodePath(step);
+            node = FlowStepPaths.ToNodePath(step);
             if (inputDelivery.Accepting(state.Runtime).All(request => request.Node != node))
             {
                 return [Error.Validation(FlowErrorCodes.TaskInput, $"节点 {node} 未等待外部输入。")];
             }
 
             inputDelivery.Deliver(state.Runtime, node, text);
-
-            return Result.Success;
         }
+
+        Advance([step]);
+
+        return Result.Success;
     }
 
     /// <summary>登记一次新执行到任务与流程状态。</summary>

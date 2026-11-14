@@ -31,7 +31,7 @@ public sealed class GraphExecutionInputBuilderTests
             new HashSet<PortName> { Content },
             staticTexts: new PortTexts(new Dictionary<PortName, string> { [Static] = "静态值" }));
 
-GraphExecutionInput input = GraphExecutionInputBuilder.Build(new TaskId(1), node, inputs, null, graph);
+        GraphExecutionInput input = GraphExecutionInputBuilder.Build(new TaskId(1), node, inputs, null, graph);
 
         Assert.Equal(longText, input.Text(Content));
         Assert.Equal(longText, input.Inputs.Single(value => value.Port == Content).Text);

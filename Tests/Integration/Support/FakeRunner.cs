@@ -67,7 +67,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     /// <summary>持有期间忽略执行的取消，用于构造暂停与收口之间的竞态。</summary>
     public bool IgnoreCancellationWhileHeld { get; set; }
 
-/// <summary>按声明的端口生成提交文本：承载内容的端口给同名校验文本，Signal 端口只给端口名；触发端口写成带触发位的对象。</summary>
+    /// <summary>按声明的端口生成提交文本：承载内容的端口给同名校验文本，Signal 端口只给端口名；触发端口写成带触发位的对象。</summary>
     private static string PortValuesFor(IReadOnlyList<NeutralExecutionOutputPort> ports)
     {
         string body = string.Join(", ", ports.Select(PortValueJson));

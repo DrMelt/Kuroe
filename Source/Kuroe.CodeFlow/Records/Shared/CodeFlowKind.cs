@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Code.Records.Shared;
+namespace Kuroe.CodeFlow.Records.Shared;
 
 /// <summary>代码定义流程的存档种类。</summary>
 public static class CodeFlowKind
