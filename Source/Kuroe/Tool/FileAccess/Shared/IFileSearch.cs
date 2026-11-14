@@ -2,7 +2,7 @@ using ErrorOr;
 
 namespace Kuroe.Tool.FileAccess.Shared;
 
-/// <summary>根目录内的文本搜索：展开路径范围，按后缀与字面文本筛选，匹配行文本累计到预算或出现次数达到上限后停止收集。</summary>
+/// <summary>根目录内的文本搜索：展开路径范围，按后缀与查找模式筛选，匹配行文本累计到预算或出现次数达到上限后停止收集。</summary>
 public interface IFileSearch
 {
     /// <summary>按范围、后缀与文本搜索。单个文件读取失败跳过。</summary>

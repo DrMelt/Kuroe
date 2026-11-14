@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Console.Tests;
 
-/// <summary>终端的写出口：独占期间的通知排队、行闭合、两个方向的流分离与框内流式排版。</summary>
+/// <summary>终端的写出口：独占期间的通知排队、行闭合、两个方向的流分离与框内文本排版。</summary>
 public sealed class TerminalTests
 {
     [Fact]
@@ -27,10 +27,10 @@ public sealed class TerminalTests
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
 
-        terminal.Append("流式片段");
+        terminal.Append("片段");
         terminal.Line("下一行");
 
-        Assert.Contains($"流式片段{Environment.NewLine}下一行", output.Output);
+        Assert.Contains($"片段{Environment.NewLine}下一行", output.Output);
     }
 
     [Fact]

@@ -96,7 +96,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     /// <summary>工具结果行。</summary>
     public void ToolResult(string text) => Write(text, Styles.Hint);
 
-    /// <summary>错误写 stderr，与 stdout 上的流式回复分流。</summary>
+    /// <summary>错误写 stderr，与 stdout 上的回复分流。</summary>
     public void Error(string text) => WriteError(text, Styles.Error);
 
     /// <summary>详情视图里的失败行。它是一次完整输出的一部分，因此与 <see cref="Error"/> 不同，走 stdout。</summary>
@@ -105,7 +105,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     /// <summary>随错误一起写 stderr 的收尾说明，与错误同流以免单独重定向时被拆散。</summary>
     public void Note(string text) => WriteError(text, Styles.Warning);
 
-    /// <summary>在当前行追加文本，不排版也不换行，用于提示符与流式增量。</summary>
+    /// <summary>在当前行追加文本，不排版也不换行，用于提示符与文本增量。</summary>
     public void Append(string text) => Append(text, Style.Plain);
 
     /// <summary>按指定样式在当前行追加文本，不排版也不换行。</summary>
@@ -145,7 +145,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
         }
     }
 
-    /// <summary>一行次要提示。浏览与前台流式期间先排队，退出独占后冲刷。</summary>
+    /// <summary>一行次要提示。浏览与前台回复期间先排队，退出独占后冲刷。</summary>
     public void Notice(string text, Style style)
     {
         lock (_gate)
@@ -182,7 +182,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
         }
     }
 
-    /// <summary>独占终端：读键的控件与流式回复期间不接受穿插输出。作用域结束时冲刷排队的通知。</summary>
+    /// <summary>独占终端：读键的控件与回复期间不接受穿插输出。作用域结束时冲刷排队的通知。</summary>
     public IDisposable Exclusive()
     {
         lock (_gate)
@@ -258,7 +258,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
         }
     }
 
-    /// <summary>停在一行中间时换行：行式输出前先闭合它，流式输出后也由调用方收尾。框内由框自己收行。</summary>
+    /// <summary>停在一行中间时换行：行式输出前先闭合它，文本输出后也由调用方收尾。框内由框自己收行。</summary>
     public void CloseLine()
     {
         if (_frame is not null)

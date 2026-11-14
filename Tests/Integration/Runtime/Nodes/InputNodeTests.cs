@@ -326,7 +326,7 @@ public sealed class InputNodeTests
                     "Kind": "Container",
                     "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
                     "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Nodes": [
-                      { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
+                      { "Name": "用户输入", "Kind": "Input", "Parameters": { "Question": "请补充背景" }, "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                     ]
                   },
                   { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "回答": "收集@回答" } ] }
@@ -353,7 +353,7 @@ public sealed class InputNodeTests
                     "Kind": "Container",
                     "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
                     "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Nodes": [
-                      { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
+                      { "Name": "用户输入", "Kind": "Input", "Parameters": { "Question": "请补充背景" }, "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                     ]
                   },
                   { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "回答" }], "From": [ { "回答": "审查容器@回答" } ] }

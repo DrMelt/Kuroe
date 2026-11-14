@@ -13,7 +13,7 @@ public sealed class PortTool(
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; } = Declare(intake, execution, ports);
 
-    /// <summary>把契约定义绑上提交该执行端口产出的调用体，有端口清单时写进说明。</summary>
+    /// <summary>把契约定义绑上提交该执行端口产出的调用体，有端口清单时写进参数 schema。</summary>
     private static IReadOnlyList<ToolFunction> Declare(
         IExecutionPortSubmitter intake,
         ExecutionId execution,
@@ -30,7 +30,7 @@ public sealed class PortTool(
         ToolArguments arguments)
     {
         ErrorOr<IReadOnlyList<ExecutionOutputValue>> parsed =
-            PortValues.Parse(arguments.Text(new ToolName("valuesJson")) ?? string.Empty, ports);
+            PortValues.Parse(arguments.Json(new ToolName("valuesJson")) ?? string.Empty, ports);
         if (parsed.IsError)
         {
             return parsed.ErrorsOrEmptyList;
@@ -43,8 +43,8 @@ public sealed class PortTool(
         }
 
         int silent = parsed.Value.Count(value => !value.Fires);
-        string note = silent > 0 ? $"，其中 {silent} 个端口不触发下游" : string.Empty;
+        string silentNote = silent > 0 ? $"，其中 {silent} 个端口不触发下游" : string.Empty;
 
-        return $"已记录 {parsed.Value.Count} 个端口的产出{note}。{ContractReceipts.Needs(outcome.Value)}";
+        return $"已记录 {parsed.Value.Count} 个端口的产出{silentNote}。{ContractReceipts.Needs(outcome.Value)}";
     }
 }

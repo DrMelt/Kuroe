@@ -48,7 +48,7 @@ public sealed class DriverApiTests
         ExecutionSnapshot plan = Assert.Single(environment.GraphExecutions(blocked, 0));
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Contains(environment.Runner.Submissions, text => text.Contains("端口必须与需交回的端口一一对应"));
+        Assert.Contains(environment.Runner.Submissions, text => text.Contains("不认识端口 别的端口"));
         Assert.Contains(plan.Failures, failure => failure.Contains("未收口"));
     }
 }

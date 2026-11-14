@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Compilation.Integration.Tests;
 
-/// <summary>文档里的完整流程示例必须能按当前格式读取并通过编译。</summary>
+/// <summary>承载完整流程示例的文档页面必须能按当前格式读取并通过编译。</summary>
 public sealed class DocFlowExamplesTests
 {
     /// <summary>按当前注册的节点类型编译一份文档。</summary>

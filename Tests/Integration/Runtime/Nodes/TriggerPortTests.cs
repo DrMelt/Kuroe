@@ -74,13 +74,41 @@ public sealed class TriggerPortTests
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "继续");
     }
 
+    /// <summary>检查结论分别门控返工与提交：false 启动返工，true 启动提交。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Verdict_gates_rework_and_commit_on_opposite_values(bool passed)
+    {
+        using TestEnvironment environment = TestEnvironment.Create(VerdictGateFlow);
+        string verdict = passed ? "true" : "false";
+        environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value switch
+        {
+            "检查" => $$"""{"结论": {"trigger": {{verdict}}}, "报告": "问题", "提交说明": "本轮未通过"}""",
+            _ => """{"交付": "完成"}""",
+        };
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot snapshot = environment.Wait(id, current => current.State == TaskState.Done);
+
+        if (passed)
+        {
+            Assert.Empty(environment.GraphExecutions(snapshot, "执行"));
+            Assert.Single(environment.GraphExecutions(snapshot, "暂存"));
+            return;
+        }
+
+        Assert.Single(environment.GraphExecutions(snapshot, "执行"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "暂存"));
+    }
+
     /// <summary>SignalTrigger 为 false 时下游组被消耗但不启动，信号端口不承载内容。</summary>
     [Fact]
     public void SignalTrigger_false_consumes_group_without_starting_downstream()
     {
         using TestEnvironment environment = TestEnvironment.Create(SignalTriggerFlow);
         environment.Runner.PortValuesJsonFor = execution => SourceValues(execution)
-            ? """{ "信号": false }"""
+            ? """{ "信号": { "trigger": false } }"""
             : null;
 
         TaskId id = environment.Submit("目标");
@@ -124,7 +152,7 @@ public sealed class TriggerPortTests
 
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Contains(environment.Runner.Submissions, text =>
-            text.Contains("普通端口不承载触发值", StringComparison.Ordinal));
+            text.Contains("普通端口只接受文本", StringComparison.Ordinal));
     }
 
     /// <summary>容器输出端口转发成员端口的触发值，false 时下游组被消耗。</summary>
@@ -309,7 +337,7 @@ public sealed class TriggerPortTests
         using TestEnvironment environment = TestEnvironment.Create(SignalGateContainerFlow);
         environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value switch
         {
-            "来源" => """{ "内容": "启动", "信号": true }""",
+            "来源" => """{ "内容": "启动", "信号": { "trigger": true } }""",
             "加工" => """{ "结论": "结果" }""",
             _ => null,
         };
@@ -468,6 +496,16 @@ public sealed class TriggerPortTests
             { "Name": "来源", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text", "Mode": "Trigger" }], "From": [ { "目标": "@目标" } ] },
             { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Text", "Mode": "Trigger" }], "From": [ { "结论": "来源@结论" } ] },
             { "Name": "下游", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "Text", "Mode": "Trigger" }], "From": [ { "结论": "审阅@结论" } ] }
+          ] } } ]
+        }
+        """;
+
+    private const string VerdictGateFlow = """
+        {
+          "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+            { "Name": "检查", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Signal", "Mode": "Trigger" }, { "Name": "报告", "Type": "Text" }, { "Name": "提交说明", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+            { "Name": "执行", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "检查报告", "Type": "Text" }, { "Name": "检查结论", "Type": "Signal", "Mode": "Trigger" }], "From": [ { "检查报告": "检查@报告", "检查结论": { "Ref": "检查@结论", "Condition": "Negative" } } ], "Outputs": [{ "Name": "交付", "Type": "Text" }] },
+            { "Name": "暂存", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "触发", "Type": "Signal", "Mode": "Trigger" }], "From": [ { "触发": "检查@结论" } ], "Outputs": [{ "Name": "交付", "Type": "Text" }] }
           ] } } ]
         }
         """;

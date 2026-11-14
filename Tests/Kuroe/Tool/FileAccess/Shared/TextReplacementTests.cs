@@ -25,14 +25,6 @@ public sealed class TextReplacementTests
     }
 
     [Fact]
-    public void Create_accepts_identical_text_when_ignoring_case()
-    {
-        TextReplacement replacement = Success(TextReplacement.Create(Query("needle", ignoreCase: true), "needle"));
-
-        Assert.Equal("needle", replacement.Replacement);
-    }
-
-    [Fact]
     public void Create_rejects_identical_text_after_newline_normalization()
     {
         ErrorOr<TextReplacement> result = TextReplacement.Create(Query("a\r\nb"), "a\nb");
@@ -53,13 +45,40 @@ public sealed class TextReplacementTests
     {
         TextReplacement replacement = Success(TextReplacement.Create(Query("a\r\nb\rc"), "x\r\ny\nz"));
 
-        Assert.Equal("a\nb\nc", replacement.Pattern);
+        Assert.Equal("a\nb\nc", replacement.Pattern.Source);
         Assert.Equal("x\ny\nz", replacement.Replacement);
     }
 
-    private static TextQuery Query(string pattern, bool ignoreCase = false)
+    [Fact]
+    public void Create_accepts_identical_text_for_a_regex()
     {
-        ErrorOr<TextQuery> query = TextQuery.Create(pattern, null, ignoreCase);
+        TextReplacement replacement = Success(TextReplacement.Create(Query("a+", regex: true), "a+"));
+
+        Assert.Equal("a+", replacement.Replacement);
+    }
+
+    [Fact]
+    public void Create_accepts_a_whitespace_pattern()
+    {
+        TextReplacement literal = Success(TextReplacement.Create(Query(" "), "x"));
+        TextReplacement regex = Success(TextReplacement.Create(Query(" ", regex: true), "x"));
+
+        Assert.Equal(" ", literal.Pattern.Source);
+        Assert.Equal(" ", regex.Pattern.Source);
+    }
+
+    [Fact]
+    public void Create_accepts_an_unknown_group_reference_in_the_template()
+    {
+        TextReplacement replacement =
+            Success(TextReplacement.Create(Query("(?<word>[a-z]+)", regex: true), "${nope}"));
+
+        Assert.Equal("${nope}", replacement.Replacement);
+    }
+
+    private static TextQuery Query(string pattern, bool regex = false)
+    {
+        ErrorOr<TextQuery> query = TextQuery.Create(pattern, null, regex);
         Assert.False(query.IsError);
 
         return query.Value;

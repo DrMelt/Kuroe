@@ -79,9 +79,18 @@ public sealed class ToolCollection
                 {
                     outcome = declaration.Invoke(new ToolArguments(arguments));
                 }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
-                    Record(new ToolCallRecord(declaration.Definition.Path.Value, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
+                    Record(new ToolCallRecord(
+                        declaration.Definition.Path.Value,
+                        parameters,
+                        $"{ex.GetType().Name}: {ex.Message}",
+                        true));
+
                     throw;
                 }
 

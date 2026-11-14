@@ -12,4 +12,4 @@
 | `Input`     | 等用户回答                   | [输入](input.md)          |
 | `Approval`  | 等用户批准                   | [审批](approval.md)       |
 
-文件必须显式写 `Kind`。类型参数与结构字段同级写在节点对象里，引用节点不写类型参数。`Llm`、`Input` 与 `Approval` 接受 `From` 引入的未声明 `Text` 输入，其他类型要求目标已在 `Inputs` 声明。
+文件必须显式写 `Kind`。节点对象的结构字段见[流程定义](../流程定义.md#节点)，各页「类型参数」列出的字段写在 `Parameters` 对象里，写在节点对象上导入时报错。引用节点不写 `Parameters`。`Llm`、`Input` 与 `Approval` 接受 `From` 引入的未声明 `Text` 输入，其他类型要求目标已在 `Inputs` 声明。

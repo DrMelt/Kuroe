@@ -615,7 +615,7 @@ internal sealed class GraphFlowControl(
                 return;
             }
 
-            GraphExecutionInput input = GraphExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
+            GraphExecutionInput input = GraphExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value, state.Flow.Graph);
             GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(input)), input);
             prepared = (execution, task.Lifecycle == TaskLifecycle.Paused);
         }

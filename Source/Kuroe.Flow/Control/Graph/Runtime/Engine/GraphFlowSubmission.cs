@@ -155,7 +155,7 @@ public sealed class GraphFlowSubmission(
                         $"存档执行节点 {path} 不在流程图中。")];
                 }
 
-                GraphExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord);
+                GraphExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord, flow.Graph);
                 GraphExecution execution = GraphExecution.Restore(executionRecord, input, executions);
                 state.Bind(execution.Unit.Id, input, execution.ControlVersion);
                 units.Add(execution.Unit);
@@ -173,7 +173,7 @@ public sealed class GraphFlowSubmission(
             saved.Pending);
     }
 
-    private GraphExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved)
+    private GraphExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved, NodeGraph graph)
     {
         GraphExecutionInput input = new()
         {
@@ -186,7 +186,10 @@ public sealed class GraphFlowSubmission(
             [
                 .. saved.Inputs.Select(value => new InputValue(
                     new PortName(value.Port.Value),
-                    new ContextValue(GraphRecordSources.Read(value.Source), value.Text))),
+                    new ContextValue(
+                        StaticInputSources.Of(graph, node.Path, new PortName(value.Port.Value))
+                            ?? GraphRecordSources.Read(value.Source),
+                        value.Text))),
             ],
             Texts = saved.Texts.ToDictionary(pair => new PortName(pair.Key.Value), pair => pair.Value),
             OutputPorts = node.SubmittablePorts,

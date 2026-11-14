@@ -28,9 +28,11 @@
 {
   "Name": "读取说明",
   "Kind": "FileRead",
-  "Path": "{root}/说明.md",
-  "Variables": { "root": "任务路径" },
-  "MaxChars": 12000,
+  "Parameters": {
+    "Path": "{root}/说明.md",
+    "Variables": { "root": "任务路径" },
+    "MaxChars": 12000
+  },
   "Inputs": [
     { "Name": "任务路径", "Type": "Text", "Mode": "Constant" },
     { "Name": "触发", "Type": "Signal" }

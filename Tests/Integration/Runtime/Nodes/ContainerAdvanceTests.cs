@@ -142,7 +142,7 @@ public sealed class ContainerAdvanceTests
                 { "Name": "撰写", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "@计划" } ] },
                 { "Name": "排版", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "@计划" } ] }
               ] },
-              { "Name": "审阅", "Kind": "Approval", "Question": "确认两版结论", "Inputs": [{ "Name": "撰写结论" }, { "Name": "排版结论" }], "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] },
+              { "Name": "审阅", "Kind": "Approval", "Parameters": { "Question": "确认两版结论" }, "Inputs": [{ "Name": "撰写结论" }, { "Name": "排版结论" }], "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] },
               { "Name": "汇总", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "撰写结论": "审阅@撰写结论", "排版结论": "审阅@排版结论" } ] }
                 ]
               }

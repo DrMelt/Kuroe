@@ -5,7 +5,7 @@ namespace Kuroe.Console.Views;
 /// <summary>框的类别。类别决定形状与线样式。</summary>
 internal enum BoxKind
 {
-    /// <summary>助手回合的流式框。</summary>
+    /// <summary>助手回合的回复框。</summary>
     Reply,
 
     /// <summary>详情与列表。</summary>

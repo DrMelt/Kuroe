@@ -8,7 +8,7 @@ using Kuroe.Tool.File.Output;
 
 namespace Kuroe.Tool.File;
 
-/// <summary>在路径基准目录内按字面文本搜索文件内容的工具。路径解析后必须落回工作区内。</summary>
+/// <summary>在路径基准目录内按字面文本或正则表达式搜索文件内容的工具。路径解析后必须落回工作区内。</summary>
 public sealed class SearchTextTool : ITool
 {
     /// <summary>判定不唯一需要观察到的出现次数，第二次出现即停止文件内容扫描。</summary>
@@ -17,15 +17,15 @@ public sealed class SearchTextTool : ITool
     private readonly IFileScope _scope;
     private readonly IFileSearch _search;
 
-    /// <summary>在路径范围内按字面文本搜索文件内容。</summary>
+    /// <summary>在路径范围内按字面文本或正则表达式搜索文件内容。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/read/SearchText"),
-        "在路径基准目录内按字面文本搜索文件内容，按文件分组返回相对路径与带行号的匹配行。递归搜索跳过工作区根下的 .kuroe 与 .git，跳过二进制文件，匹配整行，同一行多处只展示一行，输出单行保留包含命中位置的 1000 字符窗口，被截断时在保留内容后标注包含终止符的完整行长与展示的行内容区间，输出超过 8000 字符时截断。",
+        "在路径基准目录内按字面文本或正则表达式搜索文件内容，按文件分组返回相对路径与带行号的匹配行。正则逐行匹配，^ 与 $ 对应行首与行尾，模式中的换行不匹配，零宽匹配计入出现次数，不支持环视、反向引用、原子组、条件构造、\\G 与平衡组。递归搜索跳过工作区根下的 .kuroe 与 .git，跳过二进制文件，匹配整行，同一行多处只展示一行，输出单行保留包含命中位置的 1000 字符窗口，被截断时在保留内容后标注包含终止符的完整行长与展示的行内容区间，输出超过 8000 字符时截断。",
         [
-            new ToolParameter(new ToolName("pattern"), "要搜索的字面文本，不按正则解释，空或空白拒绝", Required: true),
+            new ToolParameter(new ToolName("pattern"), "要搜索的文本，regex 为假时按字面文本解释，为真时按 .NET 正则解释，空拒绝", Required: true),
             new ToolParameter(new ToolName("paths"), "相对路径基准目录的目录或文件路径列表，省略时搜索整个路径基准目录", List: true, Path: true, PathAccess: FileTools.PathAccess),
             new ToolParameter(new ToolName("extensions"), "限定文件后缀名，例如 cs 或 .cs，省略时不限制", List: true),
-            new ToolParameter(new ToolName("ignoreCase"), "匹配是否忽略大小写，布尔，缺省为假", Flag: true),
+            new ToolParameter(new ToolName("regex"), "pattern 是否按正则表达式解释，布尔，缺省为假", Flag: true),
             new ToolParameter(new ToolName("unique"), "要求 pattern 在范围内恰好出现 1 次，同一行多处按多次计，出现 0 次或多次时调用失败，多次时列出已定位的匹配行，布尔，缺省为假", Flag: true),
         ], [PathVariables.RootName]);
 
@@ -64,7 +64,7 @@ public sealed class SearchTextTool : ITool
         ErrorOr<TextQuery> query = TextQuery.Create(
             arguments.Text(new ToolName("pattern")),
             arguments.List(new ToolName("extensions")),
-            arguments.Flag(new ToolName("ignoreCase")) == true);
+            arguments.Flag(new ToolName("regex")) == true);
         if (query.IsError)
         {
             return query.ErrorsOrEmptyList;

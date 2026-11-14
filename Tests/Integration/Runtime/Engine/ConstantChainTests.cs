@@ -1,4 +1,5 @@
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;
@@ -21,10 +22,15 @@ public sealed class ConstantChainTests
         Assert.Equal(2, executions.Count);
         Assert.Equal("第一步", executions[0].Input.Node.Label.Value);
         Assert.Equal("第二步", executions[1].Input.Node.Label.Value);
-        Assert.Contains(executions[0].Input.Inputs,
-            value => value.Port.Value == "目标" && value.Text == "目标内容");
-        Assert.Contains(executions[1].Input.Inputs,
-            value => value.Port.Value == "结果" && value.Text == "结果产出");
+InputValue goal = Assert.Single(executions[0].Input.Inputs, value => value.Port.Value == "目标");
+        Assert.Equal("目标内容", goal.Text);
+        Assert.Equal(new PortName("目标"), Assert.IsType<StartSource>(goal.Origin).Port);
+
+        InputValue result = Assert.Single(executions[1].Input.Inputs, value => value.Port.Value == "结果");
+        Assert.Equal("结果产出", result.Text);
+        ConstantSource source = Assert.IsType<ConstantSource>(result.Origin);
+        Assert.Equal(NodePath.Of("整体", "第一步"), source.Node);
+        Assert.Equal(new PortName("结果"), source.Port);
         Assert.All(done.View.Steps, step => Assert.Single(step.Executions));
     }
 

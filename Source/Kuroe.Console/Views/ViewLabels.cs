@@ -111,11 +111,19 @@ internal static class ViewLabels
 
     public static string Clock(DateTimeOffset? at) => InfoLabels.Clock(at);
 
-    /// <summary>把多行文本压成一行，超过长度时截断并加省略号。</summary>
-    public static string OneLine(string text, int limit)
+    /// <summary>把多行文本压成一行，超过长度时截取前缀并给出是否截断；截断不追加记号，由调用方给出提示。</summary>
+    public static (string Text, bool Truncated) Truncate(string text, int limit)
     {
         string flat = text.Replace('\n', ' ').Replace('\r', ' ').Trim();
 
-        return flat.Length <= limit ? flat : string.Concat(flat.AsSpan(0, limit), "…");
+        return flat.Length <= limit ? (flat, false) : (flat[..limit], true);
+    }
+
+    /// <summary>把多行文本压成一行，超过长度时截断并加省略号。</summary>
+    public static string OneLine(string text, int limit)
+    {
+        (string flat, bool truncated) = Truncate(text, limit);
+
+        return truncated ? $"{flat}…" : flat;
     }
 }

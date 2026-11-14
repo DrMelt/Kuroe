@@ -242,7 +242,7 @@ public sealed class StartPathsTests
             {
               "Name": "默认",
               "Ports": [{ "Name": "目标", "Type": "Text" }],
-              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
+              "Root": { "Name": "收话", "Kind": "Input", "Parameters": { "Question": "请补充背景" }, "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -259,7 +259,7 @@ public sealed class StartPathsTests
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "环境", "Type": "Text", "Mode": "Constant", "Value": "固定" }
               ],
-              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
+              "Root": { "Name": "收话", "Kind": "Input", "Parameters": { "Question": "请补充背景" }, "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -276,7 +276,7 @@ public sealed class StartPathsTests
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "启动", "Type": "Text", "Mode": "Constant" }
               ],
-              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
+              "Root": { "Name": "收话", "Kind": "Input", "Parameters": { "Question": "请补充背景" }, "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -293,7 +293,7 @@ public sealed class StartPathsTests
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "触发", "Type": "Signal", "Mode": "Plain" }
               ],
-              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
+              "Root": { "Name": "收话", "Kind": "Input", "Parameters": { "Question": "请补充背景" }, "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -332,8 +332,7 @@ public sealed class StartPathsTests
                   {
                     "Name": "保存",
                     "Kind": "FileWrite",
-                    "Path": "{root}/out/result.txt",
-                    "Variables": { "root": "任务目录" },
+                    "Parameters": { "Path": "{root}/out/result.txt", "Variables": { "root": "任务目录" } },
                     "Inputs": [{ "Name": "正文" }, { "Name": "任务目录", "Type": "Text", "Mode": "Constant" }],
                     "Bindings": { "任务目录": "@任务目录" },
                     "From": [{ "正文": "实施@正文" }]

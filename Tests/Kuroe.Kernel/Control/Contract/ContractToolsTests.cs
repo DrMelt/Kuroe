@@ -50,22 +50,6 @@ public sealed class ContractToolsTests
     }
 
     [Fact]
-    public void Submit_rejects_blank_text()
-    {
-        ExecutionRuntime runtime = Runtime();
-        FakeGateway gateway = new();
-        FakeTask task = new();
-        IExecution execution = Create(runtime, gateway, task, new ExecutionId(1), Conclusion);
-        PortSubmitter submitter = new(gateway, Writer);
-
-        ErrorOr<ExecutionStatus> status = submitter.Submit(
-            execution.Id,
-            [new ExecutionOutputValue(Conclusion, " ")]);
-
-        Assert.Contains("端口 结论 的产出为空", status.FirstError.Description, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void Report_records_the_reason()
     {
         ExecutionRuntime runtime = Runtime();

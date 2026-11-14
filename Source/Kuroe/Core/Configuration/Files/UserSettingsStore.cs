@@ -8,11 +8,6 @@ namespace Kuroe.Configuration.Files;
 /// <summary>用户层配置文件，内容是用户设置过的项构成的节点树。</summary>
 sealed class UserSettingsStore
 {
-    /// <summary>用户层结构版本。</summary>
-    private const int CurrentVersion = 1;
-
-    private const string VersionKey = "Version";
-
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
         WriteIndented = true,
@@ -78,7 +73,6 @@ sealed class UserSettingsStore
     /// <summary>写盘并接受该节点树。</summary>
     public void Commit(JsonObject root)
     {
-        root[VersionKey] = CurrentVersion;
         AtomicFile.WriteText(_file, Serialize(root));
 
         _root = root;
@@ -131,40 +125,6 @@ sealed class UserSettingsStore
         return true;
     }
 
-    /// <summary>取结构版本，同层的大小写变体只保留规范键。</summary>
-    private static int ReadVersion(JsonObject root)
-    {
-        int version = CurrentVersion;
-
-        foreach (string key in VersionKeys(root))
-        {
-            if (root[key] is JsonValue value)
-            {
-                version = Math.Max(version, ReadInteger(value));
-            }
-
-            root.Remove(key);
-        }
-
-        return version;
-    }
-
-    /// <summary>同层中与规范版本键忽略大小写同名的键。</summary>
-    private static string[] VersionKeys(JsonObject root) =>
-        [.. root.Select(pair => pair.Key).Where(key => key.Equals(VersionKey, StringComparison.OrdinalIgnoreCase))];
-
-    private static int ReadInteger(JsonValue value)
-    {
-        try
-        {
-            return value.GetValue<int>();
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
-        {
-            throw new InvalidOperationException($"{VersionKey} 必须是整数。", ex);
-        }
-    }
-
     private JsonObject Load()
     {
         if (!File.Exists(_file))
@@ -193,14 +153,6 @@ sealed class UserSettingsStore
             throw new InvalidOperationException($"{_file} 的根节点必须是对象。");
         }
 
-        int version = ReadVersion(root);
-        if (version > CurrentVersion)
-        {
-            throw new InvalidOperationException(
-                $"{_file} 的结构版本为 {version}，高于本程序支持的 {CurrentVersion}，请升级 Kuroe。");
-        }
-
-        root[VersionKey] = CurrentVersion;
         return root;
     }
 }

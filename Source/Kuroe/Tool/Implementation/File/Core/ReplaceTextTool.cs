@@ -8,22 +8,22 @@ using Kuroe.Tool.File.Output;
 
 namespace Kuroe.Tool.File;
 
-/// <summary>在路径基准目录内多个文本文件中按字面文本批量替换的工具。路径解析后必须落回工作区内，逐文件保留编码、BOM 与换行风格。</summary>
+/// <summary>在路径基准目录内多个文本文件中按字面文本或正则表达式批量替换的工具。路径解析后必须落回工作区内，逐文件保留编码、BOM 与换行风格。</summary>
 public sealed class ReplaceTextTool : ITool
 {
     private readonly IFileScope _scope;
     private readonly IFileReplacer _replacer;
 
-    /// <summary>在多个文本文件中按字面文本批量替换。</summary>
+    /// <summary>在多个文本文件中按字面文本或正则表达式批量替换。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/ReplaceText"),
-        "在指定目录或文件内的文本文件中，按字面文本批量替换。每个文件替换全部不重叠匹配，保留原文件的编码、BOM 与换行风格，跳过二进制文件。",
+        "在指定目录或文件内的文本文件中，按字面文本或正则表达式批量替换。每个文件替换全部不重叠匹配，正则模式的替换文本支持 $1 与 ${name} 分组引用，正则作用于归一换行后的整段文件内容，保留原文件的编码、BOM 与换行风格，跳过二进制文件。",
         [
             new ToolParameter(new ToolName("paths"), "相对路径基准目录的目录或文件路径列表，目录递归展开", Required: true, List: true, Path: true, PathAccess: FileTools.PathAccess),
-            new ToolParameter(new ToolName("pattern"), "要查找的字面文本，不按正则解释", Required: true),
-            new ToolParameter(new ToolName("replacement"), "替换后的文本，可为空用于删除", Required: true),
+            new ToolParameter(new ToolName("pattern"), "要查找的文本，regex 为假时按字面文本解释，为真时按 .NET 正则解释，空拒绝", Required: true),
+            new ToolParameter(new ToolName("replacement"), "替换后的文本，可为空用于删除；regex 为真时按 .NET 替换模板解释分组引用", Required: true),
             new ToolParameter(new ToolName("extensions"), "限定文件后缀名，例如 cs 或 .cs，省略时不限制", List: true),
-            new ToolParameter(new ToolName("ignoreCase"), "匹配是否忽略大小写，布尔，缺省为假", Flag: true),
+            new ToolParameter(new ToolName("regex"), "pattern 是否按正则表达式解释，布尔，缺省为假", Flag: true),
             new ToolParameter(new ToolName("dryRun"), "只报告将发生的替换，不写入文件，布尔，缺省为假", Flag: true),
             new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省保留各文件编码；给出时所有写回文件使用该编码"),
         ], [PathVariables.RootName]);
@@ -85,7 +85,7 @@ public sealed class ReplaceTextTool : ITool
         ErrorOr<TextQuery> query = TextQuery.Create(
             pattern,
             arguments.List(new ToolName("extensions")),
-            arguments.Flag(new ToolName("ignoreCase")) == true);
+            arguments.Flag(new ToolName("regex")) == true);
         if (query.IsError)
         {
             return query.ErrorsOrEmptyList;

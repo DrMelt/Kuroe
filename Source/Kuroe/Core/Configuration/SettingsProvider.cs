@@ -55,6 +55,7 @@ public sealed class SettingsProvider : ISettingsView
             return bound.ErrorsOrEmptyList;
         }
 
+        bound.Value.Network.Apply();
         store.Adopt(normalized.Value);
 
         return new SettingsProvider(paths, store, bound.Value);
@@ -128,6 +129,7 @@ public sealed class SettingsProvider : ISettingsView
     {
         RuntimeSettings before = Current.Runtime;
         AssistantSettings beforeAssistant = Current.Assistant;
+        NetworkSettings beforeNetwork = Current.Network;
 
         JsonObject candidate = _store.Snapshot();
         try
@@ -160,9 +162,10 @@ public sealed class SettingsProvider : ISettingsView
         Current = next.Value;
         RuntimeSettings after = Current.Runtime;
         AssistantSettings afterAssistant = Current.Assistant;
+        NetworkSettings afterNetwork = Current.Network;
 
         return new SettingsEffect(
-            after.RequiresRestart(before),
+            after.RequiresRestart(before) || afterNetwork.RequiresRestart(beforeNetwork),
             after.InvalidatesHistory(before),
             afterAssistant.RequiresDialogueRebuild(beforeAssistant));
     }

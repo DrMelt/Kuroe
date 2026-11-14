@@ -19,10 +19,11 @@
 
     <ItemGroup>
         <PackageVersion Include="ErrorOr" Version="2.1.1" />
-        <PackageVersion Include="Microsoft.Extensions.AI" Version="10.10.0" />
+        <PackageVersion Include="Microsoft.Agents.AI" Version="1.28.0" />
+        <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
         <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
-        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.10" />
         <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.34.0.3385" />
         <PackageVersion Include="Spectre.Console" Version="0.57.2" />

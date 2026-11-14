@@ -209,6 +209,7 @@ public sealed class GraphExecution : IGraphExecution
         ContainerPortSource container => $"节点「{container.Container}」的端口「{container.Port}」产出",
         InputSource input => $"节点「{input.Node}」的输入",
         StartSource start => $"流程起点端口「{start.Port}」",
+        ConstantSource constant => $"节点「{constant.Node}」常量端口「{constant.Port}」",
         DefaultSource value => $"节点「{value.Node}」的端口「{value.Port}」默认值",
         _ => null,
     };

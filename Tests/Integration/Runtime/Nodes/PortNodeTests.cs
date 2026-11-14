@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
@@ -126,7 +127,7 @@ public sealed class PortNodeTests
     }
 
     [Fact]
-    public void Contract_tool_description_lists_declared_ports()
+    public void Contract_tool_schema_lists_declared_ports()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
 
@@ -135,7 +136,10 @@ public sealed class PortNodeTests
 
         IGraphExecution ported = environment.Runner.Started.Single(execution => execution.Input.OutputPorts.Count > 0);
         ToolFunction declared = Assert.Single(environment.PortToolFor(ported.Id).Functions);
-        Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
+        JsonElement properties = Assert.Single(declared.Definition.Parameters)
+            .Schema.GetValueOrDefault().GetProperty("properties");
+        Assert.True(properties.TryGetProperty("结论", out _));
+        Assert.True(properties.TryGetProperty("理由", out _));
     }
 
     [Fact]
@@ -206,9 +210,9 @@ public sealed class PortNodeTests
         Assert.Contains(blocked.View.Steps, step => step.State == FlowItemState.Blocked);
     }
 
-    /// <summary>端口交回工具的说明按需交回端口列出 Signal 端口。</summary>
+    /// <summary>端口交回工具的参数 schema 按需交回端口列出 Signal 端口。</summary>
     [Fact]
-    public void Contract_tool_description_lists_the_signal_port()
+    public void Contract_tool_schema_lists_the_signal_port()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
 
@@ -218,6 +222,8 @@ public sealed class PortNodeTests
         IGraphExecution moved = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "动手");
         ToolFunction declared = Assert.Single(environment.PortToolFor(moved.Id).Functions);
 
-        Assert.Contains("本节点需要交回的端口：完成", declared.Definition.Description, StringComparison.Ordinal);
+        JsonElement properties = Assert.Single(declared.Definition.Parameters)
+            .Schema.GetValueOrDefault().GetProperty("properties");
+        Assert.True(properties.TryGetProperty("完成", out _));
     }
 }

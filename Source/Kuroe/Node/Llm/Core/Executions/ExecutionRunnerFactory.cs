@@ -18,7 +18,7 @@ public sealed class ExecutionRunnerFactory(
             ? new ExecutionRunner(sessions, status, execution, parameters)
             : throw new InvalidOperationException("Llm 执行节点的参数类型不匹配。");
 
-    /// <summary>校验恢复数据并装配一次恢复。已上报无法完成的执行不允许恢复。</summary>
+    /// <summary>校验恢复负载的格式与模型并装配一次恢复。历史可继续性在建立恢复会话时校验。已上报无法完成的执行不允许恢复。</summary>
     public ErrorOr<IExecutionRestoreData> Prepare(ExecutionRestoreContext context)
     {
         try
@@ -28,18 +28,13 @@ public sealed class ExecutionRunnerFactory(
                 return Error.Failure("Llm.Restore", $"执行已上报无法完成：{reason}");
             }
 
-            LlmExecutionState restored = LlmExecutionStateCodec.Decode(context.Payload);
+            LlmAgentSessionPayload restored = AgentSessionCodec.Decode(context.Payload);
             string? model = (context.Target.Parameters as LlmExecutionParameters)?.Model;
             if (restored.Model != model)
             {
                 return Error.Failure(
                     "Llm.Restore",
                     $"恢复数据属于模型 {restored.Model}，当前执行使用 {model ?? "未声明模型"}。");
-            }
-
-            if (!LlmExecutionStateCodec.IsRestorable(restored))
-            {
-                return Error.Failure("Llm.Restore", "恢复数据中的会话历史不能继续。");
             }
 
             return restored;
@@ -54,7 +49,7 @@ public sealed class ExecutionRunnerFactory(
     public IExecutionRunner CreateRestored(
         ExecutionRestoreContext context,
         IExecutionRestoreData data) =>
-        data is LlmExecutionState state && context.Target.Parameters is LlmExecutionParameters parameters
+        data is LlmAgentSessionPayload state && context.Target.Parameters is LlmExecutionParameters parameters
             ? new ExecutionRunner(sessions, status, context.Execution, parameters, state)
             : throw new InvalidOperationException("Llm 恢复数据类型不匹配。");
 }

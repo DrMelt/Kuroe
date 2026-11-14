@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests.StaticGraph.Ports;
 
-/// <summary>端口规则：交回判定按端口语义、模式与产出模式给出。</summary>
+/// <summary>端口规则：交回判定按端口语义、模式与产出模式给出，原始名清单按声明序生成。</summary>
 public sealed class PortRulesTests
 {
     [Fact]
@@ -30,5 +30,17 @@ public sealed class PortRulesTests
         Assert.True(PortRules.RequiresSubmission(constant, NodeEmission.Once));
         Assert.Empty(PortRules.SubmittablePorts([constant], NodeEmission.Repeated));
         Assert.Single(PortRules.SubmittablePorts([constant], NodeEmission.Once));
+    }
+
+    [Fact]
+    public void Names_list_the_original_port_names()
+    {
+        Assert.Equal(
+            "结论、通过、完成",
+            PortRules.Names([
+                new Port(new PortName("结论"), PortTypes.Text, mode: PortMode.Trigger),
+                new Port(new PortName("通过"), PortTypes.Signal, mode: PortMode.Trigger),
+                new Port(new PortName("完成"), PortTypes.Signal)
+            ]));
     }
 }

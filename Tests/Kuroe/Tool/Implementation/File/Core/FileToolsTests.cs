@@ -280,18 +280,49 @@ public sealed class FileToolsTests
     }
 
     [Fact]
-    public void SearchText_is_case_sensitive_by_default_and_accepts_ignore_case()
+    public void SearchText_is_case_sensitive_and_accepts_inline_regex_case()
     {
         _files.AddFile(PathOf("a.txt"), "Needle");
 
         Assert.Contains("没有匹配", Call("SearchText", ("pattern", "needle")));
-        Assert.Contains("Needle", Call("SearchText", ("pattern", "needle"), ("ignoreCase", true)));
+        Assert.Contains("Needle", Call("SearchText", ("pattern", "(?i)needle"), ("regex", true)));
     }
 
     [Fact]
-    public void SearchText_rejects_blank_pattern()
+    public void SearchText_rejects_empty_pattern()
     {
-        Assert.Contains("pattern", Call("SearchText", ("pattern", " ")));
+        Assert.Contains("pattern", Call("SearchText", ("pattern", "")));
+    }
+
+    [Fact]
+    public void SearchText_accepts_a_whitespace_pattern()
+    {
+        _files.AddFile(PathOf("a.txt"), "a b");
+
+        string output = Call("SearchText", ("pattern", " "));
+
+        Assert.Contains("在 路径基准根 中匹配 1 处：", output);
+    }
+
+    [Fact]
+    public void SearchText_accepts_a_regex_pattern()
+    {
+        _files.AddFile(PathOf("a.txt"), "L1\nL22");
+
+        string output = Call("SearchText", ("pattern", "^L\\d+$"), ("regex", true));
+
+        Assert.Contains("在 路径基准根 中匹配 2 处：", output);
+        Assert.Contains("2 |L22", output);
+    }
+
+    [Fact]
+    public void SearchText_rejects_an_invalid_regex()
+    {
+        _files.AddFile(PathOf("a.txt"), "text");
+
+        string output = Call("SearchText", ("pattern", "("), ("regex", true));
+
+        Assert.Contains("pattern", output);
     }
 
     [Fact]
@@ -401,6 +432,17 @@ public sealed class FileToolsTests
 
         Assert.Contains("匹配 1 处", output);
         Assert.Contains("2 |needle", output);
+    }
+
+    [Fact]
+    public void SearchText_unique_accepts_a_single_regex_occurrence()
+    {
+        _files.AddFile(PathOf("a.txt"), "before\nL22\nafter");
+
+        string output = Call("SearchText", ("pattern", @"L\d+"), ("regex", true), ("unique", true));
+
+        Assert.Contains("匹配 1 处", output);
+        Assert.Contains("2 |L22", output);
     }
 
     [Fact]
@@ -973,14 +1015,26 @@ public sealed class FileToolsTests
     }
 
     [Fact]
-    public void ReplaceText_rejects_blank_pattern_and_unknown_encoding()
+    public void ReplaceText_rejects_empty_pattern_and_unknown_encoding()
     {
         string[] paths = ["."];
 
-        Assert.Contains("pattern", Call("ReplaceText", ("paths", paths), ("pattern", " "), ("replacement", "y")));
+        Assert.Contains("pattern", Call("ReplaceText", ("paths", paths), ("pattern", ""), ("replacement", "y")));
         Assert.Contains(
             "encoding 只支持",
             Call("ReplaceText", ("paths", paths), ("pattern", "x"), ("replacement", "y"), ("encoding", "gbk")));
+    }
+
+    [Fact]
+    public void ReplaceText_accepts_a_whitespace_pattern()
+    {
+        _files.AddFile(PathOf("a.txt"), "a b");
+        string[] paths = ["a.txt"];
+
+        string output = Call("ReplaceText", ("paths", paths), ("pattern", " "), ("replacement", "_"));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        Assert.Equal("a_b", ReadText("a.txt"));
     }
 
     [Fact]
@@ -1004,6 +1058,57 @@ public sealed class FileToolsTests
         string output = Call("ReplaceText", ("paths", paths), ("pattern", "needle"), ("replacement", "x"));
 
         Assert.Contains("黑名单", output);
+    }
+
+    [Fact]
+    public void ReplaceText_expands_regex_group_references()
+    {
+        _files.AddFile(PathOf("a.txt"), "abc123");
+        string[] paths = ["a.txt"];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "([a-z]+)(\\d+)"),
+            ("replacement", "$2-$1"),
+            ("regex", true));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        Assert.Equal("123-abc", ReadText("a.txt"));
+    }
+
+    [Fact]
+    public void ReplaceText_keeps_unknown_group_references_literal()
+    {
+        _files.AddFile(PathOf("a.txt"), "abc");
+        string[] paths = ["a.txt"];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "(?<word>[a-z]+)"),
+            ("replacement", "${nope}"),
+            ("regex", true));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        Assert.Equal("${nope}", ReadText("a.txt"));
+    }
+
+    [Fact]
+    public void ReplaceText_rejects_an_invalid_regex_without_writing()
+    {
+        _files.AddFile(PathOf("a.txt"), "text");
+        string[] paths = ["a.txt"];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "("),
+            ("replacement", "x"),
+            ("regex", true));
+
+        Assert.Contains("pattern", output);
+        Assert.Equal("text", ReadText("a.txt"));
     }
 
     [Fact]
@@ -1101,6 +1206,21 @@ public sealed class FileToolsTests
 
         Assert.True(unique.Flag);
         Assert.False(unique.Required);
+    }
+
+    [Fact]
+    public void SearchText_and_ReplaceText_declare_regex_as_an_optional_switch()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        foreach (string name in new[] { "SearchText", "ReplaceText" })
+        {
+            ToolParameter regex = Parameter(definitions, name, "regex");
+
+            Assert.True(regex.Flag);
+            Assert.False(regex.Required);
+        }
     }
 
     [Fact]

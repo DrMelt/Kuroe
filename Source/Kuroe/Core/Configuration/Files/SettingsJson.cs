@@ -11,4 +11,5 @@ namespace Kuroe.Configuration.Files;
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(RuntimeSectionDto))]
 [JsonSerializable(typeof(AssistantSectionDto))]
+[JsonSerializable(typeof(NetworkSectionDto))]
 internal sealed partial class SettingsJson : JsonSerializerContext;

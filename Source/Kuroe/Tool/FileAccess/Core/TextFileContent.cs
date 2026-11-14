@@ -78,55 +78,32 @@ public sealed class TextFileContent
         }
     }
 
-    /// <summary>按替换条件替换原文，一次扫描完成匹配与替换。replacement 的换行转换为文件原有风格，未匹配内容保持原样。</summary>
+    /// <summary>按替换条件替换原文，匹配在归一文本上进行，替换文本写回原文，未匹配内容保持原样。</summary>
+    /// <param name="replacement">替换条件。</param>
     public TextFileReplacement Replace(TextReplacement replacement)
     {
-        List<int> matches = Find(replacement.Pattern, replacement.Comparison);
+        List<TextMatchReplacement> matches = [.. replacement.Pattern.Replace(_normalized, replacement.Replacement)];
         if (matches.Count == 0)
         {
             return new TextFileReplacement(Original, 0, []);
         }
 
-        string text = NewLine.Convert(replacement.Replacement);
         var result = new StringBuilder(Original.Length);
+        List<int> starts = [];
         int last = 0;
-        foreach (int match in matches)
+        foreach (TextMatchReplacement match in matches)
         {
-            int start = _map[match];
-            int end = _map[match + replacement.Pattern.Length];
+            int start = _map[match.Index];
+            int end = _map[match.Index + match.Length];
             result.Append(Original, last, start - last);
-            result.Append(text);
+            result.Append(NewLine.Convert(match.Text));
             last = end;
+            starts.Add(match.Index);
         }
 
         result.Append(Original, last, Original.Length - last);
 
-        return new TextFileReplacement(result.ToString(), matches.Count, [.. LinesOf(matches).Distinct()]);
-    }
-
-    /// <summary>在归一文本中查找全部不重叠匹配，返回匹配起始位置。pattern 须已归一换行。</summary>
-    private List<int> Find(string pattern, StringComparison comparison)
-    {
-        if (pattern.Length == 0)
-        {
-            return [];
-        }
-
-        List<int> matches = [];
-        int index = 0;
-        while (index <= _normalized.Length - pattern.Length)
-        {
-            int found = _normalized.IndexOf(pattern, index, comparison);
-            if (found < 0)
-            {
-                break;
-            }
-
-            matches.Add(found);
-            index = found + pattern.Length;
-        }
-
-        return matches;
+        return new TextFileReplacement(result.ToString(), matches.Count, [.. LinesOf(starts).Distinct()]);
     }
 
     /// <summary>取每个匹配起始位置在归一文本中的行号，行号从 1 起。matches 须按起始位置升序。</summary>

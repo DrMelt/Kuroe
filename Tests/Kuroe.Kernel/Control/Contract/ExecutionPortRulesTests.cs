@@ -38,16 +38,6 @@ public sealed class ExecutionPortRulesTests
     }
 
     [Fact]
-    public void Text_port_requires_content()
-    {
-        ErrorOr<Success> result = ExecutionPortRules.Validate(
-            Request(Text(Conclusion)),
-            Values((Conclusion, Value(Conclusion, " "))));
-
-        Assert.Contains("端口 结论 的产出为空", Assert.Single(result.ErrorsOrEmptyList).Description, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void Signal_port_accepts_its_name_alone()
     {
         ErrorOr<Success> result = ExecutionPortRules.Validate(

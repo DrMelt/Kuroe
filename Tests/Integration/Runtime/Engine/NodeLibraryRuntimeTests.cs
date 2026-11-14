@@ -44,7 +44,7 @@ public sealed class NodeLibraryRuntimeTests
     private const string BuiltinReferenceFlow = """
         {
           "Nodes": [
-            { "Name": "准备", "Kind": "Llm", "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }] }
+            { "Name": "准备", "Kind": "Llm", "Parameters": { "Prompt": "写出计划" }, "Outputs": [{ "Name": "计划", "Type": "Text" }] }
           ],
           "Flows": [
             {

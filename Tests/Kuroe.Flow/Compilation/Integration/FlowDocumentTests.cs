@@ -133,12 +133,14 @@ public sealed class FlowDocumentTests
         Assert.Equal(["流程 默认 的节点 整体：MaxExecutions 必须是正整数。"], Errors(ContainerWithZeroMaxExecutions));
 
     [Fact]
-    public void Unknown_node_field_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 制定计划：字段 Mode 不属于 Llm 节点。"], Errors(BadNodeMode));
+    public void Type_field_outside_the_parameters_object_is_rejected() =>
+        Assert.Equal(
+            ["流程 默认 的节点 制定计划：字段 Mode 不是节点结构字段，类型专属字段写在 Parameters 对象里。"],
+            Errors(BadNodeMode));
 
     [Fact]
-    public void Container_prompt_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 容器：字段 Prompt 不属于 Container 节点。"], Errors(ContainerPrompt));
+    public void Container_parameters_are_rejected_by_the_container_type() =>
+        Assert.Equal(["流程 默认 的节点 容器：字段 Question 不属于 Container 节点。"], Errors(ContainerParameters));
 
     [Fact]
     public void Llm_question_is_rejected() =>
@@ -151,6 +153,10 @@ public sealed class FlowDocumentTests
     [Fact]
     public void Parameter_name_is_case_sensitive() =>
         Assert.Equal(["流程 默认 的节点 规划：字段 PROMPT 不属于 Llm 节点。"], Errors(CaseSensitiveParameterName));
+
+    [Fact]
+    public void Parameters_must_be_an_object() =>
+        Assert.Equal(["流程 默认 的节点 规划：Parameters 必须是对象，键是节点类型声明的字段名。"], Errors(ParametersNotObject));
 
     [Fact]
     public void Tools_parameter_must_be_a_text_array() =>
@@ -376,44 +382,51 @@ public sealed class FlowDocumentTests
         ] } } ] }
         """;
 
+    /// <summary>类型专属字段写在节点对象上，文件层按结构字段表拒绝。</summary>
     private const string BadNodeMode = """
         { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Nodes": [
         { "Name": "制定计划", "Kind": "Llm", "Mode": "PerItemm" }
         ] } } ] }
         """;
 
-    private const string ContainerPrompt = """
-        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "容器", "Kind": "Container", "Prompt": "不落地的提示", "Nodes": [ { "Name": "规划", "Kind": "Llm" } ] } } ] }
+    /// <summary>容器不声明类型参数，字段表为空。</summary>
+    private const string ContainerParameters = """
+        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "容器", "Kind": "Container", "Parameters": { "Question": "确认" }, "Nodes": [ { "Name": "规划", "Kind": "Llm" } ] } } ] }
         """;
 
     private const string FieldOutsideKind = """
-        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "备注": "随手加的" } } ] }
+        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "Parameters": { "备注": "随手加的" } } } ] }
         """;
 
     private const string QuestionOnLlm = """
-        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "Question": "你想问什么" } } ] }
+        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "Parameters": { "Question": "你想问什么" } } } ] }
         """;
 
     /// <summary>参数名按原文精确匹配，大小写变体按未知字段报出。</summary>
     private const string CaseSensitiveParameterName = """
-        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "PROMPT": "写点什么" } } ] }
+        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "Parameters": { "PROMPT": "写点什么" } } } ] }
+        """;
+
+    /// <summary>参数段不是对象，文件层拒绝。</summary>
+    private const string ParametersNotObject = """
+        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "Parameters": "写出计划" } } ] }
         """;
 
     /// <summary>Tools 参数写成文本，形状不符报出。</summary>
     private const string ToolsNotArray = """
-        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "Tools": "GetLocalTime" } } ] }
+        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "Parameters": { "Tools": "GetLocalTime" } } } ] }
         """;
 
     /// <summary>Question 参数写成数字，形状不符报出。</summary>
     private const string InputQuestionNotText = """
         { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Nodes": [
-          { "Name": "收集", "Kind": "Input", "Question": 3 }
+          { "Name": "收集", "Kind": "Input", "Parameters": { "Question": 3 } }
         ] } } ] }
         """;
 
     /// <summary>SystemPrompt 参数含空白块，报出空块。</summary>
     private const string BlankSystemPromptBlock = """
-        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "SystemPrompt": ["  "] } } ] }
+        { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "规划", "Kind": "Llm", "Parameters": { "SystemPrompt": ["  "] } } } ] }
         """;
 
     private const string NodeWithoutKind = """
@@ -537,8 +550,8 @@ public sealed class FlowDocumentTests
           "Flows": [
             { "Name": "默认", "Description": "结构覆盖", "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               "Root": { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [
-              { "Name": "准备", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxExecutions": 2, "From": [ { "目标": "@目标" } ] },
-              { "Name": "规划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "准备", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "Parameters": { "SystemPrompt": ["背景"] }, "MaxExecutions": 2, "From": [ { "目标": "@目标" } ] },
+              { "Name": "规划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Parameters": { "Prompt": "写出计划" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
               { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "规划@计划" } ] },
               { "Name": "收尾", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                 "Inputs": [{ "Name": "结论" }, { "Name": "信号", "Type": "Signal" }],
@@ -562,8 +575,7 @@ public sealed class FlowDocumentTests
                     "Kind": "Llm",
                     "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                     "Inputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "任务路径", "Type": "Text" } ],
-                    "Tools": [ "file" ],
-                    "ToolPorts": { "missing": { "root": "任务路径" } },
+                    "Parameters": { "Tools": [ "file" ], "ToolPorts": { "missing": { "root": "任务路径" } } },
                     "From": [ { "目标": "@目标", "任务路径": "@任务路径" } ]
                   }
                 }
@@ -588,7 +600,7 @@ public sealed class FlowDocumentTests
                     "Kind": "Llm",
                     "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                     "Inputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "任务路径", "Type": "Text" } ],
-                    "Tools": [ "file/read" ],
+                    "Parameters": { "Tools": [ "file/read" ] },
                     "From": [ { "目标": "@目标", "任务路径": "@任务路径" } ]
                   }
                 }

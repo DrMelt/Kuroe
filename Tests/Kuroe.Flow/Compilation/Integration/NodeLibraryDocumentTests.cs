@@ -236,7 +236,7 @@ public sealed class NodeLibraryDocumentTests
     [InlineData(UnknownLibraryReference, "不在节点库")]
     [InlineData(UnboundPort, "没有绑定来源")]
     [InlineData(ReferenceWithBody, "引用成员不能同时声明子节点")]
-    [InlineData(ReferenceWithQuestion, "引用节点不能声明类型参数 Question")]
+    [InlineData(ReferenceWithParameters, "引用节点的类型参数由被引用的库定义决定")]
     [InlineData(ContainerWithQuestion, "字段 Question 不属于 Container 节点")]
     [InlineData(UnknownPortBinding, "不是已声明的输入端口")]
     [InlineData(PortNotDeclared, "没有在容器")]
@@ -553,15 +553,15 @@ public sealed class NodeLibraryDocumentTests
         ] }
         """;
 
-    private const string ReferenceWithQuestion = """
+    private const string ReferenceWithParameters = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ], "Flows": [
-          { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Nodes": [ { "Label": "实施", "Use": "执行", "Question": "确认" } ] } }
+          { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Nodes": [ { "Label": "实施", "Use": "执行", "Parameters": { "Question": "确认" } } ] } }
         ] }
         """;
 
     private const string ContainerWithQuestion = """
         { "Nodes": [], "Flows": [
-          { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Question": "确认", "Nodes": [ { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } } ] } }
+          { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Parameters": { "Question": "确认" }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } } ] } }
         ] }
         """;
 
@@ -593,7 +593,7 @@ public sealed class NodeLibraryDocumentTests
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [
-              { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Parameters": { "Prompt": "把目标写成可实施的计划。" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
               { "Label": "交付", "Use": "外层", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "制定计划@计划" } ] }
                 ]
               }
@@ -632,7 +632,7 @@ public sealed class NodeLibraryDocumentTests
     private const string OverridingBuiltinFlow = """
         {
           "Nodes": [
-            { "Name": "执行", "Kind": "Llm", "Prompt": "文件覆写的指令" }
+            { "Name": "执行", "Kind": "Llm", "Parameters": { "Prompt": "文件覆写的指令" } }
           ],
           "Flows": [
             {
@@ -800,7 +800,7 @@ public sealed class NodeLibraryDocumentTests
 
     /// <summary>库执行定义声明 Question，装配校验拒绝。</summary>
     private const string LibraryQuestionOnText = """
-        { "Nodes": [ { "Name": "干活库", "Kind": "Llm", "Question": "你想问什么" } ], "Flows": [] }
+        { "Nodes": [ { "Name": "干活库", "Kind": "Llm", "Parameters": { "Question": "你想问什么" } } ], "Flows": [] }
         """;
 
     /// <summary>库容器定义声明输出端口，装配校验拒绝。</summary>

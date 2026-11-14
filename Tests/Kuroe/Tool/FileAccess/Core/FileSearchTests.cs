@@ -157,16 +157,6 @@ public sealed class FileSearchTests
     }
 
     [Fact]
-    public void Search_counts_occurrences_ignoring_case()
-    {
-        _files.AddFile(Path.Combine(_root, "a.txt"), "Needle needle\n");
-
-        TextSearchResult result = Run([], Query("needle", ignoreCase: true));
-
-        Assert.Equal(2, result.Occurrences);
-    }
-
-    [Fact]
     public void Search_stops_at_the_character_budget_before_the_occurrence_limit()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "needle\nneedle\n");
@@ -311,12 +301,67 @@ public sealed class FileSearchTests
     }
 
     [Fact]
-    public void Search_is_case_sensitive_by_default()
+    public void Search_is_case_sensitive()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "Needle\n");
 
         Assert.Empty(Run([], Query("needle")).Matches);
-        Assert.Single(Run([], Query("needle", ignoreCase: true)).Matches);
+    }
+
+    [Fact]
+    public void Search_accepts_a_whitespace_pattern()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "a b\n");
+
+        TextSearchResult result = Run([], Query(" "));
+
+        Assert.Equal(1, result.Occurrences);
+        Assert.Equal("a b", Assert.Single(result.Matches).Text);
+    }
+
+    [Fact]
+    public void Search_treats_anchors_as_line_boundaries()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "L1\nL22\nL333\n");
+
+        TextSearchResult result = Run([], Query(@"^L\d+$", regex: true));
+
+        Assert.Equal([1, 2, 3], result.Matches.Select(match => match.Line));
+    }
+
+    [Fact]
+    public void Search_does_not_match_across_lines()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "a\nb");
+
+        Assert.Empty(Run([], Query("a\\nb", regex: true)).Matches);
+    }
+
+    [Fact]
+    public void Search_counts_regex_occurrences_on_a_line()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "a1 b22 c333\n");
+
+        TextSearchResult result = Run([], Query(@"\d+", regex: true));
+
+        Assert.Equal(3, result.Occurrences);
+        TextSearchMatch match = Assert.Single(result.Matches);
+        Assert.Equal("a1 b22 c333", match.Text);
+    }
+
+    [Fact]
+    public void Search_stops_a_regex_at_the_occurrence_limit()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "a a a a\n");
+
+        TextSearchResult result = Run(
+            [],
+            Query("a", regex: true),
+            characterBudget: int.MaxValue,
+            occurrenceLimit: 2);
+
+        Assert.Equal(2, result.Occurrences);
+        Assert.Single(result.Matches);
     }
 
     private FileScope Scope() => new(_root, "工作目录", _files);
@@ -337,9 +382,9 @@ public sealed class FileSearchTests
     private static TextQuery Query(
         string pattern,
         IReadOnlyList<string>? extensions = null,
-        bool ignoreCase = false)
+        bool regex = false)
     {
-        ErrorOr<TextQuery> query = TextQuery.Create(pattern, extensions, ignoreCase);
+        ErrorOr<TextQuery> query = TextQuery.Create(pattern, extensions, regex);
         Assert.False(query.IsError);
         return query.Value;
     }

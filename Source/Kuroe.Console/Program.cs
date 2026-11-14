@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
-RootCommand root = new("Kuroe 助手：终端 REPL，流式输出与自动工具调用");
+RootCommand root = new("Kuroe 助手：终端 REPL，过程输出与自动工具调用");
 Option<string?> workDirectory = new("--work-directory", "-d") { Description = "工作目录，未指定时用进程当前目录" };
 root.Options.Add(workDirectory);
 root.SetAction(parseResult => RunAsync(parseResult.GetValue(workDirectory)));
@@ -78,7 +78,7 @@ static async Task<int> RunAsync(string? workDirectory)
     services.AddSingleton<DialogueBrowser>();
     services.AddSingleton<Repl>();
 
-    // 日志全部导向 stderr，避免与 stdout 上的流式回复交错
+    // 日志全部导向 stderr，避免与 stdout 上的回复交错
     services.Configure<ConsoleLoggerOptions>(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
     services.AddLogging(builder => builder
         // 日志级别只在启动时生效

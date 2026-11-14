@@ -56,6 +56,61 @@ public sealed class ToolJsonTests
     }
 
     [Fact]
+    public void Schema_uses_a_declared_parameter_schema_verbatim()
+    {
+        using JsonDocument document = JsonDocument.Parse(
+            """{"type":"object","description":"声明的说明","properties":{"结论":{"type":"string"}},"required":["结论"],"additionalProperties":false}""");
+        JsonElement schema = Json.Schema(
+        [
+            new ToolParameter(new ToolName("valuesJson"), "端口值", Required: true,
+                Schema: document.RootElement.Clone()),
+        ]);
+
+        Assert.Equal("object", schema.GetProperty("type").GetString());
+        JsonElement parameter = schema.GetProperty("properties").GetProperty("valuesJson");
+        Assert.Equal("object", parameter.GetProperty("type").GetString());
+        Assert.Equal("声明的说明", parameter.GetProperty("description").GetString());
+        Assert.Equal("string", parameter.GetProperty("properties").GetProperty("结论").GetProperty("type").GetString());
+        Assert.Equal(["valuesJson"], schema.GetProperty("required").EnumerateArray().Select(item => item.GetString()));
+        Assert.False(parameter.GetProperty("additionalProperties").GetBoolean());
+    }
+
+    [Fact]
+    public void Schema_does_not_merge_the_parameter_description()
+    {
+        using JsonDocument document = JsonDocument.Parse(
+            """{"type":"object","properties":{}}""");
+        JsonElement schema = Json.Schema(
+        [
+            new ToolParameter(new ToolName("payload"), "参数的说明",
+                Schema: document.RootElement.Clone()),
+        ]);
+
+        JsonElement parameter = schema.GetProperty("properties").GetProperty("payload");
+        Assert.False(parameter.TryGetProperty("description", out _));
+    }
+
+    [Fact]
+    public void Describe_writes_dictionary_values_as_objects()
+    {
+        AIFunctionArguments arguments = new(new Dictionary<string, object?>
+        {
+            ["payload"] = new Dictionary<string, object?>
+            {
+                ["text"] = "完成",
+                ["trigger"] = true,
+            },
+        });
+
+        string text = Json.Describe(arguments);
+
+        using JsonDocument rendered = JsonDocument.Parse(text);
+        JsonElement payload = rendered.RootElement.GetProperty("payload");
+        Assert.Equal("完成", payload.GetProperty("text").GetString());
+        Assert.True(payload.GetProperty("trigger").GetBoolean());
+    }
+
+    [Fact]
     public void Describe_writes_json_values_verbatim_and_other_values_as_text()
     {
         using JsonDocument document = JsonDocument.Parse("""["甲", "乙"]""");

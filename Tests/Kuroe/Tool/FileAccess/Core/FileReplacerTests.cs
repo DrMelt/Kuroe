@@ -106,31 +106,6 @@ public sealed class FileReplacerTests
     }
 
     [Fact]
-    public void Replace_ignores_case_when_configured()
-    {
-        string file = Path.Combine(_root, "a.txt");
-        _files.AddFile(file, "Needle");
-
-        TextReplaceResult result = Run(["."], Replacement("needle", "x", ignoreCase: true));
-
-        Assert.Equal(1, result.ChangedFiles);
-        Assert.Equal("x", _files.ReadText(file));
-    }
-
-    [Fact]
-    public void Replace_normalizes_case_when_replacement_equals_pattern()
-    {
-        string file = Path.Combine(_root, "a.txt");
-        _files.AddFile(file, "NEEDLE");
-
-        TextReplaceResult result = Run(["."], Replacement("needle", "needle", ignoreCase: true));
-
-        Assert.Equal(1, result.ChangedFiles);
-        Assert.Equal(1, result.Replacements);
-        Assert.Equal("needle", _files.ReadText(file));
-    }
-
-    [Fact]
     public void Replace_preserves_encoding_and_newline()
     {
         string file = Path.Combine(_root, "utf16.txt");
@@ -191,10 +166,9 @@ public sealed class FileReplacerTests
     private static TextReplacement Replacement(
         string pattern,
         string replacement,
-        IReadOnlyList<string>? extensions = null,
-        bool ignoreCase = false)
+        IReadOnlyList<string>? extensions = null)
     {
-        ErrorOr<TextQuery> query = TextQuery.Create(pattern, extensions, ignoreCase);
+        ErrorOr<TextQuery> query = TextQuery.Create(pattern, extensions);
         Assert.False(query.IsError);
         ErrorOr<TextReplacement> text = TextReplacement.Create(query.Value, replacement);
         Assert.False(text.IsError);

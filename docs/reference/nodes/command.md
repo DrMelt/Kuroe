@@ -34,11 +34,13 @@
 {
   "Name": "构建",
   "Kind": "Command",
-  "Program": "dotnet",
-  "Arguments": ["build", "Kuroe.slnx"],
-  "Directory": "{root}",
-  "Variables": { "root": "工作路径" },
-  "TimeoutSeconds": 600,
+  "Parameters": {
+    "Program": "dotnet",
+    "Arguments": ["build", "Kuroe.slnx"],
+    "Directory": "{root}",
+    "Variables": { "root": "工作路径" },
+    "TimeoutSeconds": 600
+  },
   "Inputs": [
     { "Name": "工作路径", "Type": "Text", "Mode": "Constant" },
     { "Name": "触发", "Type": "Signal" }
@@ -54,13 +56,15 @@
 {
   "Name": "克隆",
   "Kind": "Command",
-  "Program": "git",
-  "Arguments": ["clone", "--branch", "{branch}", "{repository}", "."],
-  "Directory": "{root}",
-  "Variables": {
-    "root": "任务路径",
-    "branch": "分支名",
-    "repository": "仓库地址"
+  "Parameters": {
+    "Program": "git",
+    "Arguments": ["clone", "--branch", "{branch}", "{repository}", "."],
+    "Directory": "{root}",
+    "Variables": {
+      "root": "任务路径",
+      "branch": "分支名",
+      "repository": "仓库地址"
+    }
   },
   "Inputs": [
     { "Name": "任务路径", "Type": "Text", "Mode": "Constant" },

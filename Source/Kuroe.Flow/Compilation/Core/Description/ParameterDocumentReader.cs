@@ -8,19 +8,21 @@ using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Compilation.Description;
 
-/// <summary>参数字段的描述读取：按类型字段表检查未知字段与值形状，再建出类型实例。</summary>
+/// <summary>参数字段的描述读取：按类型字段表检查未知字段与值形状，再建出类型实例。
+/// 字段属于哪个类型只由类型描述说明，本层不按字段名做任何判断。</summary>
 static class ParameterDocumentReader
 {
     /// <summary>读出参数段。未知字段与形状不符经 fail 报出，有错误时返回空。</summary>
     public static INodeType? Read(
         INodeTypeDescription description,
-        IReadOnlyDictionary<string, FlowValue> values,
+        NodeParameters parameters,
         NodeScope scope,
         NodeLabel node,
         ValidationErrorHandler fail)
     {
         List<Error> errors = [];
         void Report(string message) => errors.Add(scope.Node(node.Value, message));
+        IReadOnlyDictionary<string, FlowValue> values = parameters.Values;
 
         foreach (string name in values.Keys.Where(name => description.Fields.All(field => field.Name != name)))
         {
