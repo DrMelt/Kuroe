@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Control\Runtime\Kuroe.Control.Runtime.csproj" />
     <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
     <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
+    <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
     <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Control\Contract\Kuroe.Control.Contract.csproj" />
     <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Tasks\Persistence\Serialization\Shared\Kuroe.Tasks.Persistence.Serialization.Shared.csproj" />
     <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />

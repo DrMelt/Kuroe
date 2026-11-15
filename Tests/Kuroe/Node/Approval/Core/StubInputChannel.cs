@@ -1,23 +1,27 @@
-using Kuroe.Flow.InputChannel.Shared;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Input.Shared;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Node.Approval.Tests;
 
-/// <summary>测试用的外部输入协议替身：记录声明与撤销，供用例断言。</summary>
+/// <summary>测试用的输入通道替身：记录声明与撤销，供用例断言。</summary>
 internal sealed class StubInputChannel : IInputChannel
 {
     /// <summary>收到的声明，按声明顺序。</summary>
-    public List<(NodePath Node, string? Question, InputReceiver Receive)> Declared { get; } = [];
+    public List<(FlowStepPath Step, FlowPendingKind Kind, string? Question, InputReceiver Receive)> Declared { get; } = [];
 
     /// <summary>收到的撤销，按撤销顺序。</summary>
-    public List<NodePath> Declined { get; } = [];
+    public List<FlowStepPath> Declined { get; } = [];
 
-    /// <summary>声明本节点此刻接收外部输入。</summary>
-    public void Accept(INodeContext task, NodePath node, string? question, InputReceiver receive) =>
-        Declared.Add((node, question, receive));
+    /// <summary>登记一个等待外部输入的步骤。</summary>
+    public void Accept(
+        TaskId task,
+        FlowStepPath step,
+        FlowPendingKind kind,
+        string? question,
+        InputReceiver receive) =>
+        Declared.Add((step, kind, question, receive));
 
-    /// <summary>声明本节点不再接收外部输入。</summary>
-    public void Decline(INodeContext task, NodePath node) =>
-        Declined.Add(node);
+    /// <summary>撤销一个步骤的等待登记。</summary>
+    public void Decline(TaskId task, FlowStepPath step) =>
+        Declined.Add(step);
 }

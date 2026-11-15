@@ -15,9 +15,8 @@ using BuiltinNodeCatalog = Kuroe.Flow.Hosting.Workflows.BuiltinNodes.BuiltinNode
 using Kuroe.Flow.Hosting.Workflows.Flows;
 using Kuroe.Flow.Hosting.Workflows.Flows.Files;
 using Kuroe.Flow.Hosting.Workflows.Tasks;
-using Kuroe.Flow.InputChannel;
-using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Json;
+using Kuroe.Input.Shared;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
@@ -79,7 +78,6 @@ public static class GraphFlowServiceCollectionExtensions
 
         ToolContractCatalog contracts = new(composition.ToolDefinitions);
         NodeTypeDescriptionRegistry typeFiles = new();
-        InputRegistry inputs = new();
         JsonNodeFormat nodeFormat = new();
         JsonFlowFormat flowFormat = new();
         JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
@@ -89,7 +87,7 @@ public static class GraphFlowServiceCollectionExtensions
         LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
         FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, files);
         CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, graphOptions.CommandNodeProcessRunner);
-        graphOptions.RegisterNodeTypes?.Invoke(typeFiles, inputs);
+        graphOptions.RegisterNodeTypes?.Invoke(typeFiles, composition.InputChannel);
 
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(
@@ -108,8 +106,6 @@ public static class GraphFlowServiceCollectionExtensions
         {
             return flows.ErrorsOrEmptyList;
         }
-        services.AddSingleton<IInputChannel>(inputs);
-        services.AddSingleton<IInputDelivery>(inputs);
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);
         services.AddSingleton<IFlowLibrary>(flows.Value);
@@ -139,7 +135,6 @@ public static class GraphFlowServiceCollectionExtensions
             new GraphFlowStateBinder(),
             new GraphFlowControlFactory(
                 sp.GetRequiredService<IExecutionTargetResolver>(),
-                inputs,
                 sp.GetRequiredService<ITaskExecutionGateway>()),
             new GraphFlowPresentation(),
             new GraphFlowRecordSource()));

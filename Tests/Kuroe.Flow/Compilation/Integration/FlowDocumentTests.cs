@@ -4,7 +4,7 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.NodeLibrary;
-using Kuroe.Flow.InputChannel;
+using Kuroe.Input.Runtime;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
@@ -18,7 +18,7 @@ namespace Kuroe.Flow.Compilation.Integration.Tests;
 public sealed class FlowDocumentTests
 {
     /// <summary>解析与读写往返用的外部输入协议实例，这些用例不驱动节点执行。</summary>
-    private static readonly InputRegistry Inputs = new();
+    private static readonly InputChannelRegistry Inputs = new();
 
     private static IFlowDescriptionCompiler Compiler =>
         new FlowDescriptionCompiler(TestTypeFiles.Registry(Inputs), new NodeLibraryExpander());

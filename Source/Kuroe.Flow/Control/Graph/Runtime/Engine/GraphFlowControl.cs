@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Flow.Control.Graph.Runtime.Graph;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
-using Kuroe.Flow.InputChannel.Shared;
 
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
@@ -13,13 +12,12 @@ using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 
-/// <summary>一个任务的图流程控制：推进循环、恢复、重新执行、终止与等待交付。</summary>
+/// <summary>一个任务的图流程控制：推进循环、恢复、重新执行与终止。</summary>
 internal sealed class GraphFlowControl(
     ITaskFlowContext task,
     GraphFlowState state,
     IExecutionTargetResolver targetResolver,
-    IInputDelivery inputDelivery,
-    ITaskExecutionGateway gateway) : IFlowControl, IFlowInputControl, IFlowRerun
+    ITaskExecutionGateway gateway) : IFlowControl, IFlowAdvance, IFlowRerun
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
@@ -72,17 +70,17 @@ internal sealed class GraphFlowControl(
             roots = [.. state.Runtime.Roots()];
         }
 
-        Enqueue([.. seed.Steps.Select(FlowStepPaths.ToNodePath), .. roots]);
+        Enqueue([.. seed.Steps.Select(NodeStepPaths.ToNodePath), .. roots]);
         Loop = Task.Run(RunAsync);
     }
 
     /// <summary>交付或产出变化后推进：取受影响目标入队，放弃其恢复。要求持有任务 Gate 之外的调用。</summary>
-    private void Advance(IReadOnlyList<FlowStepPath> steps)
+    public void Advance(IReadOnlyList<FlowStepPath> steps)
     {
         List<NodePath> targets;
         lock (task.Gate)
         {
-            targets = [.. state.Runtime.Notify([.. steps.Select(FlowStepPaths.ToNodePath)])];
+            targets = [.. state.Runtime.Notify([.. steps.Select(NodeStepPaths.ToNodePath)])];
             state.Runtime.InvalidateRestores(targets);
             if (targets.Count > 0)
             {
@@ -149,45 +147,8 @@ internal sealed class GraphFlowControl(
         {
             List<NodePath> targets = [.. _pending, .. _queued, .. _processing, .. _restart];
 
-            return new FlowSeed([.. targets.Distinct().Select(FlowStepPaths.From)]);
+            return new FlowSeed([.. targets.Distinct().Select(NodeStepPaths.From)]);
         }
-    }
-
-    /// <summary>此刻等待外部输入的步骤，按流程图顺序。</summary>
-    public IReadOnlyList<FlowPendingStep> Pending()
-    {
-        lock (task.Gate)
-        {
-            return
-            [
-                .. inputDelivery.Accepting(state.Runtime).Select(request => new FlowPendingStep(
-                    FlowStepPaths.From(request.Node),
-                    state.Flow.Graph[request.Node] is ExecutableNode node && node.Type.Shape.AwaitsApproval
-                        ? FlowPendingKind.Approve
-                        : FlowPendingKind.Input,
-                    request.Question)),
-            ];
-        }
-    }
-
-    /// <summary>向等待中的步骤交付一次外部输入并放行后续推进。要求持有任务 Gate 之外的调用。</summary>
-    public ErrorOr<Success> Deliver(FlowStepPath step, string text)
-    {
-        NodePath node;
-        lock (task.Gate)
-        {
-            node = FlowStepPaths.ToNodePath(step);
-            if (inputDelivery.Accepting(state.Runtime).All(request => request.Node != node))
-            {
-                return [Error.Validation(FlowErrorCodes.TaskInput, $"节点 {node} 未等待外部输入。")];
-            }
-
-            inputDelivery.Deliver(state.Runtime, node, text);
-        }
-
-        Advance([step]);
-
-        return Result.Success;
     }
 
     /// <summary>登记一次新执行到任务与流程状态。</summary>

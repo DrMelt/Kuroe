@@ -7,6 +7,7 @@ using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Control.Runtime;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Pending;
@@ -41,8 +42,13 @@ public static class AssistantServiceCollectionExtensions
         services.AddSingleton(sp =>
         {
             // 对话任务自有任务域，不注册为 TaskRegistry，避免覆盖用户任务域
-            TaskRegistry registry = new(sp.GetRequiredService<ExecutionIndex>(), pauseOnRestore: false);
-            DialogueRound round = new(registry, new PendingService(registry));
+            TaskRegistry registry = new(
+                sp.GetRequiredService<ExecutionIndex>(),
+                sp.GetRequiredService<IInputDelivery>(),
+                pauseOnRestore: false);
+            DialogueRound round = new(
+                registry,
+                new PendingService(registry, sp.GetRequiredService<IFlowRuntime>()));
 
             ModelService models = sp.GetRequiredService<ModelService>();
 
@@ -59,7 +65,9 @@ public static class AssistantServiceCollectionExtensions
                     sp.GetRequiredService<KuroePaths>(),
                     gateway),
                 null,
-                new DialogueFlowControlFactory(gateway),
+                new DialogueFlowControlFactory(
+                    gateway,
+                    sp.GetRequiredService<IInputChannel>()),
                 new DialogueFlowPresentation(),
                 new DialogueFlowRecordSource());
 

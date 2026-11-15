@@ -61,6 +61,9 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         _startSource = new RuntimeStartSource(state.Flow.Graph.StartPorts, state.StartPorts);
     }
 
+    /// <summary>所属任务的标识。</summary>
+    public TaskId Id => _task.Id;
+
     /// <summary>任务锁定的流程执行视图。</summary>
     public NodeGraph Graph => _state.Flow.Graph;
 

@@ -1,4 +1,4 @@
-using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
@@ -22,7 +22,7 @@ public sealed class InputRuntimeTests
 
         Runtime(channel, context).Activate(context, NodeInputValues.Empty);
 
-        Assert.Equal([Path], [.. channel.Declared.Select(entry => entry.Node)]);
+        Assert.Equal([NodeStepPaths.From(Path)], [.. channel.Declared.Select(entry => entry.Step)]);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class InputRuntimeTests
         runtime.Activate(context, NodeInputValues.Empty);
 
         Assert.Single(channel.Declared);
-        Assert.Equal([Path], channel.Declined);
+        Assert.Equal([NodeStepPaths.From(Path)], channel.Declined);
     }
 
     /// <summary>建出运行期对象，类型与图节点共用同一个协议替身与任务上下文。</summary>

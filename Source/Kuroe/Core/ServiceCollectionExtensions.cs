@@ -10,6 +10,8 @@ using Kuroe.Execution;
 using Kuroe.Execution.Shared;
 using Kuroe.Files;
 using Kuroe.Files.Shared;
+using Kuroe.Input.Runtime;
+using Kuroe.Input.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
@@ -79,13 +81,15 @@ public static class ServiceCollectionExtensions
             return configuredTools.ErrorsOrEmptyList;
         }
 
+        InputChannelRegistry inputs = new();
         KuroeComposition composition = new(
             services,
             configuredTools.Value,
             new KuroeStartup(settings.Value.Current.Runtime.LogLevel),
             files,
             paths,
-            coreOptions.PersistTasks);
+            coreOptions.PersistTasks,
+            inputs);
 
         List<IToolSource> definitionSources =
         [
@@ -113,7 +117,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(modelService);
 
         ExecutionIndex executions = new();
-        TaskRegistry taskRegistry = new(executions);
+        TaskRegistry taskRegistry = new(executions, inputs);
         ErrorOr<Success> registered = RegisterTools(
             services,
             composition,
@@ -164,6 +168,8 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IExecutionPortSubmitter>(),
             sp.GetRequiredService<IExecutionCannotCompleteSubmitter>(),
             sp.GetRequiredService<IExecutionStatusReader>()));
+        services.AddSingleton<IInputChannel>(inputs);
+        services.AddSingleton<IInputDelivery>(inputs);
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
         services.AddSingleton(sp => new TaskRecordSerializationMapper([.. sp.GetServices<IFlowRecordCodec>()]));
         services.AddSingleton<ITaskRecordCodec>(sp => new TaskRecordCodec(
@@ -204,7 +210,9 @@ public static class ServiceCollectionExtensions
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null,
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskLeaseStore>() : null)));
         services.AddSingleton<ITaskControl>(sp => sp.GetRequiredService<TaskService>());
-        services.AddSingleton(_ => new PendingService(taskRegistry));
+        services.AddSingleton(sp => new PendingService(
+            taskRegistry,
+            sp.GetRequiredService<IFlowRuntime>()));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<IToolFactory>(),

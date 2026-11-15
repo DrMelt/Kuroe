@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Assistant.Flows;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 
@@ -11,12 +12,14 @@ namespace Kuroe.Assistant.Dialogue;
 internal sealed class DialogueFlowControl(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
-    DialogueFlowState state) : IFlowControl, IFlowInputControl
+    IInputChannel inputs,
+    DialogueFlowState state) : IFlowControl, IFlowAdvance
 {
     /// <summary>回话步骤路径。</summary>
     internal static FlowStepPath ReplyStep { get; } = FlowStepPath.Of(DialogueFlow.ReplyLabel);
 
     private bool _awaiting = true;
+    private string? _pendingInput;
     private IExecution? _live;
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -30,88 +33,145 @@ internal sealed class DialogueFlowControl(
     public bool HasBlocked => false;
 
     /// <inheritdoc/>
-    public bool HasWork => true;
+    public bool HasWork => _awaiting || _pendingInput is not null || _live is not null;
 
     /// <inheritdoc/>
     public bool HasRestores => false;
 
     /// <inheritdoc/>
-    public void Start() => _awaiting = true;
+    public void Start() => Await();
 
     /// <inheritdoc/>
-    public void Restore(FlowSeed seed) => _awaiting = seed.Steps.Count > 0;
+    public void Restore(FlowSeed seed)
+    {
+        if (seed.Steps.Count > 0)
+        {
+            Await();
+        }
+    }
 
     /// <inheritdoc/>
     public void Pause()
     {
-        _awaiting = false;
-        if (_live is { IsLive: true } live)
+        lock (task.Gate)
         {
-            gateway.Interrupt(live, "任务暂停。");
+            _awaiting = false;
+            _pendingInput = null;
+            inputs.Decline(task.Id, ReplyStep);
+            if (_live is { IsLive: true } live)
+            {
+                gateway.Interrupt(live, "任务暂停。");
+            }
         }
     }
 
     /// <inheritdoc/>
     public void Resume(bool continueRestores = true)
     {
-        _awaiting = true;
-        task.NotifyChanged();
+        lock (task.Gate)
+        {
+            if (_live is not null)
+            {
+                _awaiting = false;
+                inputs.Decline(task.Id, ReplyStep);
+            }
+            else
+            {
+                Await();
+            }
+
+            task.NotifyChanged();
+        }
     }
 
     /// <inheritdoc/>
     public ErrorOr<Success> Terminate()
     {
-        _awaiting = false;
-        ErrorOr<Success> result = task.Terminate();
-        _completion.TrySetResult();
+        lock (task.Gate)
+        {
+            _awaiting = false;
+            _pendingInput = null;
+            inputs.Decline(task.Id, ReplyStep);
+            ErrorOr<Success> result = task.Terminate();
+            _completion.TrySetResult();
 
-        return result;
+            return result;
+        }
     }
 
     /// <inheritdoc/>
-    public FlowSeed CaptureSeed() => _awaiting ? new FlowSeed([ReplyStep]) : FlowSeed.Empty;
+    public FlowSeed CaptureSeed()
+    {
+        lock (task.Gate)
+        {
+            return _awaiting || _pendingInput is not null
+                ? new FlowSeed([ReplyStep])
+                : FlowSeed.Empty;
+        }
+    }
 
     /// <inheritdoc/>
     public void InterruptForShutdown()
     {
-        _awaiting = false;
         lock (task.Gate)
         {
+            _awaiting = false;
+            _pendingInput = null;
+            inputs.Decline(task.Id, ReplyStep);
             if (_live is { IsLive: true } live)
             {
                 gateway.Interrupt(live, "进程退出。");
             }
-        }
 
-        _completion.TrySetResult();
+            _completion.TrySetResult();
+        }
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<FlowPendingStep> Pending() =>
-        _awaiting
-            ? [new FlowPendingStep(ReplyStep, FlowPendingKind.Input, DialogueFlow.Question)]
-            : [];
-
-    /// <inheritdoc/>
-    public ErrorOr<Success> Deliver(FlowStepPath step, string text)
+    public void Advance(IReadOnlyList<FlowStepPath> steps)
     {
-        if (!_awaiting)
+        if (!steps.Contains(ReplyStep))
         {
-            return [Error.Conflict("Flow.Deliver", "对话不在等待输入。")];
+            return;
         }
 
-        if (step != ReplyStep)
+        IExecution? execution;
+        lock (task.Gate)
         {
-            return [Error.Validation("Flow.Deliver", $"对话没有步骤 {step.Value}。")];
+            if (_pendingInput is not { } input
+                || _awaiting
+                || _live is not null
+                || task.Lifecycle != TaskLifecycle.Active)
+            {
+                return;
+            }
+
+            _pendingInput = null;
+            execution = gateway.Open(task, Request(input));
+            task.AttachExecution(execution);
+            _live = execution;
         }
 
-        _awaiting = false;
-        IExecution execution = gateway.Open(task, Request(text));
-        task.AttachExecution(execution);
-        _live = execution;
         _ = RunAsync(execution);
+    }
 
-        return Result.Success;
+    /// <summary>登记回话步骤等待外部输入。</summary>
+    private void Await()
+    {
+        _awaiting = true;
+        inputs.Accept(
+            task.Id,
+            ReplyStep,
+            FlowPendingKind.Input,
+            DialogueFlow.Question,
+            Receive);
+    }
+
+    /// <summary>收下一次外部输入，推进时据此建立回话执行。</summary>
+    private void Receive(string text)
+    {
+        _awaiting = false;
+        _pendingInput = text;
     }
 
     private ExecutionRequest Request(string text) =>
@@ -142,7 +202,16 @@ internal sealed class DialogueFlowControl(
                 _live = null;
             }
 
-            _awaiting = task.Lifecycle != TaskLifecycle.Terminated;
+            if (task.Lifecycle == TaskLifecycle.Active)
+            {
+                Await();
+            }
+            else
+            {
+                _awaiting = false;
+                inputs.Decline(task.Id, ReplyStep);
+            }
+
             task.NotifyExecutionSettled(execution);
             task.NotifyChanged();
         }

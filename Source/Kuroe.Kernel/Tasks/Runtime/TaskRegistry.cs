@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 
@@ -8,10 +9,17 @@ namespace Kuroe.Tasks.Runtime;
 
 /// <summary>一个任务域内的任务索引：按任务键查找、交出快照、转发执行通知。状态本身存在任务与流程控制上。</summary>
 /// <param name="executions">全部任务域共享的执行索引。</param>
+/// <param name="inputs">任务域的输入登记，用于读取待处理步骤与清理登记。</param>
 /// <param name="pauseOnRestore">可恢复的中断收口时是否暂停任务。</param>
-public sealed class TaskRegistry(IExecutionIndex executions, bool pauseOnRestore = true) : ITaskChangeSource
+public sealed class TaskRegistry(
+    IExecutionIndex executions,
+    IInputDelivery? inputs = null,
+    bool pauseOnRestore = true) : ITaskChangeSource
 {
     private readonly Lock _gate = new();
+
+    /// <summary>任务域的输入登记。</summary>
+    public IInputDelivery? Input { get; } = inputs;
 
     /// <summary>任务域是否在可恢复的中断收口时暂停任务，等待宿主恢复。</summary>
     internal bool PauseOnRestore { get; } = pauseOnRestore;
@@ -153,6 +161,7 @@ public sealed class TaskRegistry(IExecutionIndex executions, bool pauseOnRestore
 
                     if (_tasks.Remove(task.Id.Value))
                     {
+                        Input?.Remove(task.Id);
                         cleared.Add(task.Id);
                     }
                 }
@@ -180,6 +189,8 @@ public sealed class TaskRegistry(IExecutionIndex executions, bool pauseOnRestore
                 {
                     executions.Remove(execution.Id);
                 }
+
+                Input?.Remove(task.Id);
             }
         }
     }

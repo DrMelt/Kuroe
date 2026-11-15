@@ -13,6 +13,8 @@ internal sealed class StubNodeContext : INodeContext
 {
     private static readonly NodePath SourcePath = NodePath.Of("整体", "来源");
 
+    public TaskId Id { get; } = new(1);
+
     public NodeInputPlan? Plan(NodePath node) => new()
     {
         Groups =

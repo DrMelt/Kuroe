@@ -1,4 +1,4 @@
-using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Flow.Node.Shared.RuntimeGraph;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
@@ -35,7 +35,7 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     {
         _canceled = true;
         _waiting = false;
-        channel.Decline(nodeContext, Path);
+        channel.Decline(nodeContext.Id, NodeStepPaths.From(Path));
     }
 
     /// <summary>被激活时清掉上一轮回答并声明接收外部输入，取消后不再声明。输入节点不消费来源取值。</summary>
@@ -48,7 +48,12 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
 
         _waiting = true;
         Progress.Invalidate();
-        channel.Accept(context, Path, question, Deliver);
+        channel.Accept(
+            context.Id,
+            NodeStepPaths.From(Path),
+            FlowPendingKind.Input,
+            question,
+            Deliver);
     }
 
     /// <summary>收下一次外部输入：按回答发布一次，声明由交付方随交付撤销。</summary>
@@ -79,7 +84,12 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
 
         if (_waiting && !_canceled)
         {
-            channel.Accept(nodeContext, Path, question, Deliver);
+            channel.Accept(
+                nodeContext.Id,
+                NodeStepPaths.From(Path),
+                FlowPendingKind.Input,
+                question,
+                Deliver);
         }
     }
 

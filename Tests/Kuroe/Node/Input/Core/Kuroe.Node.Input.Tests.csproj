@@ -19,7 +19,7 @@
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
     </ItemGroup>
 
 <ItemGroup>

@@ -1,4 +1,4 @@
-using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
@@ -42,7 +42,7 @@ public sealed class ApprovalRuntimeTests
         runtime.Activate(context, NodeInputValues.Empty);
 
         Assert.Empty(channel.Declared);
-        Assert.Equal([Path], channel.Declined);
+        Assert.Equal([NodeStepPaths.From(Path)], channel.Declined);
     }
 
     [Fact]

@@ -12,13 +12,13 @@ using Kuroe.Flow.Hosting.Workflows.Flows;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 using Kuroe.Tasks.Persistence.Saving.Shared;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Assistant;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Tasks.Runtime;
-using Kuroe.Flow.Control.Graph.Runtime.Engine;
 using Kuroe.Pending;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -267,7 +267,7 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>任务里停在给定等待种类的节点路径。</summary>
     public IReadOnlyList<NodePath> Awaiting(TaskId id, PendingKind kind) =>
         Pendings.Pending(id) is { IsError: false } pending
-            ? [.. pending.Value.Where(node => node.Kind == kind).Select(node => FlowStepPaths.ToNodePath(node.Step))]
+            ? [.. pending.Value.Where(node => node.Kind == kind).Select(node => NodeStepPaths.ToNodePath(node.Step))]
             : [];
 
     public void Dispose()

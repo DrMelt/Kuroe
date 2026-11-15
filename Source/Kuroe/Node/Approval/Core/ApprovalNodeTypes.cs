@@ -1,4 +1,4 @@
-using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;

@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Configuration.Files;
+using Kuroe.Input.Shared;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.Tool;
@@ -21,7 +22,8 @@ public sealed class KuroeComposition
         KuroeStartup startup,
         IWorkspaceFiles files,
         KuroePaths paths,
-        bool persistTasks)
+        bool persistTasks,
+        IInputChannel inputChannel)
     {
         _services = services;
         ConfiguredTools = configuredTools;
@@ -29,6 +31,7 @@ public sealed class KuroeComposition
         Files = files;
         Paths = paths;
         PersistTasks = persistTasks;
+        InputChannel = inputChannel;
     }
 
     /// <summary>启动信息，其中的日志级别用于宿主注册日志输出。</summary>
@@ -42,6 +45,9 @@ public sealed class KuroeComposition
 
     /// <summary>任务是否写存档并占用租约。</summary>
     public bool PersistTasks { get; }
+
+    /// <summary>本次装配使用的输入登记，节点类型与宿主共用同一实例。</summary>
+    public IInputChannel InputChannel { get; }
 
     /// <summary>已装载的配置命令工具，供状态查询工具呈现。</summary>
     public IReadOnlyList<ConfiguredTool> ConfiguredTools { get; }

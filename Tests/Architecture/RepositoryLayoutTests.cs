@@ -1298,7 +1298,6 @@ public sealed class RepositoryLayoutTests
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
-        string inputChannel = Path.Combine(SourceRoot, "Kuroe.Flow", "InputChannel", "Shared");
         string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
@@ -1312,7 +1311,6 @@ public sealed class RepositoryLayoutTests
                     || IsUnder(reference, execution)
                     || IsUnder(reference, executionRecords)
                     || IsUnder(reference, graphRecords)
-                    || IsUnder(reference, inputChannel)
                     || IsUnder(reference, nodes)
                     || IsUnder(reference, presentation)
                     || IsUnder(reference, tasks)
@@ -1526,13 +1524,102 @@ public sealed class RepositoryLayoutTests
     public void Flow_control_port_excludes_input_delivery()
     {
         string control = Path.Combine(KernelRoot, "Control", "Shared", "IFlowControl.cs");
-        string input = Path.Combine(KernelRoot, "Control", "Shared", "IFlowInputControl.cs");
+        string advance = Path.Combine(KernelRoot, "Control", "Shared", "IFlowAdvance.cs");
+        string channel = Path.Combine(KernelRoot, "Input", "Shared", "IInputChannel.cs");
+        string delivery = Path.Combine(KernelRoot, "Input", "Shared", "IInputDelivery.cs");
         string controlText = File.ReadAllText(control);
 
         Assert.DoesNotContain("Pending", controlText, StringComparison.Ordinal);
         Assert.DoesNotContain("Deliver", controlText, StringComparison.Ordinal);
-        Assert.Contains("Pending", File.ReadAllText(input), StringComparison.Ordinal);
-        Assert.Contains("Deliver", File.ReadAllText(input), StringComparison.Ordinal);
+        Assert.DoesNotContain("Accept", controlText, StringComparison.Ordinal);
+        Assert.Contains("Advance", File.ReadAllText(advance), StringComparison.Ordinal);
+        Assert.Contains("Accept", File.ReadAllText(channel), StringComparison.Ordinal);
+        Assert.Contains("Decline", File.ReadAllText(channel), StringComparison.Ordinal);
+        Assert.Contains("Pending", File.ReadAllText(delivery), StringComparison.Ordinal);
+        Assert.Contains("Deliver", File.ReadAllText(delivery), StringComparison.Ordinal);
+        Assert.False(
+            File.Exists(Path.Combine(KernelRoot, "Control", "Shared", "IFlowInputControl.cs")));
+    }
+
+    [Fact]
+    public void Input_projects_reference_only_kernel_contracts()
+    {
+        string input = Path.Combine(KernelRoot, "Input");
+        string shared = Path.Combine(input, "Shared", "Kuroe.Input.Shared.csproj");
+        string runtime = Path.Combine(input, "Runtime", "Kuroe.Input.Runtime.csproj");
+        string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
+        string sharedProject = Path.Combine(input, "Shared");
+
+        Assert.Equal([Path.Combine(tasks, "Kuroe.Tasks.Shared.csproj")], ProjectReferences(shared));
+        Assert.Equal(
+            [Path.Combine(sharedProject, "Kuroe.Input.Shared.csproj"), Path.Combine(tasks, "Kuroe.Tasks.Shared.csproj")],
+            ProjectReferences(runtime));
+    }
+
+    [Fact]
+    public void Input_projects_stay_free_of_flow_implementation()
+    {
+        string input = Path.Combine(KernelRoot, "Input");
+        string[] forbidden =
+        [
+            Path.Combine(SourceRoot, "Kuroe.Flow"),
+            Path.Combine(SourceRoot, "Kuroe", "Node"),
+            Path.Combine(KernelRoot, "Execution"),
+            Path.Combine(KernelRoot, "Control"),
+            Path.Combine(KernelRoot, "Tasks", "Runtime"),
+        ];
+
+        Assert.NotEmpty(ProjectFiles(input));
+        foreach (string project in ProjectFiles(input))
+        {
+            Assert.DoesNotContain(
+                ProjectReferences(project),
+                reference => forbidden.Any(directory => IsUnder(reference, directory)));
+        }
+    }
+
+    [Fact]
+    public void Input_projects_stay_free_of_graph_and_node_vocabulary()
+    {
+        string input = Path.Combine(KernelRoot, "Input");
+        string pattern = @"(?<![A-Za-z])(Graph|Node)(?![A-Za-z])";
+
+        Assert.NotEmpty(SourceFiles(input));
+        foreach (string file in SourceFiles(input))
+        {
+            Assert.False(
+                System.Text.RegularExpressions.Regex.IsMatch(File.ReadAllText(file), pattern),
+                $"{Path.GetFileName(file)} 出现图或节点词汇。");
+        }
+    }
+
+    [Fact]
+    public void Node_projects_reference_shared_input_only()
+    {
+        string input = Path.Combine(KernelRoot, "Input", "Shared");
+        string runtime = Path.Combine(KernelRoot, "Input", "Runtime");
+        string[] projects =
+        [
+            Path.Combine(SourceRoot, "Kuroe", "Node", "Input", "Core", "Kuroe.Node.Input.csproj"),
+            Path.Combine(SourceRoot, "Kuroe", "Node", "Approval", "Core", "Kuroe.Node.Approval.csproj"),
+        ];
+
+        foreach (string project in projects)
+        {
+            IReadOnlyList<string> references = ProjectReferences(project);
+
+            Assert.Contains(references, reference => IsUnder(reference, input));
+            Assert.DoesNotContain(references, reference => IsUnder(reference, runtime));
+        }
+    }
+
+    [Fact]
+    public void Graph_control_does_not_reference_input()
+    {
+        string project = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph", "Kuroe.Flow.Control.Graph.csproj");
+        string input = Path.Combine(KernelRoot, "Input");
+
+        Assert.DoesNotContain(ProjectReferences(project), reference => IsUnder(reference, input));
     }
 
     [Fact]

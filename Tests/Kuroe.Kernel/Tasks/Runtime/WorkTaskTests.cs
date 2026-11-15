@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Control.Runtime;
 using Kuroe.Tasks.Presentation.Shared;
@@ -94,13 +95,27 @@ public sealed class WorkTaskTests
     }
 
     [Fact]
+    public void ClearSettled_removes_input_registration()
+    {
+        FakeInputDelivery inputs = new([]);
+        TaskRegistry registry = new(new ExecutionIndex(), inputs);
+        WorkTask task = CreateTask(registry);
+        registry.Adopt(task);
+
+        IReadOnlyList<TaskId> cleared = registry.ClearSettled();
+
+        Assert.Equal([task.Id], cleared);
+        Assert.Equal([task.Id], inputs.Removed);
+    }
+
+    [Fact]
     public void Snapshot_assembles_common_fields_from_task_and_presentation()
     {
-        WorkTask task = CreateTask();
+        FlowPendingStep pending = new(FlowStepPath.Of("等待"), FlowPendingKind.Approve, "确认");
+        FakeInputDelivery inputs = new([pending]);
+        WorkTask task = CreateTask(new TaskRegistry(new ExecutionIndex(), inputs));
         IFlowView view = new FlowView("测试", "test", null, [], [], []);
         FlowTexts startTexts = new(new Dictionary<PortName, string> { [new PortName("目标")] = "目标" });
-        FlowPendingStep pending = new(FlowStepPath.Of("等待"), FlowPendingKind.Approve, "确认");
-        ((ITaskFlowHost)task).AttachControl(new TestInputControl(pending));
 
         TaskSnapshot snapshot = TaskSnapshotFactory.Create(task, view, startTexts);
 
@@ -119,13 +134,13 @@ public sealed class WorkTaskTests
         Assert.Equal("确认", step.Question);
     }
 
-    private static WorkTask CreateTask()
+    private static WorkTask CreateTask(TaskRegistry? registry = null)
     {
         StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
         TestProvider provider = new();
 
         return new WorkTask(
-            new TaskRegistry(new ExecutionIndex()),
+            registry ?? new TaskRegistry(new ExecutionIndex()),
             Runtime(),
             new TaskId(1),
             inputs,
@@ -215,44 +230,14 @@ public sealed class WorkTaskTests
         public FlowRecord CaptureRecord(ITaskFlowContext task) => throw new NotSupportedException();
     }
 
-    private sealed class TestInputControl(FlowPendingStep pending) : IFlowControl, IFlowInputControl
+    private sealed class FakeInputDelivery(IReadOnlyList<FlowPendingStep> pending) : IInputDelivery
     {
-        public Task Loop => Task.CompletedTask;
+        public List<TaskId> Removed { get; } = [];
 
-        public Task Completion => Task.CompletedTask;
+        public IReadOnlyList<FlowPendingStep> Pending(TaskId task) => pending;
 
-        public bool HasBlocked => false;
+        public ErrorOr<Success> Deliver(TaskId task, FlowStepPath step, string input) => Result.Success;
 
-        public bool HasWork => false;
-
-        public bool HasRestores => false;
-
-        public void Start()
-        {
-        }
-
-        public void Restore(FlowSeed seed)
-        {
-        }
-
-        public void Pause()
-        {
-        }
-
-        public void Resume(bool continueRestores = true)
-        {
-        }
-
-        public ErrorOr<Success> Terminate() => Result.Success;
-
-        public FlowSeed CaptureSeed() => FlowSeed.Empty;
-
-        public void InterruptForShutdown()
-        {
-        }
-
-        public IReadOnlyList<FlowPendingStep> Pending() => [pending];
-
-        public ErrorOr<Success> Deliver(FlowStepPath step, string text) => Result.Success;
+        public void Remove(TaskId task) => Removed.Add(task);
     }
 }

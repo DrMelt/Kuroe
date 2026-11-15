@@ -287,9 +287,9 @@ public sealed class WorkTask : ITaskFlowHost
     /// <summary>任务的过程记录。</summary>
     public IReadOnlyList<JournalEntry> JournalEntries => Journal.Entries;
 
-    /// <summary>此刻等待外部输入的步骤。等待由流程控制的输入面给出。</summary>
+    /// <summary>此刻等待外部输入的步骤。等待由任务域的输入登记给出。</summary>
     IReadOnlyList<FlowPendingStep> ITaskFlowView.Pending =>
-        Control is IFlowInputControl input ? input.Pending() : [];
+        Registry.Input?.Pending(Id) ?? [];
 
     /// <summary>存档恢复时丢弃的过程记录条数。</summary>
     public int DroppedJournal => Journal.DroppedEntries;

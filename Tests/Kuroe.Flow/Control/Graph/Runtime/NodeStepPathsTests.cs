@@ -1,4 +1,4 @@
-using Kuroe.Flow.Control.Graph.Runtime.Engine;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Tasks.Shared;
 using Xunit;
@@ -6,17 +6,17 @@ using Xunit;
 namespace Kuroe.Flow.Control.Graph.Tests.Runtime;
 
 /// <summary>流程步骤路径与节点路径的互相转换。</summary>
-public sealed class FlowStepPathsTests
+public sealed class NodeStepPathsTests
 {
     [Fact]
     public void Node_path_round_trips_through_flow_step_path()
     {
         NodePath path = NodePath.Of("整体", "制定计划");
 
-        FlowStepPath step = FlowStepPaths.From(path);
+        FlowStepPath step = NodeStepPaths.From(path);
 
         Assert.Equal(["整体", "制定计划"], step.Levels);
-        Assert.Equal(path, FlowStepPaths.ToNodePath(step));
+        Assert.Equal(path, NodeStepPaths.ToNodePath(step));
     }
 
     [Fact]

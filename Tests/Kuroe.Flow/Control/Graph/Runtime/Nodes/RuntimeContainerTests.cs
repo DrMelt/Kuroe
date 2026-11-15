@@ -56,6 +56,8 @@ public sealed class RuntimeContainerTests
         NodePath member,
         NodePath gate) : INodeContext
     {
+        public TaskId Id { get; } = new(1);
+
         public bool GateReleased { get; set; }
 
         public NodeInputPlan? Plan(NodePath node) => node == container ? plan : null;

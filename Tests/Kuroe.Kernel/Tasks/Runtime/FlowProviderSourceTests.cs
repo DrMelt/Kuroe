@@ -180,6 +180,9 @@ public sealed class FlowProviderSourceTests
 
         public int Rerun(ITaskFlowContext task) => throw new NotSupportedException();
 
+        public void Advance(ITaskFlowContext task, IReadOnlyList<FlowStepPath> steps) =>
+            throw new NotSupportedException();
+
         public ErrorOr<Success> Terminate(ITaskFlowContext task) => throw new NotSupportedException();
 
         public Task ShutdownAsync() => Task.CompletedTask;

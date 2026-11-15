@@ -42,6 +42,8 @@
         <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Serialization\Json\Core\Kuroe.Tasks.Persistence.Json.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Control\Runtime\Kuroe.Control.Runtime.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Input\Runtime\Kuroe.Input.Runtime.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />
         <ProjectReference Include="..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
     </ItemGroup>

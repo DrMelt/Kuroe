@@ -1,4 +1,4 @@
-using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Flow.Node.Shared.RuntimeGraph;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
@@ -39,7 +39,7 @@ internal sealed class ApprovalRuntime(
     {
         _canceled = true;
         _awaiting = false;
-        channel.Decline(nodeContext, Path);
+        channel.Decline(nodeContext.Id, NodeStepPaths.From(Path));
     }
 
     /// <summary>装入本次输入并声明接收外部输入：停驻时保存输入端口取值，批准后按同名输出端口放出。已停驻或已取消时不再停驻。</summary>
@@ -52,7 +52,12 @@ internal sealed class ApprovalRuntime(
 
         _inputs = inputs;
         _awaiting = true;
-        channel.Accept(context, Path, question, _ => Approve());
+        channel.Accept(
+            context.Id,
+            NodeStepPaths.From(Path),
+            FlowPendingKind.Approve,
+            question,
+            _ => Approve());
     }
 
     /// <summary>收下一次外部输入即批准：撤停驻并发布一次，下游据此按新版本重新评估。批准不带内容，声明由交付方随交付撤销。</summary>
@@ -111,7 +116,12 @@ internal sealed class ApprovalRuntime(
 
         if (_awaiting && !_canceled)
         {
-            channel.Accept(nodeContext, Path, question, _ => Approve());
+            channel.Accept(
+                nodeContext.Id,
+                NodeStepPaths.From(Path),
+                FlowPendingKind.Approve,
+                question,
+                _ => Approve());
         }
     }
 

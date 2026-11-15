@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.Input.Shared;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Shared;
 
@@ -8,10 +9,10 @@ namespace Kuroe.Pending;
 /// <summary>一个待处理节点：步骤路径、等待种类与等待时的提问。</summary>
 public readonly record struct PendingNode(FlowStepPath Step, PendingKind Kind, string? Question);
 
-/// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入。</summary>
-public sealed class PendingService(TaskRegistry registry)
+/// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并推进流程。</summary>
+public sealed class PendingService(TaskRegistry registry, IFlowRuntime runtime)
 {
-    /// <summary>任务里此刻待处理的节点，按流程视图顺序，带等待时的提问。</summary>
+    /// <summary>任务里此刻待处理的节点，按输入登记顺序，带等待时的提问。</summary>
     public ErrorOr<List<PendingNode>> Pending(TaskId id)
     {
         ErrorOr<WorkTask> found = registry.Find(id);
@@ -35,7 +36,7 @@ public sealed class PendingService(TaskRegistry registry)
     public ErrorOr<Success> Approve(TaskId id, IReadOnlyList<FlowStepPath>? nodes = null) =>
         Take(id, PendingKind.Approve, null, string.Empty, nodes);
 
-    /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，交付由控制实例唤醒推进。</summary>
+    /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，交付在任务 Gate 内完成，随后唤醒流程推进。</summary>
     private ErrorOr<Success> Take(
         TaskId id,
         PendingKind kind,
@@ -50,7 +51,7 @@ public sealed class PendingService(TaskRegistry registry)
         }
 
         WorkTask task = found.Value;
-        IFlowInputControl? control = null;
+        IInputDelivery? inputs = registry.Input;
         ErrorOr<List<PendingNode>> accepted = task.UnderLock<ErrorOr<List<PendingNode>>>(() =>
         {
             if (task.Lifecycle == TaskLifecycle.Terminated)
@@ -63,12 +64,10 @@ public sealed class PendingService(TaskRegistry registry)
                 return [PendingErrors.Paused(id, kind)];
             }
 
-            if (task.Control is not IFlowInputControl awaitingControl)
+            if (inputs is null)
             {
                 return [PendingErrors.NoAwaiting(id, kind)];
             }
-
-            control = awaitingControl;
 
             List<PendingNode> awaiting = [.. Pending(task).Where(entry => entry.Kind == kind)];
             if (nodes is { Count: > 0 })
@@ -95,6 +94,15 @@ public sealed class PendingService(TaskRegistry registry)
                 return [PendingErrors.AmbiguousInput(id, awaiting.Count)];
             }
 
+            foreach (PendingNode entry in awaiting)
+            {
+                ErrorOr<Success> delivered = inputs.Deliver(id, entry.Step, input);
+                if (delivered.IsError)
+                {
+                    return delivered.ErrorsOrEmptyList;
+                }
+            }
+
             return awaiting;
         });
 
@@ -103,37 +111,20 @@ public sealed class PendingService(TaskRegistry registry)
             return accepted.ErrorsOrEmptyList;
         }
 
-        if (control is null)
-        {
-            return [PendingErrors.NoAwaiting(id, kind)];
-        }
-
-        foreach (PendingNode entry in accepted.Value)
-        {
-            ErrorOr<Success> delivered = control.Deliver(entry.Step, input);
-            if (delivered.IsError)
-            {
-                return delivered.ErrorsOrEmptyList;
-            }
-        }
+        runtime.Advance(task, [.. accepted.Value.Select(entry => entry.Step)]);
 
         return Result.Success;
     }
 
     /// <summary>任务里此刻待处理的节点，带等待时的提问。要求持有 Gate。</summary>
-    private static List<PendingNode> Pending(WorkTask task)
-    {
-        if (task.Control is not IFlowInputControl control)
-        {
-            return [];
-        }
-
-        return
-        [
-            .. control.Pending().Select(step => new PendingNode(
-                step.Step,
-                step.Kind == FlowPendingKind.Approve ? PendingKind.Approve : PendingKind.Answer,
-                step.Question)),
-        ];
-    }
+    private List<PendingNode> Pending(WorkTask task) =>
+        registry.Input is not { } inputs
+            ? []
+            :
+            [
+                .. inputs.Pending(task.Id).Select(step => new PendingNode(
+                    step.Step,
+                    step.Kind == FlowPendingKind.Approve ? PendingKind.Approve : PendingKind.Answer,
+                    step.Question)),
+            ];
 }

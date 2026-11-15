@@ -3,7 +3,7 @@ using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Control.Shared;
 
-/// <summary>一个任务的流程控制实例：推进循环、恢复、重新执行、终止与等待交付。任务聚合只持有它，命令经运行期引擎转发。</summary>
+/// <summary>一个任务的流程控制实例：推进循环、恢复、重新执行与终止。任务聚合只持有它，命令经运行期引擎转发。</summary>
 public interface IFlowControl
 {
     /// <summary>该任务的推进循环，宿主持有以便收口。循环结束不等于控制实例不再需要。</summary>
