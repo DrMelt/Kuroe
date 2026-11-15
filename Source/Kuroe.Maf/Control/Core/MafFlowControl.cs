@@ -11,7 +11,7 @@ internal sealed class MafFlowControl(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
     MafFlowState state,
-    MafCheckpointStore checkpoints) : IFlowControl, IFlowRerun
+    MafCheckpointStore checkpoints) : IFlowControl, IFlowRerun, IMafStepRunControl
 {
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private CancellationTokenSource? _cancel;
@@ -57,8 +57,9 @@ internal sealed class MafFlowControl(
         {
             state.PendingSteps.Clear();
             state.PendingSteps.AddRange(seed.Steps
-                .Select(step => step.Value)
-                .Where(step => state.Definition.Steps.Any(candidate => candidate.Id == step)));
+                .Select(path => state.Definition.Find(path.Value))
+                .OfType<MafStep>()
+                .Select(step => step.Id));
             _paused = true;
         }
     }
@@ -141,7 +142,7 @@ internal sealed class MafFlowControl(
     {
         lock (task.Gate)
         {
-            return new FlowSeed([.. state.PendingSteps.Select(step => FlowStepPath.Of(step))]);
+            return new FlowSeed([.. state.PendingSteps.Select(step => step.ToPath())]);
         }
     }
 
@@ -334,22 +335,28 @@ internal sealed class MafFlowControl(
     /// <summary>入口消息：开始端口文本作为第一步的上游产出。</summary>
     private MafStepMessage Entry()
     {
-        string entry = state.Definition.Entry().Value;
+        MafStep entry = state.Definition.Entry().Value;
 
         return new MafStepMessage(
-            entry,
+            entry.Id,
             [.. state.StartTexts.Texts
                 .Where(pair => pair.Key != MafFlowDefinition.ModelPort)
-                .Select(pair => new MafStepOutput(entry, pair.Key.Value, pair.Value))]);
+                .Select(pair => new MafStepOutput(entry.Id, pair.Key, pair.Value))]);
     }
 
     /// <summary>把一个步骤接到 Kuroe 执行网关。</summary>
     private FunctionExecutor<MafStepMessage, MafStepMessage> Step(MafStep step) =>
         new(
-            step.Id,
+            step.Id.Value,
             (message, _, cancellationToken) =>
-                new MafStepExecutor(task, gateway, step, state.Model, () => Halted, Abort)
+                new MafStepExecutor(task, gateway, step, state.Target(step.Id), this)
                     .HandleAsync(message, cancellationToken));
+
+    /// <inheritdoc/>
+    bool IMafStepRunControl.Halted => Halted;
+
+    /// <inheritdoc/>
+    void IMafStepRunControl.Interrupt(string reason) => Abort(reason);
 
     /// <summary>流程是否已停止接收新的步骤运行。</summary>
     private bool Halted => _stopped || _paused || _interrupted;
@@ -406,9 +413,14 @@ internal sealed class MafFlowControl(
         switch (update)
         {
             case ExecutorInvokedEvent invoked:
+                MafStep? invokedStep = state.Definition.Find(invoked.ExecutorId);
                 lock (task.Gate)
                 {
-                    state.PendingSteps.Remove(invoked.ExecutorId);
+                    if (invokedStep is not null)
+                    {
+                        state.PendingSteps.Remove(invokedStep.Id);
+                    }
+
                     task.AppendInfo($"MAF 步骤 {invoked.ExecutorId} 开始。");
                     task.Touch();
                 }

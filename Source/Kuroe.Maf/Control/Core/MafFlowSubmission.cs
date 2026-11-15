@@ -29,7 +29,7 @@ public sealed class MafFlowSubmission(
             return [.. invalid];
         }
 
-        ErrorOr<string> entry = definition.Entry();
+        ErrorOr<MafStep> entry = definition.Entry();
         if (entry.IsError)
         {
             return entry.ErrorsOrEmptyList;
@@ -47,7 +47,13 @@ public sealed class MafFlowSubmission(
                 $"开始端口 {MafFlowDefinition.ModelPort} 没有给出模型。")];
         }
 
-        MafFlowState state = new(definition, effective, new FlowTexts(Texts(effective)), model);
+        ErrorOr<Dictionary<MafStepId, IExecutionTarget>> targets = ResolveTargets(definition, model);
+        if (targets.IsError)
+        {
+            return targets.ErrorsOrEmptyList;
+        }
+
+        MafFlowState state = new(definition, effective, new FlowTexts(Texts(effective)), model, targets.Value);
 
         return new FlowSubmission(
             state,
@@ -82,13 +88,17 @@ public sealed class MafFlowSubmission(
             return [.. invalid];
         }
 
-        ErrorOr<string> entry = flow.Entry();
+        ErrorOr<MafStep> entry = flow.Entry();
         if (entry.IsError)
         {
             return entry.ErrorsOrEmptyList;
         }
 
         string model = saved.Model ?? string.Empty;
+        if (model.Length == 0)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, "MAF 流程状态缺少模型。")];
+        }
         MafCheckpoint? checkpoint = (saved.CheckpointSession, saved.CheckpointId, saved.CheckpointData) switch
         {
             ({ } session, { } id, { } data) => new MafCheckpoint(session, id, data),
@@ -108,11 +118,18 @@ public sealed class MafFlowSubmission(
             }
         }
 
+        ErrorOr<Dictionary<MafStepId, IExecutionTarget>> targets = ResolveTargets(flow, model);
+        if (targets.IsError)
+        {
+            return targets.ErrorsOrEmptyList;
+        }
+
         MafFlowState state = new(
             flow,
             saved.Inputs,
             new FlowTexts(saved.StartTexts.Texts),
-            model)
+            model,
+            targets.Value)
         {
             Checkpoint = checkpoint,
         };
@@ -123,7 +140,7 @@ public sealed class MafFlowSubmission(
             Error? failure = TryRestoreExecution(
                 record.Identity.Id,
                 flow,
-                model,
+                state,
                 execution,
                 out IExecution restoredExecution);
             if (failure is { } error)
@@ -141,37 +158,41 @@ public sealed class MafFlowSubmission(
             state.Checkpoint = null;
         }
 
-        string[] pending = interrupted
+        IReadOnlyList<MafStepId> pending = interrupted
             ? [.. flow.Steps.Select(step => step.Id)]
-            : [.. saved.PendingSteps];
+            : [.. saved.PendingSteps
+                .Select(value => MafStepId.Create(value))
+                .Where(result => result.IsSuccess)
+                .Select(result => result.Value)];
 
         return new FlowRestore(
             state,
             state.StartTexts,
             restored,
-            new FlowSeed([.. pending.Select(step => FlowStepPath.Of(step))]));
+            new FlowSeed([.. pending.Select(step => step.ToPath())]));
     }
 
     /// <summary>按存档重建一次已收口的执行。</summary>
     private Error? TryRestoreExecution(
         TaskId taskId,
         MafFlowDefinition definition,
-        string model,
+        MafFlowState state,
         ExecutionRecord record,
         out IExecution execution)
     {
         execution = null!;
-        MafStep? step = definition.Steps.FirstOrDefault(candidate => candidate.Id == record.Target.Value);
+        MafStep? step = definition.Steps.FirstOrDefault(candidate => candidate.ExecutionTargetId == record.Target);
         if (step is null)
         {
             return Error.Failure(FlowErrorCodes.RecordFormat,
                 $"存档里的步骤 {record.Target.Value} 不在流程定义中。");
         }
 
+        IExecutionTarget target = state.Target(step.Id);
         ExecutionRequest request = new(
             new ExecutionOwnerId(taskId.Value),
             record.Target,
-            step.Target(model).Kind,
+            target.Kind,
             record.Attempt,
             [.. record.Inputs.Select(input => new ExecutionInputPort(
                 input.Port,
@@ -222,6 +243,41 @@ public sealed class MafFlowSubmission(
         execution = restored;
 
         return null;
+    }
+
+    /// <summary>按模型建立全部步骤的执行目标；目标建立失败或标识不一致时返回错误。</summary>
+    private static ErrorOr<Dictionary<MafStepId, IExecutionTarget>> ResolveTargets(
+        MafFlowDefinition definition,
+        string model)
+    {
+        Dictionary<MafStepId, IExecutionTarget> targets = [];
+        List<Error> errors = [];
+        foreach (MafStep step in definition.Steps)
+        {
+            ErrorOr<IExecutionTarget> target = step.TargetFactory.Create(step.Id, model);
+            if (target.IsError)
+            {
+                errors.AddRange(target.ErrorsOrEmptyList);
+                continue;
+            }
+
+            if (target.Value.Id != step.ExecutionTargetId)
+            {
+                errors.Add(FlowErrors.Body(
+                    definition.Name.Value,
+                    $"步骤「{step.Id.Value}」的执行目标标识 {target.Value.Id.Value} 与步骤标识不一致。"));
+                continue;
+            }
+
+            targets[step.Id] = target.Value;
+        }
+
+        if (errors.Count > 0)
+        {
+            return errors;
+        }
+
+        return targets;
     }
 
     /// <summary>提交输入必须覆盖全部不带默认值的开始端口，不能重复，也不能落在未声明的端口上。</summary>
