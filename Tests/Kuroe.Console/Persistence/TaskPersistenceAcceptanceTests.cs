@@ -86,10 +86,12 @@ public abstract class TaskPersistenceAcceptanceTests
 
             await using ITaskPersistenceSession second = await CreateSessionAsync(root);
             ErrorOr<Success> resumed = second.Resume(id);
+            Assert.False(resumed.IsError, string.Join("；", resumed.ErrorsOrEmptyList.Select(error => error.Description)));
+
+            second.WaitForInput(id);
             ErrorOr<Success> answered = second.Answer(id, "加载后的回答");
 
-            Assert.False(resumed.IsError);
-            Assert.False(answered.IsError);
+            Assert.False(answered.IsError, string.Join("；", answered.ErrorsOrEmptyList.Select(error => error.Description)));
         }
         finally
         {
@@ -116,11 +118,9 @@ public abstract class TaskPersistenceAcceptanceTests
             await using ITaskPersistenceSession second = await CreateSessionAsync(root);
             TaskSnapshot loaded = second.Snapshot(id);
             Assert.Contains(loaded.View.Steps, step => step.Block is not null);
-            ErrorOr<Success> resumed = second.Resume(id);
             ErrorOr<Success> rerun = second.Rerun(id);
 
-            Assert.False(resumed.IsError);
-            Assert.False(rerun.IsError);
+            Assert.False(rerun.IsError, string.Join("；", rerun.ErrorsOrEmptyList.Select(error => error.Description)));
         }
         finally
         {
