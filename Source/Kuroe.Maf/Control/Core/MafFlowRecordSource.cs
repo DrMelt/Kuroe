@@ -15,7 +15,7 @@ public sealed class MafFlowRecordSource : IFlowRecordSource
         MafCheckpoint? checkpoint = state.Checkpoint;
         string[] pending = task.Control is { } control
             ? [.. control.CaptureSeed().Steps.Select(step => step.Value)]
-            : [.. state.PendingSteps];
+            : [.. state.PendingSteps.Select(step => step.Value)];
 
         return new FlowRecord(
             new FlowIdentity(state.Definition.Name, MafFlowKind.Value, MafFlowIdentity.Implementation),

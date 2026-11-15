@@ -33,14 +33,14 @@ public sealed class MafFlowPresentation : IFlowPresentation
         IReadOnlyList<FlowExecutionView> executions =
         [
             .. task.Executions
-                .Where(execution => execution.Request.Target.Value == step.Id)
+                .Where(execution => execution.Request.Target == step.ExecutionTargetId)
                 .Select(Execution),
         ];
         FlowExecutionView? last = executions.LastOrDefault(
             execution => execution.State is ExecutionState.Failed or ExecutionState.Interrupted);
 
         return new FlowStepView(
-            step.Id,
+            step.Id.Value,
             step.Label,
             "Maf",
             StepState(task, executions),

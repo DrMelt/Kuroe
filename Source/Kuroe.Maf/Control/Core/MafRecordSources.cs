@@ -9,11 +9,11 @@ internal static class MafRecordSources
     internal static string Write(MafStepOutput output) =>
         string.Join(
             Separator,
-            Uri.EscapeDataString(output.Step),
-            Uri.EscapeDataString(output.Port));
+            Uri.EscapeDataString(output.Step.Value),
+            Uri.EscapeDataString(output.Port.Value));
 
     /// <summary>一条步骤产出的展示文本。</summary>
-    internal static string Display(MafStepOutput output) => Display(output.Step, output.Port);
+    internal static string Display(MafStepOutput output) => Display(output.Step.Value, output.Port.Value);
 
     /// <summary>从执行记录来源标识读回展示文本；标识不合法时原样返回。</summary>
     internal static string Display(string source)

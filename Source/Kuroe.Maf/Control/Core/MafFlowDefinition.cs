@@ -18,14 +18,22 @@ public sealed record MafFlowDefinition(
     public string? Description { get; init; }
 
     /// <summary>入口步骤：没有入边的步骤。定义必须恰好有一个入口。</summary>
-    internal ErrorOr<string> Entry()
+    internal ErrorOr<MafStep> Entry()
     {
-        string[] entries = [.. Steps.Select(step => step.Id).Where(id => Edges.All(edge => edge.To != id))];
+        MafStep[] entries = [.. Steps.Where(step => Edges.All(edge => edge.To != step.Id))];
 
         return entries.Length == 1
             ? entries[0]
             : Error.Validation(FlowErrorCodes.FlowComposition, "MAF 流程必须恰好有一个入口步骤。");
     }
+
+    /// <summary>按步骤标识取步骤，不存在时为空。</summary>
+    internal MafStep? Find(MafStepId id) =>
+        Steps.FirstOrDefault(step => step.Id == id);
+
+    /// <summary>按步骤标识文本取步骤，不存在时为空。</summary>
+    internal MafStep? Find(string id) =>
+        Steps.FirstOrDefault(step => step.Id.Value == id);
 
     /// <summary>校验定义结构：步骤标识唯一且可作路径、连接两端存在、每个步骤至多一个上游、全部步骤从入口可达、开始端口声明完整。</summary>
     internal IReadOnlyList<Error> Validate()
@@ -36,28 +44,29 @@ public sealed record MafFlowDefinition(
             errors.Add(FlowErrors.Body(Name.Value, "没有步骤。"));
         }
 
-        HashSet<string> ids = [];
+        HashSet<MafStepId> ids = [];
         foreach (MafStep step in Steps)
         {
-            if (string.IsNullOrWhiteSpace(step.Id) || step.Id.Contains('/'))
+            ErrorOr<MafStepId> id = MafStepId.Create(step.Id.Value);
+            if (id.IsError)
             {
-                errors.Add(FlowErrors.Body(Name.Value, $"步骤标识「{step.Id}」不合法。"));
+                errors.Add(id.FirstError);
                 continue;
             }
 
             if (!ids.Add(step.Id))
             {
-                errors.Add(FlowErrors.Body(Name.Value, $"步骤标识「{step.Id}」重复。"));
+                errors.Add(FlowErrors.Body(Name.Value, $"步骤标识「{step.Id.Value}」重复。"));
             }
 
             if (step.Outputs.Any(port => string.IsNullOrWhiteSpace(port.Value)))
             {
-                errors.Add(FlowErrors.Body(Name.Value, $"步骤「{step.Id}」的输出端口名不合法。"));
+                errors.Add(FlowErrors.Body(Name.Value, $"步骤「{step.Id.Value}」的输出端口名不合法。"));
             }
 
             if (step.Outputs.GroupBy(port => port).Any(group => group.Count() > 1))
             {
-                errors.Add(FlowErrors.Body(Name.Value, $"步骤「{step.Id}」的输出端口重复。"));
+                errors.Add(FlowErrors.Body(Name.Value, $"步骤「{step.Id.Value}」的输出端口重复。"));
             }
         }
 
@@ -65,31 +74,31 @@ public sealed record MafFlowDefinition(
         {
             if (!ids.Contains(edge.From))
             {
-                errors.Add(FlowErrors.Body(Name.Value, $"连接起点「{edge.From}」不在流程中。"));
+                errors.Add(FlowErrors.Body(Name.Value, $"连接起点「{edge.From.Value}」不在流程中。"));
             }
 
             if (!ids.Contains(edge.To))
             {
-                errors.Add(FlowErrors.Body(Name.Value, $"连接终点「{edge.To}」不在流程中。"));
+                errors.Add(FlowErrors.Body(Name.Value, $"连接终点「{edge.To.Value}」不在流程中。"));
             }
         }
 
-        foreach (IGrouping<string, MafEdge> incoming in Edges.GroupBy(edge => edge.To).Where(group => group.Count() > 1))
+        foreach (IGrouping<MafStepId, MafEdge> incoming in Edges.GroupBy(edge => edge.To).Where(group => group.Count() > 1))
         {
             errors.Add(FlowErrors.Body(Name.Value,
-                $"步骤「{incoming.Key}」有多个上游，步骤只接受一个上游。"));
+                $"步骤「{incoming.Key.Value}」有多个上游，步骤只接受一个上游。"));
         }
 
-        ErrorOr<string> entry = Entry();
+        ErrorOr<MafStep> entry = Entry();
         if (entry.IsError)
         {
             errors.Add(entry.FirstError);
         }
         else if (errors.Count == 0)
         {
-            foreach (string unreachable in Unreachable(entry.Value, ids))
+            foreach (MafStepId unreachable in Unreachable(entry.Value.Id, ids))
             {
-                errors.Add(FlowErrors.Body(Name.Value, $"步骤「{unreachable}」从入口不可达。"));
+                errors.Add(FlowErrors.Body(Name.Value, $"步骤「{unreachable.Value}」从入口不可达。"));
             }
         }
 
@@ -112,9 +121,9 @@ public sealed record MafFlowDefinition(
     }
 
     /// <summary>步骤中从入口不可达的标识。</summary>
-    private IEnumerable<string> Unreachable(string entry, HashSet<string> ids)
+    private IEnumerable<MafStepId> Unreachable(MafStepId entry, HashSet<MafStepId> ids)
     {
-        HashSet<string> reached = [entry];
+        HashSet<MafStepId> reached = [entry];
         bool grew = true;
         while (grew)
         {
@@ -132,19 +141,23 @@ public sealed record MafFlowDefinition(
 /// <summary>MAF 流程的开始端口。</summary>
 public sealed record MafStartPort(PortName Name, string? Default = null);
 
-/// <summary>MAF 流程的步骤：标识、标签、输出端口与按模型建立执行目标的工厂。
+/// <summary>MAF 流程的步骤：标识、标签、输出端口与执行目标工厂。
 /// 步骤标识同时是执行目标标识；步骤的输入是直接上游步骤的输出。</summary>
 public sealed record MafStep(
-    string Id,
+    MafStepId Id,
     string Label,
     IReadOnlyList<PortName> Outputs,
-    Func<string, IExecutionTarget> Target);
+    IMafStepTargetFactory TargetFactory)
+{
+    /// <summary>步骤对应的执行目标标识。</summary>
+    public ExecutionTargetId ExecutionTargetId => Id.ToExecutionTargetId();
+}
 
 /// <summary>步骤之间的连接。</summary>
-public sealed record MafEdge(string From, string To);
+public sealed record MafEdge(MafStepId From, MafStepId To);
 
 /// <summary>MAF 流程的一条上游产出，随消息在步骤之间传递。</summary>
-internal sealed record MafStepOutput(string Step, string Port, string Text);
+internal sealed record MafStepOutput(MafStepId Step, PortName Port, string Text);
 
 /// <summary>MAF 流程步骤之间传递的消息：上游步骤与它交回的端口文本。</summary>
-internal sealed record MafStepMessage(string Step, IReadOnlyList<MafStepOutput> Outputs);
+internal sealed record MafStepMessage(MafStepId Step, IReadOnlyList<MafStepOutput> Outputs);

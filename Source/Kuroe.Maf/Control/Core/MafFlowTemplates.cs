@@ -32,7 +32,7 @@ public sealed class MafFlowTemplates(IMafFlowSource flows) : IFlowTemplateSource
                 FlowStartKind.Content,
                 null))],
             [.. definition.Steps.Select(step => new FlowStepView(
-                step.Id,
+                step.Id.Value,
                 step.Label,
                 "Maf",
                 FlowItemState.Pending,

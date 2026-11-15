@@ -9,10 +9,10 @@ internal static class MafWorkflow
         MafFlowDefinition definition,
         Func<MafStep, FunctionExecutor<MafStepMessage, MafStepMessage>> create)
     {
-        Dictionary<string, FunctionExecutor<MafStepMessage, MafStepMessage>> executors = definition.Steps
+        Dictionary<MafStepId, FunctionExecutor<MafStepMessage, MafStepMessage>> executors = definition.Steps
             .ToDictionary(step => step.Id, create);
 
-        WorkflowBuilder builder = new(executors[definition.Entry().Value]);
+        WorkflowBuilder builder = new(executors[definition.Entry().Value.Id]);
         foreach (MafEdge edge in definition.Edges)
         {
             builder.AddEdge(executors[edge.From], executors[edge.To]);

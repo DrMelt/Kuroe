@@ -13,6 +13,21 @@ namespace Kuroe.Maf.Control.Tests;
 /// <summary>MAF 流程的提交与恢复：开始输入校验、默认值补齐与存档往返。</summary>
 public sealed class MafFlowSubmissionTests
 {
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("甲/乙")]
+    public void Step_id_rejects_invalid_text(string value)
+    {
+        Assert.True(MafStepId.Create(value).IsError);
+    }
+
+    [Fact]
+    public void Step_id_trims_text()
+    {
+        Assert.Equal("甲", MafStepId.Create(" 甲 ").Value.Value);
+    }
+
     [Fact]
     public void Prepare_requires_every_start_port_without_default()
     {
@@ -94,8 +109,8 @@ public sealed class MafFlowSubmissionTests
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition(
                 [
-                    new MafStep("重复", "甲", [new PortName("输出")], _ => new FakeTarget()),
-                    new MafStep("重复", "乙", [new PortName("输出")], _ => new FakeTarget()),
+                    Step("重复", "甲"),
+                    Step("重复", "乙"),
                 ],
                 []),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
@@ -104,12 +119,56 @@ public sealed class MafFlowSubmissionTests
     }
 
     [Fact]
+    public void Prepare_rejects_invalid_step_ids()
+    {
+        ErrorOr<FlowSubmission> prepared = Submit(
+            Definition(
+                [Step("甲/乙")],
+                []),
+            [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
+
+        Assert.True(prepared.IsError);
+    }
+
+    [Fact]
+    public void Prepare_rejects_target_factory_errors()
+    {
+        MafStep step = new(
+            new MafStepId("步骤"),
+            "步骤",
+            [new PortName("输出")],
+            new FailingTargetFactory());
+        ErrorOr<FlowSubmission> prepared = Submit(
+            Definition([step], []),
+            [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
+
+        Assert.True(prepared.IsError);
+    }
+
+    [Fact]
+    public void Prepare_rejects_target_id_mismatch()
+    {
+        MafStep step = new(
+            new MafStepId("步骤"),
+            "步骤",
+            [new PortName("输出")],
+            new MismatchedTargetFactory());
+        ErrorOr<FlowSubmission> prepared = Submit(
+            Definition([step], []),
+            [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
+
+        Assert.True(prepared.IsError);
+        Assert.Contains(prepared.ErrorsOrEmptyList,
+            error => error.Description.Contains("不一致", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Prepare_rejects_connections_to_missing_steps()
     {
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition(
-                [new MafStep("唯一", "唯一", [new PortName("输出")], _ => new FakeTarget())],
-                [new MafEdge("唯一", "不存在")]),
+                [Step("唯一")],
+                [Edge("唯一", "不存在")]),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
 
         Assert.True(prepared.IsError);
@@ -121,11 +180,11 @@ public sealed class MafFlowSubmissionTests
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition(
                 [
-                    new MafStep("左", "左", [new PortName("输出")], _ => new FakeTarget()),
-                    new MafStep("右", "右", [new PortName("输出")], _ => new FakeTarget()),
-                    new MafStep("汇合", "汇合", [new PortName("输出")], _ => new FakeTarget()),
+                    Step("左"),
+                    Step("右"),
+                    Step("汇合"),
                 ],
-                [new MafEdge("左", "汇合"), new MafEdge("右", "汇合")]),
+                [Edge("左", "汇合"), Edge("右", "汇合")]),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
 
         Assert.True(prepared.IsError);
@@ -138,7 +197,7 @@ public sealed class MafFlowSubmissionTests
             new MafFlowDefinition(
                 new FlowName("测试"),
                 [new MafStartPort(new PortName("目标"), "默认目标")],
-                [new MafStep("唯一", "唯一", [new PortName("输出")], _ => new FakeTarget())],
+                [Step("唯一")],
                 []),
             [new StartInput(new PortName("目标"), "做点事")]);
 
@@ -151,11 +210,11 @@ public sealed class MafFlowSubmissionTests
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition(
                 [
-                    new MafStep("入口", "入口", [new PortName("输出")], _ => new FakeTarget()),
-                    new MafStep("甲", "甲", [new PortName("输出")], _ => new FakeTarget()),
-                    new MafStep("乙", "乙", [new PortName("输出")], _ => new FakeTarget()),
+                    Step("入口"),
+                    Step("甲"),
+                    Step("乙"),
                 ],
-                [new MafEdge("甲", "乙"), new MafEdge("乙", "甲")]),
+                [Edge("甲", "乙"), Edge("乙", "甲")]),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
 
         Assert.True(prepared.IsError);
@@ -201,14 +260,35 @@ public sealed class MafFlowSubmissionTests
 
     private static MafFlowDefinition Definition() => Definition(
         [
-            new MafStep("第一步", "第一步", [new PortName("输出")], _ => new FakeTarget()),
-            new MafStep("第二步", "第二步", [new PortName("输出")], _ => new FakeTarget()),
+            Step("第一步"),
+            Step("第二步"),
         ],
-        [new MafEdge("第一步", "第二步")]);
+        [Edge("第一步", "第二步")]);
 
-    private sealed class FakeTarget : IExecutionTarget
+    private static MafStep Step(string id, string? label = null) =>
+        new(new MafStepId(id), label ?? id, [new PortName("输出")], Target());
+
+    private static MafEdge Edge(string from, string to) =>
+        new(new MafStepId(from), new MafStepId(to));
+
+    private static MafStepTarget Target() =>
+        new("test", false, _ => EmptyExecutionParameters.Instance);
+
+    private sealed class FailingTargetFactory : IMafStepTargetFactory
     {
-        public ExecutionTargetId Id => new("第一步");
+        public ErrorOr<IExecutionTarget> Create(MafStepId step, string model) =>
+            Error.Validation("Maf.Target", "没有执行目标。");
+    }
+
+    private sealed class MismatchedTargetFactory : IMafStepTargetFactory
+    {
+        public ErrorOr<IExecutionTarget> Create(MafStepId step, string model) =>
+            new MismatchedTarget();
+    }
+
+    private sealed class MismatchedTarget : IExecutionTarget
+    {
+        public ExecutionTargetId Id => new("其他");
 
         public string Kind => "test";
 

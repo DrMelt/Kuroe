@@ -12,10 +12,10 @@ internal static class TestFlow
 
     internal static MafFlowDefinition Definition() => Definition(
         [
-            new MafStep("第一步", "第一步", [new PortName("输出")], _ => new FakeTarget("第一步")),
-            new MafStep("第二步", "第二步", [new PortName("输出")], _ => new FakeTarget("第二步")),
+            Step("第一步"),
+            Step("第二步"),
         ],
-        [new MafEdge("第一步", "第二步")]);
+        [Edge("第一步", "第二步")]);
 
     internal static MafFlowDefinition Definition(IReadOnlyList<MafStep> steps, IReadOnlyList<MafEdge> edges) =>
         new(
@@ -31,34 +31,31 @@ internal static class TestFlow
         };
 
     internal static MafFlowDefinition SingleStep() => Definition(
-        [new MafStep("唯一", "唯一", [new PortName("输出")], _ => new FakeTarget("唯一"))],
+        [Step("唯一")],
         []);
 
     internal static MafFlowDefinition Fork() => Definition(
         [
-            new MafStep("起点", "起点", [new PortName("输出")], _ => new FakeTarget("起点")),
-            new MafStep("左", "左", [new PortName("输出")], _ => new FakeTarget("左")),
-            new MafStep("右", "右", [new PortName("输出")], _ => new FakeTarget("右")),
+            Step("起点"),
+            Step("左"),
+            Step("右"),
         ],
-        [new MafEdge("起点", "左"), new MafEdge("起点", "右")]);
+        [Edge("起点", "左"), Edge("起点", "右")]);
+
+    internal static MafStep Step(string id) =>
+        new(new MafStepId(id), id, [new PortName("输出")], Target());
+
+    internal static MafEdge Edge(string from, string to) =>
+        new(new MafStepId(from), new MafStepId(to));
+
+    internal static MafStepTarget Target() =>
+        new(FakeRunnerFactory.KindName, false, _ => EmptyExecutionParameters.Instance);
 
     internal static StartInputs Inputs() => new(
     [
         new StartInput(new PortName("目标"), "做点事"),
         new StartInput(MafFlowDefinition.ModelPort, "test-model"),
     ]);
-}
-
-/// <summary>执行目标：标识与步骤标识一致。</summary>
-internal sealed class FakeTarget(string id) : IExecutionTarget
-{
-    public ExecutionTargetId Id => new(id);
-
-    public string Kind => FakeRunnerFactory.KindName;
-
-    public bool UsesDefaultRunner => false;
-
-    public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;
 }
 
 /// <summary>按种类建立测试运行器，保留建立的运行器供测试驱动。</summary>
