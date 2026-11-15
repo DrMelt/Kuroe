@@ -3,7 +3,7 @@ using Kuroe.Tasks.Shared;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
-namespace Kuroe.Flow.Persistence.Files.Tests;
+namespace Kuroe.Tasks.Persistence.Files.Tests;
 
 /// <summary>任务租约的文件实现：独占、释放与锁文件保留。</summary>
 public sealed class FileTaskLeaseStoreTests : IDisposable

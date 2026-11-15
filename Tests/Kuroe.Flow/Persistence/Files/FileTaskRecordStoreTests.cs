@@ -1,12 +1,12 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Files.Shared;
-using Kuroe.Flow.Persistence.Json;
+using Kuroe.Tasks.Persistence.Files.Shared;
+using Kuroe.Tasks.Persistence.Json;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
-namespace Kuroe.Flow.Persistence.Files.Tests;
+namespace Kuroe.Tasks.Persistence.Files.Tests;
 
 /// <summary>文件存档存储的契约实现，失败注入只在测试侧包装。</summary>
 public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDisposable

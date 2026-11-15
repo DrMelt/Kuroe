@@ -1,3 +1,4 @@
+using ErrorOr;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Kuroe.Maf.Records.Shared;
@@ -13,49 +14,63 @@ public sealed class MafFlowRecordCodec : IFlowRecordCodec
     public bool Handles(FlowIdentity identity) => identity.Kind == MafFlowKind.Value;
 
     /// <inheritdoc/>
-    public IFlowDefinitionRecord ReadDefinition(FlowRecordData data)
+    public ErrorOr<IFlowDefinitionRecord> ReadDefinition(FlowRecordData data)
     {
-        MafFlowDefinitionData dto = Read(
-            data.Definition,
-            MafFlowRecordJson.Default.MafFlowDefinitionData,
-            "MAF 流程定义");
+        try
+        {
+            MafFlowDefinitionData dto = Read(
+                data.Definition,
+                MafFlowRecordJson.Default.MafFlowDefinitionData,
+                "MAF 流程定义");
 
-        return new MafFlowDefinitionRecord(
-            RequiredText(dto.Implementation, "MAF 流程实现"),
-            RequiredText(dto.Flow, "MAF 流程名"));
+            return new MafFlowDefinitionRecord(
+                RequiredText(dto.Implementation, "MAF 流程实现"),
+                RequiredText(dto.Flow, "MAF 流程名"));
+        }
+        catch (FormatException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
+        }
     }
 
     /// <inheritdoc/>
-    public IFlowStateRecord ReadState(FlowRecordData data)
+    public ErrorOr<IFlowStateRecord> ReadState(FlowRecordData data)
     {
-        MafFlowStateData dto = Read(
-            data.State,
-            MafFlowRecordJson.Default.MafFlowStateData,
-            "MAF 流程状态");
-        TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
+        try
+        {
+            MafFlowStateData dto = Read(
+                data.State,
+                MafFlowRecordJson.Default.MafFlowStateData,
+                "MAF 流程状态");
+            TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
 
-        return new MafFlowStateRecord(
-            new StartInputs(
-            [
-                .. (start.Inputs ?? []).Select(input => new StartInput(
-                    new PortName(RequiredText(input.Port, "开始输入端口")),
-                    RequiredText(input.Text, "开始输入文本"))),
-            ]),
-            new FlowTexts(ReadTexts(start.StartTexts)),
-            dto.Model,
-            dto.CheckpointSession,
-            dto.CheckpointId,
-            dto.CheckpointData,
-            dto.PendingSteps ?? []);
+            return new MafFlowStateRecord(
+                new StartInputs(
+                [
+                    .. (start.Inputs ?? []).Select(input => new StartInput(
+                        new PortName(RequiredText(input.Port, "开始输入端口")),
+                        RequiredText(input.Text, "开始输入文本"))),
+                ]),
+                new FlowTexts(ReadTexts(start.StartTexts)),
+                dto.Model,
+                dto.CheckpointSession,
+                dto.CheckpointId,
+                dto.CheckpointData,
+                dto.PendingSteps ?? []);
+        }
+        catch (FormatException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
+        }
     }
 
     /// <inheritdoc/>
-    public FlowRecordData Write(IFlowDefinitionRecord definition, IFlowStateRecord state)
+    public ErrorOr<FlowRecordData> Write(IFlowDefinitionRecord definition, IFlowStateRecord state)
     {
         if (definition is not MafFlowDefinitionRecord mafDefinition
             || state is not MafFlowStateRecord mafState)
         {
-            throw new NotSupportedException("MAF 流程编解码收到非 MAF 流程记录。");
+            return [Error.Failure(FlowErrorCodes.RecordWrite, "MAF 流程编解码收到非 MAF 流程记录。")];
         }
 
         return new FlowRecordData(

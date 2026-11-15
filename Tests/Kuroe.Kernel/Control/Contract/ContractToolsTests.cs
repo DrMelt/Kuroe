@@ -110,7 +110,7 @@ public sealed class ContractToolsTests
         return execution;
     }
 }
-internal sealed class FakeGateway : IFlowExecutionGateway
+internal sealed class FakeGateway : ITaskExecutionGateway
 {
     private readonly Dictionary<ExecutionId, (IExecution Execution, ITaskFlowContext Owner)> _entries = [];
 
@@ -182,6 +182,8 @@ internal sealed class FakeTask : ITaskFlowContext
     public IReadOnlyList<JournalEntry> JournalEntries => [];
 
     public int DroppedJournal => 0;
+
+    public IReadOnlyList<FlowPendingStep> Pending => [];
 
     public void AppendInfo(string text) => throw new NotSupportedException();
 

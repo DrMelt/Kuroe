@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Configuration.Files;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.Tool;
@@ -18,12 +19,16 @@ public sealed class KuroeComposition
         IServiceCollection services,
         IReadOnlyList<ConfiguredTool> configuredTools,
         KuroeStartup startup,
-        IWorkspaceFiles files)
+        IWorkspaceFiles files,
+        KuroePaths paths,
+        bool persistTasks)
     {
         _services = services;
         ConfiguredTools = configuredTools;
         Startup = startup;
         Files = files;
+        Paths = paths;
+        PersistTasks = persistTasks;
     }
 
     /// <summary>启动信息，其中的日志级别用于宿主注册日志输出。</summary>
@@ -32,8 +37,17 @@ public sealed class KuroeComposition
     /// <summary>本次装配使用的文件访问实现，后续并入的工具源共用它。</summary>
     public IWorkspaceFiles Files { get; }
 
+    /// <summary>本次装配的工作目录路径。</summary>
+    public KuroePaths Paths { get; }
+
+    /// <summary>任务是否写存档并占用租约。</summary>
+    public bool PersistTasks { get; }
+
     /// <summary>已装载的配置命令工具，供状态查询工具呈现。</summary>
     public IReadOnlyList<ConfiguredTool> ConfiguredTools { get; }
+
+    /// <summary>已并入的工具定义，供流程节点类型在装配期校验。</summary>
+    public IReadOnlyList<ToolDefinition> ToolDefinitions => _definitions;
 
     /// <summary>把工具源并入工具集并注册，按函数路径与模型调用名校验重复。失败时不注册任何源。</summary>
     public ErrorOr<Success> AddToolSources(IEnumerable<IToolSource> sources)

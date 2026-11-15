@@ -7,7 +7,7 @@ namespace Kuroe.Maf.Control;
 /// <summary>MAF 步骤的执行桥接：一次步骤运行对应一次 Kuroe 执行，产出作为消息交给下游。</summary>
 internal sealed class MafStepExecutor(
     ITaskFlowContext task,
-    IFlowExecutionGateway gateway,
+    ITaskExecutionGateway gateway,
     MafStep step,
     string model,
     Func<bool> halted,

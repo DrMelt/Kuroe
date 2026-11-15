@@ -6,7 +6,7 @@ using Kuroe.Control.Shared;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Tasks.Runtime;
 
 namespace Kuroe.Assistant.Dialogue;
 

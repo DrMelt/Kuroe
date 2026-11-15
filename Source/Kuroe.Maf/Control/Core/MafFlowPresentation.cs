@@ -10,12 +10,9 @@ namespace Kuroe.Maf.Control;
 public sealed class MafFlowPresentation : IFlowPresentation
 {
     /// <inheritdoc/>
-    public IFlowView CaptureView(ITaskFlowContext task) => View(task);
+    public IFlowView CaptureView(ITaskFlowView task) => View(task);
 
-    /// <inheritdoc/>
-    public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) => [];
-
-    private static FlowView View(ITaskFlowContext task)
+    private static FlowView View(ITaskFlowView task)
     {
         MafFlowState state = MafFlowAccess.State(task);
 
@@ -31,7 +28,7 @@ public sealed class MafFlowPresentation : IFlowPresentation
             []);
     }
 
-    private static FlowStepView Step(MafStep step, ITaskFlowContext task)
+    private static FlowStepView Step(MafStep step, ITaskFlowView task)
     {
         IReadOnlyList<FlowExecutionView> executions =
         [
@@ -76,7 +73,7 @@ public sealed class MafFlowPresentation : IFlowPresentation
         };
     }
 
-    private static FlowItemState StepState(ITaskFlowContext task, IReadOnlyList<FlowExecutionView> executions)
+    private static FlowItemState StepState(ITaskFlowView task, IReadOnlyList<FlowExecutionView> executions)
     {
         if (task.State == TaskState.Terminated)
         {

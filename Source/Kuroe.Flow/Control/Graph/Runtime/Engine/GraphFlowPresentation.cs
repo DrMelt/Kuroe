@@ -11,13 +11,9 @@ namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 public sealed class GraphFlowPresentation : IFlowPresentation
 {
     /// <inheritdoc/>
-    public IFlowView CaptureView(ITaskFlowContext task) => View(task);
+    public IFlowView CaptureView(ITaskFlowView task) => View(task);
 
-    /// <inheritdoc/>
-    public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) =>
-        (task.Control as IFlowInputControl)?.Pending() ?? [];
-
-    private static IFlowView View(ITaskFlowContext task)
+    private static IFlowView View(ITaskFlowView task)
     {
         GraphFlowState state = State(task);
         TaskRuntime runtime = state.Runtime;
@@ -27,14 +23,14 @@ public sealed class GraphFlowPresentation : IFlowPresentation
     }
 
     private static IReadOnlyList<GraphExecutionSnapshot> GraphExecutions(
-        ITaskFlowContext task,
+        ITaskFlowView task,
         GraphFlowState state) =>
         [.. task.Executions.Select(execution => new GraphExecution(
             state.Context(execution.Id).Input,
             execution,
             state.Context(execution.Id).ControlVersion).Snapshot())];
 
-    private static GraphFlowState State(ITaskFlowContext task)
+    private static GraphFlowState State(ITaskFlowView task)
     {
         if (task.FlowState is not GraphFlowState state || !state.Attached)
         {

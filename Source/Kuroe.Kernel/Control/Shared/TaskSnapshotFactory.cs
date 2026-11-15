@@ -9,9 +9,8 @@ public static class TaskSnapshotFactory
 {
     /// <summary>按任务当前状态、流程视图与等待步骤装配快照。</summary>
     public static TaskSnapshot Create(
-        ITaskFlowContext task,
+        ITaskFlowView task,
         IFlowView view,
-        IReadOnlyList<FlowPendingStep> pending,
         FlowTexts startTexts) =>
         new(
             task.Id,
@@ -26,7 +25,7 @@ public static class TaskSnapshotFactory
             task.LastActivityAt)
         {
             Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
-            Pending = [.. pending.Select(PendingOf)],
+            Pending = [.. task.Pending.Select(PendingOf)],
             StartTexts = startTexts,
         };
 

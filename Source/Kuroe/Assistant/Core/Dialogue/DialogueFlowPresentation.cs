@@ -8,13 +8,6 @@ namespace Kuroe.Assistant.Dialogue;
 public sealed class DialogueFlowPresentation : IFlowPresentation
 {
     /// <inheritdoc/>
-    public IFlowView CaptureView(ITaskFlowContext task) =>
-        DialogueView.Build(
-            task.Control as IFlowInputControl,
-            task,
-            task.State);
-
-    /// <inheritdoc/>
-    public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) =>
-        (task.Control as IFlowInputControl)?.Pending() ?? [];
+    public IFlowView CaptureView(ITaskFlowView task) =>
+        DialogueView.Build(task, task.State);
 }

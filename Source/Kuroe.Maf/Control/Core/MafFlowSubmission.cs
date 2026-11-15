@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Records.Shared;
@@ -11,7 +12,7 @@ namespace Kuroe.Maf.Control;
 /// <summary>MAF 流程的提交与恢复：校验开始输入，建立流程状态，从存档重建执行。</summary>
 public sealed class MafFlowSubmission(
     IMafFlowSource flows,
-    IFlowExecutionGateway executions) : IFlowSubmission
+    ITaskExecutionGateway executions) : IFlowSubmission
 {
     /// <inheritdoc/>
     public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title)
@@ -88,17 +89,32 @@ public sealed class MafFlowSubmission(
         }
 
         string model = saved.Model ?? string.Empty;
+        MafCheckpoint? checkpoint = (saved.CheckpointSession, saved.CheckpointId, saved.CheckpointData) switch
+        {
+            ({ } session, { } id, { } data) => new MafCheckpoint(session, id, data),
+            _ => null,
+        };
+        if (checkpoint is { } savedCheckpoint)
+        {
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(savedCheckpoint.Data);
+            }
+            catch (JsonException ex)
+            {
+                return [Error.Failure(
+                    FlowErrorCodes.RecordFormat,
+                    $"MAF 检查点不合法：{ex.Message}")];
+            }
+        }
+
         MafFlowState state = new(
             flow,
             saved.Inputs,
             new FlowTexts(saved.StartTexts.Texts),
             model)
         {
-            Checkpoint = (saved.CheckpointSession, saved.CheckpointId, saved.CheckpointData) switch
-            {
-                ({ } session, { } id, { } data) => new MafCheckpoint(session, id, data),
-                _ => null,
-            },
+            Checkpoint = checkpoint,
         };
 
         List<IExecution> restored = [];

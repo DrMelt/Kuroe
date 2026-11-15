@@ -9,7 +9,7 @@ namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 public sealed class GraphFlowControlFactory(
     IExecutionTargetResolver targets,
     IInputDelivery inputs,
-    IFlowExecutionGateway gateway) : IFlowControlFactory
+    ITaskExecutionGateway gateway) : IFlowControlFactory
 {
     /// <inheritdoc/>
     public IFlowControl CreateControl(ITaskFlowContext task)

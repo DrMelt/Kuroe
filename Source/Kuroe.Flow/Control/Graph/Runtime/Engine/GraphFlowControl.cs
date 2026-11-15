@@ -19,7 +19,7 @@ internal sealed class GraphFlowControl(
     GraphFlowState state,
     IExecutionTargetResolver targetResolver,
     IInputDelivery inputDelivery,
-    IFlowExecutionGateway gateway) : IFlowControl, IFlowInputControl, IFlowRerun
+    ITaskExecutionGateway gateway) : IFlowControl, IFlowInputControl, IFlowRerun
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];

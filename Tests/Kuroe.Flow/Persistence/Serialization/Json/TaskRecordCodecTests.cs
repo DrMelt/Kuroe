@@ -2,12 +2,12 @@ using Kuroe.Execution.Records.Shared;
 using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Tasks.Records.Shared;
-using Kuroe.Flow.Persistence.Serialization.Shared;
+using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
-namespace Kuroe.Flow.Persistence.Json.Tests;
+namespace Kuroe.Tasks.Persistence.Json.Tests;
 
 /// <summary>JSON 存档编解码的契约实现。</summary>
 public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests

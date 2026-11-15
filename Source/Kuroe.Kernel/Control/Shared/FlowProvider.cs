@@ -4,8 +4,7 @@ namespace Kuroe.Control.Shared;
 public sealed record FlowProvider(
     IFlowIdentity Identity,
     IFlowSubmission Submission,
-    IFlowStateBinder StateBinder,
+    IFlowStateBinder? StateBinder,
     IFlowControlFactory Controls,
     IFlowPresentation Presentation,
-    IFlowRecordSource Records,
-    IFlowTemplateSource Templates);
+    IFlowRecordSource Records);

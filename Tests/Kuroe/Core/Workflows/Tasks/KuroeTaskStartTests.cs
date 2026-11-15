@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Tasks.Shared;
 using Kuroe.Tests.Support;
-using Kuroe.Workflows.Tasks;
+using Kuroe.Flow.Hosting.Tasks;
 using Xunit;
 
 namespace Kuroe.Tests.Workflows.Tasks;

@@ -3,8 +3,9 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Workflows.Flows;
+using Kuroe.Flow.Hosting;
+using Kuroe.Flow.Hosting.Flows;
+using Kuroe.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
@@ -63,10 +64,18 @@ internal sealed class CliSession : IAsyncDisposable
         var services = new ServiceCollection();
         ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
             paths.Value,
-            new KuroeCoreOptions { AllowFlowFailures = true, PersistTasks = true });
+            new KuroeCoreOptions { PersistTasks = true });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<Success> graph = services.AddKuroeGraphFlows(
+            composition.Value,
+            new GraphFlowOptions { AllowFlowFailures = true });
+        if (graph.IsError)
+        {
+            return graph.ErrorsOrEmptyList;
         }
 
         configure?.Invoke(services);

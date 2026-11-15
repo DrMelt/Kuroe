@@ -4,7 +4,7 @@ using Kuroe.Execution.Shared;
 namespace Kuroe.Control.Shared;
 
 /// <summary>流程控制访问执行单元的唯一端口：建立、查找、恢复、运行、中断与拒绝执行。</summary>
-public interface IFlowExecutionGateway : IExecutionOwnerIndex
+public interface ITaskExecutionGateway : IExecutionOwnerIndex
 {
     /// <summary>为任务建立一个排队中的执行并分配执行号。</summary>
     IExecution Open(ITaskFlowContext owner, ExecutionRequest request);

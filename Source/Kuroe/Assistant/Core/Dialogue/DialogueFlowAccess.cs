@@ -10,7 +10,7 @@ internal static class DialogueFlowAccess
     private const string ModelKey = "model";
     private const string LanguageKey = "language";
 
-    internal static DialogueFlowState State(ITaskFlowContext task) =>
+    internal static DialogueFlowState State(ITaskFlowView task) =>
         task.FlowState as DialogueFlowState
         ?? throw new InvalidOperationException("任务不是对话流程。");
 

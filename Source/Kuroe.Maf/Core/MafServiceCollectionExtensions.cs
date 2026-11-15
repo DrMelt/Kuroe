@@ -21,14 +21,14 @@ public static class MafServiceCollectionExtensions
         IMafFlowSource flows)
     {
         services.AddSingleton(flows);
+        services.AddSingleton<IFlowTemplateSource>(new MafFlowTemplates(flows));
         services.AddSingleton(sp => new FlowProvider(
             new MafFlowIdentity(flows),
-            new MafFlowSubmission(flows, sp.GetRequiredService<IFlowExecutionGateway>()),
-            NoFlowStateBinder.Instance,
-            new MafFlowControlFactory(sp.GetRequiredService<IFlowExecutionGateway>()),
+            new MafFlowSubmission(flows, sp.GetRequiredService<ITaskExecutionGateway>()),
+            null,
+            new MafFlowControlFactory(sp.GetRequiredService<ITaskExecutionGateway>()),
             new MafFlowPresentation(),
-            new MafFlowRecordSource(),
-            new MafFlowTemplates(flows)));
+            new MafFlowRecordSource()));
         services.AddSingleton<IFlowRecordCodec, MafFlowRecordCodec>();
 
         return services;

@@ -140,7 +140,7 @@ internal sealed class FakeRunner : IExecutionRunner, IProcessJournal
 }
 
 /// <summary>只用于提交与装配测试的执行网关，任何调用都表示测试越界。</summary>
-internal sealed class UnusedGateway : IFlowExecutionGateway
+internal sealed class UnusedGateway : ITaskExecutionGateway
 {
     public IExecution Open(ITaskFlowContext owner, ExecutionRequest request) =>
         throw new NotSupportedException();

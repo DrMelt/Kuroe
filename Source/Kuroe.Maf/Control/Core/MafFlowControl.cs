@@ -9,7 +9,7 @@ namespace Kuroe.Maf.Control;
 /// <summary>一个任务的 MAF 流程控制：MAF 运行期决定步骤推进，Kuroe 执行单元承担每次运行。</summary>
 internal sealed class MafFlowControl(
     ITaskFlowContext task,
-    IFlowExecutionGateway gateway,
+    ITaskExecutionGateway gateway,
     MafFlowState state,
     MafCheckpointStore checkpoints) : IFlowControl, IFlowRerun
 {

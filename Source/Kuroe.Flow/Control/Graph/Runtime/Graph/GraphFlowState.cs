@@ -16,7 +16,7 @@ internal sealed class GraphFlowState(
     IPortTexts startTexts,
     StartPortValues startPorts,
     GraphFlowDefinitionRecord? definition,
-    IFlowExecutionGateway executions) : IGraphFlowState
+    ITaskExecutionGateway executions) : IGraphFlowState
 {
     private readonly Dictionary<ExecutionId, GraphExecutionContext> _executions = [];
     private ITaskFlowContext? _task;

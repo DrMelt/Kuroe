@@ -5,7 +5,8 @@ using Kuroe.Assistant;
 using Kuroe.Console;
 using Kuroe.Console.Views;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Persistence.Restoring.Shared;
+using Kuroe.Flow.Hosting;
+using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
@@ -44,10 +45,19 @@ static async Task<int> RunAsync(string? workDirectory)
     services.AddSingleton(errors);
     ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
         paths.Value,
-        new KuroeCoreOptions { RegisterNodeTypes = NodeTypes.Register });
+        new KuroeCoreOptions());
     if (composition.IsError)
     {
         errors.Report(composition.ErrorsOrEmptyList);
+        return 1;
+    }
+
+    ErrorOr<Success> graph = services.AddKuroeGraphFlows(
+        composition.Value,
+        new GraphFlowOptions { RegisterNodeTypes = NodeTypes.Register });
+    if (graph.IsError)
+    {
+        errors.Report(graph.ErrorsOrEmptyList);
         return 1;
     }
 

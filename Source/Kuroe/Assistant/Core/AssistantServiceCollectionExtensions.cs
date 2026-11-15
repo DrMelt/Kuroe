@@ -1,13 +1,14 @@
 using ErrorOr;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Assistant.Flows;
+using Kuroe.CodeFlow.Persistence;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
-using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Control.Runtime;
+using Kuroe.Tasks.Runtime;
 using Kuroe.Pending;
 using Kuroe.Tool.Source;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,7 @@ public static class AssistantServiceCollectionExtensions
         KuroeComposition composition,
         string sourceDirectory)
     {
+        services.AddKuroeCodeFlowRecords();
         ErrorOr<Success> tools = composition.AddToolSources(
         [
             new SourceToolSource(sourceDirectory, composition.Files),
@@ -44,7 +46,7 @@ public static class AssistantServiceCollectionExtensions
 
             ModelService models = sp.GetRequiredService<ModelService>();
 
-            FlowExecutionGateway gateway = new(
+            TaskExecutionGateway gateway = new(
                 sp.GetRequiredService<ExecutionIndex>(),
                 sp.GetRequiredService<IExecutionRuntime>());
 
@@ -56,11 +58,10 @@ public static class AssistantServiceCollectionExtensions
                     sp.GetRequiredService<SettingsProvider>(),
                     sp.GetRequiredService<KuroePaths>(),
                     gateway),
-                NoFlowStateBinder.Instance,
+                null,
                 new DialogueFlowControlFactory(gateway),
                 new DialogueFlowPresentation(),
-                new DialogueFlowRecordSource(),
-                NoFlowTemplates.Instance);
+                new DialogueFlowRecordSource());
 
             // 对话任务自有任务域，任务键不占用用户任务域的序列
             GuidTaskIdSource ids = new();

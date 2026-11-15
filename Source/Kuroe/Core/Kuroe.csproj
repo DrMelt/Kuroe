@@ -30,34 +30,20 @@
         <ProjectReference Include="..\..\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Files\Core\Kuroe.Files.csproj" />
         <ProjectReference Include="..\Process\Core\Kuroe.Process.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\InputChannel\Core\Kuroe.Flow.InputChannel.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Compilation\Json\Shared\Kuroe.Flow.Json.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Compilation\Json\Core\Kuroe.Flow.Json.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Shared\Kuroe.Flow.Persistence.Serialization.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Files\Shared\Kuroe.Flow.Persistence.Files.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Restoring\Core\Kuroe.Flow.Persistence.Restoring.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Restoring\Shared\Kuroe.Flow.Persistence.Restoring.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Saving\Core\Kuroe.Flow.Persistence.Saving.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Saving\Shared\Kuroe.Flow.Persistence.Saving.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Files\Core\Kuroe.Flow.Persistence.Files.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Json\Core\Kuroe.Flow.Persistence.Json.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Graph\Core\Kuroe.Flow.Persistence.Graph.csproj" />
-        <ProjectReference Include="..\..\Kuroe.CodeFlow\Persistence\Core\Kuroe.CodeFlow.Persistence.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Runtime\Core\Kuroe.Flow.Runtime.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Serialization\Shared\Kuroe.Tasks.Persistence.Serialization.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Files\Shared\Kuroe.Tasks.Persistence.Files.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Restoring\Core\Kuroe.Tasks.Persistence.Restoring.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Restoring\Shared\Kuroe.Tasks.Persistence.Restoring.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Saving\Core\Kuroe.Tasks.Persistence.Saving.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Saving\Shared\Kuroe.Tasks.Persistence.Saving.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Files\Core\Kuroe.Tasks.Persistence.Files.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Persistence\Serialization\Json\Core\Kuroe.Tasks.Persistence.Json.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Kernel\Control\Runtime\Kuroe.Control.Runtime.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
         <ProjectReference Include="..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\Node\File\Core\Kuroe.Node.File.csproj" />
-        <ProjectReference Include="..\Node\Command\Core\Kuroe.Node.Command.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -69,10 +55,8 @@
     </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\..\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Control\Contract\Kuroe.Control.Contract.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>

@@ -7,18 +7,19 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
+using Kuroe.Flow.Hosting;
+using Kuroe.Flow.Hosting.Flows;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Restoring.Shared;
+using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Persistence.Saving.Shared;
+using Kuroe.Tasks.Persistence.Saving.Shared;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Assistant;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant.Dialogue;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Tasks.Runtime;
 using Kuroe.Flow.Control.Graph.Runtime.Engine;
 using Kuroe.Pending;
-using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Console.Tests.Support;
@@ -148,10 +149,18 @@ public sealed class TestEnvironment : IDisposable
         services.AddLogging();
         var runner = new FakeRunner();
 
-        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(paths, new KuroeCoreOptions { RegisterNodeTypes = NodeTypes.Register });
+        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(paths, new KuroeCoreOptions());
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<Success> graph = services.AddKuroeGraphFlows(
+            composition.Value,
+            new GraphFlowOptions { RegisterNodeTypes = NodeTypes.Register });
+        if (graph.IsError)
+        {
+            return graph.ErrorsOrEmptyList;
         }
 
         ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(root, "source"));

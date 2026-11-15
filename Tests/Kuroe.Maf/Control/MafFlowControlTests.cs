@@ -2,9 +2,9 @@ using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
 using Kuroe.Execution.Shared;
-using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Runtime.Tasks.Persistence;
+using Kuroe.Control.Runtime;
+using Kuroe.Tasks.Runtime;
+using Kuroe.Tasks.Runtime.Persistence;
 using Kuroe.Maf.Records.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Tasks.Presentation.Shared;
@@ -274,16 +274,15 @@ public sealed class MafFlowControlTests
                 new ExecutionRunnerRegistry([factory]),
                 new ExecutionRestorerRegistry());
             TaskRegistry registry = new(index, pauseOnRestore: false);
-            Gateway = new FlowExecutionGateway(index, executions);
+            Gateway = new TaskExecutionGateway(index, executions);
             Flow = new FlowRuntime(executions);
             FlowProvider provider = new(
                 new MafFlowIdentity(flows),
                 new MafFlowSubmission(flows, Gateway),
-                NoFlowStateBinder.Instance,
+                null,
                 new MafFlowControlFactory(Gateway),
                 new MafFlowPresentation(),
-                new MafFlowRecordSource(),
-                new MafFlowTemplates(flows));
+                new MafFlowRecordSource());
 
             FlowSubmission submission = new MafFlowSubmission(flows, Gateway)
                 .Prepare(new TaskId(1), TestFlow.Name, TestFlow.Inputs(), "标题")
@@ -302,7 +301,7 @@ public sealed class MafFlowControlTests
             registry.Adopt(Work);
         }
 
-        internal FlowExecutionGateway Gateway { get; }
+        internal TaskExecutionGateway Gateway { get; }
 
         internal FlowRuntime Flow { get; }
 

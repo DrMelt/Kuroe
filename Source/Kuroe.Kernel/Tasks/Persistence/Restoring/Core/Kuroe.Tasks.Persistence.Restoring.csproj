@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shared\Kuroe.Tasks.Persistence.Restoring.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\Files\Shared\Kuroe.Tasks.Persistence.Files.Shared.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\Shared\Kuroe.Tasks.Shared.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
+    </ItemGroup>
+</Project>

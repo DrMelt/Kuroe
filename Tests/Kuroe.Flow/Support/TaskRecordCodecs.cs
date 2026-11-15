@@ -1,7 +1,7 @@
 using Kuroe.CodeFlow.Persistence;
 using Kuroe.Flow.Persistence.Graph;
-using Kuroe.Flow.Persistence.Json;
-using Kuroe.Flow.Persistence.Serialization.Shared;
+using Kuroe.Tasks.Persistence.Json;
+using Kuroe.Tasks.Persistence.Serialization.Shared;
 
 namespace Kuroe.Flow.TestSupport;
 

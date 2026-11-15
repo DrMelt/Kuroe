@@ -75,9 +75,9 @@ public sealed class MafFlowSubmissionTests
             ["第二步"]);
 
         MafFlowRecordCodec codec = new();
-        FlowRecordData data = codec.Write(submission.Definition!, state);
-        IFlowDefinitionRecord definition = codec.ReadDefinition(data);
-        IFlowStateRecord restored = codec.ReadState(data);
+        FlowRecordData data = codec.Write(submission.Definition!, state).Value;
+        IFlowDefinitionRecord definition = codec.ReadDefinition(data).Value;
+        IFlowStateRecord restored = codec.ReadState(data).Value;
 
         Assert.Equal(MafFlowIdentity.Implementation, Assert.IsType<MafFlowDefinitionRecord>(definition).Implementation);
         MafFlowStateRecord roundTripped = Assert.IsType<MafFlowStateRecord>(restored);
@@ -169,8 +169,8 @@ public sealed class MafFlowSubmissionTests
         using JsonDocument document = JsonDocument.Parse("{}");
         FlowRecordData empty = new(document.RootElement, document.RootElement);
 
-        Assert.Throws<FormatException>(() => codec.ReadDefinition(empty));
-        Assert.Throws<FormatException>(() => codec.ReadState(empty));
+        Assert.True(codec.ReadDefinition(empty).IsError);
+        Assert.True(codec.ReadState(empty).IsError);
     }
 
     [Fact]

@@ -1,11 +1,12 @@
+using ErrorOr;
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
-using Kuroe.Flow.Persistence.Serialization.Shared;
+using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
-namespace Kuroe.Flow.Persistence.Json.Tests;
+namespace Kuroe.Tasks.Persistence.Json.Tests;
 
 /// <summary>新增流程实现只需提供自己的记录与编解码器，不改中央序列化项目。</summary>
 public sealed class FlowRecordCodecRegistrationTests
@@ -40,17 +41,17 @@ public sealed class FlowRecordCodecRegistrationTests
     {
         public bool Handles(FlowIdentity identity) => identity.Kind == "custom";
 
-        public IFlowDefinitionRecord ReadDefinition(FlowRecordData data) =>
+        public ErrorOr<IFlowDefinitionRecord> ReadDefinition(FlowRecordData data) =>
             new CustomDefinition(data.Definition.GetProperty("Value").GetString() ?? string.Empty);
 
-        public IFlowStateRecord ReadState(FlowRecordData data) =>
+        public ErrorOr<IFlowStateRecord> ReadState(FlowRecordData data) =>
             new CustomState(data.State.GetProperty("Value").GetString() ?? string.Empty);
 
-        public FlowRecordData Write(IFlowDefinitionRecord definition, IFlowStateRecord state) =>
+        public ErrorOr<FlowRecordData> Write(IFlowDefinitionRecord definition, IFlowStateRecord state) =>
             definition is CustomDefinition customDefinition && state is CustomState customState
                 ? new FlowRecordData(
                     JsonSerializer.SerializeToElement(new { customDefinition.Value }),
                     JsonSerializer.SerializeToElement(new { customState.Value }))
-                : throw new NotSupportedException();
+                : Error.Failure("Record.Write", "记录类型不受支持。");
     }
 }

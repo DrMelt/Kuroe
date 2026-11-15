@@ -1,10 +1,11 @@
+using ErrorOr;
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
-namespace Kuroe.Flow.Persistence.Serialization.Shared.Tests;
+namespace Kuroe.Tasks.Persistence.Serialization.Shared.Tests;
 
 /// <summary>通用存档映射：往返、版本、缺失字段、编解码器选择与错误码。</summary>
 public sealed class TaskRecordSerializationMapperTests
@@ -122,17 +123,17 @@ public sealed class TaskRecordSerializationMapperTests
     {
         public bool Handles(FlowIdentity identity) => identity.Kind == "fake";
 
-        public IFlowDefinitionRecord ReadDefinition(FlowRecordData data) =>
+        public ErrorOr<IFlowDefinitionRecord> ReadDefinition(FlowRecordData data) =>
             new FakeDefinition(data.Definition.GetProperty("Value").GetString() ?? string.Empty);
 
-        public IFlowStateRecord ReadState(FlowRecordData data) =>
+        public ErrorOr<IFlowStateRecord> ReadState(FlowRecordData data) =>
             new FakeState(data.State.GetProperty("Value").GetString() ?? string.Empty);
 
-        public FlowRecordData Write(IFlowDefinitionRecord definition, IFlowStateRecord state) =>
+        public ErrorOr<FlowRecordData> Write(IFlowDefinitionRecord definition, IFlowStateRecord state) =>
             definition is FakeDefinition fakeDefinition && state is FakeState fakeState
                 ? new FlowRecordData(
                     JsonSerializer.SerializeToElement(new { fakeDefinition.Value }),
                     JsonSerializer.SerializeToElement(new { fakeState.Value }))
-                : throw new NotSupportedException();
+                : Error.Failure("Record.Write", "记录类型不受支持。");
     }
 }

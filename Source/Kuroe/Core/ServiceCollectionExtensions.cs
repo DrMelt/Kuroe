@@ -3,32 +3,32 @@ using Kuroe.Catalogs;
 using Kuroe.Catalogs.Files;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Control.Graph.Runtime.Catalog;
+using Kuroe.Control.Contract;
+using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
+using Kuroe.Execution;
 using Kuroe.Execution.Shared;
-using Kuroe.Flow.Graph.Records.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Files;
+using Kuroe.Files.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Node.Command;
-using Kuroe.Node.File;
-using Kuroe.Flow.Compilation.Description;
-using Kuroe.Flow.Persistence.Files.Shared;
-using Kuroe.Flow.Persistence.Json;
-using Kuroe.CodeFlow.Persistence;
-using Kuroe.Flow.Persistence.Graph;
-using Kuroe.Flow.Persistence.Serialization.Shared;
-using Kuroe.Flow.Compilation.Shared.Flow;
-using Kuroe.Execution;
-using Kuroe.Flow.Runtime;
+using Kuroe.Pending;
 using Kuroe.Shared;
-using Kuroe.Flow.Persistence.Restoring.Shared;
-using Kuroe.Flow.Persistence.Saving.Shared;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Tasks.Persistence.Files;
+using Kuroe.Tasks.Persistence.Files.Shared;
+using Kuroe.Tasks.Persistence.Json;
+using Kuroe.Tasks.Persistence.Restoring;
+using Kuroe.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Tasks.Persistence.Saving;
+using Kuroe.Tasks.Persistence.Saving.Shared;
+using Kuroe.Tasks.Persistence.Serialization.Shared;
+using Kuroe.Tasks.Presentation.Shared;
+using Kuroe.Tasks.Records.Shared;
+using Kuroe.Tasks.Runtime;
+using Kuroe.Tasks.Runtime.Persistence;
+using Kuroe.Tasks.Shared;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
@@ -37,40 +37,18 @@ using Kuroe.Tool.File;
 using Kuroe.Tool.Git;
 using Kuroe.Tool.Json;
 using Kuroe.Tool.Time;
-using Kuroe.Workflows.BuiltinNodes;
-using Kuroe.Workflows.Tasks;
-using Kuroe.Flow.Persistence.Files;
 using Kuroe.Tools;
-using Kuroe.Flow.Control.Graph.Runtime.Engine;
-using Kuroe.Control.Contract;
-using Kuroe.Flow.Persistence.Restoring;
-using Kuroe.Flow.Persistence.Saving;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Runtime.Tasks.Persistence;
-using Kuroe.Flow.Compilation;
-using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Files;
-using Kuroe.Files.Shared;
-using Kuroe.Flow.InputChannel;
-using Kuroe.Flow.InputChannel.Shared;
-using Kuroe.Flow.Json;
-using Kuroe.Flow.NodeLibrary;
-using Kuroe.Flow.NodeType.Container;
-using Kuroe.Pending;
-using Kuroe.Workflows.Flows;
-using Kuroe.Workflows.Flows.Files;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe;
 
-/// <summary>Kuroe 核心装配入口，新增核心工具或服务改这里。宿主提供路径，日志输出由宿主注册。</summary>
+/// <summary>Kuroe 核心装配入口，只装配中性基础设施与任务运行时。具体流程由各自的装配入口并入。</summary>
 public static class ServiceCollectionExtensions
 {
-    /// <summary>装配配置、目录、流程、基础工具与任务推进，失败时返回启动期的全部错误。
-    /// 内置助手由 AddKuroeAssistant 在核心装配之后并入。</summary>
+    /// <summary>装配配置、目录、基础工具、任务运行时与持久化，失败时返回启动期的全部错误。</summary>
     /// <param name="services">服务集合。</param>
     /// <param name="paths">工作目录及其下的配置路径。</param>
-    /// <param name="options">宿主追加的节点类型与流程库失败策略。</param>
+    /// <param name="options">核心装配选项。</param>
     /// <returns>装配产物，其中的启动信息用于宿主注册日志输出，工具集可继续并入工具。</returns>
     public static ErrorOr<KuroeComposition> AddKuroeCore(
         this IServiceCollection services,
@@ -91,26 +69,6 @@ public static class ServiceCollectionExtensions
             return catalog.ErrorsOrEmptyList;
         }
 
-        ErrorOr<TaskDirectory> taskDirectory = TaskDirectory.Create(paths.TasksDirectory);
-        if (taskDirectory.IsError)
-        {
-            return taskDirectory.ErrorsOrEmptyList;
-        }
-
-        // 宿主开始输入表只承载流程名到开始端口的映射，与流程开始入口的一致性在任务提交时校验
-        ErrorOr<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> hostForms =
-            new HostStartInputsStore(paths.HostStartInputsFile).Load();
-        if (hostForms.IsError)
-        {
-            return hostForms.ErrorsOrEmptyList;
-        }
-
-        ErrorOr<HostStartInputs> hostStartInputs = HostStartInputs.Create(hostForms.Value, StartSources.Supported);
-        if (hostStartInputs.IsError)
-        {
-            return hostStartInputs.ErrorsOrEmptyList;
-        }
-
         ToolFileRegistry toolFiles = new();
         CommandToolFiles.RegisterInto(toolFiles);
 
@@ -125,9 +83,10 @@ public static class ServiceCollectionExtensions
             services,
             configuredTools.Value,
             new KuroeStartup(settings.Value.Current.Runtime.LogLevel),
-            files);
+            files,
+            paths,
+            coreOptions.PersistTasks);
 
-        // 工具定义先于流程编译，供 ToolPorts 在装载期校验变量映射
         List<IToolSource> definitionSources =
         [
             new FileToolSource(files),
@@ -142,59 +101,13 @@ public static class ServiceCollectionExtensions
             return definitionTools.ErrorsOrEmptyList;
         }
 
-        ToolContractCatalog contracts = new(definitionSources.SelectMany(source => source.Definitions));
-
-        NodeTypeDescriptionRegistry typeFiles = new();
-        InputRegistry inputs = new();
-        JsonNodeFormat nodeFormat = new();
-        JsonFlowFormat flowFormat = new();
-        JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
-        IFlowExpander expander = new NodeLibraryExpander();
-        IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
-        ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
-        LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
-        FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, files);
-        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, coreOptions.CommandNodeProcessRunner);
-        coreOptions.RegisterNodeTypes?.Invoke(typeFiles, inputs);
-
-        ErrorOr<FlowService> flows = FlowService.Create(
-            new FlowStore(
-                paths.NodesFile,
-                paths.FlowsFile,
-                paths.WorkingDirectory,
-                nodeFormat,
-                nodeFormat,
-                flowFormat,
-                flowFormat,
-                importFormat),
-            BuiltinNodes.Nodes,
-            descriptionCompiler,
-            coreOptions.AllowFlowFailures);
-        if (flows.IsError)
-        {
-            return flows.ErrorsOrEmptyList;
-        }
-
         services.AddSingleton(paths);
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
-        services.AddSingleton<IInputChannel>(inputs);
-        services.AddSingleton<IInputDelivery>(inputs);
         services.AddSingleton<IModelAccess>(catalog.Value);
-        services.AddSingleton(flows.Value);
-        services.AddSingleton<IFlowCatalog>(flows.Value);
-        services.AddSingleton<IFlowLibrary>(flows.Value);
-        services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
-        services.AddSingleton<IFlowSnapshotSource>(flows.Value);
-        services.AddSingleton<IFlowSnapshotCompiler>(flows.Value);
-        services.AddSingleton(hostStartInputs.Value);
-        services.AddSingleton<IHostStartInputs>(hostStartInputs.Value);
-        services.AddSingleton<IFlowTemplateCatalog>(sp => new FlowTemplateCatalog(
-            sp.GetRequiredService<IFlowProviderSource>()));
-        services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
-            paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
-        services.AddSingleton(descriptionCompiler);
         services.AddSingleton(configuredTools.Value);
+        services.AddSingleton<IFlowTemplateCatalog>(sp => new FlowTemplateCatalog(
+            sp.GetServices<IFlowTemplateSource>()));
 
         ModelService modelService = new(settings.Value, catalog.Value);
         services.AddSingleton(modelService);
@@ -206,8 +119,6 @@ public static class ServiceCollectionExtensions
             composition,
             settings.Value,
             catalog.Value,
-            flows.Value,
-            hostStartInputs.Value,
             modelService,
             paths.WorkingDirectory,
             taskRegistry,
@@ -218,7 +129,6 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<IToolJson, ToolJson>();
-        // 工具面展示用的只读集合，只持有定义，不建立载体
         services.AddSingleton(sp => ToolCollection.ForDisplay(
             sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
             sp.GetRequiredService<IToolJson>()));
@@ -234,7 +144,8 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ExecutionRestorerRegistry>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
         services.AddSingleton<IExecutionOwnerIndex>(executions);
-        services.AddSingleton<IFlowExecutionGateway>(sp => new FlowExecutionGateway(
+        services.AddSingleton<IExecutionIndex>(executions);
+        services.AddSingleton<ITaskExecutionGateway>(sp => new TaskExecutionGateway(
             executions,
             sp.GetRequiredService<IExecutionRuntime>()));
         services.AddSingleton<IExecutionContractWriter, ExecutionContractWriter>();
@@ -254,8 +165,6 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IExecutionCannotCompleteSubmitter>(),
             sp.GetRequiredService<IExecutionStatusReader>()));
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
-        services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
-        services.AddSingleton<IFlowRecordCodec, CodeFlowRecordCodec>();
         services.AddSingleton(sp => new TaskRecordSerializationMapper([.. sp.GetServices<IFlowRecordCodec>()]));
         services.AddSingleton<ITaskRecordCodec>(sp => new TaskRecordCodec(
             sp.GetRequiredService<TaskRecordSerializationMapper>()));
@@ -267,30 +176,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITaskRecordCoordinator>(sp => new TaskRecordCoordinator(
             sp.GetRequiredService<ITaskRecordSource>(),
             sp.GetRequiredService<ITaskRecordStore>()));
-
-        // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
-        services.AddSingleton<IExecutionTargetResolver>(sp => new ExecutionTargetResolver(
-            new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
-        services.AddSingleton(sp => new FlowProvider(
-            new GraphFlowIdentity(flows.Value),
-            new GraphFlowSubmission(
-                flows.Value,
-                flows.Value,
-                hostStartInputs.Value,
-                sp.GetRequiredService<IHostTaskStart>(),
-                sp.GetRequiredService<IExecutionTargetResolver>(),
-                sp.GetRequiredService<IFlowExecutionGateway>(),
-                coreOptions.PersistTasks ? flows.Value : null),
-            new GraphFlowStateBinder(),
-            new GraphFlowControlFactory(
-                sp.GetRequiredService<IExecutionTargetResolver>(),
-                inputs,
-                sp.GetRequiredService<IFlowExecutionGateway>()),
-            new GraphFlowPresentation(),
-            new GraphFlowRecordSource(),
-            new GraphFlowTemplateSource(
-                flows.Value,
-                hostStartInputs.Value)));
         services.AddSingleton(sp => new FlowProviderSource(sp.GetServices<FlowProvider>()));
         services.AddSingleton<IFlowProviderSource>(sp => sp.GetRequiredService<FlowProviderSource>());
         services.AddSingleton(sp => new FlowRuntime(
@@ -308,6 +193,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<ITaskLeaseStore>(),
                 sp.GetRequiredService<ITaskRestoreRuntime>()));
         }
+
         services.AddSingleton(sp => new TaskService(
             new TaskActions(
                 taskRegistry,
@@ -334,32 +220,26 @@ public static class ServiceCollectionExtensions
         return composition;
     }
 
-    /// <summary>装配运行期工具源并注册：状态查询工具与契约工具按定义校验重复。
-    /// 路径型工具定义已在流程编译前注册。载体在每次执行时按上下文创建。TaskRegistry 是用户任务域，ExecutionIndex 是全部任务域共享的执行索引。</summary>
+    /// <summary>装配运行期工具源并注册：状态查询工具与契约工具按定义校验重复。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
         KuroeComposition composition,
         SettingsProvider settings,
         CatalogService catalog,
-        FlowService flows,
-        HostStartInputs hostStartInputs,
         ModelService models,
         string workingDirectory,
         TaskRegistry taskRegistry,
         ExecutionIndex executions)
     {
         TaskSnapshotReader taskReader = new(taskRegistry);
+        FlowTemplateCatalog definitionCatalog = new([]);
+        KuroeInfoToolSource definitions = new(
+            taskReader,
+            new ToolCatalogView(catalog, models),
+            definitionCatalog,
+            settings);
 
-        List<IToolSource> sources =
-        [
-            new KuroeInfoToolSource(
-                taskReader,
-                new ToolCatalogView(catalog, models),
-                new FlowTemplateCatalog(new GraphFlowTemplateSource(flows, hostStartInputs)),
-                settings),
-        ];
-
-        ErrorOr<Success> added = composition.AddToolSources(sources);
+        ErrorOr<Success> added = composition.AddToolDefinitions(definitions.Definitions);
         if (added.IsError)
         {
             return added.ErrorsOrEmptyList;
@@ -375,6 +255,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(taskRegistry);
         services.AddSingleton<ITaskChangeSource>(taskRegistry);
         services.AddSingleton<ITaskReader>(taskReader);
+        services.AddSingleton<IToolSource>(sp => new KuroeInfoToolSource(
+            taskReader,
+            new ToolCatalogView(catalog, models),
+            sp.GetRequiredService<IFlowTemplateCatalog>(),
+            settings));
         services.AddSingleton<IToolFactory>(sp => new KuroeToolFactory(
             [.. sp.GetServices<IToolSource>()],
             workingDirectory));
@@ -382,4 +267,3 @@ public static class ServiceCollectionExtensions
         return Result.Success;
     }
 }
-

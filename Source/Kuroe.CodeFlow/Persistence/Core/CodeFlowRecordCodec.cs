@@ -1,3 +1,4 @@
+using ErrorOr;
 using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
@@ -13,45 +14,59 @@ public sealed class CodeFlowRecordCodec : IFlowRecordCodec
     public bool Handles(FlowIdentity identity) => identity.Kind == CodeFlowKind.Value;
 
     /// <inheritdoc/>
-    public IFlowDefinitionRecord ReadDefinition(FlowRecordData data)
+    public ErrorOr<IFlowDefinitionRecord> ReadDefinition(FlowRecordData data)
     {
-        CodeFlowDefinitionData dto = Read(
-            data.Definition,
-            CodeFlowRecordJson.Default.CodeFlowDefinitionData,
-            "代码流程定义");
+        try
+        {
+            CodeFlowDefinitionData dto = Read(
+                data.Definition,
+                CodeFlowRecordJson.Default.CodeFlowDefinitionData,
+                "代码流程定义");
 
-        return new CodeFlowDefinitionRecord(
-            RequiredText(dto.Implementation, "代码流程实现"),
-            dto.Values ?? []);
+            return new CodeFlowDefinitionRecord(
+                RequiredText(dto.Implementation, "代码流程实现"),
+                dto.Values ?? []);
+        }
+        catch (FormatException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
+        }
     }
 
     /// <inheritdoc/>
-    public IFlowStateRecord ReadState(FlowRecordData data)
+    public ErrorOr<IFlowStateRecord> ReadState(FlowRecordData data)
     {
-        CodeFlowStateData dto = Read(
-            data.State,
-            CodeFlowRecordJson.Default.CodeFlowStateData,
-            "代码流程状态");
-        TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
+        try
+        {
+            CodeFlowStateData dto = Read(
+                data.State,
+                CodeFlowRecordJson.Default.CodeFlowStateData,
+                "代码流程状态");
+            TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
 
-        return new CodeFlowStateRecord(
-            new StartInputs(
-            [
-                .. (start.Inputs ?? []).Select(input => new StartInput(
-                    new PortName(RequiredText(input.Port, "开始输入端口")),
-                    RequiredText(input.Text, "开始输入文本"))),
-            ]),
-            new FlowTexts(ReadTexts(start.StartTexts)),
-            dto.Values ?? []);
+            return new CodeFlowStateRecord(
+                new StartInputs(
+                [
+                    .. (start.Inputs ?? []).Select(input => new StartInput(
+                        new PortName(RequiredText(input.Port, "开始输入端口")),
+                        RequiredText(input.Text, "开始输入文本"))),
+                ]),
+                new FlowTexts(ReadTexts(start.StartTexts)),
+                dto.Values ?? []);
+        }
+        catch (FormatException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
+        }
     }
 
     /// <inheritdoc/>
-    public FlowRecordData Write(IFlowDefinitionRecord definition, IFlowStateRecord state)
+    public ErrorOr<FlowRecordData> Write(IFlowDefinitionRecord definition, IFlowStateRecord state)
     {
         if (definition is not CodeFlowDefinitionRecord codeDefinition
             || state is not CodeFlowStateRecord codeState)
         {
-            throw new NotSupportedException("代码流程编解码收到非代码流程记录。");
+            return [Error.Failure(FlowErrorCodes.RecordWrite, "代码流程编解码收到非代码流程记录。")];
         }
 
         return new FlowRecordData(

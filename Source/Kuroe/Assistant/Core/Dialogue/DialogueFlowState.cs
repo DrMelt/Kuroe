@@ -41,8 +41,7 @@ internal sealed class DialogueFlowState(
 internal static class DialogueView
 {
     internal static FlowView Build(
-        IFlowInputControl? control,
-        ITaskFlowContext task,
+        ITaskFlowView task,
         TaskState? taskState = null)
     {
         IReadOnlyList<FlowExecutionView> executions =
@@ -69,7 +68,7 @@ internal static class DialogueView
         {
             stepState = FlowItemState.Canceled;
         }
-        else if (control?.Pending().Count > 0)
+        else if (task.Pending.Count > 0)
         {
             stepState = FlowItemState.Pending;
         }

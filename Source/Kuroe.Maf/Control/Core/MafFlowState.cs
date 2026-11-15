@@ -38,7 +38,7 @@ internal sealed class MafFlowState(
 /// <summary>MAF 流程状态的读取。</summary>
 internal static class MafFlowAccess
 {
-    internal static MafFlowState State(ITaskFlowContext task) =>
+    internal static MafFlowState State(ITaskFlowView task) =>
         task.FlowState as MafFlowState
         ?? throw new InvalidOperationException("任务不是 MAF 流程。");
 }

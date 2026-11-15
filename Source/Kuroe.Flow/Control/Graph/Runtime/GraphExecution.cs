@@ -40,7 +40,7 @@ public sealed class GraphExecution : IGraphExecution
     internal static GraphExecution Restore(
         ExecutionRecord record,
         GraphExecutionInput input,
-        IFlowExecutionGateway executions)
+        ITaskExecutionGateway executions)
     {
         ExecutionRequest request = BuildRequest(input);
         IExecution unit = executions.Restore(

@@ -1,3 +1,4 @@
+using ErrorOr;
 using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
@@ -12,26 +13,44 @@ public sealed class GraphFlowRecordCodec : IFlowRecordCodec
     public bool Handles(FlowIdentity identity) => identity.Kind == GraphFlowKind.Value;
 
     /// <inheritdoc/>
-    public IFlowDefinitionRecord ReadDefinition(FlowRecordData data) =>
-        GraphFlowRecordReading.ReadDefinition(Read<GraphFlowDefinitionData>(
-            data.Definition,
-            GraphFlowRecordJson.Default.GraphFlowDefinitionData,
-            "图流程定义"));
+    public ErrorOr<IFlowDefinitionRecord> ReadDefinition(FlowRecordData data)
+    {
+        try
+        {
+            return GraphFlowRecordReading.ReadDefinition(Read<GraphFlowDefinitionData>(
+                data.Definition,
+                GraphFlowRecordJson.Default.GraphFlowDefinitionData,
+                "图流程定义"));
+        }
+        catch (FormatException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
+        }
+    }
 
     /// <inheritdoc/>
-    public IFlowStateRecord ReadState(FlowRecordData data) =>
-        GraphFlowRecordReading.ReadState(Read<GraphFlowStateData>(
-            data.State,
-            GraphFlowRecordJson.Default.GraphFlowStateData,
-            "图流程状态"));
+    public ErrorOr<IFlowStateRecord> ReadState(FlowRecordData data)
+    {
+        try
+        {
+            return GraphFlowRecordReading.ReadState(Read<GraphFlowStateData>(
+                data.State,
+                GraphFlowRecordJson.Default.GraphFlowStateData,
+                "图流程状态"));
+        }
+        catch (FormatException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
+        }
+    }
 
     /// <inheritdoc/>
-    public FlowRecordData Write(IFlowDefinitionRecord definition, IFlowStateRecord state)
+    public ErrorOr<FlowRecordData> Write(IFlowDefinitionRecord definition, IFlowStateRecord state)
     {
         if (definition is not GraphFlowDefinitionRecord graphDefinition
             || state is not GraphFlowStateRecord graphState)
         {
-            throw new NotSupportedException("图流程编解码收到非图流程记录。");
+            return [Error.Failure(FlowErrorCodes.RecordWrite, "图流程编解码收到非图流程记录。")];
         }
 
         return new FlowRecordData(

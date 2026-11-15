@@ -25,7 +25,7 @@ public sealed class GraphFlowSubmission(
     IHostStartInputs hostStartInputs,
     IHostTaskStart host,
     IExecutionTargetResolver targets,
-    IFlowExecutionGateway executions,
+    ITaskExecutionGateway executions,
     IFlowSnapshotSource? snapshots = null) : IFlowSubmission
 {
     /// <inheritdoc/>

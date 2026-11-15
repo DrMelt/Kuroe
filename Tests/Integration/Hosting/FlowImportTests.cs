@@ -5,7 +5,7 @@ using Kuroe.Configuration.Files;
 using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Workflows.Flows;
+using Kuroe.Flow.Hosting.Flows;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Hosting;

@@ -10,20 +10,21 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Persistence.Restoring.Shared;
-using Kuroe.Flow.Persistence.Saving.Shared;
+using Kuroe.Flow.Hosting;
+using Kuroe.Flow.Hosting.Flows;
+using Kuroe.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Tasks.Persistence.Saving.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Assistant;
 using Kuroe.Assistant.Dialogue;
-using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Control.Runtime;
+using Kuroe.Tasks.Runtime;
 using Kuroe.Flow.Control.Graph.Runtime.Engine;
 using Kuroe.Pending;
 using Kuroe.Process;
 using Kuroe.Tool;
 using Kuroe.Tool.Contract;
-using Kuroe.Workflows.Flows;
 using Kuroe.Flow.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -183,13 +184,12 @@ public sealed class TestEnvironment : IDisposable
         }
         """;
 
-    /// <summary>完整装配的选项：注册全部节点类型，流程失败即启动失败。默认不写存档，持久化用例显式打开。</summary>
-    internal static KuroeCoreOptions Options => CreateOptions(null);
+    /// <summary>完整装配的核心选项。默认不写存档，持久化用例显式打开。</summary>
+    internal static KuroeCoreOptions Options => new() { PersistTasks = false };
 
-    private static KuroeCoreOptions CreateOptions(IProcessRunner? process) => new()
+    private static GraphFlowOptions CreateGraphOptions(IProcessRunner? process) => new()
     {
         RegisterNodeTypes = TestTypeFiles.RegisterAll,
-        PersistTasks = false,
         CommandNodeProcessRunner = process,
     };
 
@@ -216,10 +216,16 @@ public sealed class TestEnvironment : IDisposable
 
         ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
             paths,
-            CreateOptions(process) with { PersistTasks = persistTasks });
+            new KuroeCoreOptions { PersistTasks = persistTasks });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<Success> graph = services.AddKuroeGraphFlows(composition.Value, CreateGraphOptions(process));
+        if (graph.IsError)
+        {
+            return graph.ErrorsOrEmptyList;
         }
 
         ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(root, "source"));

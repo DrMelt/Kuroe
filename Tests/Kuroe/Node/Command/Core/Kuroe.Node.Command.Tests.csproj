@@ -16,7 +16,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Node\Command\Core\Kuroe.Node.Command.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
         
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />

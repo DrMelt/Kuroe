@@ -7,8 +7,9 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Tool;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Workflows.Flows;
+using Kuroe.Tasks.Runtime;
+using Kuroe.Flow.Hosting;
+using Kuroe.Flow.Hosting.Flows;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -161,6 +162,9 @@ public sealed class WiringTests : IDisposable
 
         ErrorOr<KuroeComposition> composition = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
         Assert.False(composition.IsError);
+
+        ErrorOr<Success> graph = services.AddKuroeGraphFlows(composition.Value);
+        Assert.False(graph.IsError);
 
         ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(_root, "source"));
         Assert.False(assistant.IsError);
