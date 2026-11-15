@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Shared;
 
-namespace Kuroe.Flow.Hosting.Flows;
+namespace Kuroe.Flow.Hosting.Workflows.Flows;
 
 /// <summary>宿主开始输入表的错误构造。表与流程的开始入口不一致时在任务提交阶段报出。</summary>
 static class HostStartInputsErrors

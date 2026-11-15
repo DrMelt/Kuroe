@@ -5,8 +5,8 @@ using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Shared;
-using Kuroe.Flow.Hosting.Flows;
-using Kuroe.Flow.Hosting.Tasks;
+using Kuroe.Flow.Hosting.Workflows.Flows;
+using Kuroe.Flow.Hosting.Workflows.Tasks;
 using Xunit;
 
 namespace Kuroe.Tests.Workflows.Flows;

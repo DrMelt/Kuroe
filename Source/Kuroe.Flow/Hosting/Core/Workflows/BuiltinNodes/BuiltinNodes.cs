@@ -6,7 +6,7 @@ using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Tool;
 
-namespace Kuroe.Flow.Hosting.BuiltinNodes;
+namespace Kuroe.Flow.Hosting.Workflows.BuiltinNodes;
 
 /// <summary>内置节点定义：随程序注册进节点库，可被文件定义的同类节点同名覆盖。</summary>
 internal static class BuiltinNodes

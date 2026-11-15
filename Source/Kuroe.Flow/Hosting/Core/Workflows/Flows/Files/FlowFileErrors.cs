@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Flow.Hosting.Flows.Files;
+namespace Kuroe.Flow.Hosting.Workflows.Flows.Files;
 
 /// <summary>节点库与流程文件存取域的错误构造。</summary>
 static class FlowFileErrors

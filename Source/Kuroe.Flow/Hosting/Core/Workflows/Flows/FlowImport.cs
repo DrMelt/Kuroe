@@ -1,6 +1,6 @@
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Flow.Hosting.Flows;
+namespace Kuroe.Flow.Hosting.Workflows.Flows;
 
 /// <summary>一次导入的结果：来源文件的绝对路径、导入的流程与节点定义及逐条说明。</summary>
 public sealed record FlowImport(

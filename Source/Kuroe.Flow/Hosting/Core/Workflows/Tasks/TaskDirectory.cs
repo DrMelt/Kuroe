@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Tasks.Shared;
 using Kuroe.Shared;
 
-namespace Kuroe.Flow.Hosting.Tasks;
+namespace Kuroe.Flow.Hosting.Workflows.Tasks;
 
 /// <summary>任务工作目录：以任务键给目录命名，在启动目录下建立。</summary>
 public sealed class TaskDirectory

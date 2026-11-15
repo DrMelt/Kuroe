@@ -2,13 +2,12 @@ using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Control.Runtime;
-using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Tasks;
+namespace Kuroe.Tasks.Runtime.Tests;
 
 /// <summary>任务控制状态：瞬态 Done 快照不阻止暂停与终止，真正完成后才拒绝。</summary>
 public sealed class WorkTaskTests

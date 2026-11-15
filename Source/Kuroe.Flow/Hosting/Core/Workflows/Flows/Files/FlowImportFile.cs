@@ -1,6 +1,6 @@
 using Kuroe.Flow.Compilation.Shared;
 
-namespace Kuroe.Flow.Hosting.Flows.Files;
+namespace Kuroe.Flow.Hosting.Workflows.Flows.Files;
 
 /// <summary>一次导入文件的内容：节点库文件或流程文件，只承载其中一类。</summary>
 public abstract record FlowImportFile(string Source);

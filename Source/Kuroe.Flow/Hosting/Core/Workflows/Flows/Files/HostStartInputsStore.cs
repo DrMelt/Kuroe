@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
 
-namespace Kuroe.Flow.Hosting.Flows.Files;
+namespace Kuroe.Flow.Hosting.Workflows.Flows.Files;
 
 /// <summary>hostStartInputs.json 的读取：文本形状是流程名到开始端口到宿主输入名的两层表。
 /// 文件不存在时没有表项，结构不符、名字为空与重复一次给全。</summary>

@@ -7,13 +7,12 @@ using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Control.Runtime;
-using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Tasks;
+namespace Kuroe.Tasks.Runtime.Tests;
 
 /// <summary>代码定义流程使用执行端口与中性契约工具：输入、输出、状态读取、无法完成与存档往返。</summary>
 public sealed class CodeFlowExecutionTests

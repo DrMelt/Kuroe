@@ -5,7 +5,7 @@ using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Hosting.Flows;
+namespace Kuroe.Flow.Hosting.Workflows.Flows;
 
 /// <summary>宿主维护的开始输入表：一条流程一项，键是开始端口名，值是宿主输入名。
 /// 表项之外承载内容的开始端口按用户输入处理，不承载内容的开始端口不进入提交，表项之内的开始端口由宿主给值，不依赖端口命名。

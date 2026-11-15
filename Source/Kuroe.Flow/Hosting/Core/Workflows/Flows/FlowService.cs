@@ -5,9 +5,9 @@ using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Shared;
-using Kuroe.Flow.Hosting.Flows.Files;
+using Kuroe.Flow.Hosting.Workflows.Flows.Files;
 
-namespace Kuroe.Flow.Hosting.Flows;
+namespace Kuroe.Flow.Hosting.Workflows.Flows;
 
 /// <summary>运行期的流程模板集合。描述文档是授权来源，编译结果是运行期来源，落盘交给 FlowStore。</summary>
 public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapshotSource, IFlowSnapshotCompiler, IFlowLibrary

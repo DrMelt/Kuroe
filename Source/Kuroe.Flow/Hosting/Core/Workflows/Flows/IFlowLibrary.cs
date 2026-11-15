@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Hosting.Flows;
+namespace Kuroe.Flow.Hosting.Workflows.Flows;
 
 /// <summary>宿主可用的流程库操作：不可用流程与文件导入。</summary>
 public interface IFlowLibrary

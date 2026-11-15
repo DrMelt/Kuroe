@@ -3,7 +3,7 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Json.Shared;
 using Kuroe.Tasks.Persistence.Files;
 
-namespace Kuroe.Flow.Hosting.Flows.Files;
+namespace Kuroe.Flow.Hosting.Workflows.Flows.Files;
 
 /// <summary>nodes.json 与 flows.json 的文件存取：路径解析、读取与原子写入。文本与描述文档的转换由格式实现承担。</summary>
 public sealed class FlowStore(

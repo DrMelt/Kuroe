@@ -3,14 +3,13 @@ using Kuroe.Control.Shared;
 using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Control.Runtime;
-using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Runtime.Persistence;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Tasks;
+namespace Kuroe.Tasks.Runtime.Tests;
 
 /// <summary>流程实现分派：恢复按存档定义选择实现，同一种类可以有多个实现。</summary>
 public sealed class FlowProviderSourceTests
@@ -156,7 +155,7 @@ public sealed class FlowProviderSourceTests
     {
         public IFlowView CaptureView(ITaskFlowView task) => new FlowView(name, "code", null, [], [], []);
 
-        }
+    }
 
     private sealed class TestRecords : IFlowRecordSource
     {

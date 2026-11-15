@@ -1,10 +1,7 @@
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
-using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared;
-using Kuroe.Files;
 using Kuroe.Files.Shared;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Description;
@@ -14,10 +11,10 @@ using Kuroe.Flow.Compilation.Shared.Flow;
 using Kuroe.Flow.Control.Graph.Runtime.Catalog;
 using Kuroe.Flow.Control.Graph.Runtime.Engine;
 using Kuroe.Flow.Graph.Records.Shared;
-using BuiltinNodeCatalog = Kuroe.Flow.Hosting.BuiltinNodes.BuiltinNodes;
-using Kuroe.Flow.Hosting.Flows;
-using Kuroe.Flow.Hosting.Flows.Files;
-using Kuroe.Flow.Hosting.Tasks;
+using BuiltinNodeCatalog = Kuroe.Flow.Hosting.Workflows.BuiltinNodes.BuiltinNodes;
+using Kuroe.Flow.Hosting.Workflows.Flows;
+using Kuroe.Flow.Hosting.Workflows.Flows.Files;
+using Kuroe.Flow.Hosting.Workflows.Tasks;
 using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Json;
@@ -28,11 +25,9 @@ using Kuroe.Flow.Persistence.Graph;
 using Kuroe.Node.Command;
 using Kuroe.Node.File;
 using Kuroe.Node.Llm;
-using Kuroe.Node.Llm.Tools;
 using Kuroe.Process;
 using Kuroe.Tool;
 using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Flow.Hosting;
@@ -113,7 +108,7 @@ public static class GraphFlowServiceCollectionExtensions
         {
             return flows.ErrorsOrEmptyList;
         }
-    services.AddSingleton<IInputChannel>(inputs);
+        services.AddSingleton<IInputChannel>(inputs);
         services.AddSingleton<IInputDelivery>(inputs);
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);

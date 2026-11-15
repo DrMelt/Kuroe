@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Cli.Views;
 using Kuroe.Presentation.Shared;
 using Kuroe.Tasks.Shared;
-using Kuroe.Flow.Hosting.Flows;
+using Kuroe.Flow.Hosting.Workflows.Flows;
 
 namespace Kuroe.Cli.Commands;
 
