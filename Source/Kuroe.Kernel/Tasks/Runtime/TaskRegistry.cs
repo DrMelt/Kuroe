@@ -8,21 +8,32 @@ using Kuroe.Tasks.Shared;
 namespace Kuroe.Tasks.Runtime;
 
 /// <summary>一个任务域内的任务索引：按任务键查找、交出快照、转发执行通知。状态本身存在任务与流程控制上。</summary>
-/// <param name="executions">全部任务域共享的执行索引。</param>
-/// <param name="inputs">任务域的输入登记，用于读取待处理步骤与清理登记。</param>
-/// <param name="pauseOnRestore">可恢复的中断收口时是否暂停任务。</param>
-public sealed class TaskRegistry(
-    IExecutionIndex executions,
-    IInputDelivery? inputs = null,
-    bool pauseOnRestore = true) : ITaskChangeSource
+public sealed class TaskRegistry : ITaskChangeSource
 {
     private readonly Lock _gate = new();
+    private readonly IExecutionIndex _executions;
+    private readonly bool _inputChangesBound;
+
+    /// <summary>建立一个任务域。</summary>
+    /// <param name="executions">全部任务域共享的执行索引。</param>
+    /// <param name="inputs">任务域的输入登记，用于读取待处理步骤与清理登记。</param>
+    /// <param name="pauseOnRestore">可恢复的中断收口时是否暂停任务。</param>
+    public TaskRegistry(
+        IExecutionIndex executions,
+        IInputDelivery? inputs = null,
+        bool pauseOnRestore = true)
+    {
+        _executions = executions;
+        Input = inputs;
+        PauseOnRestore = pauseOnRestore;
+        _inputChangesBound = BindInputChanges(inputs, OnInputChanged);
+    }
 
     /// <summary>任务域的输入登记。</summary>
-    public IInputDelivery? Input { get; } = inputs;
+    public IInputDelivery? Input { get; }
 
     /// <summary>任务域是否在可恢复的中断收口时暂停任务，等待宿主恢复。</summary>
-    internal bool PauseOnRestore { get; } = pauseOnRestore;
+    internal bool PauseOnRestore { get; }
 
     private readonly Dictionary<string, WorkTask> _tasks = [];
 
@@ -42,7 +53,7 @@ public sealed class TaskRegistry(
     }
 
     /// <summary>把恢复的执行登记进共享执行索引，并推进下一次执行号。</summary>
-    public void RestoreExecution(ITaskFlowContext owner, IExecution execution) => executions.Restore(owner, execution);
+    public void RestoreExecution(ITaskFlowContext owner, IExecution execution) => _executions.Restore(owner, execution);
 
     /// <summary>按任务键取任务，不存在时返回错误。</summary>
     public ErrorOr<WorkTask> Find(TaskId id)
@@ -84,7 +95,7 @@ public sealed class TaskRegistry(
     public ErrorOr<(WorkTask Task, IExecution Execution)> FindOwnedExecution(ExecutionId id)
     {
         ErrorOr<(IExecution Execution, ITaskFlowContext Owner)> found =
-            executions.FindOwned(id);
+            _executions.FindOwned(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -156,7 +167,7 @@ public sealed class TaskRegistry(
                 {
                     foreach (IExecution execution in task.Executions)
                     {
-                        executions.Remove(execution.Id);
+                        _executions.Remove(execution.Id);
                     }
 
                     if (_tasks.Remove(task.Id.Value))
@@ -187,7 +198,7 @@ public sealed class TaskRegistry(
             {
                 foreach (IExecution execution in task.Executions)
                 {
-                    executions.Remove(execution.Id);
+                    _executions.Remove(execution.Id);
                 }
 
                 Input?.Remove(task.Id);
@@ -209,4 +220,34 @@ public sealed class TaskRegistry(
 
     /// <summary>上报任务状态变化。</summary>
     public void ReportChanged(TaskId id) => Changed?.Invoke(id);
+
+    /// <summary>把输入登记变化接到本任务域，等待步骤变化会刷新任务快照。</summary>
+    private static bool BindInputChanges(IInputDelivery? delivery, Action<TaskId> handler)
+    {
+        if (delivery is IInputChannel channel)
+        {
+            channel.Changed += handler;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void OnInputChanged(TaskId id)
+    {
+        if (!_inputChangesBound)
+        {
+            return;
+        }
+
+        lock (_gate)
+        {
+            if (!_tasks.ContainsKey(id.Value))
+            {
+                return;
+            }
+        }
+
+        ReportChanged(id);
+    }
 }

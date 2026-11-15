@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Kuroe.Node.Approval.Tests;
 
-/// <summary>审批节点类型的形状与类型规则：不启动执行，对外端口由输入端口派生，放行后放出停驻时的取值。</summary>
+/// <summary>审批节点类型的形状与类型规则：启动执行后等待批准，对外端口由输入端口派生，放行后放出停驻时的取值。</summary>
 public sealed class ApprovalNodeTypeTests
 {
     private static readonly StubInputChannel Channel = new();
@@ -31,11 +31,12 @@ public sealed class ApprovalNodeTypeTests
     }
 
     [Fact]
-    public void Shape_derives_its_ports_without_dispatching_executions()
+    public void Shape_derives_its_ports_and_dispatches_execution()
     {
         NodeTypeShape shape = NodeType.Shape;
 
-        Assert.False(shape.DispatchesExecutions);
+        Assert.True(shape.DispatchesExecutions);
+        Assert.True(shape.AwaitsExternalInput);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
         Assert.IsType<OutputDeclaration.DerivedFromInputs>(shape.Outputs);
@@ -72,7 +73,7 @@ public sealed class ApprovalNodeTypeTests
         string[] errors = [.. Failures(node)];
 
         Assert.Single(errors);
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明 MaxExecutions。"));
+        Assert.Contains(errors, error => error.EndsWith("审批节点不能声明 MaxExecutions。"));
     }
 
     private static IReadOnlyList<string> Failures(NodeSpec node)

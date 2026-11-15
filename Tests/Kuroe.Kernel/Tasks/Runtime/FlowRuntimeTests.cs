@@ -39,11 +39,6 @@ public sealed class FlowRuntimeTests
         Assert.Equal(1, control.Pauses);
         Assert.Equal(1, control.Resumes);
         Assert.Equal(1, runtime.Rerun(task));
-
-        FlowStepPath step = FlowStepPath.Of("回话");
-        runtime.Advance(task, [step]);
-
-        Assert.Equal([step], control.Advanced);
     }
 
     [Fact]
@@ -228,7 +223,7 @@ internal static class FlowRuntimeTestDoubles
             new ExecutionRestorerRegistry());
 }
 
-internal sealed class TestControl : IFlowControl, IFlowAdvance, IFlowRerun
+internal sealed class TestControl : IFlowControl, IFlowRerun
 {
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -243,8 +238,6 @@ internal sealed class TestControl : IFlowControl, IFlowAdvance, IFlowRerun
     public int Resumes { get; private set; }
 
     public int Shutdowns { get; private set; }
-
-    public IReadOnlyList<FlowStepPath> Advanced { get; private set; } = [];
 
     public Task Loop => Task.CompletedTask;
 
@@ -271,8 +264,6 @@ internal sealed class TestControl : IFlowControl, IFlowAdvance, IFlowRerun
     public void Resume(bool continueRestores = true) => Resumes++;
 
     public int Rerun() => 1;
-
-    public void Advance(IReadOnlyList<FlowStepPath> steps) => Advanced = steps;
 
     public ErrorOr<Success> Terminate() => Result.Success;
 

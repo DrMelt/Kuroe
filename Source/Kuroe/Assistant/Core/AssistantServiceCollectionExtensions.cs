@@ -48,7 +48,7 @@ public static class AssistantServiceCollectionExtensions
                 pauseOnRestore: false);
             DialogueRound round = new(
                 registry,
-                new PendingService(registry, sp.GetRequiredService<IFlowRuntime>()));
+                new PendingService(registry));
 
             ModelService models = sp.GetRequiredService<ModelService>();
 

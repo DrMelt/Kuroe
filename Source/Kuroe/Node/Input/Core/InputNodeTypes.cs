@@ -14,6 +14,8 @@ public static class InputNodeTypes
     /// <summary>输入节点类型的静态形状：不派发执行，输入侧只作驱动与内容引用，输出侧只写回答。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
+        DispatchesExecutions = true,
+        AwaitsExternalInput = true,
         StartsUnaided = true,
         AcceptsInferredInputs = true,
         InputTypes = [PortTypes.Text, PortTypes.Signal],

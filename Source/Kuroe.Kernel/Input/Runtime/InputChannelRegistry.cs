@@ -5,11 +5,15 @@ using Kuroe.Tasks.Shared;
 namespace Kuroe.Input.Runtime;
 
 /// <summary>输入通道的进程内实现：按任务与步骤保存等待登记、提问与接收委托。
-/// 内部锁只保护登记表结构，接收委托在锁外调用，调用方须持有任务 Gate。</summary>
+/// 内部锁保护登记表结构，接收委托在锁外调用。交付要求持有任务 Gate；登记可在 Gate 外调用，任务清理后拒绝新登记。</summary>
 public sealed class InputChannelRegistry : IInputChannel, IInputDelivery
 {
     private readonly Lock _gate = new();
     private readonly Dictionary<TaskId, Dictionary<FlowStepPath, Acceptance>> _tasks = [];
+    private readonly HashSet<TaskId> _closed = [];
+
+    /// <inheritdoc/>
+    public event Action<TaskId>? Changed;
 
     /// <inheritdoc/>
     public void Accept(
@@ -21,6 +25,11 @@ public sealed class InputChannelRegistry : IInputChannel, IInputDelivery
     {
         lock (_gate)
         {
+            if (_closed.Contains(task))
+            {
+                return;
+            }
+
             if (!_tasks.TryGetValue(task, out Dictionary<FlowStepPath, Acceptance>? steps))
             {
                 steps = [];
@@ -29,11 +38,14 @@ public sealed class InputChannelRegistry : IInputChannel, IInputDelivery
 
             steps[step] = new Acceptance(kind, question, receive);
         }
+
+        Changed?.Invoke(task);
     }
 
     /// <inheritdoc/>
     public void Decline(TaskId task, FlowStepPath step)
     {
+        bool removed;
         lock (_gate)
         {
             if (!_tasks.TryGetValue(task, out Dictionary<FlowStepPath, Acceptance>? steps))
@@ -41,11 +53,16 @@ public sealed class InputChannelRegistry : IInputChannel, IInputDelivery
                 return;
             }
 
-            steps.Remove(step);
+            removed = steps.Remove(step);
             if (steps.Count == 0)
             {
                 _tasks.Remove(task);
             }
+        }
+
+        if (removed)
+        {
+            Changed?.Invoke(task);
         }
     }
 
@@ -55,7 +72,9 @@ public sealed class InputChannelRegistry : IInputChannel, IInputDelivery
         lock (_gate)
         {
             return _tasks.TryGetValue(task, out Dictionary<FlowStepPath, Acceptance>? steps)
-                ? [.. steps.Select(entry => new FlowPendingStep(entry.Key, entry.Value.Kind, entry.Value.Question))]
+                ? [.. steps
+                    .OrderBy(entry => entry.Key.Value, StringComparer.Ordinal)
+                    .Select(entry => new FlowPendingStep(entry.Key, entry.Value.Kind, entry.Value.Question))]
                 : [];
         }
     }
@@ -89,6 +108,7 @@ public sealed class InputChannelRegistry : IInputChannel, IInputDelivery
         lock (_gate)
         {
             _tasks.Remove(task);
+            _closed.Add(task);
         }
     }
 

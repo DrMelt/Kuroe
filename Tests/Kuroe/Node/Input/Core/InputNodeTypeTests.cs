@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Kuroe.Node.Input.Tests;
 
-/// <summary>输入节点类型的形状与类型规则：不启动执行，只以用户回答为产出。</summary>
+/// <summary>输入节点类型的形状与类型规则：启动执行后等待回答，只以用户回答为产出。</summary>
 public sealed class InputNodeTypeTests
 {
     private static readonly StubInputChannel Channel = new();
@@ -31,11 +31,12 @@ public sealed class InputNodeTypeTests
     }
 
     [Fact]
-    public void Shape_waits_without_dispatching_executions()
+    public void Shape_dispatches_execution_and_waits_for_input()
     {
         NodeTypeShape shape = NodeType.Shape;
 
-        Assert.False(shape.DispatchesExecutions);
+        Assert.True(shape.DispatchesExecutions);
+        Assert.True(shape.AwaitsExternalInput);
         Assert.False(shape.Organizes);
         Assert.IsType<OutputDeclaration.Declared>(shape.Outputs);
         Assert.True(shape.StartsUnaided);

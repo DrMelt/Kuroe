@@ -21,6 +21,12 @@ internal static class GraphFlowRecordReading
         TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
         SchedulerSeedData pending = dto.Pending ?? throw new FormatException("存档缺少调度种子。");
 
+        List<FlowStepPath> seed =
+        [
+            .. (pending.Targets ?? []).Select(path =>
+                new FlowStepPath([.. ReadPath(path, "调度目标").Levels.Select(level => level.Value)])),
+        ];
+
         return new GraphFlowStateRecord(
             new TaskStartSnapshot(
                 new StartInputs(
@@ -32,7 +38,7 @@ internal static class GraphFlowRecordReading
                 ReadTexts(start.StartTexts)),
             [.. (dto.Nodes ?? []).Select(ReadNode)],
             [.. (dto.Ports ?? []).Select(ReadPortPublication)],
-            new FlowSeed([.. (pending.Targets ?? []).Select(path => new FlowStepPath([.. ReadPath(path, "调度目标").Levels.Select(level => level.Value)]))]));
+            new FlowSeed([.. seed.Distinct()]));
     }
 
     private static NodeRecord ReadNode(NodeData dto)
@@ -48,15 +54,6 @@ internal static class GraphFlowRecordReading
                 common,
                 [.. (dto.RerunTargets ?? []).Select(target => ReadPath(target, "重新执行目标"))],
                 block),
-            "Input" => new InputNodeRecord(
-                path,
-                common,
-                dto.Waiting ?? false),
-            "Approval" => new ApprovalNodeRecord(
-                path,
-                common,
-                ReadNodeInputs(dto.Inputs),
-                dto.Awaiting ?? false),
             "Container" => new ContainerNodeRecord(
                 path,
                 common),
@@ -108,26 +105,6 @@ internal static class GraphFlowRecordReading
                     ReadContextSource(value.Origin),
                     value.Text ?? string.Empty)),
             ]);
-
-    private static NodeInputValuesRecord ReadNodeInputs(NodeInputValuesData? dto)
-    {
-        if (dto is null)
-        {
-            throw new FormatException("审批节点记录缺少输入取值。");
-        }
-
-        return new NodeInputValuesRecord(
-            [.. (dto.Ordered ?? []).Select(item => new NodeInputValueRecord(
-                ReadPort(item.Target, "审批输入端口"),
-                RequiredText(item.Type, "审批输入类型"),
-                ReadInputValue(item.Value ?? throw new FormatException("审批输入缺少取值。"))))]);
-    }
-
-    private static InputValueRecord ReadInputValue(InputValueData dto) =>
-        new(
-            ReadPort(dto.Port, "输入端口"),
-            ReadContextSource(dto.Origin),
-            dto.Text ?? string.Empty);
 
     private static ContextSourceRecord ReadContextSource(ContextSourceData? dto)
     {

@@ -31,10 +31,7 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState, IInputProgress
     /// <summary>随任务取消。</summary>
     public abstract bool Canceled { get; }
 
-    /// <summary>节点已声明等待外部输入，尚未交付。等待中的节点算任务活动。</summary>
-    public virtual bool AwaitingInput => false;
-
-    /// <summary>节点是否从输入端口取内容激活。输入节点等待外部交付，不依赖来源组齐备。</summary>
+    /// <summary>节点是否从输入端口取内容激活。</summary>
     public virtual bool NeedsInput => true;
 
     /// <summary>随任务进入取消态。</summary>

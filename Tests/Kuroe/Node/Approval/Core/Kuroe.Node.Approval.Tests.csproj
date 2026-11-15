@@ -14,8 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference
-            Include="..\..\..\..\..\Source\Kuroe\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
@@ -27,5 +26,6 @@
 
 <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
     </ItemGroup>
 </Project>

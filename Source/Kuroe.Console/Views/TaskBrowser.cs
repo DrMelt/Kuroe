@@ -245,7 +245,10 @@ internal sealed class TaskBrowser(
             overview.Print(task);
             terminal.NewLine();
 
-            List<Item> items = [Refresh, .. task.View.Steps.SelectMany(step => step.Executions)
+            HashSet<string> waitingSteps = [.. task.Pending.Select(pending => pending.Path)];
+            List<Item> items = [Refresh, .. task.View.Steps
+                .Where(step => !waitingSteps.Contains(step.Path))
+                .SelectMany(step => step.Executions)
                 .OrderBy(execution => execution.Id)
                 .Select(execution => new Item(ExecutionItemLabel(execution), "execution", Task: id, Execution: execution.Id))];
             AddTaskActions(items, task);

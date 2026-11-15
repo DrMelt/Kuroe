@@ -12,6 +12,9 @@ public sealed record NodeTypeShape
     /// <summary>是否派发执行。不派发的类型由上游版本或外部输入驱动产出。</summary>
     public bool DispatchesExecutions { get; init; }
 
+    /// <summary>执行启动后需要等待外部输入。等待中的执行按运行中处理，中断后由流程控制决定是否重新派发。</summary>
+    public bool AwaitsExternalInput { get; init; }
+
     /// <summary>等待的输入是否为批准。等待型节点里 Input 为回答，Approval 为批准。</summary>
     public bool AwaitsApproval { get; init; }
 

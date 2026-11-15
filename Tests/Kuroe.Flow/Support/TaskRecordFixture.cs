@@ -57,16 +57,16 @@ public static class TaskRecordFixture
                             Common(revision: 0, lastInputGroup: null, rerunRequested: false),
                             [read],
                             new NodeBlock("读取失败。", new ExecutionId(taskId * 10 + 2), At(3, 4, 22))),
-                        new InputNodeRecord(
+                        new ExecutableNodeRecord(
                             answer,
                             Common(revision: 1, lastInputGroup: null, rerunRequested: false),
-                            false),
-                        new ApprovalNodeRecord(
+                            [],
+                            null),
+                        new ExecutableNodeRecord(
                             approve,
                             Common(revision: 1, lastInputGroup: 0, rerunRequested: false),
-                            new NodeInputValuesRecord(
-                                [new NodeInputValueRecord(target, "Text", new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容"))]),
-                            false),
+                            [],
+                            null),
                         new ContainerNodeRecord(
                             container,
                             Common(revision: 1, lastInputGroup: null, rerunRequested: false)),

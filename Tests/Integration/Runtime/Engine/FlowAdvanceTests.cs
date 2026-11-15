@@ -222,6 +222,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(FlowErrorCodes.TaskPaused, rejected.FirstError.Code);
 
         environment.Tasks.Resume(id).ThrowIfError();
+        await environment.WaitAsync(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
         environment.Pendings.Approve(id).ThrowIfError();
 
         Assert.Equal(TaskState.Done, (await environment.WaitAsync(id, snapshot => snapshot.State == TaskState.Done)).State);

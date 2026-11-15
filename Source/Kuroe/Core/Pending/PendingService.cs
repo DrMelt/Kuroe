@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
 using Kuroe.Input.Shared;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Shared;
@@ -10,7 +9,7 @@ namespace Kuroe.Pending;
 public readonly record struct PendingNode(FlowStepPath Step, PendingKind Kind, string? Question);
 
 /// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并推进流程。</summary>
-public sealed class PendingService(TaskRegistry registry, IFlowRuntime runtime)
+public sealed class PendingService(TaskRegistry registry)
 {
     /// <summary>任务里此刻待处理的节点，按输入登记顺序，带等待时的提问。</summary>
     public ErrorOr<List<PendingNode>> Pending(TaskId id)
@@ -36,7 +35,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runtime)
     public ErrorOr<Success> Approve(TaskId id, IReadOnlyList<FlowStepPath>? nodes = null) =>
         Take(id, PendingKind.Approve, null, string.Empty, nodes);
 
-    /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，交付在任务 Gate 内完成，随后唤醒流程推进。</summary>
+    /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，交付在任务 Gate 内完成。</summary>
     private ErrorOr<Success> Take(
         TaskId id,
         PendingKind kind,
@@ -52,7 +51,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runtime)
 
         WorkTask task = found.Value;
         IInputDelivery? inputs = registry.Input;
-        ErrorOr<List<PendingNode>> accepted = task.UnderLock<ErrorOr<List<PendingNode>>>(() =>
+        return task.UnderLock<ErrorOr<Success>>(() =>
         {
             if (task.Lifecycle == TaskLifecycle.Terminated)
             {
@@ -103,17 +102,8 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runtime)
                 }
             }
 
-            return awaiting;
+            return Result.Success;
         });
-
-        if (accepted.IsError)
-        {
-            return accepted.ErrorsOrEmptyList;
-        }
-
-        runtime.Advance(task, [.. accepted.Value.Select(entry => entry.Step)]);
-
-        return Result.Success;
     }
 
     /// <summary>任务里此刻待处理的节点，带等待时的提问。要求持有 Gate。</summary>

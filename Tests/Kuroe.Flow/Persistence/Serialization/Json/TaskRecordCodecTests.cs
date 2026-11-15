@@ -1,6 +1,4 @@
 using Kuroe.Execution.Records.Shared;
-using Kuroe.CodeFlow.Records.Shared;
-using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Shared;
@@ -54,28 +52,14 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Equal(FlowErrorCodes.RecordVersion, TaskRecordCodecs.Codec().Read(legacy).FirstError.Code);
     }
 
-    [Fact]
-    public void Read_migrates_a_version_13_graph_archive()
+    [Theory]
+    [InlineData(13)]
+    [InlineData(14)]
+    public void Read_rejects_previous_versions(int version)
     {
-        TaskRecord record = TaskRecordCodecs.Codec().Read(Fixture("v13-graph.json")).ThrowIfError();
+        string previous = $"{{\"Version\":{version},\"Task\":{{}}}}";
 
-        Assert.Equal(new TaskId(TaskRecordFixture.DefaultTaskId), record.Identity.Id);
-        GraphFlowStateRecord state = Assert.IsType<GraphFlowStateRecord>(record.Flow.State);
-        Assert.Equal(5, state.Nodes.Count);
-        Assert.Equal(2, state.Ports.Count);
-        Assert.Equal(2, state.Pending.Steps.Count);
-        Assert.IsType<GraphFlowDefinitionRecord>(record.Flow.Definition);
-    }
-
-    [Fact]
-    public void Read_migrates_a_version_13_code_archive()
-    {
-        TaskRecord record = TaskRecordCodecs.Codec().Read(Fixture("v13-code.json")).ThrowIfError();
-
-        CodeFlowDefinitionRecord definition = Assert.IsType<CodeFlowDefinitionRecord>(record.Flow.Definition);
-        CodeFlowStateRecord state = Assert.IsType<CodeFlowStateRecord>(record.Flow.State);
-        Assert.Equal("dialogue", definition.Implementation);
-        Assert.Equal("中文", state.Values["language"]);
+        Assert.Equal(FlowErrorCodes.RecordVersion, TaskRecordCodecs.Codec().Read(previous).FirstError.Code);
     }
 
     [Fact]
@@ -164,7 +148,4 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
 
         Assert.Contains("计划结果", json);
     }
-
-    private static string Fixture(string name) =>
-        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", name));
 }

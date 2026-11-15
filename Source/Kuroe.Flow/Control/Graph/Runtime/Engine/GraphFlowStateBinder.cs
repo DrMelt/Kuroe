@@ -38,6 +38,12 @@ public sealed class GraphFlowStateBinder : IFlowStateBinder
         {
             GraphExecutionSnapshot snapshot = execution.Snapshot();
             RuntimeExecutable node = runtime.Executable(execution.Input.Node);
+            if (node.Block is null && state.Flow.Graph.ShapeOf(node.Path)?.AwaitsExternalInput == true)
+            {
+                node.RequestRerun();
+                continue;
+            }
+
             if (snapshot.StartedAt is null)
             {
                 if (node.Block?.Execution == execution.Id)

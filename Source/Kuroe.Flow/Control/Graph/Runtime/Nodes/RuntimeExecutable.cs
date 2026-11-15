@@ -122,9 +122,19 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>按端口产出发布，没有内容产出时使用。</summary>
     public void Publish(GraphExecution execution) => Publish(execution, ExecutionOutput.FromPorts([]));
 
-    /// <summary>产出发布：按执行结果的形态选择端口发布或内容发布，版本单调递增，下游据此重新评估。</summary>
+    /// <summary>产出发布：节点提供输出投影时由投影决定端口内容，其余按执行结果的形态选择端口发布或内容发布。
+    /// 版本单调递增，下游据此重新评估。</summary>
     public void Publish(GraphExecution execution, ExecutionOutput output)
     {
+        if (Executable.Type is INodeOutputProjection projection)
+        {
+            Progress.Publish(projection.Project(execution.Id, execution.Input, output) with
+            {
+                Revision = Progress.NextRevision(),
+            });
+            return;
+        }
+
         switch (output.Kind)
         {
             case ExecutionOutputKind.Ports:
@@ -139,6 +149,9 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
                 throw new ArgumentOutOfRangeException(nameof(output), output.Kind, "未知的执行产出形态。");
         }
     }
+
+    /// <summary>该节点是否自带输出投影，产出完整性由投影负责。</summary>
+    public bool HasOutputProjection => Executable.Type is INodeOutputProjection;
 
     /// <summary>端口产出的发布：按这次执行的契约构造发布。</summary>
     private void PublishPorts(GraphExecution execution) =>

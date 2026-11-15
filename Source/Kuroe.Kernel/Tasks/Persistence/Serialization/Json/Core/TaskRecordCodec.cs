@@ -6,7 +6,7 @@ using Kuroe.Tasks.Records.Shared;
 
 namespace Kuroe.Tasks.Persistence.Json;
 
-/// <summary>存档的 JSON 编解码。版本、字段映射与流程片段编解码由通用格式负责，本类处理 JSON 文本与旧版本迁移。</summary>
+/// <summary>存档的 JSON 编解码。版本、字段映射与流程片段编解码由通用格式负责，本类处理 JSON 文本。</summary>
 public sealed class TaskRecordCodec(TaskRecordSerializationMapper mapper) : ITaskRecordCodec
 {
     /// <inheritdoc/>
@@ -28,15 +28,12 @@ public sealed class TaskRecordCodec(TaskRecordSerializationMapper mapper) : ITas
                 return [Error.Failure(FlowErrorCodes.RecordFormat, "存档缺少版本。")];
             }
 
-            if (!TaskRecordSerializationVersion.IsReadable(version)
-                && !TaskRecordSerializationVersion.IsMigratable(version))
+            if (!TaskRecordSerializationVersion.IsReadable(version))
             {
                 return [Error.Failure(FlowErrorCodes.RecordVersion, $"不支持的存档版本 {version}。")];
             }
 
-            file = TaskRecordSerializationVersion.IsReadable(version)
-                ? document.RootElement.Deserialize(TaskRecordJson.Default.TaskRecordDocument)
-                : TaskRecordLegacyFormat.Migrate(document.RootElement);
+            file = document.RootElement.Deserialize(TaskRecordJson.Default.TaskRecordDocument);
         }
         catch (JsonException ex)
         {

@@ -21,9 +21,6 @@ internal static class GraphFlowRecordMapping
             [.. state.Ports.Select(ToData)],
             new SchedulerSeedData([.. state.Pending.Steps.Select(step => ToData(NodePath.Of([.. step.Levels])))]));
 
-    private static InputValueData ToData(InputValueRecord value) =>
-        new(value.Port.Value, ToData(value.Origin), value.Text);
-
     private static ContextSourceData ToData(ContextSourceRecord source) =>
         new(
             source.Kind,
@@ -39,38 +36,14 @@ internal static class GraphFlowRecordMapping
                 Path: ToData(executable.Path),
                 Common: ToData(executable.Common),
                 Block: ToData(executable.Block),
-                RerunTargets: [.. executable.RerunTargets.Select(ToData)],
-                Waiting: null,
-                Inputs: null,
-                Awaiting: null),
+                RerunTargets: [.. executable.RerunTargets.Select(ToData)]),
 
-            InputNodeRecord input => new NodeData(
-                Kind: "Input",
-                Path: ToData(input.Path),
-                Common: ToData(input.Common),
-                Block: null,
-                RerunTargets: null,
-                Waiting: input.Waiting,
-                Inputs: null,
-                Awaiting: null),
-            ApprovalNodeRecord approval => new NodeData(
-                Kind: "Approval",
-                Path: ToData(approval.Path),
-                Common: ToData(approval.Common),
-                Block: null,
-                RerunTargets: null,
-                Waiting: null,
-                Inputs: ToData(approval.Inputs),
-                Awaiting: approval.Awaiting),
             ContainerNodeRecord container => new NodeData(
                 Kind: "Container",
                 Path: ToData(container.Path),
                 Common: ToData(container.Common),
                 Block: null,
-                RerunTargets: null,
-                Waiting: null,
-                Inputs: null,
-                Awaiting: null),
+                RerunTargets: null),
             _ => throw new NotSupportedException($"不认识的节点记录 {node.GetType().Name}。"),
         };
 
@@ -99,13 +72,6 @@ internal static class GraphFlowRecordMapping
         block is null
             ? null
             : new NodeBlockData(block.Summary, block.Execution?.Value, block.At);
-
-    private static NodeInputValuesData ToData(NodeInputValuesRecord inputs) =>
-        new(
-            [.. inputs.Ordered.Select(item => new NodeInputValueData(
-                item.Target.Value,
-                item.Type,
-                ToData(item.Value)))]);
 
     private static NodePathData ToData(NodePath path) =>
         new([.. path.Levels.Select(level => level.Value)]);

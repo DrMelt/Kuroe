@@ -13,7 +13,7 @@ internal sealed class DialogueFlowControl(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
     IInputChannel inputs,
-    DialogueFlowState state) : IFlowControl, IFlowAdvance
+    DialogueFlowState state) : IFlowControl
 {
     /// <summary>回话步骤路径。</summary>
     internal static FlowStepPath ReplyStep { get; } = FlowStepPath.Of(DialogueFlow.ReplyLabel);
@@ -127,14 +127,31 @@ internal sealed class DialogueFlowControl(
         }
     }
 
-    /// <inheritdoc/>
-    public void Advance(IReadOnlyList<FlowStepPath> steps)
-    {
-        if (!steps.Contains(ReplyStep))
-        {
-            return;
-        }
 
+
+    /// <summary>登记回话步骤等待外部输入。</summary>
+    private void Await()
+    {
+        _awaiting = true;
+        inputs.Accept(
+            task.Id,
+            ReplyStep,
+            FlowPendingKind.Input,
+            DialogueFlow.Question,
+            Receive);
+    }
+
+    /// <summary>收下一次外部输入，交付返回后建立回话执行。</summary>
+    private void Receive(string text)
+    {
+        _awaiting = false;
+        _pendingInput = text;
+        _ = Task.Run(ContinueWithInput, CancellationToken.None);
+    }
+
+    /// <summary>按已收到的输入建立回话执行。交付在任务 Gate 内完成，这里在 Gate 释放后进入。</summary>
+    private void ContinueWithInput()
+    {
         IExecution? execution;
         lock (task.Gate)
         {
@@ -153,25 +170,6 @@ internal sealed class DialogueFlowControl(
         }
 
         _ = RunAsync(execution);
-    }
-
-    /// <summary>登记回话步骤等待外部输入。</summary>
-    private void Await()
-    {
-        _awaiting = true;
-        inputs.Accept(
-            task.Id,
-            ReplyStep,
-            FlowPendingKind.Input,
-            DialogueFlow.Question,
-            Receive);
-    }
-
-    /// <summary>收下一次外部输入，推进时据此建立回话执行。</summary>
-    private void Receive(string text)
-    {
-        _awaiting = false;
-        _pendingInput = text;
     }
 
     private ExecutionRequest Request(string text) =>

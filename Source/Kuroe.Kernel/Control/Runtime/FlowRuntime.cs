@@ -93,14 +93,7 @@ public sealed class FlowRuntime(
     /// <summary>要求持有任务 Gate：对阻塞的步骤重新执行，流程实现不提供重跑能力时为零。</summary>
     public int Rerun(ITaskFlowContext task) => (Find(task) as IFlowRerun)?.Rerun() ?? 0;
 
-    /// <summary>按已交付的步骤推进。流程实现不提供推进面时为空操作。</summary>
-    public void Advance(ITaskFlowContext task, IReadOnlyList<FlowStepPath> steps)
-    {
-        if (steps.Count > 0 && Find(task) is IFlowAdvance advance)
-        {
-            advance.Advance(steps);
-        }
-    }
+
 
     /// <summary>终止任务：控制实例停止全部执行，推进循环随之终止。推进循环已收口时只终止任务状态。</summary>
     public ErrorOr<Success> Terminate(ITaskFlowContext task)

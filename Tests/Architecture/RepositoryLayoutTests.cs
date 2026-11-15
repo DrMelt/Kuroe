@@ -1524,7 +1524,7 @@ public sealed class RepositoryLayoutTests
     public void Flow_control_port_excludes_input_delivery()
     {
         string control = Path.Combine(KernelRoot, "Control", "Shared", "IFlowControl.cs");
-        string advance = Path.Combine(KernelRoot, "Control", "Shared", "IFlowAdvance.cs");
+        string runtime = Path.Combine(KernelRoot, "Control", "Shared", "IFlowRuntime.cs");
         string channel = Path.Combine(KernelRoot, "Input", "Shared", "IInputChannel.cs");
         string delivery = Path.Combine(KernelRoot, "Input", "Shared", "IInputDelivery.cs");
         string controlText = File.ReadAllText(control);
@@ -1532,7 +1532,8 @@ public sealed class RepositoryLayoutTests
         Assert.DoesNotContain("Pending", controlText, StringComparison.Ordinal);
         Assert.DoesNotContain("Deliver", controlText, StringComparison.Ordinal);
         Assert.DoesNotContain("Accept", controlText, StringComparison.Ordinal);
-        Assert.Contains("Advance", File.ReadAllText(advance), StringComparison.Ordinal);
+        Assert.DoesNotContain("Advance", File.ReadAllText(runtime), StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(KernelRoot, "Control", "Shared", "IFlowAdvance.cs")));
         Assert.Contains("Accept", File.ReadAllText(channel), StringComparison.Ordinal);
         Assert.Contains("Decline", File.ReadAllText(channel), StringComparison.Ordinal);
         Assert.Contains("Pending", File.ReadAllText(delivery), StringComparison.Ordinal);

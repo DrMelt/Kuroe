@@ -25,8 +25,7 @@ public interface IFlowRuntime
     /// <summary>要求持有任务 Gate：对阻塞的步骤重新执行，返回实际发出的重新执行目标数。流程实现不提供重跑能力时为零。</summary>
     int Rerun(ITaskFlowContext task);
 
-    /// <summary>要求持有任务 Gate 之外的调用：按已交付的步骤推进。流程实现不提供推进面时为空操作。</summary>
-    void Advance(ITaskFlowContext task, IReadOnlyList<FlowStepPath> steps);
+
 
     /// <summary>要求持有任务 Gate：终止任务并结束流程运行。</summary>
     ErrorOr<Success> Terminate(ITaskFlowContext task);

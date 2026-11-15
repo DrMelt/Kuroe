@@ -17,7 +17,7 @@ internal sealed class GraphFlowControl(
     ITaskFlowContext task,
     GraphFlowState state,
     IExecutionTargetResolver targetResolver,
-    ITaskExecutionGateway gateway) : IFlowControl, IFlowAdvance, IFlowRerun
+    ITaskExecutionGateway gateway) : IFlowControl, IFlowRerun
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
@@ -28,6 +28,9 @@ internal sealed class GraphFlowControl(
 
     /// <summary>未启动即中断的节点，恢复推进时重新排队。</summary>
     private readonly HashSet<NodePath> _restart = [];
+
+    /// <summary>等待输入的执行在暂停或退出时被中断的节点，收口后重新排队。</summary>
+    private readonly HashSet<NodePath> _waitRestarts = [];
     private TaskCompletionSource? _signal;
     private int _inflight;
     private bool _stop;
@@ -65,33 +68,27 @@ internal sealed class GraphFlowControl(
     public void Restore(FlowSeed seed)
     {
         List<NodePath> roots;
+        List<NodePath> waiting;
         lock (task.Gate)
         {
             roots = [.. state.Runtime.Roots()];
-        }
+            waiting =
+            [
+                .. state.Executions
+                    .Where(execution => execution.State == ExecutionState.Interrupted
+                        && state.Flow.Graph.ShapeOf(execution.Input.Node)?.AwaitsExternalInput == true
+                        && state.Runtime.Executable(execution.Input.Node).Block is null)
+                    .Select(execution => execution.Input.Node),
+            ];
 
-        Enqueue([.. seed.Steps.Select(NodeStepPaths.ToNodePath), .. roots]);
-        Loop = Task.Run(RunAsync);
-    }
-
-    /// <summary>交付或产出变化后推进：取受影响目标入队，放弃其恢复。要求持有任务 Gate 之外的调用。</summary>
-    public void Advance(IReadOnlyList<FlowStepPath> steps)
-    {
-        List<NodePath> targets;
-        lock (task.Gate)
-        {
-            targets = [.. state.Runtime.Notify([.. steps.Select(NodeStepPaths.ToNodePath)])];
-            state.Runtime.InvalidateRestores(targets);
-            if (targets.Count > 0)
+            foreach (NodePath path in waiting)
             {
-                task.AppendInfo("上游产出变化，下游放弃恢复。");
+                state.Runtime.Executable(path).RequestRerun();
             }
-
-            task.Touch();
         }
 
-        Enqueue(targets);
-        task.NotifyChanged();
+        Enqueue([.. seed.Steps.Select(NodeStepPaths.ToNodePath), .. roots, .. waiting]);
+        Loop = Task.Run(RunAsync);
     }
 
     /// <summary>恢复推进循环，continueRestores 为真时恢复可恢复的阻塞。要求持有任务 Gate。</summary>
@@ -168,9 +165,25 @@ internal sealed class GraphFlowControl(
     /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>
     public void Pause()
     {
-        foreach (IExecution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
+        GraphExecution[] live = [.. state.Executions.Where(execution => execution.IsLive)];
+        MarkWaitingRestarts(live);
+
+        foreach (GraphExecution execution in live)
         {
-            gateway.Interrupt(execution, "任务已暂停。");
+            gateway.Interrupt(execution.Unit, "任务已暂停。");
+        }
+    }
+
+    /// <summary>把等待外部输入的执行标记为暂停或退出后的重新派发目标。</summary>
+    private void MarkWaitingRestarts(IReadOnlyList<GraphExecution> live)
+    {
+        lock (_gate)
+        {
+            foreach (GraphExecution execution in live.Where(execution =>
+                state.Flow.Graph.ShapeOf(execution.Input.Node)?.AwaitsExternalInput == true))
+            {
+                _waitRestarts.Add(execution.Input.Node);
+            }
         }
     }
 
@@ -278,6 +291,7 @@ internal sealed class GraphFlowControl(
             }
 
             live = [.. state.Executions.Where(execution => execution.IsLive)];
+            MarkWaitingRestarts(live);
         }
 
         foreach (GraphExecution execution in live)
@@ -669,10 +683,26 @@ internal sealed class GraphFlowControl(
         TaskRuntime.SettlePlan plan;
         TaskRuntime.RestorePlan? autoRestore = null;
         bool selfActivate;
+        bool restart;
         lock (task.Gate)
         {
+            bool restartOnInterrupt;
+            lock (_gate)
+            {
+                restartOnInterrupt = _waitRestarts.Remove(node.Path);
+            }
+
             node.ReleaseActive();
-            plan = state.Runtime.Settle(node, execution);
+            plan = state.Runtime.Settle(node, execution, restartOnInterrupt);
+            restart = plan.Restart;
+            if (restart)
+            {
+                lock (_gate)
+                {
+                    _restart.Add(node.Path);
+                }
+            }
+
             if (plan.Interruption == ExecutionInterruption.Restorable && plan.Restore is { } restorable)
             {
                 if (task.Lifecycle == TaskLifecycle.Paused)
@@ -702,7 +732,17 @@ internal sealed class GraphFlowControl(
 
             // 活跃屏障可能丢失一次来源新版本的通知：活跃释放后这里补一次评估，
             // 否则该节点停在可启动状态而无人再激活，任务会一直等待
-            selfActivate = state.Runtime.CanStart(node);
+            selfActivate = state.Runtime.CanSelfActivate(node);
+        }
+
+        if (restart && task.UnderLock(() => task.Lifecycle == TaskLifecycle.Active))
+        {
+            lock (_gate)
+            {
+                _restart.Remove(node.Path);
+            }
+
+            Enqueue([node.Path]);
         }
 
         if (autoRestore is { } restorePlan)

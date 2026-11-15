@@ -43,9 +43,7 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
         IReadOnlyList<NodeRecord> nodes = State(loaded).Nodes;
 
-        Assert.Equal(2, nodes.OfType<ExecutableNodeRecord>().Count());
-        Assert.Single(nodes.OfType<InputNodeRecord>());
-        Assert.Single(nodes.OfType<ApprovalNodeRecord>());
+        Assert.Equal(4, nodes.OfType<ExecutableNodeRecord>().Count());
         Assert.Single(nodes.OfType<ContainerNodeRecord>());
     }
 

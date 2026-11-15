@@ -233,8 +233,8 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = WaitForInputs(environment, id, 1);
 
-        // 容器不表达成员的等待，只按成员活动给状态；等待由节点的待处理报告给出
-        Assert.All(parked.View.Groups, group => Assert.Equal(FlowItemState.Pending, group.State));
+        // 等待中的输入节点有活动执行，容器按成员活动显示运行中；等待由节点的待处理报告给出
+        Assert.All(parked.View.Groups, group => Assert.Equal(FlowItemState.Running, group.State));
         Assert.Single(environment.Awaiting(id, PendingKind.Answer));
     }
 

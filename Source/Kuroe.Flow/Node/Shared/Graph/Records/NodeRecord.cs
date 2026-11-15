@@ -44,33 +44,8 @@ public sealed record ExecutableNodeRecord(
     NodeBlock? Block)
     : NodeRecord(Path, Common);
 
-/// <summary>输入节点的持久状态。</summary>
-public sealed record InputNodeRecord(
-    NodePath Path,
-    NodeCommonRecord Common,
-    bool Waiting)
-    : NodeRecord(Path, Common);
-
-/// <summary>审批节点的持久状态。</summary>
-public sealed record ApprovalNodeRecord(
-    NodePath Path,
-    NodeCommonRecord Common,
-    NodeInputValuesRecord Inputs,
-    bool Awaiting)
-    : NodeRecord(Path, Common);
-
 /// <summary>容器的持久状态。内容就绪由成员状态推导，不单独保存。</summary>
 public sealed record ContainerNodeRecord(
     NodePath Path,
     NodeCommonRecord Common)
     : NodeRecord(Path, Common);
-
-/// <summary>审批节点停驻时保存的输入内容。</summary>
-public sealed record NodeInputValuesRecord(
-    IReadOnlyList<NodeInputValueRecord> Ordered);
-
-/// <summary>审批节点的一条输入取值。</summary>
-public sealed record NodeInputValueRecord(
-    PortName Target,
-    string Type,
-    InputValueRecord Value);

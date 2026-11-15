@@ -20,10 +20,10 @@ public sealed class ContainerAdvanceTests
             && ContainerState(snapshot, "交付") == FlowItemState.Done);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
-        // 两条分支各一个执行，审批节点停在待批准，汇总还没有执行
+        // 两条分支各一个执行，审批节点停在待批准并持有等待执行，汇总还没有执行
         Assert.Single(parked.View.Steps[1].Executions);
         Assert.Single(parked.View.Steps[2].Executions);
-        Assert.Empty(parked.View.Steps[3].Executions);
+        Assert.Single(parked.View.Steps[3].Executions);
         Assert.Empty(parked.View.Steps[4].Executions);
         Assert.Equal(FlowItemState.Done, Assert.Single(parked.View.Groups, group => group.Label == "交付").State);
 

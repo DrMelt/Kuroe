@@ -210,9 +210,7 @@ public static class ServiceCollectionExtensions
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null,
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskLeaseStore>() : null)));
         services.AddSingleton<ITaskControl>(sp => sp.GetRequiredService<TaskService>());
-        services.AddSingleton(sp => new PendingService(
-            taskRegistry,
-            sp.GetRequiredService<IFlowRuntime>()));
+        services.AddSingleton(sp => new PendingService(taskRegistry));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<IToolFactory>(),
