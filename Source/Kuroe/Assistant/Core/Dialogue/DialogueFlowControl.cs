@@ -153,6 +153,7 @@ internal sealed class DialogueFlowControl(
     private void ContinueWithInput()
     {
         IExecution? execution;
+        DialogueTarget target;
         lock (task.Gate)
         {
             if (_pendingInput is not { } input
@@ -165,11 +166,13 @@ internal sealed class DialogueFlowControl(
 
             _pendingInput = null;
             execution = gateway.Open(task, Request(input));
+            IExecution? previous = task.Executions.Count > 0 ? task.Executions[^1] : null;
+            target = new DialogueTarget(state.Parameters, state.Model, previous?.RestoreData);
             task.AttachExecution(execution);
             _live = execution;
         }
 
-        _ = RunAsync(execution);
+        _ = RunAsync(execution, target);
     }
 
     private ExecutionRequest Request(string text) =>
@@ -186,12 +189,12 @@ internal sealed class DialogueFlowControl(
             },
             []);
 
-    private async Task RunAsync(IExecution execution)
+    private async Task RunAsync(IExecution execution, DialogueTarget target)
     {
         await gateway.RunAsync(
             execution,
             null,
-            new DialogueTarget(state.Parameters, state.Model)).ConfigureAwait(false);
+            target).ConfigureAwait(false);
 
         lock (task.Gate)
         {
@@ -216,8 +219,11 @@ internal sealed class DialogueFlowControl(
     }
 }
 
-/// <summary>对话执行的类型目标：Llm 种类与对话参数。</summary>
-internal sealed class DialogueTarget(LlmParameters parameters, string model) : IExecutionTarget
+/// <summary>对话执行的类型目标：Llm 种类、对话参数与上一轮会话快照。</summary>
+internal sealed class DialogueTarget(
+    LlmParameters parameters,
+    string model,
+    ExecutionRestoreState? seed) : IExecutionTarget
 {
     /// <inheritdoc/>
     public ExecutionTargetId Id => new(DialogueFlow.ReplyLabel);
@@ -229,5 +235,8 @@ internal sealed class DialogueTarget(LlmParameters parameters, string model) : I
     public bool UsesDefaultRunner => true;
 
     /// <inheritdoc/>
-    public IExecutionParameters Parameters { get; } = new LlmExecutionParameters(parameters, model, LlmNodeTypes.Kind);
+    public IExecutionParameters Parameters { get; } = new LlmExecutionParameters(parameters, model, LlmNodeTypes.Kind)
+    {
+        ConversationSeed = seed,
+    };
 }

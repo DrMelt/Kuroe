@@ -7,12 +7,13 @@ using Kuroe.Node.Llm;
 
 namespace Kuroe.Assistant.Dialogue;
 
-/// <summary>对话流程状态：开始输入、工作区、模型与语言。</summary>
+/// <summary>对话流程状态：开始输入、工作区、模型、语言与模式。</summary>
 internal sealed class DialogueFlowState(
     StartInputs inputs,
     string workspace,
     string model,
-    string language) : IFlowState
+    string language,
+    DialogueMode mode) : IFlowState
 {
     /// <inheritdoc/>
     public StartInputs Inputs { get; } = inputs;
@@ -26,6 +27,9 @@ internal sealed class DialogueFlowState(
     /// <summary>回复语言。</summary>
     internal string Language { get; } = language;
 
+    /// <summary>当前模式。</summary>
+    internal DialogueMode Mode { get; private set; } = mode;
+
     /// <summary>开始端口文本。</summary>
     internal FlowTexts StartTexts { get; } = new(
         inputs.Values.ToDictionary(input => input.Port, input => input.Text));
@@ -34,7 +38,10 @@ internal sealed class DialogueFlowState(
     internal static FlowSeed AwaitingSeed => new([DialogueFlowControl.ReplyStep]);
 
     /// <summary>回话执行参数。</summary>
-    internal LlmParameters Parameters => DialogueFlow.Parameters(Language);
+    internal LlmParameters Parameters => DialogueFlow.Parameters(Mode, Language);
+
+    /// <summary>切换模式，下一轮执行按新模式建立工具面。</summary>
+    internal void SelectMode(DialogueMode mode) => Mode = mode;
 }
 
 /// <summary>对话流程的视图投影。</summary>

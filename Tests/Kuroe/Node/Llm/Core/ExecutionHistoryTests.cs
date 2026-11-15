@@ -36,6 +36,18 @@ public sealed class ExecutionHistoryTests
         Assert.EndsWith(text, Assert.Single(messages).Text);
     }
 
+    [Fact]
+    public void Inputs_are_appended_to_the_existing_history()
+    {
+        ExecutionRequest request = Request(
+            [new ExecutionInputValue(new ExecutionPortName("追问"), "继续", null)]);
+        List<ChatMessage> messages = [new ChatMessage(ChatRole.Assistant, "上一轮回复")];
+
+        History(request).LayOut(messages);
+
+        Assert.Equal(["上一轮回复", "继续"], messages.Select(message => message.Text));
+    }
+
     private static ExecutionHistory History(ExecutionRequest request) =>
         new(request, new LlmExecutionParameters(null, null, LlmNodeTypes.Kind));
 

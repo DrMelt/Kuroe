@@ -70,7 +70,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     }
 
     /// <summary>本轮要做的事：节点要求在请求最前，随后是轮次。</summary>
-    public string Instruction(ExecutionRequest request) => ExecutionParameters.Instruction(request);
+    public string? Instruction(ExecutionRequest request) => ExecutionParameters.Instruction(request);
 
     /// <summary>本轮系统指令：节点声明的恒定块，都没有时为空。</summary>
     public string? SystemPrompt() => ExecutionParameters.SystemPrompt();

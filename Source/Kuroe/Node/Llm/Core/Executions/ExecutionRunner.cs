@@ -36,17 +36,37 @@ internal sealed class ExecutionRunner(
     /// <summary>运行中恢复数据变化后触发。</summary>
     public event Action? RestoreDataChanged;
 
-    /// <summary>执行一次 Llm 请求，按产出契约补发要求。恢复数据存在时从上次中断处继续。</summary>
+    /// <summary>执行一次 Llm 请求，按产出契约补发要求。恢复数据存在时从上次中断处继续，会话种子存在时接续上一轮历史。</summary>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
         ExecutionRequest request,
         CancellationToken cancellationToken)
     {
+        LlmAgentSessionPayload? seeded = null;
+        if (_restored is null && _parameters.ConversationSeed is { } seed)
+        {
+            try
+            {
+                seeded = AgentSessionCodec.Decode(seed);
+                if (seeded.Model != _parameters.Model)
+                {
+                    return Error.Failure(
+                        "Llm.Session",
+                        $"会话种子属于模型 {seeded.Model}，当前执行使用 {_parameters.Model ?? "未声明模型"}。");
+                }
+            }
+            catch (Exception ex)
+            {
+                return Error.Failure("Llm.Session", $"会话种子不可读：{ex.Message}");
+            }
+        }
+
         ErrorOr<IConversation> created = await _sessions.ForExecutionAsync(
             execution,
             request,
             _parameters,
             _journal,
             _restored,
+            seeded,
             cancellationToken).ConfigureAwait(false);
 
         if (created.IsError)

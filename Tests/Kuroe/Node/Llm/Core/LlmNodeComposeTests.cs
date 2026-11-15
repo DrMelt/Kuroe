@@ -18,7 +18,7 @@ public sealed class LlmNodeComposeTests
 
     [Fact]
     public void A_whole_node_first_round_has_no_instruction() =>
-        Assert.Empty(Typed(new LlmParameters()).Instruction(WholeNode()));
+        Assert.Null(Typed(new LlmParameters()).Instruction(WholeNode()));
 
     [Fact]
     public void Blocks_become_the_system_instruction() =>

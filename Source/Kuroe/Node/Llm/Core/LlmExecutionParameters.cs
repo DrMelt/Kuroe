@@ -9,8 +9,11 @@ public sealed record LlmExecutionParameters(
     string? Model,
     string Kind) : IExecutionParameters
 {
-    /// <summary>本轮要做的事：节点要求在请求最前，随后是轮次。</summary>
-    public string Instruction(ExecutionRequest request)
+    /// <summary>本轮的会话历史种子，来自此前执行留下的 Llm 会话快照。不写入执行记录。</summary>
+    public ExecutionRestoreState? ConversationSeed { get; init; }
+
+    /// <summary>本轮要做的事：节点要求在请求最前，随后是轮次。没有内容时为空。</summary>
+    public string? Instruction(ExecutionRequest request)
     {
         List<string> instruction = [];
         if (Parameters?.Prompt is { Length: > 0 } prompt)
@@ -23,7 +26,7 @@ public sealed record LlmExecutionParameters(
             instruction.Add($"这是第 {request.Attempt} 轮实施。");
         }
 
-        return string.Join('\n', instruction);
+        return instruction.Count == 0 ? null : string.Join('\n', instruction);
     }
 
     /// <summary>本轮系统指令：节点声明的恒定块，都没有时为空。</summary>

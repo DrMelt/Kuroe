@@ -1,4 +1,5 @@
 using ApiHub.Shared.Models;
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Console.Views;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Tasks.Presentation.Shared;
@@ -659,8 +660,10 @@ public sealed partial class TaskAndReplTests
 
         Assert.Contains("当前模型 fake", cli.Output.Output);
         Assert.Contains("回复语言 中文", cli.Output.Output);
+        Assert.Contains("模式 只读", cli.Output.Output);
         Assert.Contains("→ 发送消息", cli.Output.Output);
         Assert.Contains("√ 切换模型", cli.Output.Output);
+        Assert.Contains("↔ 切换模式", cli.Output.Output);
         Assert.Contains("- 重置对话", cli.Output.Output);
         Assert.Contains("← 返回主菜单", cli.Output.Output);
     }
@@ -685,12 +688,30 @@ public sealed partial class TaskAndReplTests
         using ConsoleSession cli = new();
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
 
         await cli.Assistant.BrowseAsync();
 
         Assert.Contains("对话已重置。", cli.Output.Output);
+    }
+
+    [Fact]
+    public async Task Assistant_menu_switches_the_mode()
+    {
+        using ConsoleSession cli = new();
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+
+        await cli.Assistant.BrowseAsync();
+
+        Assert.Equal(DialogueMode.Edit, cli.Environment.Dialogue.Mode);
+        Assert.Contains("模式已切换为更改，下一轮生效。", cli.Output.Output);
     }
 
     [Fact]

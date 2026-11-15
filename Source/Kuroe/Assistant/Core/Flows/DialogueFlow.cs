@@ -1,7 +1,7 @@
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
-using Kuroe.Tool;
 
 namespace Kuroe.Assistant.Flows;
 
@@ -17,6 +17,9 @@ internal static class DialogueFlow
     /// <summary>开始端口名：任务的初始输入由此进入流程。</summary>
     internal static PortName StartPort { get; } = new("目标");
 
+    /// <summary>模式端口名：任务建立时由宿主给出初始模式。</summary>
+    internal static PortName ModePort { get; } = new("模式");
+
     /// <summary>回话步骤的路径与标签。</summary>
     internal const string ReplyLabel = "回话";
 
@@ -29,33 +32,23 @@ internal static class DialogueFlow
     /// <summary>等待用户输入时的提问。</summary>
     internal const string Question = "请输入";
 
-    /// <summary>回话节点可用的能力白名单，写上级路径即放行整棵子树。文件只读工具可用，路径变量绑定工作区。</summary>
-    internal static IReadOnlyList<ToolPath> Tools { get; } =
-    [
-        new ToolPath("GetLocalTime"),
-        new ToolPath("KuroeInfo"),
-        new ToolPath("file/read"),
-        new ToolPath("source"),
-        new ToolPath("git/read"),
-        new ToolPath("dotnet/read"),
-    ];
-
     /// <summary>回话节点的固定身份说明。</summary>
     private const string Identity = "你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。";
 
-    /// <summary>回话节点的恒定系统指令块：身份说明与回复语言。</summary>
-    internal static IReadOnlyList<string> SystemPrompt(string language) =>
+    /// <summary>回话节点的恒定系统指令块：身份说明、模式指令与回复语言。</summary>
+    internal static IReadOnlyList<string> SystemPrompt(DialogueMode mode, string language) =>
     [
         Identity,
+        mode.Instruction,
         $"使用「{language}」语言母语者语言风格回答。",
     ];
 
-    /// <summary>回话执行参数：工具白名单、工作区路径变量与系统指令。</summary>
-    internal static LlmParameters Parameters(string language) => new()
+    /// <summary>回话执行参数：模式工具白名单、工作区路径变量与系统指令。</summary>
+    internal static LlmParameters Parameters(DialogueMode mode, string language) => new()
     {
-        Tools = Tools,
+        Tools = mode.Tools,
         ToolPorts = ToolPorts(),
-        SystemPrompt = SystemPrompt(language),
+        SystemPrompt = SystemPrompt(mode, language),
     };
 
     /// <summary>工具路径到路径变量映射的对应表，子树按上级路径给出。</summary>

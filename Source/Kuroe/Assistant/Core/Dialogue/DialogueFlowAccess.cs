@@ -9,6 +9,7 @@ internal static class DialogueFlowAccess
     private const string WorkspaceKey = "workspace";
     private const string ModelKey = "model";
     private const string LanguageKey = "language";
+    private const string ModeKey = "mode";
 
     internal static DialogueFlowState State(ITaskFlowView task) =>
         task.FlowState as DialogueFlowState
@@ -23,6 +24,7 @@ internal static class DialogueFlowAccess
             [WorkspaceKey] = state.Workspace,
             [ModelKey] = state.Model,
             [LanguageKey] = state.Language,
+            [ModeKey] = state.Mode.Key,
         };
 
     internal static string Language(IReadOnlyDictionary<string, string> values, string fallback) =>
@@ -33,4 +35,7 @@ internal static class DialogueFlowAccess
 
     internal static string Workspace(IReadOnlyDictionary<string, string> values, string fallback) =>
         values.GetValueOrDefault(WorkspaceKey) ?? fallback;
+
+    internal static DialogueMode Mode(IReadOnlyDictionary<string, string> values) =>
+        DialogueMode.Parse(values.GetValueOrDefault(ModeKey));
 }

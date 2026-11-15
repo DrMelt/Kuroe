@@ -22,6 +22,41 @@ public sealed class DialogueHost(
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
     private ModelName? _model;
+    private DialogueMode _mode = DialogueMode.Default;
+
+    /// <summary>当前选择的模式。模式变化后下一轮执行按新模式建立工具面。</summary>
+    public DialogueMode Mode
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _mode;
+            }
+        }
+    }
+
+    /// <summary>选择模式。已有对话任务时更新流程状态，不重建任务、不清空历史。</summary>
+    public void SelectMode(DialogueMode mode)
+    {
+        TaskId? current;
+        lock (_gate)
+        {
+            _mode = mode;
+            current = _dialogue;
+        }
+
+        if (current is { } id && registry.Find(id) is { IsError: false } found)
+        {
+            WorkTask task = found.Value;
+            task.UnderLock(() =>
+            {
+                DialogueFlowAccess.State(task).SelectMode(mode);
+                return true;
+            });
+            ((ITaskFlowContext)task).NotifyChanged();
+        }
+    }
 
     /// <summary>一轮对话。无模型时返回模型未选择，不触碰任务。过程事件经 observer 送出。</summary>
     public async Task<ErrorOr<Success>> ReplyAsync(
@@ -57,12 +92,14 @@ public sealed class DialogueHost(
         registry.ClearSettled();
     }
 
-    /// <summary>当前对话任务，不存在、已被清理、已收口或模型已变化时新建。助手语言在创建时读取，配置变化后重置对话重建任务生效。</summary>
+    /// <summary>当前对话任务，不存在、已被清理、已收口或模型已变化时新建。助手语言与模式在创建时读取，配置变化后重置对话重建任务生效。</summary>
     private TaskId EnsureDialogue(ModelName model)
     {
         TaskId? replaced = null;
+        DialogueMode mode;
         lock (_gate)
         {
+            mode = _mode;
             if (_dialogue is { } current)
             {
                 if (_model == model && IsUsable(current))
@@ -84,7 +121,11 @@ public sealed class DialogueHost(
 
         registry.ClearSettled();
 
-        StartInputs inputs = StartInputs.Single(DialogueFlow.StartPort, "对话");
+        StartInputs inputs = new(
+        [
+            new StartInput(DialogueFlow.StartPort, "对话"),
+            new StartInput(DialogueFlow.ModePort, mode.Key),
+        ]);
         ErrorOr<TaskSnapshot> created = actions.Submit(flow, DialogueFlow.Name, inputs, "对话");
         if (created.IsError)
         {

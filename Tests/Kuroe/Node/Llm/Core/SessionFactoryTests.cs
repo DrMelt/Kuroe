@@ -26,6 +26,7 @@ public sealed class SessionFactoryTests
             Parameters(null),
             new ProcessJournal(),
             null,
+            null,
             CancellationToken.None);
 
         Assert.True(created.IsError);
@@ -42,6 +43,7 @@ public sealed class SessionFactoryTests
             Request(),
             Parameters("fake"),
             new ProcessJournal(),
+            null,
             null,
             CancellationToken.None);
 

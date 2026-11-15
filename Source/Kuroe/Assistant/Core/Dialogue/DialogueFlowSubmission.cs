@@ -34,7 +34,8 @@ public sealed class DialogueFlowSubmission(
         }
 
         string language = settings.AssistantLanguage;
-        DialogueFlowState state = new(inputs, paths.WorkingDirectory, model.Value, language);
+        DialogueMode mode = DialogueMode.Parse(inputs.Text(DialogueFlow.ModePort));
+        DialogueFlowState state = new(inputs, paths.WorkingDirectory, model.Value, language, mode);
 
         return new FlowSubmission(
             state,
@@ -60,7 +61,8 @@ public sealed class DialogueFlowSubmission(
         string language = DialogueFlowAccess.Language(saved.Values, settings.AssistantLanguage);
         string model = DialogueFlowAccess.Model(saved.Values, models.Current?.Value ?? string.Empty);
         string workspace = DialogueFlowAccess.Workspace(saved.Values, paths.WorkingDirectory);
-        DialogueFlowState state = new(saved.Inputs, workspace, model, language);
+        DialogueMode mode = DialogueFlowAccess.Mode(saved.Values);
+        DialogueFlowState state = new(saved.Inputs, workspace, model, language, mode);
         List<IExecution> restored = [.. record.Executions.Select(execution => RestoreExecution(record.Identity.Id, execution))];
 
         return new FlowRestore(

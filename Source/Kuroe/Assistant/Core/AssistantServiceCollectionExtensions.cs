@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Assistant.Dialogue;
-using Kuroe.Assistant.Flows;
 using Kuroe.CodeFlow.Persistence;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
@@ -32,7 +31,7 @@ public static class AssistantServiceCollectionExtensions
         ErrorOr<Success> tools = composition.AddToolSources(
         [
             new SourceToolSource(sourceDirectory, composition.Files),
-            new ToolboxToolSource(DialogueFlow.Tools, composition.ConfiguredTools),
+            new ToolboxToolSource(DialogueMode.All, composition.ConfiguredTools),
         ]);
         if (tools.IsError)
         {

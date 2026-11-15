@@ -6,14 +6,20 @@ namespace Kuroe.Tool.KuroeInfo.Tests;
 public sealed class ToolboxKuroeInfoToolTests
 {
     [Fact]
-    public void Describe_lists_the_dialogue_prefixes_and_the_empty_command_tools_hint()
+    public void Describe_lists_the_dialogue_modes_and_the_empty_command_tools_hint()
     {
-        ToolboxKuroeInfoTool tool = new([new ToolPath("file"), new ToolPath("git")], []);
+        ToolboxKuroeInfoTool tool = new(
+            [
+                new DialogueToolGroup("只读", [new ToolPath("file/read"), new ToolPath("git/read")]),
+                new DialogueToolGroup("更改", [new ToolPath("file/read"), new ToolPath("file/write")]),
+            ],
+            []);
 
         string output = ToolResult.Render(Assert.Single(tool.Functions)
             .Invoke(new ToolArguments(new Dictionary<string, object?>())));
 
-        Assert.Contains("file、git", output, StringComparison.Ordinal);
+        Assert.Contains("只读：file/read、git/read", output, StringComparison.Ordinal);
+        Assert.Contains("更改：file/read、file/write", output, StringComparison.Ordinal);
         Assert.Contains("没有配置命令工具", output, StringComparison.Ordinal);
     }
 }

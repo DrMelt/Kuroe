@@ -13,10 +13,10 @@
 | `KuroeInfo/ListFlows`    | 无                 | 列出全部已注册流程模板：流程名、执行节点路径与说明                           |
 | `KuroeInfo/GetFlow`      | `flowName` 必填    | 查看指定流程的展开节点表：模型、节点类型名与要求                             |
 | `KuroeInfo/GetConfig`    | 无                 | 查看生效配置：各节设置项的生效值与来源标记                                   |
-| `KuroeInfo/ListTools`    | 无                 | 列出内置对话放行的路径前缀与配置的命令工具                                   |
+| `KuroeInfo/ListTools`    | 无                 | 列出内置对话各模式放行的路径前缀与配置的命令工具                             |
 
 ## 行为
 
 任务与执行查询只覆盖用户任务，内置对话任务不出现。`GetTask` 的任务键可用完整键或末尾 8 位。`GetExecution` 的执行号是数字。执行详情给出请求次数、token 用量、上下文、恢复数据与继续来源，含义与展示规则见[任务与执行](../../usage/任务与执行.md#用量)。任务过程记录只给最近 10 条，更早的只报条数；执行过程记录只在运行中可见。
 
-`ListTools` 只在 Console 内置助手中提供，列出对话白名单与 `.kuroe/tools.json` 声明的命令工具，见[内置助手](../../console/内置助手.md)。
+`ListTools` 只在 Console 内置助手中提供，列出对话各模式的白名单与 `.kuroe/tools.json` 声明的命令工具，见[内置助手](../../console/内置助手.md)。

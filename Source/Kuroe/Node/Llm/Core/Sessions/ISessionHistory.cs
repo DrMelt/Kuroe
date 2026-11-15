@@ -17,7 +17,7 @@ internal interface ISessionHistory
     /// <summary>本轮可用的工具路径，没有能力时为空集合。</summary>
     IReadOnlyList<ToolPath> ToolPaths { get; }
 
-    /// <summary>按来源重铺历史。</summary>
+    /// <summary>把本轮输入追加到历史。</summary>
     void LayOut(List<ChatMessage> messages);
 }
 
@@ -37,7 +37,6 @@ internal sealed class ExecutionHistory(ExecutionRequest request, LlmExecutionPar
 
     public void LayOut(List<ChatMessage> messages)
     {
-        messages.Clear();
         foreach (ExecutionInputValue value in request.Inputs)
         {
             messages.Add(new ChatMessage(ChatRole.User, Text(value)));

@@ -36,6 +36,54 @@ public sealed class AgentSessionTests
     }
 
     [Fact]
+    public async Task A_seeded_session_appends_the_round_input_to_the_restored_history()
+    {
+        FakeClient client = new(_ => Reply("回答"));
+        TestSession created = await CreateSession(client);
+        LlmAgentSessionPayload captured = await AgentSessionCodec.CaptureAsync(
+            created.Agent,
+            created.AgentSession,
+            "fake",
+            CancellationToken.None);
+
+        (ChatClientAgent agent, InMemoryChatHistoryProvider provider, ExecutionChatClient executionClient) =
+            CreateAgent(client, new ProcessJournal(), tools: null);
+        AgentSession restored = await AgentSessionCodec.RestoreAsync(
+            agent,
+            AgentSessionCodec.Decode(AgentSessionCodec.Encode(captured)),
+            CancellationToken.None);
+
+        ExecutionRequest request = new(
+            new ExecutionOwnerId("1"),
+            new ExecutionTargetId("回话"),
+            LlmNodeTypes.Kind,
+            1,
+            [],
+            [new ExecutionInputValue(new ExecutionPortName("回答"), "追问", null)],
+            new Dictionary<ExecutionPortName, string>(),
+            []);
+        ExecutionHistory history = new(
+            request,
+            new LlmExecutionParameters(null, "fake", LlmNodeTypes.Kind));
+        List<ChatMessage> messages = provider.GetMessages(restored);
+        history.LayOut(messages);
+        provider.SetMessages(restored, messages);
+
+        Session session = new(
+            agent,
+            restored,
+            provider,
+            history,
+            new ProcessJournal(),
+            executionClient,
+            restored: false);
+
+        await session.AskAsync(null, CancellationToken.None);
+
+        Assert.Equal(["开始", "追问"], client.Requests[^1].Select(message => message.Text));
+    }
+
+    [Fact]
     public async Task A_consumed_request_records_usage_and_content()
     {
         ProcessJournal journal = new();

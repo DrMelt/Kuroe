@@ -16,13 +16,14 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
     private readonly IToolFactory _tools = tools;
     private readonly IToolJson _json = json;
 
-    /// <summary>一次执行的会话，工具载体与历史都由执行输入给出。带恢复数据时恢复 MAF 会话。</summary>
+    /// <summary>一次执行的会话，工具载体与历史都由执行输入给出。带恢复数据时恢复 MAF 会话，接续历史时恢复后追加本轮输入。</summary>
     internal async Task<ErrorOr<IConversation>> ForExecutionAsync(
         ExecutionId execution,
         ExecutionRequest request,
         LlmExecutionParameters parameters,
         ProcessJournal journal,
         LlmAgentSessionPayload? restored,
+        LlmAgentSessionPayload? seeded,
         CancellationToken cancellationToken)
     {
         ExecutionHistory history = new(request, parameters);
@@ -55,6 +56,20 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
                 journal,
                 executionClient,
                 restored,
+                continuesRound: true,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        if (seeded is not null)
+        {
+            return await RestoreAsync(
+                agent,
+                provider,
+                history,
+                journal,
+                executionClient,
+                seeded,
+                continuesRound: false,
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -103,14 +118,15 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
             null);
     }
 
-    /// <summary>恢复一次执行的会话。历史可继续性在建立恢复会话时校验。</summary>
+    /// <summary>恢复一次执行的会话。历史可继续性在建立恢复会话时校验。接续历史时把本轮输入追加到恢复后的历史。</summary>
     private static async Task<ErrorOr<IConversation>> RestoreAsync(
         ChatClientAgent agent,
         InMemoryChatHistoryProvider provider,
-        ISessionHistory history,
+        ExecutionHistory history,
         ProcessJournal journal,
         ExecutionChatClient executionClient,
         LlmAgentSessionPayload restored,
+        bool continuesRound,
         CancellationToken cancellationToken)
     {
         AgentSession session;
@@ -134,7 +150,14 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
             return Error.Failure("Llm.Restore", "恢复数据中的会话历史不能继续。");
         }
 
-        return new Session(agent, session, provider, history, journal, executionClient, restored: true);
+        if (!continuesRound)
+        {
+            List<ChatMessage> messages = provider.GetMessages(session);
+            history.LayOut(messages);
+            provider.SetMessages(session, messages);
+        }
+
+        return new Session(agent, session, provider, history, journal, executionClient, restored: continuesRound);
     }
 
     /// <summary>释放缓存的模型客户端。</summary>

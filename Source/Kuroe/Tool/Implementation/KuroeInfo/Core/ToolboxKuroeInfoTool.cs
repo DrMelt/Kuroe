@@ -4,25 +4,30 @@ using Kuroe.Tool.Json;
 
 namespace Kuroe.Tool.KuroeInfo;
 
-/// <summary>工具面的状态查询工具。列出内置对话放行的路径前缀与配置的命令工具及其调用名与路径。</summary>
+/// <summary>内置对话的一个模式及其放行的工具路径前缀。</summary>
+public sealed record DialogueToolGroup(string Name, IReadOnlyList<ToolPath> Tools);
+
+/// <summary>工具面的状态查询工具。列出内置对话各模式放行的路径前缀与配置的命令工具及其调用名与路径。</summary>
 public sealed class ToolboxKuroeInfoTool : ITool
 {
-    private readonly IReadOnlyList<ToolPath> _dialogueTools;
+    private readonly IReadOnlyList<DialogueToolGroup> _dialogueGroups;
     private readonly IReadOnlyList<ConfiguredTool> _configuredTools;
 
     /// <summary>列出工具面的函数定义。</summary>
     private static readonly ToolDefinition ListTools = new(
         new ToolPath("KuroeInfo/ListTools"),
-        "列出内置对话放行的路径前缀与配置的命令工具及其调用名与路径。",
+        "列出内置对话各模式放行的路径前缀与配置的命令工具及其调用名与路径。",
         []);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
-    /// <summary>用内置对话的能力白名单与配置的工具建立载体。</summary>
-    public ToolboxKuroeInfoTool(IReadOnlyList<ToolPath> dialogueTools, IReadOnlyList<ConfiguredTool> configuredTools)
+    /// <summary>用内置对话各模式的工具白名单与配置的工具建立载体。</summary>
+    public ToolboxKuroeInfoTool(
+        IReadOnlyList<DialogueToolGroup> dialogueGroups,
+        IReadOnlyList<ConfiguredTool> configuredTools)
     {
-        _dialogueTools = dialogueTools;
+        _dialogueGroups = dialogueGroups;
         _configuredTools = configuredTools;
         Functions = [ListTools.Bind(_ => Describe())];
     }
@@ -31,9 +36,13 @@ public sealed class ToolboxKuroeInfoTool : ITool
     private ErrorOr<string> Describe()
     {
         var text = new StringBuilder();
-        text.AppendLine("内置对话放行的路径前缀：");
-        text.AppendLine($"  {string.Join("、", _dialogueTools.OrderBy(path => path.Value))}");
-        text.AppendLine("调用名是路径的分隔符换成下划线，调用按调用名写。");
+        text.AppendLine("内置对话各模式放行的路径前缀：");
+        foreach (DialogueToolGroup group in _dialogueGroups)
+        {
+            text.AppendLine($"  {group.Name}：{string.Join("、", group.Tools.OrderBy(path => path.Value))}");
+        }
+
+        text.AppendLine("调用名是路径的分隔符换成下划线，调用按调用名写。实际可调用的函数以本轮工具面为准。");
 
         if (_configuredTools.Count == 0)
         {

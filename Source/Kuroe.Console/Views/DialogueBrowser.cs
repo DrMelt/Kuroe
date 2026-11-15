@@ -31,13 +31,14 @@ internal sealed class DialogueBrowser(
 
             while (true)
             {
-                terminal.Line($"当前模型 {models.Current?.Value ?? "未选择"} · 回复语言 {settings.AssistantLanguage}");
+                terminal.Line($"当前模型 {models.Current?.Value ?? "未选择"} · 回复语言 {settings.AssistantLanguage} · 模式 {dialogue.Mode.DisplayName}");
                 terminal.NewLine();
 
                 Item[] items =
                 [
                     new("→ 发送消息", "send"),
                     new("√ 切换模型", "model"),
+                    new("↔ 切换模式", "mode"),
                     new("- 重置对话", "reset"),
                     Back,
                 ];
@@ -51,6 +52,10 @@ internal sealed class DialogueBrowser(
 
                     case "model":
                         catalogs.PickModel();
+                        break;
+
+                    case "mode":
+                        PickMode();
                         break;
 
                     case "reset":
@@ -114,5 +119,19 @@ internal sealed class DialogueBrowser(
     {
         dialogue.Reset();
         terminal.Ok("对话已重置。");
+    }
+
+    /// <summary>选择模式，取消保持当前模式。切换在下一轮生效，不重建对话任务。</summary>
+    private void PickMode()
+    {
+        DialogueMode current = dialogue.Mode;
+        DialogueMode picked = terminal.Choose("选择模式", DialogueMode.All, mode => mode.DisplayName, current);
+        if (ReferenceEquals(picked, current))
+        {
+            return;
+        }
+
+        dialogue.SelectMode(picked);
+        terminal.Ok($"模式已切换为{picked.DisplayName}，下一轮生效。");
     }
 }

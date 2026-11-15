@@ -1,5 +1,6 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
@@ -51,6 +52,67 @@ public sealed class DialogueHostTests
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
         Assert.Equal(["回复1", "回复2"], observer.Texts);
+    }
+
+    [Fact]
+    public async Task Switching_mode_keeps_the_dialogue_task_and_changes_the_next_round_tools()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+
+        await environment.Dialogue.ReplyAsync("第一问", null);
+        environment.Dialogue.SelectMode(DialogueMode.Edit);
+        await environment.Dialogue.ReplyAsync("第二问", null);
+
+        Assert.Equal(DialogueMode.Edit, environment.Dialogue.Mode);
+        Assert.Equal(
+            environment.Runner.StartedCode[0].Request.Owner.Value,
+            environment.Runner.StartedCode[1].Request.Owner.Value);
+
+        LlmParameters read = Parameters(environment, 0);
+        LlmParameters edit = Parameters(environment, 1);
+
+        Assert.DoesNotContain(read.Tools, tool => tool.Value == "file/write");
+        Assert.Contains(edit.Tools, tool => tool.Value == "file/write");
+        Assert.DoesNotContain(edit.Tools, tool => tool.Value == "git/write");
+        Assert.DoesNotContain(edit.Tools, tool => tool.Value == "dotnet/write");
+        Assert.Contains("只读模式", read.SystemPrompt[1], StringComparison.Ordinal);
+        Assert.Contains("更改模式", edit.SystemPrompt[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Selected_mode_applies_to_the_first_round()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        environment.Dialogue.SelectMode(DialogueMode.Edit);
+
+        await environment.Dialogue.ReplyAsync("你好", null);
+
+        LlmParameters parameters = Parameters(environment, 0);
+
+        Assert.Contains(parameters.Tools, tool => tool.Value == "file/write");
+        Assert.Contains("更改模式", parameters.SystemPrompt[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Rounds_continue_from_the_previous_execution_session_snapshot()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        ExecutionRestoreState seed = new("fake", "{\"session\":{}}");
+        environment.Runner.RestoreData = seed;
+
+        await environment.Dialogue.ReplyAsync("第一问", null);
+        await environment.Dialogue.ReplyAsync("第二问", null);
+
+        LlmExecutionParameters first = Assert.IsType<LlmExecutionParameters>(
+            environment.Runner.StartedTargets[0].Parameters);
+        LlmExecutionParameters second = Assert.IsType<LlmExecutionParameters>(
+            environment.Runner.StartedTargets[1].Parameters);
+
+        Assert.Null(first.ConversationSeed);
+        Assert.Equal(seed, second.ConversationSeed);
     }
 
     [Fact]
@@ -243,6 +305,14 @@ public sealed class DialogueHostTests
 
     private static string ErrorText(ErrorOr<Success> result) =>
         result.IsError ? string.Join("；", result.ErrorsOrEmptyList.Select(error => error.Description)) : string.Empty;
+
+    private static LlmParameters Parameters(TestEnvironment environment, int round)
+    {
+        LlmExecutionParameters execution = Assert.IsType<LlmExecutionParameters>(
+            environment.Runner.StartedTargets[round].Parameters);
+
+        return execution.Parameters ?? throw new InvalidOperationException("对话执行缺少参数。");
+    }
 
     /// <summary>记下收到的过程，供断言。</summary>
     private sealed class RecordingOutput
