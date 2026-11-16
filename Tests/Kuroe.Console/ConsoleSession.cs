@@ -60,10 +60,11 @@ internal sealed class ConsoleSession : IDisposable
     public ToolView Tools => new(Environment.Tools, Environment.ConfiguredTools, Terminal);
 
     public DialogueBrowser Assistant =>
-        new(Environment.Dialogue, Environment.Models, Catalogs, Environment.Settings, new DialogueOutput(Terminal), Terminal, Errors);
+        new(Environment.Dialogue, Environment.Models, Catalogs, Environment.Settings, Terminal, Errors);
 
     public Repl Repl => new(
         Environment.Tasks,
+        Environment.Dialogue,
         Assistant,
         new ExecutionNotifier(Environment.Registry, Terminal),
         new StartupView(Environment.Catalog, Environment.Models, Environment.Tools, Environment.Templates, Terminal),

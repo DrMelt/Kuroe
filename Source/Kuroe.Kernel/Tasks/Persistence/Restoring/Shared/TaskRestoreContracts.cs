@@ -15,7 +15,15 @@ public interface ITaskRestoreService
 public sealed record TaskLoadReport(
     IReadOnlyList<TaskSnapshot> Loaded,
     IReadOnlyList<TaskId> Busy,
-    IReadOnlyList<TaskLoadFailure> Failures);
+    IReadOnlyList<TaskLoadFailure> Failures)
+{
+    /// <summary>合并同一进程内多个任务域的加载报告。</summary>
+    public TaskLoadReport Merge(TaskLoadReport other) =>
+        new(
+            [.. Loaded, .. other.Loaded],
+            [.. Busy, .. other.Busy],
+            [.. Failures, .. other.Failures]);
+}
 
 /// <summary>一个任务存档的加载失败。文件级失败没有任务键。</summary>
 public sealed record TaskLoadFailure(

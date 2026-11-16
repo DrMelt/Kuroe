@@ -63,6 +63,7 @@ internal static class ViewLabels
     {
         ExecutionState.Succeeded => Styles.Success,
         ExecutionState.Failed => Styles.Error,
+        ExecutionState.Interrupted => Styles.Warning,
         ExecutionState.Running or ExecutionState.Queued => Styles.Key,
         _ => Styles.Hint,
     };

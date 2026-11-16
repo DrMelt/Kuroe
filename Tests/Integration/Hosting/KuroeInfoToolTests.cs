@@ -32,7 +32,7 @@ public sealed class KuroeInfoToolTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = _ => "回复你好";
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
         TaskKuroeInfoTool tool = new(environment.TaskReader);
 
@@ -45,10 +45,10 @@ public sealed class KuroeInfoToolTests
     public async Task GetExecution_renders_execution_process_and_tool_entry()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Usage = new Kuroe.Execution.Shared.ExecutionUsage(
+        environment.Runner.Usage = new Execution.Shared.ExecutionUsage(
             1,
             0,
-            new Kuroe.Execution.Shared.TokenUsage(12, 3, 15, null, null))
+            new Execution.Shared.TokenUsage(12, 3, 15, null, null))
         {
             ContextTokens = 12,
         };

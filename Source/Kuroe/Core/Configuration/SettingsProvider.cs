@@ -27,7 +27,7 @@ public sealed class SettingsProvider : ISettingsView
     /// <summary>用户层偏好文件的绝对路径。</summary>
     public string UserSettingsFile => _paths.UserSettingsFile;
 
-    /// <summary>内置助手的回复语言，对话任务创建时读取。</summary>
+    /// <summary>内置助手的回复语言，新会话建立时读取。</summary>
     public string AssistantLanguage => Current.Assistant.Language;
 
     /// <summary>规范化用户层并绑定校验，失败时一次给出全部错误。装配统一由 AddKuroeCore 完成。</summary>
@@ -167,6 +167,6 @@ public sealed class SettingsProvider : ISettingsView
         return new SettingsEffect(
             after.RequiresRestart(before) || afterNetwork.RequiresRestart(beforeNetwork),
             after.InvalidatesHistory(before),
-            afterAssistant.RequiresDialogueRebuild(beforeAssistant));
+            afterAssistant.AffectsNewDialogueSessions(beforeAssistant));
     }
 }

@@ -423,8 +423,8 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
 
-        Kuroe.Execution.Shared.ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(
-            new Kuroe.Execution.Shared.ExecutionId(1)).ThrowIfError();
+        Execution.Shared.ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(
+            new Execution.Shared.ExecutionId(1)).ThrowIfError();
         cli.Tasks.ShowExecution(execution.Id.Value);
 
         Assert.Contains("执行 #1", cli.Output.Output);
@@ -630,7 +630,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new();
 
-        var reply = await cli.Environment.Dialogue.ReplyAsync("你好", null);
+        var reply = await cli.Environment.SayAsync("你好", null);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
         cli.Tasks.Browse();
 
@@ -643,7 +643,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new();
 
-        var reply = await cli.Environment.Dialogue.ReplyAsync("你好", null);
+        var reply = await cli.Environment.SayAsync("你好", null);
         cli.Tasks.StopTask(new TaskId(1));
 
         Assert.False(reply.IsError);
@@ -664,8 +664,28 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("→ 发送消息", cli.Output.Output);
         Assert.Contains("√ 切换模型", cli.Output.Output);
         Assert.Contains("↔ 切换模式", cli.Output.Output);
-        Assert.Contains("- 重置对话", cli.Output.Output);
+        Assert.DoesNotContain("重置对话", cli.Output.Output);
         Assert.Contains("← 返回主菜单", cli.Output.Output);
+    }
+
+    [Fact]
+    public async Task Assistant_session_list_does_not_offer_the_global_model_switch()
+    {
+        using ConsoleSession cli = new();
+        for (int i = 0; i < 5; i++)
+        {
+            cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        }
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+
+        await cli.Assistant.BrowseAsync();
+
+        Assert.Contains("── 主菜单 › Kuroe 助手 › 会话列表", cli.Output.Output);
+        Assert.Contains("+ 新建会话", cli.Output.Output);
+        Assert.DoesNotContain("切换全局模型", cli.Output.Output);
     }
 
     [Fact]
@@ -678,23 +698,8 @@ public sealed partial class TaskAndReplTests
 
         await cli.Assistant.BrowseAsync();
 
-        Assert.Contains("Kuroe >", cli.Output.Output);
-        Assert.Equal(1, cli.Output.Output.Split("── 主菜单 › Kuroe 助手").Length - 1);
-    }
-
-    [Fact]
-    public async Task Assistant_menu_resets_the_dialogue()
-    {
-        using ConsoleSession cli = new();
-        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
-        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
-        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
-        cli.Output.Input.PushKey(ConsoleKey.Enter);
-        cli.Output.Input.PushKey(ConsoleKey.Escape);
-
-        await cli.Assistant.BrowseAsync();
-
-        Assert.Contains("对话已重置。", cli.Output.Output);
+        Assert.Equal(1, cli.Output.Output.Split("Kuroe >").Length - 1);
+        Assert.Contains("助手操作", cli.Output.Output);
     }
 
     [Fact]
@@ -710,7 +715,7 @@ public sealed partial class TaskAndReplTests
 
         await cli.Assistant.BrowseAsync();
 
-        Assert.Equal(DialogueMode.Edit, cli.Environment.Dialogue.Mode);
+        Assert.Equal(DialogueMode.Edit, cli.Environment.Session.Mode);
         Assert.Contains("模式已切换为更改，下一轮生效。", cli.Output.Output);
     }
 
@@ -772,7 +777,6 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("主菜单", cli.Output.Output);
         Assert.Contains("Kuroe 助手", cli.Output.Output);
         Assert.Contains("退出程序", cli.Output.Output);
-        Assert.DoesNotContain("重置对话", cli.Output.Output);
     }
 
     [Fact]

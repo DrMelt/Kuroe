@@ -39,7 +39,7 @@ public sealed class TaskDirectoryAcceptanceTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = _ => "回复你好";
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
         Assert.False(reply.IsError);
         Assert.False(Directory.Exists(Path.Combine(environment.Root, ".kuroe_tasks")));

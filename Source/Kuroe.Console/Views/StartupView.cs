@@ -30,7 +30,7 @@ internal sealed class StartupView(
 
         if (report is { } load && load.Busy.Count > 0)
         {
-            lines.Add(new Text($"{load.Busy.Count} 个任务由其他进程持有，本实例未加载。", Styles.Hint));
+            lines.Add(new Text($"{load.Busy.Count} 个任务或会话由其他进程持有，本实例未加载。", Styles.Hint));
         }
 
         if (contents.Providers.Length == 0)

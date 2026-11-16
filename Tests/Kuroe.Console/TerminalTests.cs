@@ -1,11 +1,10 @@
-using Kuroe.Console.Views;
 using Spectre.Console;
 using Spectre.Console.Testing;
 using Xunit;
 
 namespace Kuroe.Console.Tests;
 
-/// <summary>终端的写出口：独占期间的通知排队、行闭合、两个方向的流分离与框内文本排版。</summary>
+/// <summary>终端的写出口：独占期间的通知排队、页面标题重绘与两个方向的流分离。</summary>
 public sealed class TerminalTests
 {
     [Fact]
@@ -20,17 +19,6 @@ public sealed class TerminalTests
         }
 
         Assert.Contains("排队中的提示。", output.Output);
-    }
-
-    [Fact]
-    public void Line_closes_a_dangling_append_first()
-    {
-        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-
-        terminal.Append("片段");
-        terminal.Line("下一行");
-
-        Assert.Contains($"片段{Environment.NewLine}下一行", output.Output);
     }
 
     [Fact]
@@ -173,126 +161,6 @@ public sealed class TerminalTests
         Assert.Equal(string.Empty, output.Output);
         Assert.Contains("失败说明", error.Output);
         Assert.Contains("未生效。", error.Output);
-    }
-
-    [Fact]
-    public void Frame_wraps_streamed_text_between_borders()
-    {
-        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-        output.Profile.Width = 30;
-
-        using (terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手"))
-        {
-            terminal.Append(new string('字', 40));
-        }
-
-        string[] lines = Rows(output.Output);
-        Assert.StartsWith("┌─Kuroe 助手", lines[0]);
-        Assert.EndsWith("┐", lines[0]);
-        Assert.Equal(30, lines[0].GetCellWidth());
-        Assert.StartsWith("└", lines[^1]);
-        Assert.EndsWith("┘", lines[^1]);
-        Assert.Equal(30, lines[^1].GetCellWidth());
-
-        string[] content = lines[1..^1];
-        Assert.Equal(4, content.Length);
-        foreach (string line in content)
-        {
-            Assert.StartsWith("│ ", line);
-            Assert.EndsWith(" │", line);
-            Assert.Equal(30, line.GetCellWidth());
-        }
-    }
-
-    [Fact]
-    public void Frame_puts_tool_lines_inside_the_box()
-    {
-        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-        output.Profile.Width = 40;
-
-        using (terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手"))
-        {
-            terminal.Append("我先看一下。");
-            terminal.ToolCall("工具 GetStatus {}");
-            terminal.ToolResult("结果 执行中");
-        }
-
-        string[] lines = Rows(output.Output);
-        Assert.Contains(lines, line => line.Contains("│ 我先看一下。") && line.EndsWith('│'));
-        Assert.Contains(lines, line => line.Contains("│ 工具 GetStatus {}") && line.EndsWith('│'));
-        Assert.Contains(lines, line => line.Contains("│ 结果 执行中") && line.EndsWith('│'));
-    }
-
-    [Fact]
-    public void Frame_closes_when_the_scope_throws()
-    {
-        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-        output.Profile.Width = 30;
-
-        Assert.Throws<InvalidOperationException>((Action)(() =>
-        {
-            using (terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手"))
-            {
-                terminal.Append("已取消。");
-                throw new InvalidOperationException("失败");
-            }
-        }));
-
-        string[] lines = Rows(output.Output);
-        Assert.StartsWith("└", lines[^1]);
-        Assert.EndsWith("┘", lines[^1]);
-    }
-
-    [Fact]
-    public void Frame_falls_back_to_plain_lines_on_a_narrow_console()
-    {
-        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-        output.Profile.Width = 10;
-
-        using (terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手"))
-        {
-            terminal.Append("短文本");
-        }
-
-        Assert.DoesNotContain('┌', output.Output);
-        Assert.DoesNotContain('│', output.Output);
-        Assert.Contains("短文本", output.Output);
-    }
-
-    [Fact]
-    public void Frame_keeps_surrogate_pairs_together()
-    {
-        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-        output.Profile.Width = 20;
-
-        using (terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手"))
-        {
-            terminal.Append(string.Concat(Enumerable.Repeat("😀", 10)));
-        }
-
-        string[] content = Rows(output.Output)[1..^1];
-        Assert.True(content.Length >= 2, output.Output);
-        Assert.Equal(10, content.Sum(line => line.Split("😀").Length - 1));
-    }
-
-    [Fact]
-    public void Frame_rejects_renderables()
-    {
-        Terminal terminal = ConsoleSession.NewTerminal(out _, out _);
-
-        using Terminal.Frame frame = terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手");
-
-        Assert.Throws<InvalidOperationException>(() => terminal.Write(new Text("内容")));
-    }
-
-    [Fact]
-    public void Page_rejects_a_page_inside_a_frame()
-    {
-        Terminal terminal = ConsoleSession.NewTerminal(out _, out _);
-
-        using Terminal.Frame frame = terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手");
-
-        Assert.Throws<InvalidOperationException>(() => terminal.Page("主菜单"));
     }
 
     /// <summary>建一套控制序列原样写出的终端，两个方向各自捕获。</summary>

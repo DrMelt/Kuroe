@@ -2,6 +2,7 @@ using System.CommandLine;
 using ErrorOr;
 using Kuroe;
 using Kuroe.Assistant;
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Console;
 using Kuroe.Console.Views;
 using Kuroe.Configuration.Files;
@@ -70,7 +71,6 @@ static async Task<int> RunAsync(string? workDirectory)
 
     // 呈现与通知
     services.AddSingleton<ResultView>();
-    services.AddSingleton<DialogueOutput>();
     services.AddSingleton<ExecutionNotifier>();
     services.AddSingleton<TaskListView>();
     services.AddSingleton<TaskOverviewView>();
@@ -103,12 +103,14 @@ static async Task<int> RunAsync(string? workDirectory)
         new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
     TaskLoadReport loaded = provider.GetRequiredService<ITaskRestoreService>().Restore();
-    foreach (TaskLoadFailure failure in loaded.Failures)
+    TaskLoadReport assistantLoad = provider.GetRequiredService<DialogueHost>().Restore();
+    TaskLoadReport report = loaded.Merge(assistantLoad);
+    foreach (TaskLoadFailure failure in report.Failures)
     {
         errors.Report(failure.Errors);
     }
 
-    await provider.GetRequiredService<Repl>().RunAsync(loaded);
+    await provider.GetRequiredService<Repl>().RunAsync(report);
 
     return 0;
 }

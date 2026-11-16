@@ -21,7 +21,7 @@ public sealed class TaskRecordCleanupTests : IDisposable
         await _environment.Records.FlushAsync(id);
         Assert.Contains(store.ReadAll().Records, record => record.Identity.Id == id);
 
-        _environment.Tasks.ClearSettled();
+        _environment.Tasks.ClearSettled().ThrowIfError();
 
         Assert.DoesNotContain(store.ReadAll().Records, record => record.Identity.Id == id);
         Assert.False(File.Exists(Path.Combine(directory, $"{id.Value}{Codec.FileExtension}")));

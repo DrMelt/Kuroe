@@ -35,7 +35,7 @@ public sealed class TaskService(TaskActions actions) : ITaskControl
     public ErrorOr<Success> StopExecution(ExecutionId id) => _actions.StopExecution(id);
 
     /// <summary>丢掉已完成或已终止的任务，同时删除它们的存档。</summary>
-    public IReadOnlyList<TaskId> ClearSettled() => _actions.ClearSettled();
+    public ErrorOr<IReadOnlyList<TaskId>> ClearSettled() => _actions.ClearSettled();
 
     /// <summary>终止任务：在跑的执行随之中断，未走完的步骤不再推进。</summary>
     public ErrorOr<Success> StopTask(TaskId id) => _actions.StopTask(id);

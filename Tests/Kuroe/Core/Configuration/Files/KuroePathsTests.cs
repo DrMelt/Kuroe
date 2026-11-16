@@ -26,6 +26,16 @@ public sealed class KuroePathsTests
     }
 
     [Fact]
+    public void Assistant_records_live_under_the_assistant_directory()
+    {
+        KuroePaths paths = KuroePaths.At(Path.Combine(Path.GetTempPath(), "kuroe-paths"));
+
+        Assert.Equal(Path.Combine(paths.WorkingDirectory, ".kuroe_assistant"), paths.AssistantDirectory);
+        Assert.Equal(Path.Combine(paths.AssistantDirectory, "records"), paths.AssistantRecordsDirectory);
+        Assert.NotEqual(paths.RecordsDirectory, paths.AssistantRecordsDirectory);
+    }
+
+    [Fact]
     public void Invalid_path_is_rejected()
     {
         ErrorOr<KuroePaths> result = KuroePaths.Resolve("bad\u0000path");

@@ -96,7 +96,7 @@ public sealed class TaskRecordCoordinator : ITaskRecordCoordinator
     }
 
     /// <inheritdoc/>
-    public void Remove(TaskId id)
+    public ErrorOr<Success> Remove(TaskId id)
     {
         _write.Wait();
         try
@@ -107,7 +107,7 @@ public sealed class TaskRecordCoordinator : ITaskRecordCoordinator
                 _removed.Add(id);
             }
 
-            _ = _store.Delete(id);
+            return _store.Delete(id);
         }
         finally
         {

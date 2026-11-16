@@ -15,7 +15,7 @@ public sealed class TaskDomainTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复你好";
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
         Assert.False(reply.IsError);
         Assert.Empty(environment.TaskReader.Snapshots());
@@ -29,7 +29,7 @@ public sealed class TaskDomainTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复你好";
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> reply = await environment.SayAsync("你好", null);
         TaskId id = environment.Submit("修复登录超时");
 
         Assert.False(reply.IsError);
@@ -45,7 +45,7 @@ public sealed class TaskDomainTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复你好";
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> reply = await environment.SayAsync("你好", null);
         IExecution round = Assert.Single(environment.Runner.StartedCode);
 
         Assert.False(reply.IsError);
@@ -60,9 +60,9 @@ public sealed class TaskDomainTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复";
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null);
+        ErrorOr<Success> first = await environment.SayAsync("第一问", null);
         IReadOnlyList<TaskId> cleared = environment.Registry.ClearSettled();
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null);
+        ErrorOr<Success> second = await environment.SayAsync("第二问", null);
 
         Assert.False(first.IsError);
         Assert.False(second.IsError);
@@ -76,19 +76,19 @@ public sealed class TaskDomainTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复你好";
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> reply = await environment.SayAsync("你好", null);
         IExecution dialogue = Assert.Single(environment.Runner.StartedCode);
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = await environment.SettleAsync(id);
 
         Assert.False(reply.IsError);
         Assert.Equal(1, dialogue.Id.Value);
-        IReadOnlyList<Kuroe.Execution.Shared.ExecutionSnapshot> executions = [.. done.Executions];
+        IReadOnlyList<Execution.Shared.ExecutionSnapshot> executions = [.. done.Executions];
         Assert.NotEmpty(executions);
         Assert.All(executions, execution => Assert.True(execution.Id.Value > dialogue.Id.Value));
         Assert.All(executions, execution =>
             Assert.Equal(id, environment.Executions.FindOwned(
-                new Kuroe.Execution.Shared.ExecutionId(execution.Id.Value)).ThrowIfError().Owner.Id));
+                new ExecutionId(execution.Id.Value)).ThrowIfError().Owner.Id));
     }
 
     [Fact]
@@ -97,10 +97,10 @@ public sealed class TaskDomainTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复";
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> first = await environment.SayAsync("你好", null);
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = await environment.SettleAsync(id);
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("再问", null);
+        ErrorOr<Success> second = await environment.SayAsync("再问", null);
 
         Assert.False(first.IsError);
         Assert.False(second.IsError);

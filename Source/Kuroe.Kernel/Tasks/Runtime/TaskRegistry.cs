@@ -144,7 +144,19 @@ public sealed class TaskRegistry : ITaskChangeSource
         ];
     }
 
-    /// <summary>丢掉已收口且没有执行在跑的任务，返回被丢掉的任务键。判定与移除都在该任务 Gate 之内，保持锁序一致。</summary>
+    /// <summary>丢掉一个已收口且没有执行在跑的任务，返回是否移除。</summary>
+    public bool Drop(TaskId id)
+    {
+        WorkTask? task;
+        lock (_gate)
+        {
+            task = _tasks.GetValueOrDefault(id.Value);
+        }
+
+        return task is not null && TryDrop(task);
+    }
+
+    /// <summary>丢掉已收口且没有执行在跑的任务，返回被丢掉的任务键。</summary>
     public IReadOnlyList<TaskId> ClearSettled()
     {
         WorkTask[] all;
@@ -153,33 +165,36 @@ public sealed class TaskRegistry : ITaskChangeSource
             all = [.. _tasks.Values];
         }
 
-        List<TaskId> cleared = [];
-        foreach (WorkTask task in all)
+        return [.. all.Where(TryDrop).Select(task => task.Id)];
+    }
+
+    /// <summary>丢掉一个任务。判定与移除都在该任务 Gate 之内，保持锁序一致。</summary>
+    private bool TryDrop(WorkTask task)
+    {
+        lock (task.Gate)
         {
-            lock (task.Gate)
+            if (!task.State.IsSettled() || task.Executions.Any(execution => execution.IsLive))
             {
-                if (!task.State.IsSettled() || task.Executions.Any(execution => execution.IsLive))
+                return false;
+            }
+
+            lock (_gate)
+            {
+                foreach (IExecution execution in task.Executions)
                 {
-                    continue;
+                    _executions.Remove(execution.Id);
                 }
 
-                lock (_gate)
+                if (!_tasks.Remove(task.Id.Value))
                 {
-                    foreach (IExecution execution in task.Executions)
-                    {
-                        _executions.Remove(execution.Id);
-                    }
-
-                    if (_tasks.Remove(task.Id.Value))
-                    {
-                        Input?.Remove(task.Id);
-                        cleared.Add(task.Id);
-                    }
+                    return false;
                 }
+
+                Input?.Remove(task.Id);
+
+                return true;
             }
         }
-
-        return cleared;
     }
 
     /// <summary>丢弃本域全部任务与执行索引条目，退出时调用。</summary>

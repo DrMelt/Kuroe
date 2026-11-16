@@ -41,4 +41,12 @@ internal static class TaskErrors
     /// <summary>已完成的任务不能终止。</summary>
     public static Error DoneCannotTerminate(TaskId task) =>
         Error.Conflict(FlowErrorCodes.TaskDoneCannotTerminate, $"{task} 已完成，不能终止。");
+
+    /// <summary>任务还有执行在跑，不能丢弃。</summary>
+    public static Error LiveCannotDrop(TaskId task) =>
+        Error.Conflict(FlowErrorCodes.TaskLiveCannotDrop, $"{task} 还有执行在跑，不能丢弃。");
+
+    /// <summary>任务还有执行在跑或没有收口，不能丢弃。</summary>
+    public static Error NotSettled(TaskId task) =>
+        Error.Conflict(FlowErrorCodes.TaskNotSettled, $"{task} 还有执行在跑或没有收口，不能丢弃。");
 }

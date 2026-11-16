@@ -1,6 +1,7 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Assistant.Dialogue;
+using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
@@ -11,7 +12,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Hosting;
 
-/// <summary>常驻对话任务的管理层宿主：无模型时报模型未选择、一轮对话落到代码流程、多轮在同一任务上接续、语言变化后重置才重建、模型变化后下一轮重建。</summary>
+/// <summary>内置助手会话宿主：无模型时报模型未选择、一轮落到代码流程、多轮在同一会话上接续、语言与模型只影响新建会话、会话隔离与忙时拒绝、历史与任务域生命周期。</summary>
 public sealed class DialogueHostTests
 {
     [Fact]
@@ -19,7 +20,7 @@ public sealed class DialogueHostTests
     {
         using TestEnvironment environment = TestEnvironment.Create(seedCatalog: false);
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
         Assert.True(reply.IsError);
         Assert.Equal("当前未选择模型。", ErrorText(reply));
@@ -32,7 +33,7 @@ public sealed class DialogueHostTests
         environment.Runner.CodeReply = _ => "回复你好";
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
+        ErrorOr<Success> reply = await environment.SayAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["回复你好"], observer.Texts);
@@ -46,8 +47,8 @@ public sealed class DialogueHostTests
         environment.Runner.CodeReply = _ => $"回复{++round}";
         RecordingOutput observer = new();
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", new ProcessObserver(observer.Content, observer.Entry));
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", new ProcessObserver(observer.Content, observer.Entry));
+        ErrorOr<Success> first = await environment.SayAsync("第一问", new ProcessObserver(observer.Content, observer.Entry));
+        ErrorOr<Success> second = await environment.SayAsync("第二问", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
@@ -60,11 +61,11 @@ public sealed class DialogueHostTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复";
 
-        await environment.Dialogue.ReplyAsync("第一问", null);
-        environment.Dialogue.SelectMode(DialogueMode.Edit);
-        await environment.Dialogue.ReplyAsync("第二问", null);
+        await environment.SayAsync("第一问", null);
+        environment.Dialogue.SelectMode(environment.Session.Id, DialogueMode.Edit).ThrowIfError();
+        await environment.SayAsync("第二问", null);
 
-        Assert.Equal(DialogueMode.Edit, environment.Dialogue.Mode);
+        Assert.Equal(DialogueMode.Edit, environment.Session.Mode);
         Assert.Equal(
             environment.Runner.StartedCode[0].Request.Owner.Value,
             environment.Runner.StartedCode[1].Request.Owner.Value);
@@ -80,14 +81,15 @@ public sealed class DialogueHostTests
         Assert.Contains("更改模式", edit.SystemPrompt[1], StringComparison.Ordinal);
     }
 
+    /// <summary>建立会话时给出的模式作用于首轮。</summary>
     [Fact]
-    public async Task Selected_mode_applies_to_the_first_round()
+    public async Task The_mode_given_at_creation_applies_to_the_first_round()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复";
-        environment.Dialogue.SelectMode(DialogueMode.Edit);
+        environment.Dialogue.Create(mode: DialogueMode.Edit).ThrowIfError();
 
-        await environment.Dialogue.ReplyAsync("你好", null);
+        await environment.SayAsync("你好", null);
 
         LlmParameters parameters = Parameters(environment, 0);
 
@@ -103,8 +105,8 @@ public sealed class DialogueHostTests
         ExecutionRestoreState seed = new("fake", "{\"session\":{}}");
         environment.Runner.RestoreData = seed;
 
-        await environment.Dialogue.ReplyAsync("第一问", null);
-        await environment.Dialogue.ReplyAsync("第二问", null);
+        await environment.SayAsync("第一问", null);
+        await environment.SayAsync("第二问", null);
 
         LlmExecutionParameters first = Assert.IsType<LlmExecutionParameters>(
             environment.Runner.StartedTargets[0].Parameters);
@@ -115,42 +117,242 @@ public sealed class DialogueHostTests
         Assert.Equal(seed, second.ConversationSeed);
     }
 
+    /// <summary>语言变化不改变已有会话，新会话使用新语言。</summary>
     [Fact]
-    public async Task Language_change_waits_for_reset_before_rebuilding()
+    public async Task Language_change_keeps_the_existing_session_and_applies_to_a_new_session()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复";
 
-        await environment.Dialogue.ReplyAsync("第一问", null);
+        await environment.SayAsync("第一问", null);
         string firstOwner = environment.Runner.StartedCode[0].Request.Owner.Value;
         environment.Settings.Set("Assistant:Language", "English").ThrowIfError();
-        await environment.Dialogue.ReplyAsync("第二问", null);
-        environment.Dialogue.Reset();
-        await environment.Dialogue.ReplyAsync("第三问", null);
+        await environment.SayAsync("第二问", null);
+        environment.Dialogue.Create().ThrowIfError();
+        await environment.SayAsync("第三问", null);
 
         Assert.Equal(firstOwner, environment.Runner.StartedCode[1].Request.Owner.Value);
         Assert.NotEqual(firstOwner, environment.Runner.StartedCode[2].Request.Owner.Value);
     }
 
-    /// <summary>模型变化后下一轮重建对话任务，新任务用新模型。</summary>
+    /// <summary>模型变化不改变已有会话，新会话使用新模型。</summary>
     [Fact]
-    public async Task Model_change_rebuilds_the_dialogue_task_with_the_new_model()
+    public async Task Model_change_keeps_the_existing_session_and_applies_to_a_new_session()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.CodeReply = _ => "回复";
 
-        await environment.Dialogue.ReplyAsync("第一问", null);
+        await environment.SayAsync("第一问", null);
+        string firstOwner = environment.Runner.StartedCode[0].Request.Owner.Value;
         environment.Catalog.AddModel(
             ModelName.Create("second").Value,
             ProviderName.Create("test").Value,
             ProviderModelName.Create("second").Value).ThrowIfError();
         environment.Models.Select(ModelName.Create("second").Value).ThrowIfError();
-        await environment.Dialogue.ReplyAsync("第二问", null);
+        await environment.SayAsync("第二问", null);
+        environment.Dialogue.Create().ThrowIfError();
+        await environment.SayAsync("第三问", null);
 
         Assert.Equal(
-            ["fake", "second"],
+            ["fake", "fake", "second"],
             environment.Runner.StartedTargets
                 .Select(target => Assert.IsType<LlmExecutionParameters>(target.Parameters).Model));
+        Assert.Equal(firstOwner, environment.Runner.StartedCode[1].Request.Owner.Value);
+        Assert.NotEqual(firstOwner, environment.Runner.StartedCode[2].Request.Owner.Value);
+    }
+
+    [Fact]
+    public async Task Sessions_keep_separate_tasks_and_modes()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        DialogueSessionInfo first = environment.Dialogue.Create().ThrowIfError();
+        await environment.Dialogue.SendAsync(first.Id, "第一问", null);
+        environment.Dialogue.SelectMode(first.Id, DialogueMode.Edit).ThrowIfError();
+        DialogueSessionInfo second = environment.Dialogue.Create().ThrowIfError();
+        await environment.Dialogue.SendAsync(second.Id, "第二问", null);
+
+        Assert.Equal(2, environment.Dialogue.Sessions.Count);
+        Assert.Equal(DialogueMode.Edit, environment.Dialogue.Sessions.Single(session => session.Id == first.Id).Mode);
+        Assert.Equal(DialogueMode.Read, environment.Dialogue.Sessions.Single(session => session.Id == second.Id).Mode);
+        Assert.NotEqual(first.Id, second.Id);
+    }
+
+    [Fact]
+    public async Task A_running_session_rejects_a_second_send()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        environment.Runner.Gate.Hold(NodePath.Of("回话"));
+        DialogueSessionInfo session = environment.Dialogue.Create().ThrowIfError();
+
+        Task<ErrorOr<Success>> running = environment.Dialogue.SendAsync(session.Id, "第一问", null);
+        await environment.Runner.Gate.Entered(NodePath.Of("回话"));
+
+        ErrorOr<Success> second = await environment.Dialogue.SendAsync(session.Id, "第二问", null);
+
+        Assert.True(second.IsError);
+        Assert.Contains("正在执行", ErrorText(second));
+
+        environment.Runner.Gate.ClearHolds();
+        Assert.False((await running.WaitAsync(TestContext.Current.CancellationToken)).IsError);
+    }
+
+    [Fact]
+    public async Task The_first_input_becomes_the_session_title()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        DialogueSessionInfo session = environment.Dialogue.Create().ThrowIfError();
+
+        await environment.Dialogue.SendAsync(session.Id, "帮我看看 README", null);
+
+        Assert.Equal(
+            "帮我看看 README",
+            environment.Dialogue.Sessions.Single(candidate => candidate.Id == session.Id).Title);
+    }
+
+    [Fact]
+    public async Task Deleting_a_session_leaves_the_other_sessions()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        DialogueSessionInfo first = environment.Dialogue.Create().ThrowIfError();
+        DialogueSessionInfo second = environment.Dialogue.Create().ThrowIfError();
+        await environment.Dialogue.SendAsync(first.Id, "第一问", null);
+        await environment.Dialogue.SendAsync(second.Id, "第二问", null);
+
+        (await environment.Dialogue.DeleteAsync(first.Id, TestContext.Current.CancellationToken)).ThrowIfError();
+
+        DialogueSessionInfo remaining = Assert.Single(environment.Dialogue.Sessions);
+        Assert.Equal(second.Id, remaining.Id);
+    }
+
+    [Fact]
+    public async Task Deleting_the_active_session_selects_the_most_recent_remaining_one()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        DialogueSessionInfo first = environment.Dialogue.Create().ThrowIfError();
+        await environment.Dialogue.SendAsync(first.Id, "第一问", null);
+        DialogueSessionInfo second = environment.Dialogue.Create().ThrowIfError();
+        await environment.Dialogue.SendAsync(second.Id, "第二问", null);
+
+        (await environment.Dialogue.DeleteAsync(second.Id, TestContext.Current.CancellationToken)).ThrowIfError();
+
+        Assert.Equal(first.Id, environment.Dialogue.Active?.Id);
+    }
+
+    [Fact]
+    public async Task Renaming_a_session_changes_its_title()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        DialogueSessionInfo session = environment.Dialogue.Create().ThrowIfError();
+
+        environment.Dialogue.Rename(session.Id, "排查构建失败").ThrowIfError();
+
+        Assert.Equal("排查构建失败", Assert.Single(environment.Dialogue.Sessions).Title);
+    }
+
+    [Fact]
+    public async Task A_finished_turn_reports_through_the_host_event()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        List<DialogueTurnNotice> notices = [];
+        environment.Dialogue.TurnCompleted += notices.Add;
+        DialogueSessionInfo session = environment.Dialogue.Create().ThrowIfError();
+
+        await environment.Dialogue.SendAsync(session.Id, "你好", null);
+
+        DialogueTurnNotice notice = Assert.Single(notices);
+        Assert.Equal(session.Id, notice.Session);
+        Assert.True(notice.Succeeded);
+    }
+
+    [Fact]
+    public async Task An_unreadable_restore_snapshot_leaves_the_execution_in_the_history_tail()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        environment.Runner.RestoreData = new ExecutionRestoreState("unknown", "{}");
+        DialogueSessionInfo session = environment.Dialogue.Create().ThrowIfError();
+        await environment.Dialogue.SendAsync(session.Id, "第一问", null);
+
+        ErrorOr<DialogueHistory> history = await environment.Dialogue.ReadHistoryAsync(
+            session.Id,
+            TestContext.Current.CancellationToken);
+
+        Assert.False(history.IsError, ErrorText(history));
+        Assert.Empty(history.Value.Conversation.Messages);
+        Assert.Single(history.Value.Tail);
+        Assert.NotEmpty(history.Value.Errors);
+    }
+
+    [Fact]
+    public async Task Closing_the_assistant_writes_session_records()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(persistTasks: true);
+        environment.Runner.CodeReply = _ => "回复";
+        DialogueSessionInfo session = environment.Dialogue.Create().ThrowIfError();
+        await environment.Dialogue.SendAsync(session.Id, "第一问", null);
+
+        await environment.Dialogue.CloseAsync();
+
+        string records = KuroePaths.At(environment.Root).AssistantRecordsDirectory;
+        Assert.True(Directory.Exists(records));
+        Assert.NotEmpty(Directory.EnumerateFiles(records));
+    }
+
+    [Fact]
+    public async Task Deleting_a_persisted_session_removes_its_record()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(persistTasks: true);
+        DialogueSessionInfo session = environment.Dialogue.Create().ThrowIfError();
+        string record = Path.Combine(
+            KuroePaths.At(environment.Root).AssistantRecordsDirectory,
+            $"{session.Id.Value}.json");
+        Assert.True(File.Exists(record));
+
+        (await environment.Dialogue.DeleteAsync(session.Id, TestContext.Current.CancellationToken)).ThrowIfError();
+
+        Assert.False(File.Exists(record));
+    }
+
+    [Fact]
+    public async Task A_new_instance_restores_sessions_from_the_assistant_records()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+        TestEnvironment first = TestEnvironment.Create(persistTasks: true, root: root);
+
+        try
+        {
+            first.Runner.CodeReply = _ => "回复";
+            DialogueSessionInfo session = first.Dialogue.Create().ThrowIfError();
+            await first.Dialogue.SendAsync(session.Id, "第一问", null);
+            await first.Tasks.ShutdownAsync();
+            await first.Dialogue.CloseAsync();
+
+            using TestEnvironment second = TestEnvironment.Create(seedCatalog: false, persistTasks: true, root: root);
+            var report = second.Dialogue.Restore();
+
+            Assert.Empty(report.Failures);
+            DialogueSessionInfo restored = Assert.Single(second.Dialogue.Sessions);
+            Assert.Equal("第一问", restored.Title);
+        }
+        finally
+        {
+            first.Dispose();
+
+            try
+            {
+                Directory.Delete(root, recursive: true);
+            }
+            catch (IOException)
+            {
+                // 第二个实例可能已经清理临时目录
+            }
+        }
     }
 
     [Fact]
@@ -161,7 +363,7 @@ public sealed class DialogueHostTests
         List<ExecutionNotice> notices = [];
         environment.Registry.Notified += notices.Add;
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+        ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Empty(notices);
@@ -177,7 +379,7 @@ public sealed class DialogueHostTests
 
         for (int index = 1; index <= 8; index++)
         {
-            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{index}问", new ProcessObserver(observer.Content, observer.Entry));
+            ErrorOr<Success> reply = await environment.SayAsync($"第{index}问", new ProcessObserver(observer.Content, observer.Entry));
 
             Assert.False(reply.IsError, ErrorText(reply));
         }
@@ -197,7 +399,7 @@ public sealed class DialogueHostTests
             journal.AppendToolCall("GetLocalTime", "{}", "2026-10-18 19:10:48", false);
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
+        ErrorOr<Success> reply = await environment.SayAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(reply.IsError, ErrorText(reply));
         JournalEntry entry = Assert.Single(observer.Entries);
@@ -217,7 +419,7 @@ public sealed class DialogueHostTests
         };
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
+        ErrorOr<Success> reply = await environment.SayAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["增量", "回复你好"], observer.Texts);
@@ -237,7 +439,7 @@ public sealed class DialogueHostTests
             journal.AppendContent(ProcessContentKind.Reasoning, "先想");
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
+        ErrorOr<Success> reply = await environment.SayAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["先想"], observer.Reasonings);
@@ -259,7 +461,7 @@ public sealed class DialogueHostTests
         environment.Runner.CodeReply = _ => "回复";
         environment.Runner.Gate.Hold(NodePath.Of("回话"));
 
-        Task<ErrorOr<Success>> running = environment.Dialogue.ReplyAsync("第一问", null);
+        Task<ErrorOr<Success>> running = environment.SayAsync("第一问", null);
         await environment.Runner.Gate.Entered(NodePath.Of("回话"));
         IExecution execution = Assert.Single(environment.Runner.StartedCode);
         ITaskFlowContext owner = environment.Executions.FindOwned(execution.Id).ThrowIfError().Owner;
@@ -282,7 +484,7 @@ public sealed class DialogueHostTests
 
         environment.Runner.Gate.ClearHolds();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("第二问", null);
+        ErrorOr<Success> reply = await environment.SayAsync("第二问", null);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(2, environment.Runner.StartedCode.Count);
@@ -303,7 +505,7 @@ public sealed class DialogueHostTests
         Assert.Fail("等待超时。");
     }
 
-    private static string ErrorText(ErrorOr<Success> result) =>
+    private static string ErrorText<T>(ErrorOr<T> result) =>
         result.IsError ? string.Join("；", result.ErrorsOrEmptyList.Select(error => error.Description)) : string.Empty;
 
     private static LlmParameters Parameters(TestEnvironment environment, int round)

@@ -45,6 +45,6 @@ public sealed class StartupViewTests
 
         startup.Print(report);
 
-        Assert.Contains("2 个任务由其他进程持有，本实例未加载。", cli.Output.Output);
+        Assert.Contains("2 个任务或会话由其他进程持有，本实例未加载。", cli.Output.Output);
     }
 }

@@ -50,7 +50,7 @@ public sealed class TestEnvironment : IDisposable
         _waiter = new NotifiedTaskWaiter(
             TaskReader,
             provider.GetRequiredService<ITaskChangeSource>());
-        runner.PortSubmitter = provider.GetRequiredService<Kuroe.Execution.Shared.IExecutionPortSubmitter>();
+        runner.PortSubmitter = provider.GetRequiredService<Execution.Shared.IExecutionPortSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>
@@ -74,8 +74,31 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>存档协调，用例据此把待写状态显式落盘。</summary>
     public ITaskRecordCoordinator Records => _provider.GetRequiredService<ITaskRecordCoordinator>();
 
-    /// <summary>常驻对话任务的管理层宿主。</summary>
+    /// <summary>内置助手会话宿主。</summary>
     public DialogueHost Dialogue => _provider.GetRequiredService<DialogueHost>();
+
+    /// <summary>当前会话摘要，没有当前会话时抛异常。</summary>
+    public DialogueSessionInfo Session =>
+        Dialogue.Active ?? throw new InvalidOperationException("没有当前会话。");
+
+    /// <summary>把一轮输入交给当前会话，没有会话时按当前配置新建。</summary>
+    public async Task<ErrorOr<Success>> SayAsync(
+        string input,
+        Execution.Shared.ProcessObserver? observer = null)
+    {
+        if (Dialogue.Active is not { } session)
+        {
+            ErrorOr<DialogueSessionInfo> created = Dialogue.Create();
+            if (created.IsError)
+            {
+                return created.ErrorsOrEmptyList;
+            }
+
+            session = created.Value;
+        }
+
+        return await Dialogue.SendAsync(session.Id, input, observer);
+    }
 
     public SettingsProvider Settings => _provider.GetRequiredService<SettingsProvider>();
 
@@ -96,8 +119,8 @@ public sealed class TestEnvironment : IDisposable
 
     public ToolCollection Tools => _provider.GetRequiredService<ToolCollection>();
 
-    public IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool> ConfiguredTools =>
-        _provider.GetRequiredService<IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool>>();
+    public IReadOnlyList<Tool.Json.ConfiguredTool> ConfiguredTools =>
+        _provider.GetRequiredService<IReadOnlyList<Tool.Json.ConfiguredTool>>();
 
     /// <summary>测试默认写入的流程文件与宿主开始输入表，模型经宿主输入 MODEL 取当前选择，供按名提交的执行测试使用。</summary>
     private const string TestFlowFile = """
@@ -170,10 +193,14 @@ public sealed class TestEnvironment : IDisposable
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
-        services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(runner);
+        services.AddSingleton<Execution.Shared.IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
-        TaskLoadReport loaded = provider.GetRequiredService<ITaskRestoreService>().Restore();
+        TaskLoadReport loaded = composition.Value.PersistTasks
+            ? provider.GetRequiredService<ITaskRestoreService>()
+                .Restore()
+                .Merge(provider.GetRequiredService<DialogueHost>().Restore())
+            : new TaskLoadReport([], [], []);
 
         if (seedCatalog)
         {

@@ -51,6 +51,12 @@ public static class FlowErrorCodes
     /// <summary>任务已终止。</summary>
     public const string TaskTerminated = "Task.Terminated";
 
+    /// <summary>任务还有执行在跑，不能丢弃。</summary>
+    public const string TaskLiveCannotDrop = "Task.LiveCannotDrop";
+
+    /// <summary>任务没有收口，不能丢弃。</summary>
+    public const string TaskNotSettled = "Task.NotSettled";
+
     /// <summary>任务不可恢复。</summary>
     public const string TaskNotResumable = "Task.NotResumable";
 

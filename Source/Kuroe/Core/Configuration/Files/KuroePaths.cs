@@ -13,6 +13,8 @@ public sealed class KuroePaths
         ConfigDirectory = Path.Combine(root, ".kuroe");
         TasksDirectory = Path.Combine(root, ".kuroe_tasks");
         RecordsDirectory = Path.Combine(TasksDirectory, ".records");
+        AssistantDirectory = Path.Combine(root, ".kuroe_assistant");
+        AssistantRecordsDirectory = Path.Combine(AssistantDirectory, "records");
         UserSettingsFile = Path.Combine(ConfigDirectory, "settings.json");
         CatalogFile = Path.Combine(ConfigDirectory, "catalog.json");
         NodesFile = Path.Combine(ConfigDirectory, "nodes.json");
@@ -31,6 +33,12 @@ public sealed class KuroePaths
 
     /// <summary>任务存档与租约的目录。</summary>
     public string RecordsDirectory { get; }
+
+    /// <summary>内置助手会话数据的目录。</summary>
+    public string AssistantDirectory { get; }
+
+    /// <summary>内置助手会话存档与租约的目录。</summary>
+    public string AssistantRecordsDirectory { get; }
 
     /// <summary>用户层偏好文件。</summary>
     public string UserSettingsFile { get; }

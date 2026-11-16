@@ -15,8 +15,8 @@ internal sealed record AssistantSettings
     /// <summary>内置助手的回复语言，作为系统指令的一部分。</summary>
     public string Language { get; init; } = DefaultLanguage;
 
-    /// <summary>语言变化后已有对话任务不再适用，需要重建后生效。</summary>
-    public bool RequiresDialogueRebuild(AssistantSettings other) => Language != other.Language;
+    /// <summary>语言变化只影响新建会话，已有会话保持建立时的语言。</summary>
+    public bool AffectsNewDialogueSessions(AssistantSettings other) => Language != other.Language;
 
     /// <summary>绑定并校验该节，未写的语言取默认值，空白值拒绝。</summary>
     public static ErrorOr<AssistantSettings> From(JsonObject? section)

@@ -1,12 +1,14 @@
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Console.Views;
 using Kuroe.Control.Shared;
 using Kuroe.Tasks.Persistence.Restoring.Shared;
 
 namespace Kuroe.Console;
 
-/// <summary>终端交互循环。主菜单是唯一入口，对话作为菜单项，普通输入进入常驻对话任务。</summary>
+/// <summary>终端交互循环。主菜单是唯一入口，助手与任务等入口都是菜单项。</summary>
 internal sealed class Repl(
     ITaskControl tasks,
+    DialogueHost dialogue,
     DialogueBrowser dialogueBrowser,
     ExecutionNotifier notifier,
     StartupView startup,
@@ -56,6 +58,7 @@ internal sealed class Repl(
                     }
 
                     await tasks.ShutdownAsync();
+                    await dialogue.CloseAsync();
                     return;
 
                 case "dialogue":

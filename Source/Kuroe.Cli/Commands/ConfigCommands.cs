@@ -29,7 +29,7 @@ internal sealed class ConfigCommands(CliSession session, CliOutput output)
         {
             output.Line("已保存，下次运行生效。");
         }
-        else if (applied.Value.RequiresDialogueRebuild)
+        else if (applied.Value.AffectsNewDialogueSessions)
         {
             output.Line("已保存；该设置只作用于 Kuroe.Console，下次启动生效。");
         }

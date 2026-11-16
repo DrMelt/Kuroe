@@ -19,6 +19,12 @@ internal static class DialogueFlow
     /// <summary>模式端口名：任务建立时由宿主给出初始模式。</summary>
     internal static PortName ModePort { get; } = new("模式");
 
+    /// <summary>模型端口名：任务建立时固定本会话使用的模型。</summary>
+    internal static PortName ModelPort { get; } = new("模型");
+
+    /// <summary>语言端口名：任务建立时固定本会话的回复语言。</summary>
+    internal static PortName LanguagePort { get; } = new("语言");
+
     /// <summary>回话步骤的路径与标签。</summary>
     internal const string ReplyLabel = "回话";
 

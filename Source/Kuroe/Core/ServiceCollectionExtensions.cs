@@ -16,20 +16,14 @@ using Kuroe.Node.Llm;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Pending;
 using Kuroe.Shared;
-using Kuroe.Tasks.Persistence.Files;
-using Kuroe.Tasks.Persistence.Files.Shared;
 using Kuroe.Tasks.Persistence.Json;
-using Kuroe.Tasks.Persistence.Restoring;
 using Kuroe.Tasks.Persistence.Restoring.Shared;
-using Kuroe.Tasks.Persistence.Saving;
 using Kuroe.Tasks.Persistence.Saving.Shared;
 using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Runtime;
-using Kuroe.Tasks.Runtime.Persistence;
 using Kuroe.Tasks.Shared;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
@@ -174,47 +168,38 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new TaskRecordSerializationMapper([.. sp.GetServices<IFlowRecordCodec>()]));
         services.AddSingleton<ITaskRecordCodec>(sp => new TaskRecordCodec(
             sp.GetRequiredService<TaskRecordSerializationMapper>()));
-        services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
-            paths.RecordsDirectory,
-            sp.GetRequiredService<ITaskRecordCodec>()));
-        services.AddSingleton<ITaskLeaseStore>(sp => new FileTaskLeaseStore(paths.RecordsDirectory));
-        services.AddSingleton<ITaskRecordSource>(new TaskRecordSource(taskRegistry));
-        services.AddSingleton<ITaskRecordCoordinator>(sp => new TaskRecordCoordinator(
-            sp.GetRequiredService<ITaskRecordSource>(),
-            sp.GetRequiredService<ITaskRecordStore>()));
         services.AddSingleton(sp => new FlowProviderSource(sp.GetServices<FlowProvider>()));
         services.AddSingleton<IFlowProviderSource>(sp => sp.GetRequiredService<FlowProviderSource>());
         services.AddSingleton(sp => new FlowRuntime(
             sp.GetRequiredService<IExecutionRuntime>()));
         services.AddSingleton<IFlowRuntime>(sp => sp.GetRequiredService<FlowRuntime>());
-        services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(
+        services.AddSingleton(sp => TaskDomainComposition.Create(
             taskRegistry,
             sp.GetRequiredService<IExecutionRuntime>(),
+            sp.GetRequiredService<IFlowRuntime>(),
             sp.GetRequiredService<IFlowProviderSource>(),
-            sp.GetRequiredService<IFlowRuntime>()));
+            sp.GetRequiredService<ITaskIdSource>(),
+            coreOptions.PersistTasks,
+            coreOptions.PersistTasks ? paths.RecordsDirectory : null,
+            coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCodec>() : null));
+        services.AddSingleton(sp => sp.GetRequiredService<TaskDomain>().Pendings);
         if (coreOptions.PersistTasks)
         {
-            services.AddSingleton<ITaskRestoreService>(sp => new TaskRestoreService(
-                sp.GetRequiredService<ITaskRecordStore>(),
-                sp.GetRequiredService<ITaskLeaseStore>(),
-                sp.GetRequiredService<ITaskRestoreRuntime>()));
+            services.AddSingleton<ITaskRecordCoordinator>(sp =>
+                sp.GetRequiredService<TaskDomain>().Records
+                ?? throw new InvalidOperationException("任务域未建立写盘协调。"));
+            services.AddSingleton<ITaskRestoreService>(sp =>
+                sp.GetRequiredService<TaskDomain>().Restore
+                ?? throw new InvalidOperationException("任务域未建立恢复服务。"));
         }
 
-        services.AddSingleton(sp => new TaskService(
-            new TaskActions(
-                taskRegistry,
-                sp.GetRequiredService<IExecutionRuntime>(),
-                sp.GetRequiredService<IFlowRuntime>(),
-                sp.GetRequiredService<IFlowProviderSource>(),
-                sp.GetRequiredService<ITaskIdSource>(),
-                coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null,
-                coreOptions.PersistTasks ? sp.GetRequiredService<ITaskLeaseStore>() : null)));
+        services.AddSingleton(sp => new TaskService(sp.GetRequiredService<TaskDomain>().Actions));
         services.AddSingleton<ITaskControl>(sp => sp.GetRequiredService<TaskService>());
-        services.AddSingleton(sp => new PendingService(taskRegistry));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<IToolFactory>(),
             sp.GetRequiredService<IToolJson>()));
+        services.AddSingleton<IExecutionConversationReader, ExecutionConversationReader>();
         services.AddSingleton(sp => new ExecutionRunnerFactory(
             sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<Kuroe.Execution.Shared.IExecutionStatusReader>()));

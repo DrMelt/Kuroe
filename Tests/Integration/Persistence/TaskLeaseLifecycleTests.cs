@@ -38,7 +38,7 @@ public sealed class TaskLeaseLifecycleTests : IDisposable
 
         Assert.True(probe.TryAcquire(id).IsError);
 
-        _environment.Tasks.ClearSettled();
+        _environment.Tasks.ClearSettled().ThrowIfError();
 
         probe.TryAcquire(id).ThrowIfError();
     }

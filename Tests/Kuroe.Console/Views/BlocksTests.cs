@@ -96,23 +96,6 @@ public sealed class BlocksTests
     }
 
     [Fact]
-    public void Frame_and_section_share_the_same_top_border()
-    {
-        foreach (BoxKind kind in Enum.GetValues<BoxKind>())
-        {
-            Terminal framed = ConsoleSession.NewTerminal(out TestConsole frameOutput, out _);
-            frameOutput.Profile.Width = 40;
-            framed.OpenFrame(kind, "标题").Dispose();
-
-            Terminal paneled = ConsoleSession.NewTerminal(out TestConsole panelOutput, out _);
-            panelOutput.Profile.Width = 40;
-            paneled.Write(Blocks.Section(kind, "标题", new Text("内容")));
-
-            Assert.Equal(Rows(panelOutput.Output)[0], Rows(frameOutput.Output)[0]);
-        }
-    }
-
-    [Fact]
     public void Only_the_menu_uses_its_own_line()
     {
         Assert.NotEqual(BoxSkin.Of(BoxKind.View).Line, BoxSkin.Of(BoxKind.Menu).Line);
@@ -122,7 +105,6 @@ public sealed class BlocksTests
     public void Only_the_menu_uses_a_rounded_box()
     {
         Assert.Equal("╭", BoxSkin.Of(BoxKind.Menu).Shape.GetPart(BoxBorderPart.TopLeft));
-        Assert.Equal("┌", BoxSkin.Of(BoxKind.Reply).Shape.GetPart(BoxBorderPart.TopLeft));
         Assert.Equal("┌", BoxSkin.Of(BoxKind.View).Shape.GetPart(BoxBorderPart.TopLeft));
     }
 

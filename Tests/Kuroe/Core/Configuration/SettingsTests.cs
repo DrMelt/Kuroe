@@ -93,11 +93,11 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
-    public void Language_change_requires_dialogue_rebuild()
+    public void Language_change_affects_new_dialogue_sessions()
     {
         SettingsEffect language = _settings.Set("Assistant:Language", "English").ThrowIfError();
 
-        Assert.True(language.RequiresDialogueRebuild);
+        Assert.True(language.AffectsNewDialogueSessions);
         Assert.False(language.RequiresRestart);
         Assert.False(language.InvalidatesHistory);
     }
@@ -109,7 +109,7 @@ public sealed class SettingsTests : IDisposable
 
         Assert.True(proxy.RequiresRestart);
         Assert.False(proxy.InvalidatesHistory);
-        Assert.False(proxy.RequiresDialogueRebuild);
+        Assert.False(proxy.AffectsNewDialogueSessions);
     }
 
     [Fact]

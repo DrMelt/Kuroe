@@ -103,7 +103,7 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Success, ViewLabels.StyleOf(ExecutionState.Succeeded));
         Assert.Equal(Styles.Error, ViewLabels.StyleOf(ExecutionState.Failed));
         Assert.Equal(Styles.Key, ViewLabels.StyleOf(ExecutionState.Running));
-        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(ExecutionState.Interrupted));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(ExecutionState.Interrupted));
     }
 
     [Fact]

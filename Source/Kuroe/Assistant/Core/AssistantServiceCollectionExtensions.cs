@@ -30,7 +30,7 @@ public static class AssistantServiceCollectionExtensions
             return tools.ErrorsOrEmptyList;
         }
 
-        services.AddSingleton(sp => DialogueHostFactory.Create(sp));
+        services.AddSingleton(sp => DialogueHostFactory.Create(sp, composition.PersistTasks));
 
         return Result.Success;
     }

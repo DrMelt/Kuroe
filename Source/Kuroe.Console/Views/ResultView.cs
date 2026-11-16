@@ -35,9 +35,9 @@ internal sealed class ResultView(Terminal terminal, ErrorView errors)
             terminal.Hint("下一轮对话将清空上下文。");
         }
 
-        if (effect.RequiresDialogueRebuild)
+        if (effect.AffectsNewDialogueSessions)
         {
-            terminal.Hint("内置助手语言已变更，已有对话任务需在「Kuroe 助手」页选择「重置对话」后生效。");
+            terminal.Hint("内置助手语言已变更，已有会话保持原语言，新建会话使用新语言。");
         }
     }
 

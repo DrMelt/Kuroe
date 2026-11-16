@@ -32,7 +32,7 @@ public interface ITaskControl
     ErrorOr<Success> StopExecution(ExecutionId id);
 
     /// <summary>丢掉已完成或已终止的任务。</summary>
-    IReadOnlyList<TaskId> ClearSettled();
+    ErrorOr<IReadOnlyList<TaskId>> ClearSettled();
 
     /// <summary>终止任务。</summary>
     ErrorOr<Success> StopTask(TaskId id);

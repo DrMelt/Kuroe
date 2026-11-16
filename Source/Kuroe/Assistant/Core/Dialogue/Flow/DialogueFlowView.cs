@@ -52,7 +52,12 @@ internal static class DialogueFlowView
             DialogueFlow.Name.Value,
             CodeFlowKind.Value,
             "内置对话：回答用户的每轮输入",
-            [new FlowPortView(DialogueFlow.StartPort.Value, "Text", null)],
+            [
+                new FlowPortView(DialogueFlow.StartPort.Value, "Text", null),
+                new FlowPortView(DialogueFlow.ModePort.Value, "Text", null),
+                new FlowPortView(DialogueFlow.ModelPort.Value, "Text", null),
+                new FlowPortView(DialogueFlow.LanguagePort.Value, "Text", null),
+            ],
             [
                 new FlowStepView(
                     DialogueFlow.ReplyLabel,

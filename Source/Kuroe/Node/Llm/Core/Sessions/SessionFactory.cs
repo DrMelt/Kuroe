@@ -81,9 +81,108 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
         return new Session(agent, created, provider, history, journal, executionClient, restored: false);
     }
 
+    /// <summary>读取恢复数据中的会话历史。装配一个不接模型的 Agent，只用于反序列化与会话历史提供者。</summary>
+    internal static async Task<ErrorOr<ExecutionConversation>> ReadConversationAsync(
+        ExecutionRestoreState restore,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            LlmAgentSessionPayload payload = AgentSessionCodec.Decode(restore);
+            InMemoryChatHistoryProvider provider = new(new InMemoryChatHistoryProviderOptions());
+            ChatClientAgent agent = CreateAgent(
+                new UnavailableChatClient(),
+                provider,
+                systemPrompt: null,
+                functions: []);
+            AgentSession session = await AgentSessionCodec
+                .RestoreAsync(agent, payload, cancellationToken)
+                .ConfigureAwait(false);
+
+            return session.TryGetInMemoryChatHistory(out List<ChatMessage>? messages) && messages is not null
+                ? ConversationOf(messages)
+                : ExecutionConversation.Empty;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return Error.Failure("Llm.Conversation", $"会话历史不可读：{ex.Message}");
+        }
+    }
+
+    /// <summary>把 MAF 消息转为中性消息，保留内容种类与顺序，不做展示过滤。</summary>
+    private static ExecutionConversation ConversationOf(IReadOnlyList<ChatMessage> messages)
+    {
+        List<ExecutionMessage> converted = [];
+        foreach (ChatMessage message in messages)
+        {
+            List<ExecutionContentPart> parts = [];
+            foreach (AIContent content in message.Contents)
+            {
+                switch (content)
+                {
+                    case TextContent text:
+                        parts.Add(new ExecutionContentPart(ExecutionContentKind.Text, text.Text ?? string.Empty));
+                        break;
+
+                    case TextReasoningContent reasoning:
+                        parts.Add(new ExecutionContentPart(ExecutionContentKind.Reasoning, reasoning.Text ?? string.Empty));
+                        break;
+
+                    case FunctionCallContent call:
+                        parts.Add(new ExecutionContentPart(ExecutionContentKind.ToolCall, call.Name ?? string.Empty));
+                        break;
+
+                    case FunctionResultContent result:
+                        parts.Add(new ExecutionContentPart(
+                            ExecutionContentKind.ToolResult,
+                            result.Result?.ToString() ?? string.Empty));
+                        break;
+
+                    case UsageContent:
+                        break;
+
+                    default:
+                        parts.Add(new ExecutionContentPart(ExecutionContentKind.Other, string.Empty));
+                        break;
+                }
+            }
+
+            if (parts.Count > 0)
+            {
+                converted.Add(new ExecutionMessage(RoleOf(message.Role), parts));
+            }
+        }
+
+        return new ExecutionConversation(converted);
+    }
+
+    private static ExecutionMessageRole RoleOf(ChatRole role)
+    {
+        if (role == ChatRole.User)
+        {
+            return ExecutionMessageRole.User;
+        }
+
+        if (role == ChatRole.Assistant)
+        {
+            return ExecutionMessageRole.Assistant;
+        }
+
+        if (role == ChatRole.System)
+        {
+            return ExecutionMessageRole.System;
+        }
+
+        return role == ChatRole.Tool ? ExecutionMessageRole.Tool : ExecutionMessageRole.Other;
+    }
+
     /// <summary>装配一次执行的模型客户端管线：工具调用在会话内完成，历史按服务调用持久化。</summary>
     internal static ChatClientAgent CreateAgent(
-        ExecutionChatClient executionClient,
+        IChatClient executionClient,
         InMemoryChatHistoryProvider provider,
         string? systemPrompt,
         IReadOnlyList<AIFunction> functions)

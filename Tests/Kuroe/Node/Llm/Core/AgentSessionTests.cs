@@ -280,6 +280,64 @@ public sealed class AgentSessionTests
         Assert.Equal("开始", Assert.Single(provider.GetMessages(restored)).Text);
     }
 
+    [Fact]
+    public async Task Conversation_reader_returns_persisted_user_and_assistant_text()
+    {
+        FakeClient client = new(_ => Reply("回答"));
+        TestSession created = await CreateSession(client);
+        await created.Session.AskAsync("问题", CancellationToken.None);
+        LlmAgentSessionPayload payload = await created.Session.CreateRestoreDataAsync(CancellationToken.None)
+            ?? throw new InvalidOperationException("没有恢复数据。");
+
+        ErrorOr<ExecutionConversation> read = await new ExecutionConversationReader()
+            .ReadAsync(AgentSessionCodec.Encode(payload), CancellationToken.None);
+        Assert.False(read.IsError);
+        ExecutionConversation conversation = read.Value;
+
+        Assert.Equal(
+            [
+                (ExecutionMessageRole.User, "开始"),
+                (ExecutionMessageRole.User, "问题"),
+                (ExecutionMessageRole.Assistant, "回答"),
+            ],
+            conversation.Messages.Select(message => (
+                message.Role,
+                string.Concat(message.Parts
+                    .Where(part => part.Kind == ExecutionContentKind.Text)
+                    .Select(part => part.Text)))));
+    }
+
+    [Fact]
+    public async Task Conversation_reader_keeps_reasoning_and_tool_parts()
+    {
+        FakeClient client = new(_ => UsageReply("先想", "再答"));
+        TestSession created = await CreateSession(client);
+        await created.Session.AskAsync("问题", CancellationToken.None);
+        LlmAgentSessionPayload payload = await created.Session.CreateRestoreDataAsync(CancellationToken.None)
+            ?? throw new InvalidOperationException("没有恢复数据。");
+
+        ErrorOr<ExecutionConversation> read = await new ExecutionConversationReader()
+            .ReadAsync(AgentSessionCodec.Encode(payload), CancellationToken.None);
+        Assert.False(read.IsError);
+        ExecutionConversation conversation = read.Value;
+
+        Assert.Contains(
+            conversation.Messages.SelectMany(message => message.Parts),
+            part => part.Kind == ExecutionContentKind.Reasoning && part.Text == "先想");
+        Assert.Contains(
+            conversation.Messages.SelectMany(message => message.Parts),
+            part => part.Kind == ExecutionContentKind.Text && part.Text == "再答");
+    }
+
+    [Fact]
+    public async Task Conversation_reader_rejects_an_unknown_format()
+    {
+        ErrorOr<ExecutionConversation> conversation = await new ExecutionConversationReader()
+            .ReadAsync(new ExecutionRestoreState("unknown", "{}"), CancellationToken.None);
+
+        Assert.True(conversation.IsError);
+    }
+
     private static async Task<TestSession> CreateSession(
         FakeClient client,
         ProcessJournal? journal = null,

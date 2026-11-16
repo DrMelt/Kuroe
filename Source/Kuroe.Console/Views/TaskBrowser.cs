@@ -61,8 +61,15 @@ internal sealed class TaskBrowser(
     /// <summary>丢掉已完成或已终止的内存任务，同时删除存档。</summary>
     public void Clear()
     {
-        int count = tasks.ClearSettled().Count;
-        terminal.Ok($"已丢掉 {count} 个任务。");
+        ErrorOr<IReadOnlyList<TaskId>> cleared = tasks.ClearSettled();
+        if (cleared.IsError)
+        {
+            results.Reject(cleared.ErrorsOrEmptyList);
+
+            return;
+        }
+
+        terminal.Ok($"已丢掉 {cleared.Value.Count} 个任务。");
     }
 
     /// <summary>改任务标题。</summary>
@@ -89,7 +96,7 @@ internal sealed class TaskBrowser(
 
     /// <summary>停止单个执行。</summary>
     public void StopExecution(int id) => results.Report(
-        tasks.StopExecution(new Kuroe.Execution.Shared.ExecutionId(id)),
+        tasks.StopExecution(new Execution.Shared.ExecutionId(id)),
         $"执行 #{id} 已停止。");
 
     /// <summary>打开任务节点树页。</summary>
@@ -353,7 +360,7 @@ internal sealed class TaskBrowser(
     /// <summary>打印执行详情。</summary>
     public void ShowExecution(int executionId)
     {
-        ErrorOr<(TaskSnapshot Task, Kuroe.Execution.Shared.ExecutionSnapshot Execution)> found = FindExecution(executionId);
+        ErrorOr<(TaskSnapshot Task, Execution.Shared.ExecutionSnapshot Execution)> found = FindExecution(executionId);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -380,7 +387,7 @@ internal sealed class TaskBrowser(
             }
 
             TaskSnapshot task = found.Value.Task;
-            Kuroe.Execution.Shared.ExecutionSnapshot snapshot = found.Value.Execution;
+            Execution.Shared.ExecutionSnapshot snapshot = found.Value.Execution;
 
             terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Request.Target}");
             executionView.Print(task, snapshot);
@@ -420,17 +427,17 @@ internal sealed class TaskBrowser(
     }
 
     /// <summary>按执行号取执行与其所属任务的快照。</summary>
-    private ErrorOr<(TaskSnapshot Task, Kuroe.Execution.Shared.ExecutionSnapshot Execution)> FindExecution(int id)
+    private ErrorOr<(TaskSnapshot Task, Execution.Shared.ExecutionSnapshot Execution)> FindExecution(int id)
     {
-        ErrorOr<(WorkTask Task, Kuroe.Execution.Shared.IExecution Execution)> found =
-            registry.FindOwnedExecution(new Kuroe.Execution.Shared.ExecutionId(id));
+        ErrorOr<(WorkTask Task, Execution.Shared.IExecution Execution)> found =
+            registry.FindOwnedExecution(new Execution.Shared.ExecutionId(id));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
         WorkTask owner = found.Value.Task;
-        Kuroe.Execution.Shared.ExecutionSnapshot snapshot = found.Value.Execution.Snapshot();
+        Execution.Shared.ExecutionSnapshot snapshot = found.Value.Execution.Snapshot();
 
         return (owner.Snapshot(), snapshot);
     }

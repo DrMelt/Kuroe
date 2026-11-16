@@ -1,3 +1,4 @@
+using Kuroe;
 using Kuroe.Assistant.Dialogue.Flow;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
@@ -6,56 +7,56 @@ using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Input.Shared;
-using Kuroe.Pending;
+using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Assistant.Dialogue;
 
-/// <summary>对话宿主的构造：自有任务域、执行网关、流程提供者与任务动作。</summary>
+/// <summary>对话宿主的构造：独立的对话任务域、存档目录、租约与恢复服务。</summary>
 internal static class DialogueHostFactory
 {
-    /// <summary>按容器建立常驻对话宿主。对话任务域不注册为 TaskRegistry，避免覆盖用户任务域。</summary>
-    internal static DialogueHost Create(IServiceProvider services)
+    /// <summary>按容器建立会话宿主。对话任务域不注册为用户任务域，存档与租约使用助手目录。</summary>
+    internal static DialogueHost Create(IServiceProvider services, bool persistTasks)
     {
         TaskRegistry registry = new(
             services.GetRequiredService<ExecutionIndex>(),
             services.GetRequiredService<IInputDelivery>(),
             pauseOnRestore: false);
-        DialogueRound round = new(
-            registry,
-            new PendingService(registry));
-
         ModelService models = services.GetRequiredService<ModelService>();
-
-        TaskExecutionGateway gateway = new(
-            services.GetRequiredService<ExecutionIndex>(),
-            services.GetRequiredService<IExecutionRuntime>());
+        SettingsProvider settings = services.GetRequiredService<SettingsProvider>();
+        KuroePaths paths = services.GetRequiredService<KuroePaths>();
+        ITaskExecutionGateway gateway = services.GetRequiredService<ITaskExecutionGateway>();
 
         // 对话流程由代码定义，不进入图流程库与宿主开始输入表
         FlowProvider provider = new(
             new DialogueFlowIdentity(),
-            new DialogueFlowSubmission(
-                models,
-                services.GetRequiredService<SettingsProvider>(),
-                services.GetRequiredService<KuroePaths>(),
-                gateway),
+            new DialogueFlowSubmission(models, settings, paths, gateway),
             null,
             new DialogueFlowControlFactory(
                 gateway,
                 services.GetRequiredService<IInputChannel>()),
             new DialogueFlowPresentation(),
             new DialogueFlowRecordSource());
+        FlowProviderSource providers = new([provider]);
 
-        // 对话任务自有任务域，任务键不占用用户任务域的序列
-        GuidTaskIdSource ids = new();
-        TaskActions actions = new(
+        TaskDomain domain = TaskDomainComposition.Create(
             registry,
             services.GetRequiredService<IExecutionRuntime>(),
             services.GetRequiredService<IFlowRuntime>(),
-            new FlowProviderSource([provider]),
-            ids);
+            providers,
+            new GuidTaskIdSource(),
+            persistTasks,
+            persistTasks ? paths.AssistantRecordsDirectory : null,
+            persistTasks ? services.GetRequiredService<ITaskRecordCodec>() : null);
 
-        return new DialogueHost(actions, provider, round, models, registry);
+        DialogueRound round = new(registry, domain.Pendings);
+        DialogueTurns turns = new(registry, round);
+        DialogueSessions sessions = new(domain.Actions, registry, models, settings, provider, turns);
+        DialogueHistoryReader history = new(
+            registry,
+            services.GetRequiredService<IExecutionConversationReader>());
+
+        return new DialogueHost(domain.Actions, sessions, turns, history, domain.Restore);
     }
 }

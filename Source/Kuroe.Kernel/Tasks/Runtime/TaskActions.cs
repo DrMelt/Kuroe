@@ -235,8 +235,8 @@ public sealed class TaskActions(
         }
     }
 
-    /// <summary>终止任务：在跑的执行随之中断，未走完的步骤不再推进，之后不可恢复。</summary>
-    public ErrorOr<Success> StopTask(TaskId id)
+    /// <summary>终止任务：在跑的执行随之中断，未走完的步骤不再推进，之后不可恢复。不释放租约，由删除或退出收尾。</summary>
+    public ErrorOr<Success> Terminate(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
@@ -248,21 +248,37 @@ public sealed class TaskActions(
         if (!stopped.IsError)
         {
             PersistImmediately(found.Value.Id);
-            _leases?.Release(found.Value.Id);
+        }
+
+        return stopped;
+    }
+
+    /// <summary>终止任务并释放占用。</summary>
+    public ErrorOr<Success> StopTask(TaskId id)
+    {
+        ErrorOr<Success> stopped = Terminate(id);
+        if (!stopped.IsError)
+        {
+            _leases?.Release(id);
         }
 
         return stopped;
     }
 
     /// <summary>丢掉已完成或已终止的任务，删除它们的存档并放开占用。</summary>
-    public IReadOnlyList<TaskId> ClearSettled()
+    public ErrorOr<IReadOnlyList<TaskId>> ClearSettled()
     {
         IReadOnlyList<TaskId> cleared = _registry.ClearSettled();
+        List<Error> errors = [];
         if (_records is { } coordinator)
         {
             foreach (TaskId id in cleared)
             {
-                coordinator.Remove(id);
+                ErrorOr<Success> removed = coordinator.Remove(id);
+                if (removed.IsError)
+                {
+                    errors.AddRange(removed.ErrorsOrEmptyList);
+                }
             }
         }
 
@@ -274,17 +290,56 @@ public sealed class TaskActions(
             }
         }
 
-        return cleared;
+        if (errors.Count > 0)
+        {
+            return errors;
+        }
+
+        TaskId[] snapshot = [.. cleared];
+        return snapshot;
     }
 
     /// <summary>等待当前待写状态落盘，不改任务状态。</summary>
     public Task FlushAsync() => _records?.FlushAsync() ?? Task.CompletedTask;
 
-    /// <summary>退出时先中断任务与执行并等待收口，再写全部任务存档，放开占用，最后丢弃任务域。</summary>
-    public async Task ShutdownAsync()
+    /// <summary>丢弃一个任务。有执行在跑时拒绝；未收口的任务先终止，再移除任务与存档并释放占用。</summary>
+    public ErrorOr<Success> Drop(TaskId id)
     {
-        await _driver.ShutdownAsync().ConfigureAwait(false);
+        ErrorOr<WorkTask> found = _registry.Find(id);
+        if (found.IsError)
+        {
+            return found.ErrorsOrEmptyList;
+        }
 
+        WorkTask task = found.Value;
+        if (task.Executions.Any(execution => execution.IsLive))
+        {
+            return [TaskErrors.LiveCannotDrop(id)];
+        }
+
+        if (!task.State.IsSettled())
+        {
+            ErrorOr<Success> terminated = Terminate(id);
+            if (terminated.IsError)
+            {
+                return terminated;
+            }
+        }
+
+        if (!_registry.Drop(id))
+        {
+            return [TaskErrors.NotSettled(id)];
+        }
+
+        ErrorOr<Success> removed = _records?.Remove(id) ?? Result.Success;
+        _leases?.Release(id);
+
+        return removed;
+    }
+
+    /// <summary>写出全部任务存档，释放本域占用并丢弃任务域。不中断流程，进程级的流程收口由调用方先完成。</summary>
+    public async Task CloseAsync()
+    {
         if (_records is { } coordinator)
         {
             foreach (TaskId id in _registry.Ids())
@@ -297,5 +352,12 @@ public sealed class TaskActions(
 
         _leases?.ReleaseAll();
         _registry.Forget();
+    }
+
+    /// <summary>退出时先中断任务与执行并等待收口，再写全部任务存档，放开占用，最后丢弃任务域。</summary>
+    public async Task ShutdownAsync()
+    {
+        await _driver.ShutdownAsync().ConfigureAwait(false);
+        await CloseAsync().ConfigureAwait(false);
     }
 }

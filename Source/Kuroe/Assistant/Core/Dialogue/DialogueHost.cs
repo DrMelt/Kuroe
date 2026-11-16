@@ -1,174 +1,140 @@
-using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Assistant.Dialogue.Flow;
-using Kuroe.Catalogs;
-using Kuroe.Control.Shared;
-using Kuroe.Node.Llm;
-using Kuroe.Tasks.Presentation.Shared;
+using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 
-/// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等本轮收口，无模型时报模型未选择。
-/// 模型在任务启动时写入流程，模型变化后下一次输入重建任务。</summary>
-public sealed class DialogueHost
+/// <summary>内置助手会话集合的管理层宿主：对外给出会话目录、轮次、历史与任务域生命周期。
+/// 每个会话是一条独立任务，模型与语言在建立时固定，模式按会话切换。</summary>
+public sealed class DialogueHost : IDisposable, IAsyncDisposable
 {
     private readonly TaskActions _actions;
-    private readonly FlowProvider _flow;
-    private readonly DialogueRound _rounds;
-    private readonly ModelService _models;
-    private readonly TaskRegistry _registry;
-    private readonly Lock _gate = new();
-    private TaskId? _dialogue;
-    private ModelName? _model;
-    private DialogueMode _mode = DialogueMode.Default;
+    private readonly DialogueSessions _sessions;
+    private readonly DialogueTurns _turns;
+    private readonly DialogueHistoryReader _history;
+    private readonly ITaskRestoreService? _restore;
+    private int _restored;
+    private int _closed;
 
     internal DialogueHost(
         TaskActions actions,
-        FlowProvider flow,
-        DialogueRound rounds,
-        ModelService models,
-        TaskRegistry registry)
+        DialogueSessions sessions,
+        DialogueTurns turns,
+        DialogueHistoryReader history,
+        ITaskRestoreService? restore)
     {
         _actions = actions;
-        _flow = flow;
-        _rounds = rounds;
-        _models = models;
-        _registry = registry;
+        _sessions = sessions;
+        _turns = turns;
+        _history = history;
+        _restore = restore;
     }
 
-    /// <summary>当前选择的模式。模式变化后下一轮执行按新模式建立工具面。</summary>
-    public DialogueMode Mode
+    /// <summary>一轮后台对话结束触发，宿主据此给出完成提示。</summary>
+    public event Action<DialogueTurnNotice>? TurnCompleted
     {
-        get
-        {
-            lock (_gate)
-            {
-                return _mode;
-            }
-        }
+        add => _turns.Completed += value;
+        remove => _turns.Completed -= value;
     }
 
-    /// <summary>选择模式。已有对话任务时更新流程状态，不重建任务、不清空历史。</summary>
-    public void SelectMode(DialogueMode mode)
+    /// <summary>当前会话摘要，没有当前会话时为空。</summary>
+    public DialogueSessionInfo? Active => _sessions.Active;
+
+    /// <summary>全部会话，按最近活动排序。</summary>
+    public IReadOnlyList<DialogueSessionInfo> Sessions => _sessions.List();
+
+    /// <summary>恢复会话存档并选择最近的会话。没有持久化时返回空报告，重复调用只返回空报告。</summary>
+    public TaskLoadReport Restore()
     {
-        TaskId? current;
-        lock (_gate)
+        if (Interlocked.CompareExchange(ref _restored, 1, 0) != 0)
         {
-            _mode = mode;
-            current = _dialogue;
+            return EmptyLoad();
         }
 
-        if (current is { } id && _registry.Find(id) is { IsError: false } found)
+        try
         {
-            WorkTask task = found.Value;
-            task.UnderLock(() =>
-            {
-                DialogueFlowState.Of(task).SelectMode(mode);
-                return true;
-            });
-            ((ITaskFlowContext)task).NotifyChanged();
+            TaskLoadReport report = _restore?.Restore() ?? EmptyLoad();
+            _sessions.SelectLatest();
+
+            return report;
+        }
+        catch
+        {
+            Interlocked.Exchange(ref _restored, 0);
+            throw;
         }
     }
 
-    /// <summary>一轮对话。无模型时返回模型未选择，不触碰任务。过程事件经 observer 送出。</summary>
-    public async Task<ErrorOr<Success>> ReplyAsync(
+    /// <summary>新建会话。模型与语言取当前全局配置，标题与模式可由调用方给出。</summary>
+    public ErrorOr<DialogueSessionInfo> Create(string? title = null, DialogueMode? mode = null) =>
+        _sessions.Create(title, mode);
+
+    /// <summary>选择当前会话。</summary>
+    public ErrorOr<Success> Select(TaskId id) => _sessions.Select(id);
+
+    /// <summary>切换指定会话的模式。下一轮执行按新模式建立工具面，不重建任务。</summary>
+    public ErrorOr<Success> SelectMode(TaskId id, DialogueMode mode) => _sessions.SelectMode(id, mode);
+
+    /// <summary>改会话标题。</summary>
+    public ErrorOr<Success> Rename(TaskId id, string title) => _sessions.Rename(id, title);
+
+    /// <summary>向指定会话发送一轮输入。会话正在执行时拒绝，不排队。</summary>
+    public async Task<ErrorOr<Success>> SendAsync(
+        TaskId id,
         string input,
         ProcessObserver? observer = null)
     {
-        if (_models.Current is not { } model)
-        {
-            return ModelErrors.ModelNotSelected();
-        }
-
-        ErrorOr<TaskId> ensured = EnsureDialogue(model);
-        if (ensured.IsError)
-        {
-            return ensured.ErrorsOrEmptyList;
-        }
-
-        return await _rounds.AskAsync(ensured.Value, input, observer);
-    }
-
-    /// <summary>重置对话：停止并丢弃当前对话任务，下一次输入重建。</summary>
-    public void Reset()
-    {
-        TaskId? old;
-        lock (_gate)
-        {
-            old = _dialogue;
-            _dialogue = null;
-            _model = null;
-        }
-
-        if (old is { } id)
-        {
-            _actions.StopTask(id);
-        }
-
-        _registry.ClearSettled();
-    }
-
-    /// <summary>当前对话任务，不存在、已被清理、已收口或模型已变化时新建。助手语言与模式在创建时读取，配置变化后重置对话重建任务生效。</summary>
-    private ErrorOr<TaskId> EnsureDialogue(ModelName model)
-    {
-        TaskId? replaced = null;
-        DialogueMode mode;
-        lock (_gate)
-        {
-            mode = _mode;
-            if (_dialogue is { } current)
-            {
-                if (_model == model && IsUsable(current))
-                {
-                    return current;
-                }
-
-                replaced = current;
-                _dialogue = null;
-                _model = null;
-            }
-        }
-
-        // 被替换的旧任务先终止，随 ClearSettled 清出任务域
-        if (replaced is { } staleTask)
-        {
-            _actions.StopTask(staleTask);
-        }
-
-        _registry.ClearSettled();
-
-        StartInputs inputs = new(
-        [
-            new StartInput(DialogueFlow.StartPort, "对话"),
-            new StartInput(DialogueFlow.ModePort, mode.Key),
-        ]);
-        ErrorOr<TaskSnapshot> created = _actions.Submit(_flow, DialogueFlow.Name, inputs, "对话");
-        if (created.IsError)
-        {
-            return created.ErrorsOrEmptyList;
-        }
-
-        TaskId id = created.Value.Id;
-        lock (_gate)
-        {
-            _dialogue = id;
-            _model = model;
-        }
-
-        return id;
-    }
-
-    /// <summary>当前任务是否还承担着对话：丢失、取消或收口后不再使用。</summary>
-    private bool IsUsable(TaskId id)
-    {
-        ErrorOr<WorkTask> found = _registry.Find(id);
+        ErrorOr<WorkTask> found = _sessions.Find(id);
         if (found.IsError)
         {
-            return false;
+            return found.ErrorsOrEmptyList;
         }
 
-        return found.Value.UnderLock(() => found.Value.State is TaskState.Running);
+        if (_turns.IsBusy(id))
+        {
+            return [DialogueErrors.Busy(id)];
+        }
+
+        _sessions.NameFromInput(found.Value, input);
+
+        return await _turns.SendAsync(found.Value, input, observer).ConfigureAwait(false);
     }
+
+    /// <summary>删除会话。运行中的任务先停止，等执行收口后移除任务、存档与租约。</summary>
+    public Task<ErrorOr<Success>> DeleteAsync(TaskId id, CancellationToken cancellationToken = default) =>
+        _sessions.DeleteAsync(id, cancellationToken);
+
+    /// <summary>读取会话历史。基础历史取最后一次可读的恢复数据，其后的执行作为尾部返回。</summary>
+    public Task<ErrorOr<DialogueHistory>> ReadHistoryAsync(
+        TaskId id,
+        CancellationToken cancellationToken = default) =>
+        _history.ReadAsync(id, cancellationToken);
+
+    /// <summary>写出会话存档、释放租约并丢弃本域。不中断流程，共享流程运行期由进程级关闭先收口。</summary>
+    public async Task CloseAsync()
+    {
+        if (Interlocked.CompareExchange(ref _closed, 1, 0) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await _actions.CloseAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+            Interlocked.Exchange(ref _closed, 0);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() => CloseAsync().GetAwaiter().GetResult();
+
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync() => await CloseAsync().ConfigureAwait(false);
+
+    private static TaskLoadReport EmptyLoad() => new([], [], []);
 }

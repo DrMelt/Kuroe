@@ -452,13 +452,13 @@ public sealed class MenuRouteTests
     }
 
     [Fact]
-    public void Settings_set_language_points_to_the_reset_entry()
+    public void Settings_set_language_points_to_a_new_session()
     {
         using ConsoleSession cli = new();
 
         cli.Settings.Set("Assistant:Language", "English");
 
-        Assert.Contains("在「Kuroe 助手」页选择「重置对话」后生效。", cli.Output.Output);
+        Assert.Contains("内置助手语言已变更，已有会话保持原语言，新建会话使用新语言。", cli.Output.Output);
     }
 
     [Fact]

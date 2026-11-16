@@ -27,14 +27,22 @@ internal sealed class DialogueFlowSubmission(
             return [Error.Validation("Flow.Name", $"代码流程不处理流程 {name}。")];
         }
 
-        if (models.Current is not { } model)
+        string? model = inputs.Text(DialogueFlow.ModelPort);
+        if (string.IsNullOrWhiteSpace(model))
         {
-            return ModelErrors.ModelNotSelected();
+            if (models.Current is not { } current)
+            {
+                return ModelErrors.ModelNotSelected();
+            }
+
+            model = current.Value;
         }
 
-        string language = settings.AssistantLanguage;
+        string language = inputs.Text(DialogueFlow.LanguagePort) is { Length: > 0 } configuredLanguage
+            ? configuredLanguage
+            : settings.AssistantLanguage;
         DialogueMode mode = DialogueMode.Parse(inputs.Text(DialogueFlow.ModePort));
-        DialogueFlowState state = new(inputs, paths.WorkingDirectory, model.Value, language, mode);
+        DialogueFlowState state = new(inputs, paths.WorkingDirectory, model, language, mode);
 
         return new FlowSubmission(
             state,

@@ -89,7 +89,8 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         Assert.False(_store.Write(record).IsError);
         TaskRecordCoordinator coordinator = CreateCoordinator();
 
-        coordinator.Remove(record.Identity.Id);
+        ErrorOr<Success> removed = coordinator.Remove(record.Identity.Id);
+        Assert.False(removed.IsError);
 
         Assert.Empty(_store.ReadAll().Records);
     }

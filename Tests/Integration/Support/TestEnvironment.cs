@@ -48,7 +48,6 @@ public sealed class TestEnvironment : IDisposable
         runner.Executions = Executions;
         Tasks = provider.GetRequiredService<TaskService>();
         Pendings = provider.GetRequiredService<PendingService>();
-        Records = provider.GetRequiredService<ITaskRecordCoordinator>();
         _waiter = new NotifiedTaskWaiter(
             TaskReader,
             provider.GetRequiredService<ITaskChangeSource>());
@@ -57,7 +56,7 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<IExecutionCannotCompleteSubmitter>(),
             provider.GetRequiredService<IExecutionStatusReader>());
         runner.ContractToolFactory = execution =>
-            CreateContractTools(GraphExecution(new Kuroe.Execution.Shared.ExecutionId(execution.Value)));
+            CreateContractTools(GraphExecution(new ExecutionId(execution.Value)));
     }
 
     /// <summary>临时工作目录。</summary>
@@ -82,10 +81,31 @@ public sealed class TestEnvironment : IDisposable
     public PendingService Pendings { get; }
 
     /// <summary>存档协调，用例据此把待写状态显式落盘。</summary>
-    public ITaskRecordCoordinator Records { get; }
+    public ITaskRecordCoordinator Records => _provider.GetRequiredService<ITaskRecordCoordinator>();
 
-    /// <summary>常驻对话任务的管理层宿主。</summary>
+    /// <summary>内置助手会话宿主。</summary>
     public DialogueHost Dialogue => _provider.GetRequiredService<DialogueHost>();
+
+    /// <summary>当前会话摘要，没有当前会话时抛异常。</summary>
+    public DialogueSessionInfo Session =>
+        Dialogue.Active ?? throw new InvalidOperationException("没有当前会话。");
+
+    /// <summary>把一轮输入交给当前会话，没有会话时按当前配置新建。</summary>
+    public async Task<ErrorOr<Success>> SayAsync(string input, ProcessObserver? observer = null)
+    {
+        if (Dialogue.Active is not { } session)
+        {
+            ErrorOr<DialogueSessionInfo> created = Dialogue.Create();
+            if (created.IsError)
+            {
+                return created.ErrorsOrEmptyList;
+            }
+
+            session = created.Value;
+        }
+
+        return await Dialogue.SendAsync(session.Id, input, observer);
+    }
 
     public SettingsProvider Settings => _provider.GetRequiredService<SettingsProvider>();
 
@@ -109,10 +129,10 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>按执行创建全部契约工具。</summary>
     public IReadOnlyList<ITool> CreateContractTools(GraphExecution execution) =>
         _contractTools.Create(new ToolContext(
-            new Kuroe.Execution.Shared.ExecutionPortAccess(execution.Request),
-            new Dictionary<string, IReadOnlyDictionary<string, Kuroe.Execution.Shared.ExecutionPortName>>(),
+            new ExecutionPortAccess(execution.Request),
+            new Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>>(),
             Root,
-            new Kuroe.Execution.Shared.ExecutionId(execution.Id.Value),
+            new ExecutionId(execution.Id.Value),
             [
                 new ToolPath(ContractTools.Port),
                 new ToolPath(ContractTools.CannotComplete),
@@ -122,14 +142,14 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>取指定路径的契约工具。</summary>
     private ITool ContractTool(ExecutionId execution, string path)
     {
-        GraphExecution found = GraphExecution(new Kuroe.Execution.Shared.ExecutionId(execution.Value));
+        GraphExecution found = GraphExecution(new ExecutionId(execution.Value));
         IReadOnlyList<ITool> tools = CreateContractTools(found);
 
         return tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
     }
 
     /// <summary>按中性执行号取图侧执行对象。</summary>
-    public GraphExecution GraphExecution(Kuroe.Execution.Shared.ExecutionId id)
+    public GraphExecution GraphExecution(ExecutionId id)
     {
         var (_, Owner) = Executions.FindOwned(id).ThrowIfError();
         IGraphFlowState state = (IGraphFlowState)Owner.FlowState;
@@ -146,14 +166,14 @@ public sealed class TestEnvironment : IDisposable
         [.. task.View.Steps.Single(step => step.Label == label).Executions.Select(execution => GraphSnapshot(execution.Id))];
 
     private GraphExecutionSnapshot GraphSnapshot(int execution) =>
-        GraphExecution(new Kuroe.Execution.Shared.ExecutionId(execution)).Snapshot();
+        GraphExecution(new ExecutionId(execution)).Snapshot();
 
     public CatalogService Catalog => _provider.GetRequiredService<CatalogService>();
 
     public ModelService Models => _provider.GetRequiredService<ModelService>();
 
-    public IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool> ConfiguredTools =>
-        _provider.GetRequiredService<IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool>>();
+    public IReadOnlyList<Tool.Json.ConfiguredTool> ConfiguredTools =>
+        _provider.GetRequiredService<IReadOnlyList<Tool.Json.ConfiguredTool>>();
 
     /// <summary>测试默认写入的流程文件与宿主开始输入表，模型经宿主输入 MODEL 取当前选择，供按名提交的执行测试使用。</summary>
     private const string TestFlowFile = """
@@ -198,9 +218,10 @@ public sealed class TestEnvironment : IDisposable
         string? flowsJson = null,
         bool seedCatalog = true,
         bool persistTasks = false,
-        IProcessRunner? process = null)
+        IProcessRunner? process = null,
+        string? root = null)
     {
-        string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+        root ??= Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
 
         KuroePaths paths = KuroePaths.At(root);
@@ -237,21 +258,23 @@ public sealed class TestEnvironment : IDisposable
         // 替身执行器替换真实执行与恢复能力
         for (int index = services.Count - 1; index >= 0; index--)
         {
-            if (services[index].ServiceType == typeof(Kuroe.Execution.Shared.IExecutionRunnerFactory)
-                || services[index].ServiceType == typeof(Kuroe.Execution.Shared.IExecutionRestorer))
+            if (services[index].ServiceType == typeof(IExecutionRunnerFactory)
+                || services[index].ServiceType == typeof(IExecutionRestorer))
             {
                 services.RemoveAt(index);
             }
         }
 
-        services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(runner);
-        services.AddSingleton<Kuroe.Execution.Shared.IExecutionRestorer>(runner);
+        services.AddSingleton<IExecutionRunnerFactory>(runner);
+        services.AddSingleton<IExecutionRestorer>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
         // 不写存档的装配不注册恢复服务
         if (persistTasks)
         {
-            provider.GetRequiredService<ITaskRestoreService>().Restore();
+            provider.GetRequiredService<ITaskRestoreService>()
+                .Restore()
+                .Merge(provider.GetRequiredService<DialogueHost>().Restore());
         }
 
         if (seedCatalog)
@@ -272,8 +295,9 @@ public sealed class TestEnvironment : IDisposable
         string? flowsJson = null,
         bool seedCatalog = true,
         bool persistTasks = false,
-        IProcessRunner? process = null) =>
-        TryCreate(flowsJson, seedCatalog, persistTasks, process).ThrowIfError();
+        IProcessRunner? process = null,
+        string? root = null) =>
+        TryCreate(flowsJson, seedCatalog, persistTasks, process, root).ThrowIfError();
 
     /// <summary>把测试夹具按顶层字段写成节点库、流程与宿主开始输入表，空对象不写文件。</summary>
     private static void WriteFlowFiles(KuroePaths paths, string text)
