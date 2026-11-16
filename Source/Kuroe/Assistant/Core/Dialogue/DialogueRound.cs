@@ -1,20 +1,18 @@
 using ErrorOr;
-using Kuroe.Assistant.Flows;
-using Kuroe.Execution.Shared;
+using Kuroe.Assistant.Dialogue.Flow;
+using Kuroe.Pending;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Shared;
-using Kuroe.Pending;
 
 namespace Kuroe.Assistant.Dialogue;
 
 /// <summary>对话任务的一轮问答：把输入交给停在等待的输入节点，等本轮执行收口并把回复交回。
 /// 回答的交付由等待型节点的宿主功能承担，这里只管一轮的挂载、观察与收口。</summary>
-public sealed class DialogueRound(TaskRegistry registry, PendingService pendings)
+internal sealed class DialogueRound(TaskRegistry registry, PendingService pendings)
 {
     /// <summary>回答待输入的节点并等本轮产出执行收口，只报成败。过程事件经 observer 送出。</summary>
-    public async Task<ErrorOr<Success>> AskAsync(
+    internal async Task<ErrorOr<Success>> AskAsync(
         TaskId id,
-        string? nodePath,
         string input,
         ProcessObserver? observer = null)
     {
@@ -40,125 +38,56 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
             return waited.ErrorsOrEmptyList;
         }
 
-        var outcome = new TaskCompletionSource<ErrorOr<Success>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        IExecution? round = null;
-        int boundary = 0;
-        Action unsubscribeAttached = () => { };
-        Action unsubscribeSettled = () => { };
-
         // 观察者先于回答挂上：本轮执行可能紧接回答就收口，晚挂会漏掉通知。
-        // 边界与订阅在同一任务锁内建立，旧执行的通知一律忽略。
-        task.UnderLock(() =>
+        using DialogueRoundWatch watch = DialogueRoundWatch.Attach(task, target, observer);
+        ErrorOr<Success> answered = pendings.Answer(id, null, input);
+        if (answered.IsError)
         {
-            boundary = task.Executions.Count == 0
-                ? 0
-                : task.Executions.Max(execution => execution.Id.Value);
-
-            unsubscribeAttached = task.SubscribeExecutionAttached(execution =>
-            {
-                if (execution.Id.Value <= boundary || Uri.UnescapeDataString(execution.Request.Target.Value) != target)
-                {
-                    return;
-                }
-
-                bool accepted = task.UnderLock(() =>
-                {
-                    if (round is not null)
-                    {
-                        return false;
-                    }
-
-                    round = execution;
-                    return true;
-                });
-
-                if (!accepted)
-                {
-                    return;
-                }
-
-                if (observer?.Content is { } contentObserver)
-                {
-                    execution.ContentEmitted += contentObserver;
-                }
-
-                if (observer?.Entry is { } entryObserver)
-                {
-                    execution.EntryEmitted += entryObserver;
-                }
-            });
-
-            unsubscribeSettled = task.SubscribeExecutionSettled(execution =>
-            {
-                if (execution.Id.Value <= boundary || Uri.UnescapeDataString(execution.Request.Target.Value) != target)
-                {
-                    return;
-                }
-
-                if (!task.UnderLock(() => ReferenceEquals(round, execution)))
-                {
-                    return;
-                }
-
-                if (execution.State == ExecutionState.Succeeded)
-                {
-                    outcome.TrySetResult(Result.Success);
-                    return;
-                }
-
-                outcome.TrySetResult(PendingErrors.RoundFailed([.. execution.Snapshot().Failures]));
-            });
-
-            return true;
-        });
-        try
-        {
-            ErrorOr<Success> answered = pendings.Answer(id, nodePath, input);
-            if (answered.IsError)
-            {
-                return answered.ErrorsOrEmptyList;
-            }
-
-            while (true)
-            {
-                if (outcome.Task.IsCompleted)
-                {
-                    if (outcome.Task.Result.IsError)
-                    {
-                        return await outcome.Task;
-                    }
-
-                    // 本轮产出已定，等反馈复位完成、任务回到等待再返回，避免下一轮回答撞上复位窗口。
-                    // Done 可能是挂点评估前的瞬态，只有 Completed 才表示任务真正结束。
-                    if (Answering(id) || task.Completed)
-                    {
-                        return await outcome.Task;
-                    }
-
-                    if (task.State is TaskState.Blocked or TaskState.Terminated or TaskState.Paused)
-                    {
-                        return [PendingErrors.DialogueSettled(task.State)];
-                    }
-                }
-                else
-                {
-                    TaskState state = task.State;
-                    bool started = task.UnderLock(() => round is not null);
-
-                    // 本轮执行已挂上时结果由它的收口给出，未挂上才按任务状态判定收口。
-                    if (!started && (task.Completed || state is TaskState.Blocked or TaskState.Terminated or TaskState.Paused))
-                    {
-                        return [PendingErrors.DialogueSettled(state)];
-                    }
-                }
-
-                await Task.Delay(20);
-            }
+            return answered.ErrorsOrEmptyList;
         }
-        finally
+
+        return await WaitForOutcomeAsync(id, task, watch);
+    }
+
+    /// <summary>等本轮结果：失败直接返回，成功后等任务回到等待，收口或阻塞报对话无法继续。</summary>
+    private async Task<ErrorOr<Success>> WaitForOutcomeAsync(
+        TaskId id,
+        WorkTask task,
+        DialogueRoundWatch watch)
+    {
+        while (true)
         {
-            unsubscribeAttached();
-            unsubscribeSettled();
+            if (watch.Outcome.IsCompleted)
+            {
+                if (watch.Outcome.Result.IsError)
+                {
+                    return await watch.Outcome;
+                }
+
+                // 本轮产出已定，等反馈复位完成、任务回到等待再返回，避免下一轮回答撞上复位窗口。
+                // Done 可能是挂点评估前的瞬态，只有 Completed 才表示任务真正结束。
+                if (Answering(id) || task.Completed)
+                {
+                    return await watch.Outcome;
+                }
+
+                if (task.State is TaskState.Blocked or TaskState.Terminated or TaskState.Paused)
+                {
+                    return [PendingErrors.DialogueSettled(task.State)];
+                }
+            }
+            else
+            {
+                TaskState state = task.State;
+
+                // 本轮执行已挂上时结果由它的收口给出，未挂上才按任务状态判定收口。
+                if (!watch.Started && (task.Completed || state is TaskState.Blocked or TaskState.Terminated or TaskState.Paused))
+                {
+                    return [PendingErrors.DialogueSettled(state)];
+                }
+            }
+
+            await Task.Delay(20);
         }
     }
 

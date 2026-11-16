@@ -961,7 +961,7 @@ public sealed class RepositoryLayoutTests
     public void Flow_implementations_split_ports_by_class()
     {
         string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph", "Runtime", "Engine");
-        string dialogue = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue");
+        string dialogue = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow");
 
         Assert.False(File.Exists(Path.Combine(graph, "GraphFlowFramework.cs")));
         Assert.False(File.Exists(Path.Combine(dialogue, "DialogueFlowFramework.cs")));
@@ -979,6 +979,23 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
+    public void Assistant_separates_dialogue_hosting_from_its_code_flow()
+    {
+        string core = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core");
+        string dialogue = Path.Combine(core, "Dialogue");
+        string flow = Path.Combine(dialogue, "Flow");
+
+        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueHost.cs")));
+        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueRound.cs")));
+        Assert.False(File.Exists(Path.Combine(dialogue, "DialogueFlowControl.cs")));
+        Assert.True(File.Exists(Path.Combine(flow, "DialogueFlow.cs")));
+        Assert.True(File.Exists(Path.Combine(flow, "DialogueFlowControl.cs")));
+        Assert.True(File.Exists(Path.Combine(flow, "DialogueFlowView.cs")));
+        Assert.True(File.Exists(Path.Combine(flow, "DialogueFlowTarget.cs")));
+        Assert.False(Directory.Exists(Path.Combine(core, "Flows")));
+    }
+
+    [Fact]
     public void Task_snapshots_are_assembled_by_the_task_domain()
     {
         string control = Path.Combine(KernelRoot, "Control", "Shared");
@@ -986,7 +1003,7 @@ public sealed class RepositoryLayoutTests
         string graph = Path.Combine(
             SourceRoot, "Kuroe.Flow", "Control", "Graph", "Runtime", "Engine", "GraphFlowPresentation.cs");
         string dialogue = Path.Combine(
-            SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "DialogueFlowPresentation.cs");
+            SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow", "DialogueFlowPresentation.cs");
         string workTask = Path.Combine(
             SourceRoot, "Kuroe.Kernel", "Tasks", "Runtime", "WorkTask.cs");
 
@@ -1006,7 +1023,7 @@ public sealed class RepositoryLayoutTests
         string graphRecords = Path.Combine(
             SourceRoot, "Kuroe.Flow", "Control", "Graph", "Runtime", "Engine", "GraphFlowRecordSource.cs");
         string dialogueRecords = Path.Combine(
-            SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "DialogueFlowRecordSource.cs");
+            SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow", "DialogueFlowRecordSource.cs");
 
         Assert.DoesNotContain("CreateSnapshot", File.ReadAllText(presentation), StringComparison.Ordinal);
         Assert.Contains(
@@ -1181,7 +1198,7 @@ public sealed class RepositoryLayoutTests
         string[] directories =
         [
             Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue"),
-            Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Flows"),
+            Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow"),
         ];
         string[] forbidden =
         [
@@ -1664,6 +1681,7 @@ public sealed class RepositoryLayoutTests
             "Assistant",
             "Core",
             "Dialogue",
+            "Flow",
             "DialogueFlowControlFactory.cs");
         string gatewayText = File.ReadAllText(gateway);
 

@@ -1,11 +1,10 @@
-using Kuroe.Assistant.Dialogue;
-using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
+using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Assistant.Flows;
+namespace Kuroe.Assistant.Dialogue.Flow;
 
-/// <summary>内置对话流程的代码定义：流程名、开始端口、回话步骤与回话参数。流程状态由对话框架维护，不经过节点图。</summary>
+/// <summary>内置对话流程的代码定义：流程名、开始端口、回话步骤、存档键与回话参数。流程状态由对话框架维护，不经过节点图。</summary>
 internal static class DialogueFlow
 {
     /// <summary>流程名。</summary>
@@ -32,8 +31,30 @@ internal static class DialogueFlow
     /// <summary>等待用户输入时的提问。</summary>
     internal const string Question = "请输入";
 
+    /// <summary>存档值里工作区根目录的键。</summary>
+    internal const string WorkspaceKey = "workspace";
+
+    /// <summary>存档值里模型名的键。</summary>
+    internal const string ModelKey = "model";
+
+    /// <summary>存档值里回复语言的键。</summary>
+    internal const string LanguageKey = "language";
+
+    /// <summary>存档值里模式键的键。</summary>
+    internal const string ModeKey = "mode";
+
+    /// <summary>回话步骤的路径。</summary>
+    internal static FlowStepPath ReplyStep { get; } = FlowStepPath.Of(ReplyLabel);
+
+    /// <summary>停在回话步骤的恢复种子。</summary>
+    internal static FlowSeed ReplySeed { get; } = new([ReplyStep]);
+
     /// <summary>回话节点的固定身份说明。</summary>
     private const string Identity = "你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。";
+
+    /// <summary>流程定义记录里的定义值。</summary>
+    internal static IReadOnlyDictionary<string, string> DefinitionValues(string language) =>
+        new Dictionary<string, string> { [LanguageKey] = language };
 
     /// <summary>回话节点的恒定系统指令块：身份说明、模式指令与回复语言。</summary>
     internal static IReadOnlyList<string> SystemPrompt(DialogueMode mode, string language) =>

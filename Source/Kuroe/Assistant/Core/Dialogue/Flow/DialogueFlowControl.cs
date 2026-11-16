@@ -1,12 +1,11 @@
 using ErrorOr;
-using Kuroe.Assistant.Flows;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Input.Shared;
-using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
+using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Assistant.Dialogue;
+namespace Kuroe.Assistant.Dialogue.Flow;
 
 /// <summary>对话流程控制：等待输入与每一轮回话执行。</summary>
 internal sealed class DialogueFlowControl(
@@ -15,9 +14,6 @@ internal sealed class DialogueFlowControl(
     IInputChannel inputs,
     DialogueFlowState state) : IFlowControl
 {
-    /// <summary>回话步骤路径。</summary>
-    internal static FlowStepPath ReplyStep { get; } = FlowStepPath.Of(DialogueFlow.ReplyLabel);
-
     private bool _awaiting = true;
     private string? _pendingInput;
     private IExecution? _live;
@@ -57,7 +53,7 @@ internal sealed class DialogueFlowControl(
         {
             _awaiting = false;
             _pendingInput = null;
-            inputs.Decline(task.Id, ReplyStep);
+            inputs.Decline(task.Id, DialogueFlow.ReplyStep);
             if (_live is { IsLive: true } live)
             {
                 gateway.Interrupt(live, "任务暂停。");
@@ -73,7 +69,7 @@ internal sealed class DialogueFlowControl(
             if (_live is not null)
             {
                 _awaiting = false;
-                inputs.Decline(task.Id, ReplyStep);
+                inputs.Decline(task.Id, DialogueFlow.ReplyStep);
             }
             else
             {
@@ -91,7 +87,7 @@ internal sealed class DialogueFlowControl(
         {
             _awaiting = false;
             _pendingInput = null;
-            inputs.Decline(task.Id, ReplyStep);
+            inputs.Decline(task.Id, DialogueFlow.ReplyStep);
             ErrorOr<Success> result = task.Terminate();
             _completion.TrySetResult();
 
@@ -105,7 +101,7 @@ internal sealed class DialogueFlowControl(
         lock (task.Gate)
         {
             return _awaiting || _pendingInput is not null
-                ? new FlowSeed([ReplyStep])
+                ? DialogueFlow.ReplySeed
                 : FlowSeed.Empty;
         }
     }
@@ -117,7 +113,7 @@ internal sealed class DialogueFlowControl(
         {
             _awaiting = false;
             _pendingInput = null;
-            inputs.Decline(task.Id, ReplyStep);
+            inputs.Decline(task.Id, DialogueFlow.ReplyStep);
             if (_live is { IsLive: true } live)
             {
                 gateway.Interrupt(live, "进程退出。");
@@ -127,15 +123,13 @@ internal sealed class DialogueFlowControl(
         }
     }
 
-
-
     /// <summary>登记回话步骤等待外部输入。</summary>
     private void Await()
     {
         _awaiting = true;
         inputs.Accept(
             task.Id,
-            ReplyStep,
+            DialogueFlow.ReplyStep,
             FlowPendingKind.Input,
             DialogueFlow.Question,
             Receive);
@@ -153,7 +147,7 @@ internal sealed class DialogueFlowControl(
     private void ContinueWithInput()
     {
         IExecution? execution;
-        DialogueTarget target;
+        DialogueFlowTarget target;
         lock (task.Gate)
         {
             if (_pendingInput is not { } input
@@ -167,7 +161,7 @@ internal sealed class DialogueFlowControl(
             _pendingInput = null;
             execution = gateway.Open(task, Request(input));
             IExecution? previous = task.Executions.Count > 0 ? task.Executions[^1] : null;
-            target = new DialogueTarget(state.Parameters, state.Model, previous?.RestoreData);
+            target = new DialogueFlowTarget(state.Parameters, state.Model, previous?.RestoreData);
             task.AttachExecution(execution);
             _live = execution;
         }
@@ -189,7 +183,7 @@ internal sealed class DialogueFlowControl(
             },
             []);
 
-    private async Task RunAsync(IExecution execution, DialogueTarget target)
+    private async Task RunAsync(IExecution execution, DialogueFlowTarget target)
     {
         await gateway.RunAsync(
             execution,
@@ -210,33 +204,11 @@ internal sealed class DialogueFlowControl(
             else
             {
                 _awaiting = false;
-                inputs.Decline(task.Id, ReplyStep);
+                inputs.Decline(task.Id, DialogueFlow.ReplyStep);
             }
 
             task.NotifyExecutionSettled(execution);
             task.NotifyChanged();
         }
     }
-}
-
-/// <summary>对话执行的类型目标：Llm 种类、对话参数与上一轮会话快照。</summary>
-internal sealed class DialogueTarget(
-    LlmParameters parameters,
-    string model,
-    ExecutionRestoreState? seed) : IExecutionTarget
-{
-    /// <inheritdoc/>
-    public ExecutionTargetId Id => new(DialogueFlow.ReplyLabel);
-
-    /// <inheritdoc/>
-    public string Kind => LlmNodeTypes.Kind;
-
-    /// <inheritdoc/>
-    public bool UsesDefaultRunner => true;
-
-    /// <inheritdoc/>
-    public IExecutionParameters Parameters { get; } = new LlmExecutionParameters(parameters, model, LlmNodeTypes.Kind)
-    {
-        ConversationSeed = seed,
-    };
 }

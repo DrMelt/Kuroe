@@ -1,14 +1,14 @@
 using Kuroe.Assistant.Dialogue;
-using Kuroe.Assistant.Flows;
+using Kuroe.Assistant.Dialogue.Flow;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
 using Kuroe.Tool;
 using Xunit;
 
-namespace Kuroe.Assistant.Tests;
+namespace Kuroe.Assistant.Tests.Dialogue;
 
 /// <summary>内置对话的代码定义：回话参数、模式工具白名单与路径变量。</summary>
-public sealed class DialogueTests
+public sealed class DialogueFlowTests
 {
     private const string DefaultLanguage = "中文";
 
@@ -108,6 +108,6 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_reply_step_is_a_single_root_path()
     {
-        Assert.Equal("回话", DialogueFlowControl.ReplyStep.Value);
+        Assert.Equal("回话", DialogueFlow.ReplyStep.Value);
     }
 }

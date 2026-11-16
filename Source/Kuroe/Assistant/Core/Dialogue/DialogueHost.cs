@@ -1,28 +1,42 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Assistant.Flows;
+using Kuroe.Assistant.Dialogue.Flow;
 using Kuroe.Catalogs;
 using Kuroe.Control.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
+using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Runtime;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 
 /// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等本轮收口，无模型时报模型未选择。
 /// 模型在任务启动时写入流程，模型变化后下一次输入重建任务。</summary>
-public sealed class DialogueHost(
-    TaskActions actions,
-    FlowProvider flow,
-    DialogueRound rounds,
-    ModelService models,
-    TaskRegistry registry)
+public sealed class DialogueHost
 {
+    private readonly TaskActions _actions;
+    private readonly FlowProvider _flow;
+    private readonly DialogueRound _rounds;
+    private readonly ModelService _models;
+    private readonly TaskRegistry _registry;
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
     private ModelName? _model;
     private DialogueMode _mode = DialogueMode.Default;
+
+    internal DialogueHost(
+        TaskActions actions,
+        FlowProvider flow,
+        DialogueRound rounds,
+        ModelService models,
+        TaskRegistry registry)
+    {
+        _actions = actions;
+        _flow = flow;
+        _rounds = rounds;
+        _models = models;
+        _registry = registry;
+    }
 
     /// <summary>当前选择的模式。模式变化后下一轮执行按新模式建立工具面。</summary>
     public DialogueMode Mode
@@ -46,12 +60,12 @@ public sealed class DialogueHost(
             current = _dialogue;
         }
 
-        if (current is { } id && registry.Find(id) is { IsError: false } found)
+        if (current is { } id && _registry.Find(id) is { IsError: false } found)
         {
             WorkTask task = found.Value;
             task.UnderLock(() =>
             {
-                DialogueFlowAccess.State(task).SelectMode(mode);
+                DialogueFlowState.Of(task).SelectMode(mode);
                 return true;
             });
             ((ITaskFlowContext)task).NotifyChanged();
@@ -63,14 +77,18 @@ public sealed class DialogueHost(
         string input,
         ProcessObserver? observer = null)
     {
-        if (models.Current is not { } model)
+        if (_models.Current is not { } model)
         {
             return ModelErrors.ModelNotSelected();
         }
 
-        TaskId id = EnsureDialogue(model);
+        ErrorOr<TaskId> ensured = EnsureDialogue(model);
+        if (ensured.IsError)
+        {
+            return ensured.ErrorsOrEmptyList;
+        }
 
-        return await rounds.AskAsync(id, null, input, observer);
+        return await _rounds.AskAsync(ensured.Value, input, observer);
     }
 
     /// <summary>重置对话：停止并丢弃当前对话任务，下一次输入重建。</summary>
@@ -86,14 +104,14 @@ public sealed class DialogueHost(
 
         if (old is { } id)
         {
-            actions.StopTask(id);
+            _actions.StopTask(id);
         }
 
-        registry.ClearSettled();
+        _registry.ClearSettled();
     }
 
     /// <summary>当前对话任务，不存在、已被清理、已收口或模型已变化时新建。助手语言与模式在创建时读取，配置变化后重置对话重建任务生效。</summary>
-    private TaskId EnsureDialogue(ModelName model)
+    private ErrorOr<TaskId> EnsureDialogue(ModelName model)
     {
         TaskId? replaced = null;
         DialogueMode mode;
@@ -116,20 +134,20 @@ public sealed class DialogueHost(
         // 被替换的旧任务先终止，随 ClearSettled 清出任务域
         if (replaced is { } staleTask)
         {
-            actions.StopTask(staleTask);
+            _actions.StopTask(staleTask);
         }
 
-        registry.ClearSettled();
+        _registry.ClearSettled();
 
         StartInputs inputs = new(
         [
             new StartInput(DialogueFlow.StartPort, "对话"),
             new StartInput(DialogueFlow.ModePort, mode.Key),
         ]);
-        ErrorOr<TaskSnapshot> created = actions.Submit(flow, DialogueFlow.Name, inputs, "对话");
+        ErrorOr<TaskSnapshot> created = _actions.Submit(_flow, DialogueFlow.Name, inputs, "对话");
         if (created.IsError)
         {
-            throw new InvalidOperationException(string.Join("；", created.ErrorsOrEmptyList.Select(error => error.Description)));
+            return created.ErrorsOrEmptyList;
         }
 
         TaskId id = created.Value.Id;
@@ -145,7 +163,7 @@ public sealed class DialogueHost(
     /// <summary>当前任务是否还承担着对话：丢失、取消或收口后不再使用。</summary>
     private bool IsUsable(TaskId id)
     {
-        ErrorOr<WorkTask> found = registry.Find(id);
+        ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
         {
             return false;

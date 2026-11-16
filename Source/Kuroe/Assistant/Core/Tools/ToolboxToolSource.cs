@@ -3,7 +3,7 @@ using Kuroe.Tool;
 using Kuroe.Tool.Json;
 using Kuroe.Tool.KuroeInfo;
 
-namespace Kuroe.Assistant;
+namespace Kuroe.Assistant.Tools;
 
 /// <summary>工具面状态查询源：内置对话各模式白名单与配置工具的只读呈现。载体只在本轮放行时创建。</summary>
 internal sealed class ToolboxToolSource(

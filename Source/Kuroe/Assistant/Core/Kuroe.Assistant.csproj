@@ -11,36 +11,33 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\Core\Kuroe.csproj" />
+        <ProjectReference Include="..\..\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\Tool\Json\Kuroe.Tool.Json.csproj" />
-        <ProjectReference Include="..\..\Tool\Implementation\Source\Core\Kuroe.Tool.Source.csproj" />
         <ProjectReference Include="..\..\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.KuroeInfo.csproj" />
-        <ProjectReference Include="..\..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
-        
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Control\Runtime\Kuroe.Control.Runtime.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.CodeFlow\Records\Shared\Kuroe.CodeFlow.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\Tool\Implementation\Source\Core\Kuroe.Tool.Source.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\..\Kuroe.CodeFlow\Persistence\Core\Kuroe.CodeFlow.Persistence.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.CodeFlow\Records\Shared\Kuroe.CodeFlow.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Control\Runtime\Kuroe.Control.Runtime.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Persistence\Files\Shared\Kuroe.Tasks.Persistence.Files.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Persistence\Saving\Shared\Kuroe.Tasks.Persistence.Saving.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
-        <ProjectReference Include="..\..\Shared\Kuroe.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="Kuroe.Assistant.Tests" />
-    </ItemGroup>
-<ItemGroup>
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
-    </ItemGroup>
-
-<ItemGroup>
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
 </Project>

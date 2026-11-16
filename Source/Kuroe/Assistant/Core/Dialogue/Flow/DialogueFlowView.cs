@@ -1,51 +1,13 @@
-using Kuroe.Assistant.Flows;
-using Kuroe.Control.Shared;
 using Kuroe.CodeFlow.Records.Shared;
+using Kuroe.Control.Shared;
+using Kuroe.Node.Llm;
 using Kuroe.Presentation.Shared;
 using Kuroe.Tasks.Shared;
-using Kuroe.Node.Llm;
 
-namespace Kuroe.Assistant.Dialogue;
-
-/// <summary>对话流程状态：开始输入、工作区、模型、语言与模式。</summary>
-internal sealed class DialogueFlowState(
-    StartInputs inputs,
-    string workspace,
-    string model,
-    string language,
-    DialogueMode mode) : IFlowState
-{
-    /// <inheritdoc/>
-    public StartInputs Inputs { get; } = inputs;
-
-    /// <summary>工作区根目录。</summary>
-    internal string Workspace { get; } = workspace;
-
-    /// <summary>执行使用的模型名。</summary>
-    internal string Model { get; } = model;
-
-    /// <summary>回复语言。</summary>
-    internal string Language { get; } = language;
-
-    /// <summary>当前模式。</summary>
-    internal DialogueMode Mode { get; private set; } = mode;
-
-    /// <summary>开始端口文本。</summary>
-    internal FlowTexts StartTexts { get; } = new(
-        inputs.Values.ToDictionary(input => input.Port, input => input.Text));
-
-    /// <summary>等待输入的恢复种子。</summary>
-    internal static FlowSeed AwaitingSeed => new([DialogueFlowControl.ReplyStep]);
-
-    /// <summary>回话执行参数。</summary>
-    internal LlmParameters Parameters => DialogueFlow.Parameters(Mode, Language);
-
-    /// <summary>切换模式，下一轮执行按新模式建立工具面。</summary>
-    internal void SelectMode(DialogueMode mode) => Mode = mode;
-}
+namespace Kuroe.Assistant.Dialogue.Flow;
 
 /// <summary>对话流程的视图投影。</summary>
-internal static class DialogueView
+internal static class DialogueFlowView
 {
     internal static FlowView Build(
         ITaskFlowView task,

@@ -1,12 +1,11 @@
-using Kuroe.Assistant.Flows;
-using Kuroe.Control.Shared;
 using Kuroe.CodeFlow.Records.Shared;
+using Kuroe.Control.Shared;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Assistant.Dialogue;
+namespace Kuroe.Assistant.Dialogue.Flow;
 
 /// <summary>代码定义对话流程的身份。</summary>
-public sealed class DialogueFlowIdentity : IFlowIdentity
+internal sealed class DialogueFlowIdentity : IFlowIdentity
 {
     /// <inheritdoc/>
     public string DisplayName => "代码流程";

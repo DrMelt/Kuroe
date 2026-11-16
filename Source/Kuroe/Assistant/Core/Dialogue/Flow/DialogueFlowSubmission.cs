@@ -1,20 +1,19 @@
 using ErrorOr;
-using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
+using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared;
 using Kuroe.Execution.Records.Shared;
-using Kuroe.CodeFlow.Records.Shared;
+using Kuroe.Execution.Shared;
+using Kuroe.Node.Llm;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
-using Kuroe.Node.Llm;
 
-namespace Kuroe.Assistant.Dialogue;
+namespace Kuroe.Assistant.Dialogue.Flow;
 
 /// <summary>对话流程的提交与恢复。</summary>
-public sealed class DialogueFlowSubmission(
+internal sealed class DialogueFlowSubmission(
     ModelService models,
     SettingsProvider settings,
     KuroePaths paths,
@@ -41,7 +40,7 @@ public sealed class DialogueFlowSubmission(
             state,
             string.IsNullOrWhiteSpace(title) ? DialogueFlow.Name.Value : title,
             state.StartTexts,
-            new CodeFlowDefinitionRecord(DialogueFlow.Implementation, DialogueFlowAccess.Values(language)));
+            new CodeFlowDefinitionRecord(DialogueFlow.Implementation, DialogueFlow.DefinitionValues(language)));
     }
 
     /// <inheritdoc/>
@@ -58,18 +57,17 @@ public sealed class DialogueFlowSubmission(
             return [Error.Failure("Flow.Restore", "存档缺少对话流程状态。")];
         }
 
-        string language = DialogueFlowAccess.Language(saved.Values, settings.AssistantLanguage);
-        string model = DialogueFlowAccess.Model(saved.Values, models.Current?.Value ?? string.Empty);
-        string workspace = DialogueFlowAccess.Workspace(saved.Values, paths.WorkingDirectory);
-        DialogueMode mode = DialogueFlowAccess.Mode(saved.Values);
-        DialogueFlowState state = new(saved.Inputs, workspace, model, language, mode);
+        string language = saved.Values.GetValueOrDefault(DialogueFlow.LanguageKey) ?? settings.AssistantLanguage;
+        string model = saved.Values.GetValueOrDefault(DialogueFlow.ModelKey) ?? models.Current?.Value ?? string.Empty;
+        string workspace = saved.Values.GetValueOrDefault(DialogueFlow.WorkspaceKey) ?? paths.WorkingDirectory;
+        DialogueFlowState state = DialogueFlowState.From(saved, language, model, workspace);
         List<IExecution> restored = [.. record.Executions.Select(execution => RestoreExecution(record.Identity.Id, execution))];
 
         return new FlowRestore(
             state,
             new FlowTexts(saved.StartTexts.Texts),
             restored,
-            DialogueFlowState.AwaitingSeed);
+            DialogueFlow.ReplySeed);
     }
 
     private IExecution RestoreExecution(TaskId task, ExecutionRecord record)
