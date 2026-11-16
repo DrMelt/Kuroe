@@ -2,7 +2,7 @@
     <Project Path="Source/Kuroe/Shared/Kuroe.Shared.csproj" />
     <Project Path="Source/Kuroe.Files/Shared/Kuroe.Files.Shared.csproj" />
     <Project Path="Source/Kuroe.Files/Core/Kuroe.Files.csproj" />
-    <Project Path="Source/Kuroe/Process/Core/Kuroe.Process.csproj" />
+    <Project Path="Source/Kuroe.Process/Core/Kuroe.Process.csproj" />
     <Project Path="Source/Kuroe/Tool/Core/Kuroe.Tool.csproj" />
     <Project Path="Source/Kuroe/Tool/Json/Kuroe.Tool.Json.csproj" />
     <Project Path="Source/Kuroe/Tool/FileAccess/Shared/Kuroe.Tool.FileAccess.Shared.csproj" />

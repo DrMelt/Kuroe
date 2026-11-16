@@ -13,7 +13,7 @@
         <ProjectReference Include="..\..\..\Kuroe\Core\Kuroe.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe\Process\Core\Kuroe.Process.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Process\Core\Kuroe.Process.csproj" />
         <ProjectReference Include="..\..\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
         <ProjectReference Include="..\..\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />

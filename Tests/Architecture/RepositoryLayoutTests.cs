@@ -1657,6 +1657,16 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
+    public void Process_project_is_a_neutral_capability()
+    {
+        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe", "Process")));
+
+        string project = Path.Combine(SourceRoot, "Kuroe.Process", "Core", "Kuroe.Process.csproj");
+        Assert.True(File.Exists(project));
+        Assert.Empty(ProjectReferences(project));
+    }
+
+    [Fact]
     public void Runner_shared_references_only_neutral_contracts()
     {
         string project = Path.Combine(SourceRoot, "Kuroe.Runner", "Shared", "Kuroe.Runner.Shared.csproj");
