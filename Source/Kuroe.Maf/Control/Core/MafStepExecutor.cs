@@ -35,7 +35,7 @@ internal sealed class MafStepExecutor(
 
         ExecutionTargetId targetId = step.ExecutionTargetId;
         int attempt = task.Executions.Count(execution => execution.Request.Target == targetId) + 1;
-        IExecution execution = gateway.Open(task, Request(message, target, attempt));
+        IExecution execution = gateway.Open(task, Request(message, attempt));
         lock (task.Gate)
         {
             task.AttachExecution(execution);
@@ -74,11 +74,10 @@ internal sealed class MafStepExecutor(
     }
 
     /// <summary>本次执行的请求：上游文本作为输入，步骤输出端口要求交回。</summary>
-    private ExecutionRequest Request(MafStepMessage message, IExecutionTarget target, int attempt) =>
+    private ExecutionRequest Request(MafStepMessage message, int attempt) =>
         new(
             new ExecutionOwnerId(task.Id.Value),
             step.ExecutionTargetId,
-            target.Kind,
             attempt,
             [.. message.Outputs.Select(output => new ExecutionInputPort(
                 new ExecutionPortName(output.Port.Value),

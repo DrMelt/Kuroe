@@ -1,6 +1,6 @@
 using Kuroe.Execution.Shared;
 
-namespace Kuroe.Runner;
+namespace Kuroe.Runner.Llm;
 
 /// <summary>Llm 执行参数：指令、能力路径、系统指令、工具变量映射与本次执行使用的模型。</summary>
 public sealed record LlmExecutionParameters(

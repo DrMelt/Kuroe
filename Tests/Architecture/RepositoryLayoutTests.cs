@@ -1612,26 +1612,44 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Node_projects_reference_runner_shared_only()
+    public void Node_projects_reference_their_runner_implementation()
     {
-        string runnerShared = Path.Combine(SourceRoot, "Kuroe", "Runner", "Shared");
+        string runnerShared = Path.Combine(
+            SourceRoot, "Kuroe", "Runner", "Shared", "Kuroe.Runner.Shared.csproj");
         string runnerRoot = Path.Combine(SourceRoot, "Kuroe", "Runner");
-        string[] projects =
+        (string Project, string Runner, bool AllowsRunnerShared)[] projects =
         [
-            Path.Combine(SourceRoot, "Kuroe", "Node", "Input", "Core", "Kuroe.Node.Input.csproj"),
-            Path.Combine(SourceRoot, "Kuroe", "Node", "Approval", "Core", "Kuroe.Node.Approval.csproj"),
-            Path.Combine(SourceRoot, "Kuroe", "Node", "Command", "Core", "Kuroe.Node.Command.csproj"),
-            Path.Combine(SourceRoot, "Kuroe", "Node", "File", "Core", "Kuroe.Node.File.csproj"),
-            Path.Combine(SourceRoot, "Kuroe", "Node", "Llm", "Core", "Kuroe.Node.Llm.csproj"),
+            (
+                Path.Combine(SourceRoot, "Kuroe", "Node", "Input", "Core", "Kuroe.Node.Input.csproj"),
+                Path.Combine(runnerRoot, "Input", "Core", "Kuroe.Runner.Input.csproj"),
+                false),
+            (
+                Path.Combine(SourceRoot, "Kuroe", "Node", "Approval", "Core", "Kuroe.Node.Approval.csproj"),
+                Path.Combine(runnerRoot, "Approval", "Core", "Kuroe.Runner.Approval.csproj"),
+                false),
+            (
+                Path.Combine(SourceRoot, "Kuroe", "Node", "Command", "Core", "Kuroe.Node.Command.csproj"),
+                Path.Combine(runnerRoot, "Command", "Core", "Kuroe.Runner.Command.csproj"),
+                false),
+            (
+                Path.Combine(SourceRoot, "Kuroe", "Node", "File", "Core", "Kuroe.Node.File.csproj"),
+                Path.Combine(runnerRoot, "File", "Core", "Kuroe.Runner.File.csproj"),
+                false),
+            (
+                Path.Combine(SourceRoot, "Kuroe", "Node", "Llm", "Core", "Kuroe.Node.Llm.csproj"),
+                Path.Combine(runnerRoot, "Llm", "Core", "Kuroe.Runner.Llm.csproj"),
+                true),
         ];
 
-        foreach (string project in projects)
+        foreach ((string project, string runner, bool allowsRunnerShared) in projects)
         {
             IReadOnlyList<string> references = ProjectReferences(project);
 
-            Assert.Contains(references, reference => IsUnder(reference, runnerShared));
+            Assert.Contains(runner, references);
             Assert.DoesNotContain(references, reference =>
-                IsUnder(reference, runnerRoot) && !IsUnder(reference, runnerShared));
+                IsUnder(reference, runnerRoot)
+                && !string.Equals(reference, runner, StringComparison.OrdinalIgnoreCase)
+                && !(allowsRunnerShared && string.Equals(reference, runnerShared, StringComparison.OrdinalIgnoreCase)));
         }
     }
 
@@ -1671,17 +1689,27 @@ public sealed class RepositoryLayoutTests
     public void Runner_shared_references_only_neutral_contracts()
     {
         string project = Path.Combine(SourceRoot, "Kuroe", "Runner", "Shared", "Kuroe.Runner.Shared.csproj");
-        string[] allowed =
+
+        Assert.Empty(ProjectReferences(project));
+    }
+
+    [Fact]
+    public void Execution_kind_is_removed()
+    {
+        string[] roots =
         [
-            Path.Combine(KernelRoot, "Execution", "Shared"),
-            Path.Combine(KernelRoot, "Tasks", "Shared"),
+            SourceRoot,
+            TestsRoot,
         ];
 
-        Assert.All(
-            ProjectReferences(project),
-            reference => Assert.True(
-                allowed.Any(directory => IsUnder(reference, directory)),
-                $"Kuroe.Runner.Shared 引用了中性契约之外的 {reference}。"));
+        string removed = "Execution" + "Kind";
+        foreach (string file in roots.SelectMany(SourceFiles))
+        {
+            Assert.DoesNotContain(
+                removed,
+                File.ReadAllText(file),
+                StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -1753,7 +1781,8 @@ public sealed class RepositoryLayoutTests
             SourceRoot,
             "Kuroe",
             "Runner",
-            "Shared",
+            "Llm",
+            "Core",
             "LlmExecutionParameters.cs");
 
         string text = File.ReadAllText(file);

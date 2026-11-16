@@ -219,8 +219,7 @@ internal static class FlowRuntimeTestDoubles
     internal static IExecutionRuntime Runtime() =>
         new ExecutionRuntime(
             new ExecutionDispatcher(),
-            new ExecutionRunnerRegistry(),
-            new ExecutionRestorerRegistry());
+            new ExecutionRunnerRegistry());
 }
 
 internal sealed class TestControl : IFlowControl, IFlowRerun

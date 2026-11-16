@@ -140,7 +140,6 @@ public sealed class MafFlowSubmission(
             Error? failure = TryRestoreExecution(
                 record.Identity.Id,
                 flow,
-                state,
                 execution,
                 out IExecution restoredExecution);
             if (failure is { } error)
@@ -176,7 +175,6 @@ public sealed class MafFlowSubmission(
     private Error? TryRestoreExecution(
         TaskId taskId,
         MafFlowDefinition definition,
-        MafFlowState state,
         ExecutionRecord record,
         out IExecution execution)
     {
@@ -188,11 +186,9 @@ public sealed class MafFlowSubmission(
                 $"存档里的步骤 {record.Target.Value} 不在流程定义中。");
         }
 
-        IExecutionTarget target = state.Target(step.Id);
         ExecutionRequest request = new(
             new ExecutionOwnerId(taskId.Value),
             record.Target,
-            target.Kind,
             record.Attempt,
             [.. record.Inputs.Select(input => new ExecutionInputPort(
                 input.Port,

@@ -18,8 +18,7 @@ public sealed class FlowProviderSourceTests
     private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(
             new Kuroe.Execution.ExecutionDispatcher(),
-            new Kuroe.Execution.ExecutionRunnerRegistry(),
-            new Kuroe.Execution.ExecutionRestorerRegistry());
+            new Kuroe.Execution.ExecutionRunnerRegistry());
     [Fact]
     public void Identity_finds_provider_by_implementation()
     {

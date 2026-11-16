@@ -29,11 +29,6 @@ namespace Kuroe.Integration.Tests.Support;
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，按声明收口，并提供恢复能力。</summary>
 public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecutionRestorer
 {
-    /// <inheritdoc/>
-    ExecutionKind NeutralExecutionRunnerFactory.Kind => ExecutionKind.Any;
-
-    /// <inheritdoc/>
-    ExecutionKind NeutralExecutionRestorer.Kind => ExecutionKind.Any;
     private readonly Lock _gate = new();
     private readonly List<IGraphExecution> _started = [];
 

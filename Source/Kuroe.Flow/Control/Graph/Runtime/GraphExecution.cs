@@ -149,7 +149,6 @@ public sealed class GraphExecution : IGraphExecution
         new(
             new ExecutionOwnerId(input.Task.Value),
             GraphRecordTargets.Format(input.Node),
-            new ExecutionKind(input.Type.Kind.Value),
             input.ExecutionCount,
             [
                 .. input.InputPorts.Select(port => new ExecutionInputPort(
@@ -188,7 +187,6 @@ public sealed class GraphExecution : IGraphExecution
         new GraphExecutionTarget(input, new ExecutionParameterContext(
             request.Owner,
             request.Target,
-            request.Kind,
             request.Attempt,
             request.InputPorts,
             request.Inputs,

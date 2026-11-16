@@ -1,6 +1,6 @@
 using Kuroe.Execution.Shared;
 
-namespace Kuroe.Runner;
+namespace Kuroe.Runner.File;
 
 /// <summary>文件执行参数：文件路径的原文、路径变量映射、路径解析的边界根与字符上限。</summary>
 public sealed record FileExecutionParameters : IExecutionParameters

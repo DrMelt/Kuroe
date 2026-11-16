@@ -18,8 +18,7 @@ public sealed class RuntimeExecutableTests
     private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(
             new Kuroe.Execution.ExecutionDispatcher(),
-            new Kuroe.Execution.ExecutionRunnerRegistry(),
-            new Kuroe.Execution.ExecutionRestorerRegistry());
+            new Kuroe.Execution.ExecutionRunnerRegistry());
     private static readonly PortName Conclusion = new("结论");
 
     [Fact]

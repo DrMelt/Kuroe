@@ -1,7 +1,7 @@
 using Kuroe.Execution.Shared;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Runner;
+namespace Kuroe.Runner.Input;
 
 /// <summary>输入执行参数：等待用户回答时的提示文本与等待步骤键。</summary>
 public sealed record InputExecutionParameters(

@@ -14,6 +14,7 @@
         <ProjectReference Include="..\..\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\Runner\Shared\Kuroe.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
         <ProjectReference Include="..\..\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\..\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.KuroeInfo.csproj" />

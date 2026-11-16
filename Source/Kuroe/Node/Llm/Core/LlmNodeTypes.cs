@@ -1,7 +1,7 @@
-using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Runner.Llm.Executions;
 using Kuroe.Tasks.Shared;
 using Kuroe.Tool;
 
@@ -13,8 +13,11 @@ public static class LlmNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Llm");
 
-    /// <summary>执行种类，运行器按它选择。</summary>
-    public static ExecutionKind Kind { get; } = new(Name.Value);
+    /// <summary>类型名的文本形式，供不引用流程模型的展示使用。</summary>
+    public static string TypeName { get; } = Name.Value;
+
+    /// <summary>执行器工厂类型，运行器按它选择。</summary>
+    public static Type RunnerFactoryType { get; } = typeof(LlmExecutionRunnerFactory);
 
     /// <summary>模型名静态输入端口，由宿主在任务启动时给出。</summary>
     public static PortName ModelPort { get; } = new("MODEL_NAME");

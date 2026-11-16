@@ -91,7 +91,6 @@ public sealed class ExecutionRecordTests
         new ExecutionRequest(
             new ExecutionOwnerId("task"),
             new ExecutionTargetId("step"),
-            new ExecutionKind("test"),
             1,
             [],
             [input],

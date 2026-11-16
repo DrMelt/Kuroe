@@ -1,6 +1,6 @@
 using Kuroe.Execution.Shared;
 
-namespace Kuroe.Runner;
+namespace Kuroe.Runner.Command;
 
 /// <summary>命令执行参数：程序、参数、执行目录原文、路径变量映射、边界根、超时、输出上限与退出码策略。</summary>
 public sealed record CommandExecutionParameters : IExecutionParameters

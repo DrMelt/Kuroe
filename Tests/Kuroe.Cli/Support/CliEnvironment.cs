@@ -1,9 +1,10 @@
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Execution;
+using Kuroe.Node.Llm;
 using Microsoft.Extensions.DependencyInjection;
 using NeutralExecutionId = Kuroe.Execution.Shared.ExecutionId;
-using NeutralExecutionKind = Kuroe.Execution.Shared.ExecutionKind;
 using NeutralExecutionOutput = Kuroe.Execution.Shared.ExecutionOutput;
 using NeutralExecutionRequest = Kuroe.Execution.Shared.ExecutionRequest;
 using NeutralExecutionRunner = Kuroe.Execution.Shared.IExecutionRunner;
@@ -48,14 +49,13 @@ internal sealed class CliEnvironment : IAsyncDisposable
             {
                 for (int index = services.Count - 1; index >= 0; index--)
                 {
-                    if (services[index].ServiceType == typeof(Kuroe.Execution.Shared.IExecutionRunnerFactory)
-                        || services[index].ServiceType == typeof(Kuroe.Execution.Shared.IExecutionRestorer))
+                    if (services[index].ServiceType == typeof(ExecutionRunnerRegistration))
                     {
                         services.RemoveAt(index);
                     }
                 }
 
-                services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(runner);
+                services.AddSingleton(new ExecutionRunnerRegistration(LlmNodeTypes.RunnerFactoryType, runner));
             });
         if (created.IsError)
         {
@@ -134,9 +134,6 @@ internal sealed class CliEnvironment : IAsyncDisposable
 /// <summary>不接模型的执行器：只播发固定文本，不提交端口产出。</summary>
 internal sealed class StubRunner : NeutralExecutionRunnerFactory
 {
-    /// <inheritdoc/>
-    public NeutralExecutionKind Kind => NeutralExecutionKind.Any;
-
     /// <summary>每次执行播发的文本。</summary>
     public string Text { get; set; } = "输出";
 

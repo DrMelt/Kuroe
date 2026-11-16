@@ -10,9 +10,9 @@ public interface IMafStepTargetFactory
     ErrorOr<IExecutionTarget> Create(MafStepId step, string model);
 }
 
-/// <summary>MAF 步骤的执行目标声明：种类与按模型构造的参数。参数在提交或恢复时构造一次，由步骤的多次运行共用。</summary>
+/// <summary>MAF 步骤的执行目标声明：执行器工厂类型与按模型构造的参数。参数在提交或恢复时构造一次，由步骤的多次运行共用。</summary>
 public sealed record MafStepTarget(
-    ExecutionKind Kind,
+    Type RunnerFactoryType,
     Func<string, ErrorOr<IExecutionParameters>> Parameters) : IMafStepTargetFactory
 {
     /// <inheritdoc/>
@@ -24,12 +24,12 @@ public sealed record MafStepTarget(
             return parameters.ErrorsOrEmptyList;
         }
 
-        return new MafExecutionTarget(step.ToExecutionTargetId(), Kind, parameters.Value);
+        return new MafExecutionTarget(step.ToExecutionTargetId(), RunnerFactoryType, parameters.Value);
     }
 }
 
 /// <summary>由框架构造的执行目标，标识来自步骤标识。</summary>
 internal sealed record MafExecutionTarget(
     ExecutionTargetId Id,
-    ExecutionKind Kind,
+    Type RunnerFactoryType,
     IExecutionParameters Parameters) : IExecutionTarget;

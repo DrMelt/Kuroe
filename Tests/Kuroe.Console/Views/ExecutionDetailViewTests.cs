@@ -52,16 +52,16 @@ public sealed class ExecutionDetailViewTests
     }
 
     [Fact]
-    public void Execution_of_another_kind_omits_the_section()
+    public void Execution_of_another_node_type_still_prints_the_required_ports()
     {
         Terminal terminal = NewTerminal(out TestConsole output);
         ExecutionSnapshot execution = Snapshot(
-            [new ExecutionOutputPort(new ExecutionPortName("结论"), ExecutionPortKind.Text, true, false)],
-            kind: "Command");
+            [new ExecutionOutputPort(new ExecutionPortName("结论"), ExecutionPortKind.Text, true, false)]);
 
         new ExecutionDetailView(terminal).Print(SnapshotTask(), execution);
 
-        Assert.DoesNotContain("契约端口", output.Output);
+        Assert.Contains("契约端口 1 个", output.Output);
+        Assert.Contains("结论", output.Output);
     }
 
     [Fact]
@@ -97,13 +97,11 @@ public sealed class ExecutionDetailViewTests
 
     private static ExecutionSnapshot Snapshot(
         IReadOnlyList<ExecutionOutputPort> ports,
-        string kind = "Llm",
         IReadOnlyList<ExecutionInputValue>? inputs = null)
     {
         ExecutionRequest request = new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("制定计划"),
-            new ExecutionKind(kind),
             1,
             [],
             inputs ?? [],

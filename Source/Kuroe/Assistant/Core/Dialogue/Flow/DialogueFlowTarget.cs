@@ -3,7 +3,7 @@ using Kuroe.Node.Llm;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
 
-/// <summary>对话执行的类型目标：Llm 种类、对话参数与上一轮会话快照。</summary>
+/// <summary>对话执行的类型目标：Llm 执行器工厂类型、对话参数与上一轮会话快照。</summary>
 internal sealed class DialogueFlowTarget(
     LlmParameters parameters,
     string model,
@@ -13,7 +13,7 @@ internal sealed class DialogueFlowTarget(
     public ExecutionTargetId Id => new(DialogueFlow.ReplyLabel);
 
     /// <inheritdoc/>
-    public ExecutionKind Kind => LlmNodeTypes.Kind;
+    public Type RunnerFactoryType => LlmNodeTypes.RunnerFactoryType;
 
     /// <inheritdoc/>
     public IExecutionParameters Parameters { get; } = parameters.ToExecutionParameters(model, seed);

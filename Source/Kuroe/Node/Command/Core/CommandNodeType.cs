@@ -3,19 +3,22 @@ using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Runner;
+using Kuroe.Runner.Command;
 
 namespace Kuroe.Node.Command;
 
 /// <summary>命令节点类型：按命令变量展开执行目录与参数并执行一次命令，把合并输出按内容产出发布到文本端口。</summary>
 public sealed class CommandNodeType(CommandExecutionParameters? parameters)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public CommandExecutionParameters? Parameters { get; } = parameters;
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => CommandNodeTypes.Name;
+
+    /// <summary>本节点使用的执行器工厂类型。</summary>
+    public Type RunnerFactoryType => CommandNodeTypes.RunnerFactoryType;
 
     /// <summary>命令节点类型的静态形状。</summary>
     public NodeTypeShape Shape => CommandNodeTypes.Shape;

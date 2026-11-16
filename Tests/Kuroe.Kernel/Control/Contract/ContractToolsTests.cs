@@ -84,8 +84,7 @@ public sealed class ContractToolsTests
     private static ExecutionRuntime Runtime() =>
         new(
             new ExecutionDispatcher(),
-            new ExecutionRunnerRegistry(),
-            new ExecutionRestorerRegistry());
+            new ExecutionRunnerRegistry());
 
     private static IExecution Create(
         ExecutionRuntime runtime,
@@ -97,7 +96,6 @@ public sealed class ContractToolsTests
         ExecutionRequest request = new(
             new ExecutionOwnerId(task.Id.Value),
             new ExecutionTargetId("步骤"),
-            new ExecutionKind("test"),
             1,
             [],
             [],

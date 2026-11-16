@@ -1,6 +1,12 @@
 using ErrorOr;
 using Kuroe.Assistant;
 using Kuroe.Control.Shared;
+using Kuroe.Execution;
+using Kuroe.Node.Approval;
+using Kuroe.Node.Command;
+using Kuroe.Node.File;
+using Kuroe.Node.Input;
+using Kuroe.Node.Llm;
 using Kuroe.Runner.Llm.Sessions;
 using Kuroe.Runner.Llm.Tools;
 using Kuroe.Catalogs;
@@ -26,25 +32,36 @@ public sealed class WiringTests : IDisposable
     {
         using ServiceProvider provider = Services();
 
-        Assert.NotNull(provider.GetRequiredService<Kuroe.Execution.Shared.IExecutionRunnerFactory>());
+        Assert.NotEmpty(provider.GetServices<ExecutionRunnerRegistration>());
         Assert.NotNull(provider.GetRequiredService<Kuroe.Execution.ExecutionRuntime>());
         Assert.NotNull(provider.GetRequiredService<SessionFactory>());
     }
 
     [Fact]
-    public void Builtin_execution_runners_cover_every_builtin_kind()
+    public void Builtin_execution_runners_cover_every_builtin_factory_type()
     {
         using ServiceProvider provider = Services();
 
-        IReadOnlyList<string> kinds =
+        List<Type> expected =
         [
-            .. provider.GetServices<Kuroe.Execution.Shared.IExecutionRunnerFactory>()
-                .Select(factory => factory.Kind.Value)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(kind => kind, StringComparer.Ordinal),
+            ApprovalNodeTypes.RunnerFactoryType,
+            CommandNodeTypes.RunnerFactoryType,
+            FileReadNodeTypes.RunnerFactoryType,
+            FileWriteNodeTypes.RunnerFactoryType,
+            InputNodeTypes.RunnerFactoryType,
+            LlmNodeTypes.RunnerFactoryType,
+        ];
+        List<Type> actual =
+        [
+            .. provider.GetServices<ExecutionRunnerRegistration>()
+                .Select(registration => registration.RunnerFactoryType)
+                .Distinct()
+                .OrderBy(type => type.FullName, StringComparer.Ordinal),
         ];
 
-        Assert.Equal(["Approval", "Command", "FileRead", "FileWrite", "Input", "Llm"], kinds);
+        Assert.Equal(
+            [.. expected.OrderBy(type => type.FullName, StringComparer.Ordinal)],
+            actual);
     }
 
     [Fact]

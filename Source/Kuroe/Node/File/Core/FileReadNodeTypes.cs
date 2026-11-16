@@ -1,8 +1,7 @@
-using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Runner;
+using Kuroe.Runner.File;
 
 namespace Kuroe.Node.File;
 
@@ -12,8 +11,8 @@ public static class FileReadNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("FileRead");
 
-    /// <summary>执行种类，运行器按它选择。</summary>
-    public static ExecutionKind Kind { get; } = new(Name.Value);
+    /// <summary>执行器工厂类型，运行器按它选择。</summary>
+    public static Type RunnerFactoryType { get; } = typeof(FileReadExecutionRunnerFactory);
 
     /// <summary>未声明 MaxChars 时的读取上限。</summary>
     public const int DefaultMaxChars = 8000;

@@ -4,7 +4,6 @@ namespace Kuroe.Execution.Shared;
 public sealed record ExecutionParameterContext(
     ExecutionOwnerId Owner,
     ExecutionTargetId Target,
-    ExecutionKind Kind,
     int Attempt,
     IReadOnlyList<ExecutionInputPort> InputPorts,
     IReadOnlyList<ExecutionInputValue> Inputs,

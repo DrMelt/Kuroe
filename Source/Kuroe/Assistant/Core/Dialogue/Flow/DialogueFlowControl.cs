@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Input.Shared;
-using Kuroe.Node.Llm;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
@@ -173,7 +172,6 @@ internal sealed class DialogueFlowControl(
         new(
             new ExecutionOwnerId(task.Id.Value),
             new ExecutionTargetId(DialogueFlow.ReplyLabel),
-            LlmNodeTypes.Kind,
             1,
             [],
             [new ExecutionInputValue(new ExecutionPortName(DialogueFlow.InputPort.Value), text, null)],

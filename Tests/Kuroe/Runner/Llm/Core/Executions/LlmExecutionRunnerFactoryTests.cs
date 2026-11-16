@@ -14,7 +14,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact]
     public void Prepare_rejects_an_execution_that_reported_cannot_complete()
     {
-        LlmExecutionRunnerFactory factory = new(new ExecutionKind("Llm"), Factory(), new StatusReader());
+        LlmExecutionRunnerFactory factory = new(Factory(), new StatusReader());
         ExecutionRestoreContext context = Context(new ExecutionContract(CannotCompleteReason: "缺少资料"));
 
         Assert.True(factory.Prepare(context).IsError);
@@ -23,7 +23,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact]
     public void Prepare_accepts_a_readable_session_payload()
     {
-        LlmExecutionRunnerFactory factory = new(new ExecutionKind("Llm"), Factory(), new StatusReader());
+        LlmExecutionRunnerFactory factory = new(Factory(), new StatusReader());
         ExecutionRestoreContext context = Context(ExecutionContract.Empty);
 
         Assert.False(factory.Prepare(context).IsError);
@@ -32,7 +32,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact]
     public void Prepare_rejects_a_payload_from_another_model()
     {
-        LlmExecutionRunnerFactory factory = new(new ExecutionKind("Llm"), Factory(), new StatusReader());
+        LlmExecutionRunnerFactory factory = new(Factory(), new StatusReader());
         ExecutionRestoreContext context = Context(ExecutionContract.Empty, model: "other");
 
         Assert.True(factory.Prepare(context).IsError);
@@ -41,7 +41,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact]
     public void Prepare_rejects_an_unknown_payload_format()
     {
-        LlmExecutionRunnerFactory factory = new(new ExecutionKind("Llm"), Factory(), new StatusReader());
+        LlmExecutionRunnerFactory factory = new(Factory(), new StatusReader());
         ExecutionRestoreContext context = Context(ExecutionContract.Empty, format: "llm.session.v2");
 
         Assert.True(factory.Prepare(context).IsError);
@@ -63,7 +63,6 @@ public sealed class LlmExecutionRunnerFactoryTests
         ExecutionRequest request = new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("实施"),
-            new ExecutionKind("Llm"),
             1,
             [],
             [],
@@ -84,8 +83,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     {
         public ExecutionTargetId Id { get; } = new("实施");
 
-        public ExecutionKind Kind => new("Llm");
-
+        public Type RunnerFactoryType => typeof(LlmExecutionRunnerFactory);
 
         public IExecutionParameters Parameters { get; } = parameters;
     }

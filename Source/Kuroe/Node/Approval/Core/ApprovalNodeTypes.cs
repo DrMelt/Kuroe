@@ -1,7 +1,7 @@
-using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Runner.Approval;
 
 namespace Kuroe.Node.Approval;
 
@@ -11,8 +11,8 @@ public static class ApprovalNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Approval");
 
-    /// <summary>执行种类，运行器按它选择。</summary>
-    public static ExecutionKind Kind { get; } = new(Name.Value);
+    /// <summary>执行器工厂类型，运行器按它选择。</summary>
+    public static Type RunnerFactoryType { get; } = typeof(ApprovalExecutionRunnerFactory);
 
     /// <summary>审批节点类型的静态形状：对外端口由输入端口派生，Signal 只作驱动，端口只转发停驻时的内容。</summary>
     public static NodeTypeShape Shape { get; } = new()

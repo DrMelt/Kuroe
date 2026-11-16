@@ -135,13 +135,10 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
         services.AddSingleton(sp => new ExecutionRunnerRegistry(
-            [.. sp.GetServices<Kuroe.Execution.Shared.IExecutionRunnerFactory>()]));
-        services.AddSingleton(sp => new ExecutionRestorerRegistry(
-            [.. sp.GetServices<Kuroe.Execution.Shared.IExecutionRestorer>()]));
+            [.. sp.GetServices<ExecutionRunnerRegistration>()]));
         services.AddSingleton(sp => new ExecutionRuntime(
             sp.GetRequiredService<ExecutionDispatcher>(),
-            sp.GetRequiredService<ExecutionRunnerRegistry>(),
-            sp.GetRequiredService<ExecutionRestorerRegistry>()));
+            sp.GetRequiredService<ExecutionRunnerRegistry>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
         services.AddSingleton<IExecutionOwnerIndex>(executions);
         services.AddSingleton<IExecutionIndex>(executions);
@@ -203,13 +200,11 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<IExecutionConversationReader, ExecutionConversationReader>();
         services.AddSingleton(sp => new LlmExecutionRunnerFactory(
-            LlmNodeTypes.Kind,
             sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<Kuroe.Execution.Shared.IExecutionStatusReader>()));
-        services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(sp =>
-            sp.GetRequiredService<LlmExecutionRunnerFactory>());
-        services.AddSingleton<Kuroe.Execution.Shared.IExecutionRestorer>(sp =>
-            sp.GetRequiredService<LlmExecutionRunnerFactory>());
+        services.AddSingleton(sp => new ExecutionRunnerRegistration(
+            LlmNodeTypes.RunnerFactoryType,
+            sp.GetRequiredService<LlmExecutionRunnerFactory>()));
 
         return composition;
     }

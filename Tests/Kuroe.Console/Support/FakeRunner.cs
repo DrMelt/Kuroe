@@ -18,9 +18,6 @@ namespace Kuroe.Console.Tests.Support;
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，并按声明收口。</summary>
 public sealed class FakeRunner : NeutralExecutionRunnerFactory
 {
-    /// <inheritdoc/>
-    public ExecutionKind Kind => ExecutionKind.Any;
-
     /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
     public IExecutionPortSubmitter? PortSubmitter { get; set; }
 

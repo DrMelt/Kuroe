@@ -1,5 +1,5 @@
 using Kuroe.Execution.Shared;
-using Kuroe.Runner;
+using Kuroe.Runner.Llm;
 using Kuroe.Shared;
 using Kuroe.Tool;
 using Kuroe.Tools;
@@ -103,7 +103,6 @@ public sealed class KuroeToolFactoryTests
         new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("流程/节点"),
-            new ExecutionKind("Llm"),
             1,
             [],
             [],

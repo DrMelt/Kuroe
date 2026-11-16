@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared;
+using Kuroe.Execution;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
@@ -150,7 +150,7 @@ public static class GraphFlowServiceCollectionExtensions
         return Result.Success;
     }
 
-    /// <summary>注册图节点运行器。种类由节点类型给出，运行器实现不认识节点。</summary>
+    /// <summary>注册图节点运行器。执行器工厂类型由节点类型给出，运行器实现不认识节点。</summary>
     public static void AddBuiltinGraphExecutionRunners(
         this IServiceCollection services,
         KuroeComposition composition,
@@ -160,15 +160,20 @@ public static class GraphFlowServiceCollectionExtensions
         IProcessRunner process = graphOptions.CommandNodeProcessRunner ?? new ProcessRunner();
         IInputChannel channel = composition.InputChannel;
 
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new CommandExecutionRunnerFactory(CommandNodeTypes.Kind, process));
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new FileReadExecutionRunnerFactory(FileReadNodeTypes.Kind, composition.Files));
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new FileWriteExecutionRunnerFactory(FileWriteNodeTypes.Kind, composition.Files));
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new InputExecutionRunnerFactory(InputNodeTypes.Kind, channel));
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new ApprovalExecutionRunnerFactory(ApprovalNodeTypes.Kind, channel));
+        services.AddSingleton(new ExecutionRunnerRegistration(
+            CommandNodeTypes.RunnerFactoryType,
+            new CommandExecutionRunnerFactory(process)));
+        services.AddSingleton(new ExecutionRunnerRegistration(
+            FileReadNodeTypes.RunnerFactoryType,
+            new FileReadExecutionRunnerFactory(composition.Files)));
+        services.AddSingleton(new ExecutionRunnerRegistration(
+            FileWriteNodeTypes.RunnerFactoryType,
+            new FileWriteExecutionRunnerFactory(composition.Files)));
+        services.AddSingleton(new ExecutionRunnerRegistration(
+            InputNodeTypes.RunnerFactoryType,
+            new InputExecutionRunnerFactory(channel)));
+        services.AddSingleton(new ExecutionRunnerRegistration(
+            ApprovalNodeTypes.RunnerFactoryType,
+            new ApprovalExecutionRunnerFactory(channel)));
     }
 }

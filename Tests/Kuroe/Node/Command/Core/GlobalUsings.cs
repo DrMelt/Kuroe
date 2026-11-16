@@ -1,1 +1,1 @@
-global using Kuroe.Runner;
+global using Kuroe.Runner.Command;

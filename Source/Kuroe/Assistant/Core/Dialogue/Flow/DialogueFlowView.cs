@@ -62,7 +62,7 @@ internal static class DialogueFlowView
                 new FlowStepView(
                     DialogueFlow.ReplyLabel,
                     DialogueFlow.ReplyLabel,
-                    LlmNodeTypes.Kind.Value,
+                    LlmNodeTypes.TypeName,
                     stepState,
                     [new FlowPortView(DialogueFlow.InputPort.Value, "Text", null)],
                     [new FlowPortView("完成", "Signal", null, Fires: false)],

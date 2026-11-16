@@ -53,7 +53,6 @@ public sealed class AgentSessionTests
         ExecutionRequest request = new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("回话"),
-            new ExecutionKind("Llm"),
             1,
             [],
             [new ExecutionInputValue(new ExecutionPortName("回答"), "追问", null)],

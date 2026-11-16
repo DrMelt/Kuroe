@@ -1,6 +1,6 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Shared.Validation;
-using Kuroe.Runner;
+using Kuroe.Runner.Command;
 
 namespace Kuroe.Node.Command;
 

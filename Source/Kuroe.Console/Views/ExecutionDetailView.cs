@@ -1,5 +1,4 @@
 using Kuroe.Execution.Shared;
-using Kuroe.Node.Llm;
 using Kuroe.Tasks.Presentation.Shared;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -49,18 +48,15 @@ internal sealed class ExecutionDetailView(Terminal terminal)
                 ? new Text("没有取到任何来源内容。", Styles.Hint)
                 : InputTable(execution.Request.Inputs)));
 
-        if (execution.Request.Kind == LlmNodeTypes.Kind)
-        {
-            IReadOnlyList<ExecutionOutputPort> ports =
-                [.. execution.Request.OutputPorts.Where(port => port.Required)];
-            _terminal.NewLine();
-            _terminal.Write(Blocks.Section(
-                BoxKind.View,
-                $"契约端口 {ports.Count} 个",
-                ports.Count == 0
-                    ? new Text("本次执行没有需要交回的端口。", Styles.Hint)
-                    : PortTable(ports)));
-        }
+        IReadOnlyList<ExecutionOutputPort> ports =
+            [.. execution.Request.OutputPorts.Where(port => port.Required)];
+        _terminal.NewLine();
+        _terminal.Write(Blocks.Section(
+            BoxKind.View,
+            $"契约端口 {ports.Count} 个",
+            ports.Count == 0
+                ? new Text("本次执行没有需要交回的端口。", Styles.Hint)
+                : PortTable(ports)));
 
         _terminal.NewLine();
         _terminal.Write(Blocks.Section(

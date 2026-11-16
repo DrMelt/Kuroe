@@ -1,5 +1,5 @@
 using Kuroe.Execution.Shared;
-using Kuroe.Runner;
+using Kuroe.Runner.Llm;
 using Xunit;
 
 namespace Kuroe.Node.Llm.Tests;
@@ -40,7 +40,6 @@ public sealed class LlmNodeComposeTests
         new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("实施"),
-            new ExecutionKind("Llm"),
             attempt,
             [],
             [],

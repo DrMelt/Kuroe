@@ -3,19 +3,22 @@ using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Runner;
+using Kuroe.Runner.File;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件写入节点类型：按路径变量解析路径，把唯一的内容 Text 输入写入文件，写入内容作为产出。</summary>
 public sealed class FileWriteNodeType(FileExecutionParameters? parameters)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public FileExecutionParameters? Parameters { get; } = parameters;
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => FileWriteNodeTypes.Name;
+
+    /// <summary>本节点使用的执行器工厂类型。</summary>
+    public Type RunnerFactoryType => FileWriteNodeTypes.RunnerFactoryType;
 
     /// <summary>文件写入节点类型的静态形状。</summary>
     public NodeTypeShape Shape => FileWriteNodeTypes.Shape;

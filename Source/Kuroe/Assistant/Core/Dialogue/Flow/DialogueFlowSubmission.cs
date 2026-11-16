@@ -6,7 +6,6 @@ using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Records.Shared;
 using Kuroe.Execution.Shared;
-using Kuroe.Node.Llm;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 
@@ -83,7 +82,6 @@ internal sealed class DialogueFlowSubmission(
         ExecutionRequest request = new(
             new ExecutionOwnerId(task.Value),
             record.Target,
-            LlmNodeTypes.Kind,
             record.Attempt,
             [],
             [.. record.Inputs.Select(input => new ExecutionInputValue(

@@ -6,8 +6,7 @@ namespace Kuroe.Execution;
 /// <summary>执行单元的控制面：选择运行器、派发执行、等待收口与退出收口。执行状态迁移不出执行单元。</summary>
 public sealed class ExecutionRuntime(
     ExecutionDispatcher dispatcher,
-    ExecutionRunnerRegistry runners,
-    ExecutionRestorerRegistry restorers) : IExecutionRuntime
+    ExecutionRunnerRegistry runners) : IExecutionRuntime
 {
     /// <inheritdoc/>
     public IExecution Create(ExecutionId id, ExecutionRequest request) => ExecutionFactory.Create(id, request);
@@ -16,8 +15,21 @@ public sealed class ExecutionRuntime(
     public IExecution Restore(ExecutionRestorePlan plan) => ExecutionFactory.Restore(plan);
 
     /// <inheritdoc/>
-    public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context) =>
-        restorers.Prepare(context);
+    public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context)
+    {
+        if (runners.Find(context.Target.RunnerFactoryType) is not IExecutionRestorer restorer)
+        {
+            return Error.Failure(
+                "Execution.Restore",
+                $"执行器工厂 {context.Target.RunnerFactoryType.FullName ?? context.Target.RunnerFactoryType.Name} 不支持恢复。");
+        }
+
+        ErrorOr<IExecutionRestoreData> data = restorer.Prepare(context);
+
+        return data.IsError
+            ? data.ErrorsOrEmptyList
+            : new PreparedExecutionRestore(context, data.Value);
+    }
 
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunAsync(
@@ -45,7 +57,10 @@ public sealed class ExecutionRuntime(
         try
         {
             Unit(execution).ContinueFrom(Unit(source));
-            IExecutionRunner runner = restorers.CreateRestored(execution.Id, prepared);
+            IExecutionRestorer restorer = runners.Find(prepared.Context.Target.RunnerFactoryType) as IExecutionRestorer
+                ?? throw new InvalidOperationException(
+                    $"执行器工厂 {prepared.Context.Target.RunnerFactoryType.FullName ?? prepared.Context.Target.RunnerFactoryType.Name} 不支持恢复。");
+            IExecutionRunner runner = restorer.CreateRestored(prepared.Context with { Execution = execution.Id }, prepared.Data);
 
             return DispatchAsync(execution, runner);
         }

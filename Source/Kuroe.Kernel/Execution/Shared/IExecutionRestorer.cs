@@ -16,9 +16,6 @@ public sealed record ExecutionRestoreContext(
 /// <summary>执行目标的恢复能力。能否恢复、负载校验与恢复运行器的建立由目标类型决定。</summary>
 public interface IExecutionRestorer
 {
-    /// <summary>执行种类，用于选择恢复器。</summary>
-    ExecutionKind Kind { get; }
-
     /// <summary>校验恢复负载并装配一次恢复。不能恢复时返回错误。</summary>
     ErrorOr<IExecutionRestoreData> Prepare(ExecutionRestoreContext context);
 

@@ -17,13 +17,12 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Node\File\Core\Kuroe.Node.File.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
-        
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Support\Kuroe.TestSupport.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Runner\Shared\Kuroe.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Runner\File\Core\Kuroe.Runner.File.csproj" />
     </ItemGroup>
 
 <ItemGroup>

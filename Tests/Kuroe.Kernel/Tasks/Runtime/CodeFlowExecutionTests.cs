@@ -104,8 +104,7 @@ public sealed class CodeFlowExecutionTests
             ExecutionIndex index = new();
             ExecutionRuntime runtime = new(
                 new ExecutionDispatcher(),
-                new ExecutionRunnerRegistry(),
-                new ExecutionRestorerRegistry());
+                new ExecutionRunnerRegistry());
             StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
             FlowProvider provider = new(
                 new CodeIdentity(),
@@ -134,7 +133,6 @@ public sealed class CodeFlowExecutionTests
             ExecutionRequest request = new(
                 new ExecutionOwnerId(Task.Id.Value),
                 new ExecutionTargetId("回话"),
-                new ExecutionKind("code"),
                 1,
                 [new ExecutionInputPort(Input, ExecutionPortKind.Text, ExecutionPortRole.Content, true, null)],
                 [new ExecutionInputValue(Input, "目标", null)],
@@ -153,7 +151,11 @@ public sealed class CodeFlowExecutionTests
         }
 
         public static Task<ErrorOr<Success>> RunAsync(IExecution execution, IExecutionRunnerFactory runner, IExecutionTarget target) =>
-            new ExecutionRuntime(new ExecutionDispatcher(), new ExecutionRunnerRegistry([runner]), new ExecutionRestorerRegistry()).RunAsync(execution, target);
+            new ExecutionRuntime(
+                new ExecutionDispatcher(),
+                new ExecutionRunnerRegistry(
+                    [new ExecutionRunnerRegistration(typeof(PortRunnerFactory), runner)]))
+            .RunAsync(execution, target);
     }
 }
 internal sealed class CodeIdentity : IFlowIdentity
@@ -231,8 +233,7 @@ internal sealed class CodeTarget : IExecutionTarget
 {
     public ExecutionTargetId Id => new("回话");
 
-    public ExecutionKind Kind => new("code");
-
+    public Type RunnerFactoryType => typeof(PortRunnerFactory);
 
     public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;
 }
@@ -242,8 +243,6 @@ internal sealed class PortRunnerFactory(
     ExecutionPortName port,
     string text) : IExecutionRunnerFactory
 {
-    public ExecutionKind Kind => new("code");
-
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         new PortRunner(submitter, execution, port, text);
 

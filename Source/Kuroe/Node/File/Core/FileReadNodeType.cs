@@ -3,19 +3,22 @@ using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Runner;
+using Kuroe.Runner.File;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件读取节点类型：按路径变量解析路径并读取文件内容，内容作为产出写入唯一的输出端口。</summary>
 public sealed class FileReadNodeType(FileExecutionParameters? parameters)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public FileExecutionParameters? Parameters { get; } = parameters;
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => FileReadNodeTypes.Name;
+
+    /// <summary>本节点使用的执行器工厂类型。</summary>
+    public Type RunnerFactoryType => FileReadNodeTypes.RunnerFactoryType;
 
     /// <summary>文件读取节点类型的静态形状。</summary>
     public NodeTypeShape Shape => FileReadNodeTypes.Shape;

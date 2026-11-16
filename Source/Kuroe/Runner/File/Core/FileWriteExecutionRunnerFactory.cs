@@ -5,12 +5,8 @@ namespace Kuroe.Runner.File;
 
 /// <summary>为文件写入执行建立运行器。</summary>
 public sealed class FileWriteExecutionRunnerFactory(
-    ExecutionKind kind,
     IWorkspaceFiles files) : IExecutionRunnerFactory
 {
-    /// <inheritdoc/>
-    public ExecutionKind Kind => kind;
-
     /// <inheritdoc/>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         target.Parameters is FileExecutionParameters parameters
