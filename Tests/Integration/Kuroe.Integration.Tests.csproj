@@ -20,8 +20,8 @@
         <ProjectReference Include="..\..\Source\Kuroe\Core\Kuroe.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe\Assistant\Core\Kuroe.Assistant.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Runner\Shared\Kuroe.Runner.Shared.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe\Runner\Shared\Kuroe.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe\Node\File\Core\Kuroe.Node.File.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Process\Core\Kuroe.Process.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe\Node\Input\Core\Kuroe.Node.Input.csproj" />

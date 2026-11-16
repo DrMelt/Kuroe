@@ -1614,8 +1614,8 @@ public sealed class RepositoryLayoutTests
     [Fact]
     public void Node_projects_reference_runner_shared_only()
     {
-        string runnerShared = Path.Combine(SourceRoot, "Kuroe.Runner", "Shared");
-        string runnerRoot = Path.Combine(SourceRoot, "Kuroe.Runner");
+        string runnerShared = Path.Combine(SourceRoot, "Kuroe", "Runner", "Shared");
+        string runnerRoot = Path.Combine(SourceRoot, "Kuroe", "Runner");
         string[] projects =
         [
             Path.Combine(SourceRoot, "Kuroe", "Node", "Input", "Core", "Kuroe.Node.Input.csproj"),
@@ -1638,7 +1638,8 @@ public sealed class RepositoryLayoutTests
     [Fact]
     public void Runner_projects_stay_free_of_node_and_flow()
     {
-        string runner = Path.Combine(SourceRoot, "Kuroe.Runner");
+        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Runner")));
+        string runner = Path.Combine(SourceRoot, "Kuroe", "Runner");
         string[] forbidden =
         [
             Path.Combine(SourceRoot, "Kuroe", "Node"),
@@ -1669,7 +1670,7 @@ public sealed class RepositoryLayoutTests
     [Fact]
     public void Runner_shared_references_only_neutral_contracts()
     {
-        string project = Path.Combine(SourceRoot, "Kuroe.Runner", "Shared", "Kuroe.Runner.Shared.csproj");
+        string project = Path.Combine(SourceRoot, "Kuroe", "Runner", "Shared", "Kuroe.Runner.Shared.csproj");
         string[] allowed =
         [
             Path.Combine(KernelRoot, "Execution", "Shared"),
@@ -1750,7 +1751,8 @@ public sealed class RepositoryLayoutTests
     {
         string file = Path.Combine(
             SourceRoot,
-            "Kuroe.Runner",
+            "Kuroe",
+            "Runner",
             "Shared",
             "LlmExecutionParameters.cs");
 
