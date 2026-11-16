@@ -22,12 +22,11 @@ public sealed class ExecutionRuntime(
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionRunnerFactory? own,
         IExecutionTarget target)
     {
         try
         {
-            IExecutionRunner runner = runners.Create(own, target, execution.Id);
+            IExecutionRunner runner = runners.Create(target, execution.Id);
 
             return DispatchAsync(execution, runner);
         }

@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Files.Shared;
+using Kuroe.Runner;
 
 namespace Kuroe.Node.File;
 
@@ -23,5 +23,5 @@ public static class FileWriteNodeTypes
     };
 
     /// <summary>按类型专属声明建出类型实例。</summary>
-    public static INodeType Create(FileParameters parameters, IWorkspaceFiles files) => new FileWriteNodeType(parameters, files);
+    public static INodeType Create(FileExecutionParameters parameters) => new FileWriteNodeType(parameters);
 }

@@ -2,12 +2,11 @@ using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
-using Kuroe.Files.Shared;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件写入节点的描述契约：声明只有路径，未知字段与形状由构造层报出。</summary>
-internal sealed class FileWriteNodeTypeDescription(string rootDirectory, IWorkspaceFiles files) : INodeTypeDescription
+internal sealed class FileWriteNodeTypeDescription(string rootDirectory) : INodeTypeDescription
 {
     /// <summary>形状所属的节点类型名。</summary>
     public NodeKind Kind => FileWriteNodeTypes.Name;
@@ -26,6 +25,5 @@ internal sealed class FileWriteNodeTypeDescription(string rootDirectory, IWorksp
     /// <summary>读出参数段并建出类型实例。</summary>
     public INodeType Read(IParameterReader values, ValidationMessageHandler fail) =>
         FileWriteNodeTypes.Create(
-            FileTargetReader.Read(values, fail, "文件写入节点", rootDirectory, FileWriteNodeTypes.DefaultMaxChars),
-            files);
+            FileTargetReader.Read(values, fail, "文件写入节点", rootDirectory, FileWriteNodeTypes.DefaultMaxChars));
 }

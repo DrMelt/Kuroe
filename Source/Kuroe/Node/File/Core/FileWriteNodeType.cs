@@ -3,16 +3,16 @@ using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Files.Shared;
+using Kuroe.Runner;
 
 namespace Kuroe.Node.File;
 
-/// <summary>文件写入节点类型：派发执行，按路径变量解析路径，把唯一的内容 Text 输入写入文件，写入内容作为产出。</summary>
-public sealed class FileWriteNodeType(FileParameters? parameters, IWorkspaceFiles files)
-    : INodeType, INodeTypeValidation, IExecutionRunnerFactory, IExecutionParameterProvider
+/// <summary>文件写入节点类型：按路径变量解析路径，把唯一的内容 Text 输入写入文件，写入内容作为产出。</summary>
+public sealed class FileWriteNodeType(FileExecutionParameters? parameters)
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
-    public FileParameters? Parameters { get; } = parameters;
+    public FileExecutionParameters? Parameters { get; } = parameters;
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => FileWriteNodeTypes.Name;
@@ -39,15 +39,6 @@ public sealed class FileWriteNodeType(FileParameters? parameters, IWorkspaceFile
         Reject(node.Outputs.Count > 1, "文件写入节点最多声明一个输出端口。");
         Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
-
-    /// <inheritdoc/>
-    string IExecutionRunnerFactory.Kind => Kind.Value;
-
-    /// <summary>为一次执行建立文件写入运行器。</summary>
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
-        target.Parameters is FileParameters declared
-            ? new FileWriteExecutionRunner(declared, files)
-            : throw new InvalidOperationException("文件写入节点的参数类型不匹配。");
 
     /// <summary>按本次执行建立文件参数。</summary>
     public IExecutionParameters Create(ExecutionParameterContext context) =>

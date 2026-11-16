@@ -29,6 +29,13 @@
         <ProjectReference Include="..\..\..\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Node\File\Core\Kuroe.Node.File.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Node\Command\Core\Kuroe.Node.Command.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe\Node\Input\Core\Kuroe.Node.Input.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Runner\Shared\Kuroe.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Runner\Command\Core\Kuroe.Runner.Command.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Runner\File\Core\Kuroe.Runner.File.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Runner\Input\Core\Kuroe.Runner.Input.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Runner\Approval\Core\Kuroe.Runner.Approval.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Tool\Implementation\Contract\Core\Kuroe.Tool.Contract.csproj" />

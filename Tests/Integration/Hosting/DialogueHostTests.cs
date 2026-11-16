@@ -6,7 +6,9 @@ using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Tasks.Shared;
+using Kuroe.Tool;
 using Kuroe.Node.Llm;
+using Kuroe.Runner;
 using Kuroe.Pending;
 using Xunit;
 
@@ -513,7 +515,13 @@ public sealed class DialogueHostTests
         LlmExecutionParameters execution = Assert.IsType<LlmExecutionParameters>(
             environment.Runner.StartedTargets[round].Parameters);
 
-        return execution.Parameters ?? throw new InvalidOperationException("对话执行缺少参数。");
+        return new LlmParameters
+        {
+            Prompt = execution.Prompt,
+            Tools = [.. execution.Tools.Select(tool => new ToolPath(tool))],
+            SystemPrompt = execution.SystemPrompt,
+            ToolPorts = execution.ToolPorts,
+        };
     }
 
     /// <summary>记下收到的过程，供断言。</summary>

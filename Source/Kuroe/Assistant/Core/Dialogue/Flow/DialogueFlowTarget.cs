@@ -16,11 +16,5 @@ internal sealed class DialogueFlowTarget(
     public string Kind => LlmNodeTypes.Kind;
 
     /// <inheritdoc/>
-    public bool UsesDefaultRunner => true;
-
-    /// <inheritdoc/>
-    public IExecutionParameters Parameters { get; } = new LlmExecutionParameters(parameters, model, LlmNodeTypes.Kind)
-    {
-        ConversationSeed = seed,
-    };
+    public IExecutionParameters Parameters { get; } = parameters.ToExecutionParameters(model, seed);
 }

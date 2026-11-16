@@ -4,7 +4,7 @@ using Kuroe.Catalogs;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
 using Kuroe.Tasks.Shared;
-using Kuroe.Node.Llm;
+using Kuroe.Runner;
 using Kuroe.Shared;
 
 namespace Kuroe.Flow.Hosting.Workflows.Tasks;

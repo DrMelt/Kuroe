@@ -4,7 +4,6 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
-using Kuroe.Process;
 using Xunit;
 
 namespace Kuroe.Node.Command.Tests;
@@ -12,7 +11,7 @@ namespace Kuroe.Node.Command.Tests;
 /// <summary>命令节点类型的形状与类型规则：派发执行，不调用模型，按版本执行工作目录内的命令。</summary>
 public sealed class CommandNodeTypeTests
 {
-    private static readonly CommandParameters Parameters = new()
+    private static readonly CommandExecutionParameters Parameters = new()
     {
         Program = "dotnet",
         Arguments = ["build"],
@@ -22,8 +21,7 @@ public sealed class CommandNodeTypeTests
         MaxChars = CommandNodeTypes.DefaultMaxChars,
     };
 
-    private static readonly FakeProcessRunner Process = new();
-    private static readonly CommandNodeType Type = new(Parameters, Process);
+    private static readonly CommandNodeType Type = new(Parameters);
 
     [Fact]
     public void Name_is_the_kind_written_in_files()
@@ -49,13 +47,12 @@ public sealed class CommandNodeTypeTests
     }
 
     [Fact]
-    public void Create_keeps_the_declaration_and_process_on_the_instance()
+    public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType type = CommandNodeTypes.Create(Parameters, Process);
+        INodeType type = CommandNodeTypes.Create(Parameters);
 
         CommandNodeType command = Assert.IsType<CommandNodeType>(type);
         Assert.Same(Parameters, command.Parameters);
-        Assert.Same(Process, command.Process);
     }
 
     [Fact]
@@ -85,12 +82,12 @@ public sealed class CommandNodeTypeTests
     [Fact]
     public void A_signal_variable_port_is_rejected()
     {
-        CommandParameters parameters = Parameters with
+        CommandExecutionParameters parameters = Parameters with
         {
             Directory = "{root}/src",
             Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
         };
-        CommandNodeType type = new(parameters, Process);
+        CommandNodeType type = new(parameters);
         InputPort[] inputs =
         [
             new(new PortName("任务路径"), PortTypes.Signal),
@@ -104,11 +101,11 @@ public sealed class CommandNodeTypeTests
     [Fact]
     public void Argument_placeholders_require_variable_mapping()
     {
-        CommandParameters parameters = Parameters with
+        CommandExecutionParameters parameters = Parameters with
         {
             Arguments = ["clone", "--branch", "{branch}"],
         };
-        CommandNodeType type = new(parameters, Process);
+        CommandNodeType type = new(parameters);
 
         Assert.Contains(Failures(type, Node(type: type)),
             error => error.EndsWith("命令占位符 {branch} 没有对应的命令变量映射。"));
@@ -117,12 +114,12 @@ public sealed class CommandNodeTypeTests
     [Fact]
     public void Argument_placeholders_accept_mapped_text_inputs()
     {
-        CommandParameters parameters = Parameters with
+        CommandExecutionParameters parameters = Parameters with
         {
             Arguments = ["clone", "{url}"],
             Variables = new Dictionary<string, string> { ["url"] = "仓库地址" },
         };
-        CommandNodeType type = new(parameters, Process);
+        CommandNodeType type = new(parameters);
         InputPort[] inputs =
         [
             new(new PortName("仓库地址"), PortTypes.Text),
@@ -135,12 +132,12 @@ public sealed class CommandNodeTypeTests
     [Fact]
     public void A_variable_not_used_by_arguments_is_rejected()
     {
-        CommandParameters parameters = Parameters with
+        CommandExecutionParameters parameters = Parameters with
         {
             Arguments = ["clone"],
             Variables = new Dictionary<string, string> { ["url"] = "仓库地址" },
         };
-        CommandNodeType type = new(parameters, Process);
+        CommandNodeType type = new(parameters);
         InputPort[] inputs =
         [
             new(new PortName("仓库地址"), PortTypes.Text),
@@ -154,12 +151,12 @@ public sealed class CommandNodeTypeTests
     [Fact]
     public void Variable_names_must_not_contain_blanks()
     {
-        CommandParameters parameters = Parameters with
+        CommandExecutionParameters parameters = Parameters with
         {
             Arguments = ["build", "{bad name}"],
             Variables = new Dictionary<string, string> { ["bad name"] = "任务路径" },
         };
-        CommandNodeType type = new(parameters, Process);
+        CommandNodeType type = new(parameters);
         InputPort[] inputs =
         [
             new(new PortName("任务路径"), PortTypes.Text),
@@ -197,14 +194,4 @@ public sealed class CommandNodeTypeTests
             Outputs = [.. Assert.IsType<OutputDeclaration.Given>(CommandNodeTypes.Shape.Outputs).Ports],
         };
 
-    /// <summary>测试用的进程执行替身，类型规则阶段不会调用。</summary>
-    private sealed class FakeProcessRunner : IProcessRunner
-    {
-        public ProcessResult Run(
-            string program,
-            IReadOnlyList<string> arguments,
-            string workingDirectory,
-            TimeSpan timeout) =>
-            new(string.Empty, 0, TimedOut: false);
-    }
 }

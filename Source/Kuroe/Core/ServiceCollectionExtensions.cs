@@ -13,10 +13,13 @@ using Kuroe.Files.Shared;
 using Kuroe.Input.Runtime;
 using Kuroe.Input.Shared;
 using Kuroe.Node.Llm;
-using Kuroe.Node.Llm.Executions;
-using Kuroe.Node.Llm.Sessions;
-using Kuroe.Node.Llm.Tools;
+using Kuroe.Runner;
+using Kuroe.Runner.Llm;
+using Kuroe.Runner.Llm.Executions;
+using Kuroe.Runner.Llm.Sessions;
+using Kuroe.Runner.Llm.Tools;
 using Kuroe.Shared;
+using Kuroe.Tasks;
 using Kuroe.Tasks.Persistence.Json;
 using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Tasks.Persistence.Saving.Shared;
@@ -132,8 +135,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
         services.AddSingleton(sp => new ExecutionRunnerRegistry(
-            [.. sp.GetServices<Kuroe.Execution.Shared.IExecutionRunnerFactory>()],
-            sp.GetService<Kuroe.Execution.Shared.IExecutionRunnerFactory>()));
+            [.. sp.GetServices<Kuroe.Execution.Shared.IExecutionRunnerFactory>()]));
         services.AddSingleton(sp => new ExecutionRestorerRegistry(
             [.. sp.GetServices<Kuroe.Execution.Shared.IExecutionRestorer>()]));
         services.AddSingleton(sp => new ExecutionRuntime(
@@ -200,13 +202,14 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IToolFactory>(),
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<IExecutionConversationReader, ExecutionConversationReader>();
-        services.AddSingleton(sp => new ExecutionRunnerFactory(
+        services.AddSingleton(sp => new LlmExecutionRunnerFactory(
+            LlmNodeTypes.Kind,
             sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<Kuroe.Execution.Shared.IExecutionStatusReader>()));
         services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(sp =>
-            sp.GetRequiredService<ExecutionRunnerFactory>());
+            sp.GetRequiredService<LlmExecutionRunnerFactory>());
         services.AddSingleton<Kuroe.Execution.Shared.IExecutionRestorer>(sp =>
-            sp.GetRequiredService<ExecutionRunnerFactory>());
+            sp.GetRequiredService<LlmExecutionRunnerFactory>());
 
         return composition;
     }

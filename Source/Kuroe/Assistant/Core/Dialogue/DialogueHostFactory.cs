@@ -1,4 +1,3 @@
-using Kuroe;
 using Kuroe.Assistant.Dialogue.Flow;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
@@ -7,6 +6,7 @@ using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Input.Shared;
+using Kuroe.Tasks;
 using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;

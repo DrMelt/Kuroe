@@ -17,7 +17,6 @@ public interface IExecutionRuntime
     /// <summary>选择运行器、派发执行并等待收口。派发异常把执行收为失败并返回错误。</summary>
     Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionRunnerFactory? own,
         IExecutionTarget target);
 
     /// <summary>选择恢复运行器、记录来源执行、派发恢复执行并等待收口。派发异常把执行收为失败并返回错误。</summary>

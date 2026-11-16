@@ -7,8 +7,7 @@ namespace Kuroe.Node.Approval.Tests;
 /// <summary>审批节点的描述契约：字段表与提问文本的读取。</summary>
 public sealed class ApprovalNodeTypeDescriptionTests
 {
-    private static readonly StubInputChannel Channel = new();
-    private static readonly ApprovalNodeTypeDescription File = new(Channel);
+    private static readonly ApprovalNodeTypeDescription File = new();
 
     [Fact]
     public void Kind_is_the_approval_node_type() =>

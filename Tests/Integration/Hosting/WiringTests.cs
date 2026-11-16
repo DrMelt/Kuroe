@@ -1,8 +1,8 @@
 using ErrorOr;
 using Kuroe.Assistant;
 using Kuroe.Control.Shared;
-using Kuroe.Node.Llm.Sessions;
-using Kuroe.Node.Llm.Tools;
+using Kuroe.Runner.Llm.Sessions;
+using Kuroe.Runner.Llm.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
@@ -16,7 +16,7 @@ using Xunit;
 namespace Kuroe.Integration.Tests.Hosting;
 
 /// <summary>不接模型地解析整张服务图：推进、执行与会话装配都建得起来。
-/// 其余测试把 IExecutionRunnerFactory 换成假的，只替换未自带执行器的节点。</summary>
+/// 其余测试用替身运行器接管 Llm 节点，内建节点使用各自运行器。</summary>
 public sealed class WiringTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
@@ -29,6 +29,22 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<Kuroe.Execution.Shared.IExecutionRunnerFactory>());
         Assert.NotNull(provider.GetRequiredService<Kuroe.Execution.ExecutionRuntime>());
         Assert.NotNull(provider.GetRequiredService<SessionFactory>());
+    }
+
+    [Fact]
+    public void Builtin_execution_runners_cover_every_builtin_kind()
+    {
+        using ServiceProvider provider = Services();
+
+        IReadOnlyList<string> kinds =
+        [
+            .. provider.GetServices<Kuroe.Execution.Shared.IExecutionRunnerFactory>()
+                .Select(factory => factory.Kind)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(kind => kind, StringComparer.Ordinal),
+        ];
+
+        Assert.Equal(["Approval", "Command", "FileRead", "FileWrite", "Input", "Llm"], kinds);
     }
 
     [Fact]
@@ -101,7 +117,7 @@ public sealed class WiringTests : IDisposable
     {
         using ServiceProvider provider = Services();
 
-        IReadOnlyList<string> names = [.. provider.GetRequiredService<Kuroe.Node.Llm.Tools.ToolCollection>()
+        IReadOnlyList<string> names = [.. provider.GetRequiredService<Kuroe.Runner.Llm.Tools.ToolCollection>()
             .Definitions
             .Select(definition => definition.Path.CallName.Value)];
 
@@ -115,7 +131,7 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         IReadOnlyList<string> paths =
-            [.. provider.GetRequiredService<Kuroe.Node.Llm.Tools.ToolCollection>()
+            [.. provider.GetRequiredService<Kuroe.Runner.Llm.Tools.ToolCollection>()
                 .Definitions.Select(definition => definition.Path.Value)];
         Assert.Contains("git/read/Status", paths);
         Assert.Contains("git/write/Restore", paths);
@@ -128,7 +144,7 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         IReadOnlyList<string> paths =
-            [.. provider.GetRequiredService<Kuroe.Node.Llm.Tools.ToolCollection>()
+            [.. provider.GetRequiredService<Kuroe.Runner.Llm.Tools.ToolCollection>()
                 .Definitions.Select(definition => definition.Path.Value)];
 
         Assert.Contains("dotnet/read/Info", paths);

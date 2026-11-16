@@ -12,7 +12,7 @@ using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Runtime.Persistence;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe;
+namespace Kuroe.Tasks;
 
 /// <summary>一个任务域的装配产物：任务索引、输入等待、任务动作与恢复服务。</summary>
 public sealed record TaskDomain(

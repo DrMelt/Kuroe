@@ -1612,23 +1612,65 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Node_projects_reference_shared_input_only()
+    public void Node_projects_reference_runner_shared_only()
     {
-        string input = Path.Combine(KernelRoot, "Input", "Shared");
-        string runtime = Path.Combine(KernelRoot, "Input", "Runtime");
+        string runnerShared = Path.Combine(SourceRoot, "Kuroe.Runner", "Shared");
+        string runnerRoot = Path.Combine(SourceRoot, "Kuroe.Runner");
         string[] projects =
         [
             Path.Combine(SourceRoot, "Kuroe", "Node", "Input", "Core", "Kuroe.Node.Input.csproj"),
             Path.Combine(SourceRoot, "Kuroe", "Node", "Approval", "Core", "Kuroe.Node.Approval.csproj"),
+            Path.Combine(SourceRoot, "Kuroe", "Node", "Command", "Core", "Kuroe.Node.Command.csproj"),
+            Path.Combine(SourceRoot, "Kuroe", "Node", "File", "Core", "Kuroe.Node.File.csproj"),
+            Path.Combine(SourceRoot, "Kuroe", "Node", "Llm", "Core", "Kuroe.Node.Llm.csproj"),
         ];
 
         foreach (string project in projects)
         {
             IReadOnlyList<string> references = ProjectReferences(project);
 
-            Assert.Contains(references, reference => IsUnder(reference, input));
-            Assert.DoesNotContain(references, reference => IsUnder(reference, runtime));
+            Assert.Contains(references, reference => IsUnder(reference, runnerShared));
+            Assert.DoesNotContain(references, reference =>
+                IsUnder(reference, runnerRoot) && !IsUnder(reference, runnerShared));
         }
+    }
+
+    [Fact]
+    public void Runner_projects_stay_free_of_node_and_flow()
+    {
+        string runner = Path.Combine(SourceRoot, "Kuroe.Runner");
+        string[] forbidden =
+        [
+            Path.Combine(SourceRoot, "Kuroe", "Node"),
+            Path.Combine(SourceRoot, "Kuroe.Flow"),
+            Path.Combine(KernelRoot, "Control"),
+            Path.Combine(KernelRoot, "Tasks", "Runtime"),
+        ];
+
+        Assert.NotEmpty(ProjectFiles(runner));
+        foreach (string project in ProjectFiles(runner))
+        {
+            Assert.DoesNotContain(
+                ProjectReferences(project),
+                reference => forbidden.Any(directory => IsUnder(reference, directory)));
+        }
+    }
+
+    [Fact]
+    public void Runner_shared_references_only_neutral_contracts()
+    {
+        string project = Path.Combine(SourceRoot, "Kuroe.Runner", "Shared", "Kuroe.Runner.Shared.csproj");
+        string[] allowed =
+        [
+            Path.Combine(KernelRoot, "Execution", "Shared"),
+            Path.Combine(KernelRoot, "Tasks", "Shared"),
+        ];
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                allowed.Any(directory => IsUnder(reference, directory)),
+                $"Kuroe.Runner.Shared 引用了中性契约之外的 {reference}。"));
     }
 
     [Fact]
@@ -1698,13 +1740,13 @@ public sealed class RepositoryLayoutTests
     {
         string file = Path.Combine(
             SourceRoot,
-            "Kuroe",
-            "Node",
-            "Llm",
-            "Core",
+            "Kuroe.Runner",
+            "Shared",
             "LlmExecutionParameters.cs");
 
-        Assert.DoesNotContain("LlmNodeType", File.ReadAllText(file), StringComparison.Ordinal);
+        string text = File.ReadAllText(file);
+        Assert.DoesNotContain("LlmNodeType", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("LlmParameters", text, StringComparison.Ordinal);
     }
 
     [Fact]

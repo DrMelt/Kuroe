@@ -6,15 +6,12 @@
 
     <ItemGroup>
         <PackageReference Include="ApiHub.Shared" />
-        <PackageReference Include="ApiHub.ChatClient" />
         <PackageReference Include="ErrorOr" />
-        <PackageReference Include="Microsoft.Agents.AI" />
-        <PackageReference Include="Microsoft.Extensions.AI" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\Tool\Core\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Runner\Shared\Kuroe.Runner.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Shared\Kuroe.Shared.csproj" />
@@ -23,10 +20,10 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Kuroe.Node.Llm.Tests" />
     </ItemGroup>
-<ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
     </ItemGroup>
-
 </Project>

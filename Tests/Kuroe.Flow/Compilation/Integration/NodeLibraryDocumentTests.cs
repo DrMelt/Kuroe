@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Input.Runtime;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.Model;
@@ -19,8 +18,6 @@ namespace Kuroe.Flow.Compilation.Integration.Tests;
 /// <summary>节点库的展开、引用绑定与装载校验：直接编译文档，不经宿主装配。</summary>
 public sealed class NodeLibraryDocumentTests
 {
-    private static readonly InputChannelRegistry Inputs = new();
-
     /// <summary>编译一份流程文档，任一条失败时返回全部错误。</summary>
     private static ErrorOr<CompiledDocument> Compile(string json)
     {
@@ -31,7 +28,7 @@ public sealed class NodeLibraryDocumentTests
         }
 
         IFlowDescriptionCompiler compiler =
-            new FlowDescriptionCompiler(TestTypeFiles.Registry(Inputs), new NodeLibraryExpander());
+            new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander());
 
         return compiler.Compile(document.Value, []);
     }

@@ -19,12 +19,12 @@ services.AddKuroeMafFlows(
                 new MafStepId("计划"),
                 "计划",
                 [new PortName("计划")],
-                new MafStepTarget("Llm", true, model => CreateParameters(model))),
+                new MafStepTarget("Llm", model => CreateParameters(model))),
             new MafStep(
                 new MafStepId("执行"),
                 "执行",
                 [new PortName("结论")],
-                new MafStepTarget("Llm", true, model => CreateParameters(model))),
+                new MafStepTarget("Llm", model => CreateParameters(model))),
         ],
         [
             new MafEdge(new MafStepId("计划"), new MafStepId("执行")),
@@ -34,7 +34,7 @@ services.AddKuroeMafFlows(
     });
 ```
 
-`CreateParameters` 返回 `ErrorOr<IExecutionParameters>`，由宿主按模型构造参数。`MafStepTarget` 由框架建立执行目标，目标标识直接来自步骤标识。需要自定义执行目标时实现 `IMafStepTargetFactory`，提交时校验目标标识必须与步骤标识一致。`AddKuroeMafFlows` 同时注册流程实现、存档编解码与流程模板，流程进入流程目录，可以从 Console 与 CLI 按名字提交。传入 `IMafFlowSource` 时按该来源取定义。
+`CreateParameters` 返回 `ErrorOr<IExecutionParameters>`，由宿主按模型构造参数。`MafStepTarget` 由框架建立执行目标，目标标识直接来自步骤标识，运行器按目标种类选择。需要自定义执行目标时实现 `IMafStepTargetFactory`，提交时校验目标标识必须与步骤标识一致。`AddKuroeMafFlows` 同时注册流程实现、存档编解码与流程模板，流程进入流程目录，可以从 Console 与 CLI 按名字提交。传入 `IMafFlowSource` 时按该来源取定义。
 
 ## 定义
 

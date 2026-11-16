@@ -69,20 +69,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
         ToolPortRules.Validate(Parameters, node, Contracts, scope, fail);
     }
 
-    /// <summary>本轮要做的事：节点要求在请求最前，随后是轮次。</summary>
-    public string? Instruction(ExecutionRequest request) => ExecutionParameters.Instruction(request);
-
-    /// <summary>本轮系统指令：节点声明的恒定块，都没有时为空。</summary>
-    public string? SystemPrompt() => ExecutionParameters.SystemPrompt();
-
-    /// <summary>本轮可用的工具路径：节点声明的白名单，加按需交回输出端口附上的交回能力，以及所有执行节点都有的上报与查看通道。</summary>
-    public IReadOnlyList<ToolPath> ToolPaths(IReadOnlyList<ExecutionOutputPort> outputs) =>
-        ExecutionParameters.ToolPaths(outputs);
-
-    /// <summary>执行参数视图，节点定义给出的参数与模型由执行目标补齐。</summary>
-    private LlmExecutionParameters ExecutionParameters => new(Parameters, null, Kind.Value);
-
     /// <summary>按本次执行建立 Llm 参数。</summary>
     public IExecutionParameters Create(ExecutionParameterContext context) =>
-        new LlmExecutionParameters(Parameters, context.Model, Kind.Value);
+        (Parameters ?? new LlmParameters()).ToExecutionParameters(context.Model);
 }

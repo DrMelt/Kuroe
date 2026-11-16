@@ -32,7 +32,7 @@ internal sealed class DialogueFlowSubmission(
         {
             if (models.Current is not { } current)
             {
-                return ModelErrors.ModelNotSelected();
+                return Kuroe.Runner.ModelErrors.ModelNotSelected();
             }
 
             model = current.Value;

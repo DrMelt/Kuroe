@@ -1,7 +1,6 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
-using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Node.File.Tests;
@@ -10,12 +9,11 @@ namespace Kuroe.Node.File.Tests;
 public sealed class FileNodeTypeDescriptionTests
 {
     private static readonly string Root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "kuroe-file-description-tests"));
-    private static readonly InMemoryWorkspaceFiles Files = new();
 
     [Fact]
     public void Read_description_declares_the_kind_shape_and_fields()
     {
-        FileReadNodeTypeDescription description = new(Root, Files);
+        FileReadNodeTypeDescription description = new(Root);
 
         Assert.Equal(FileReadNodeTypes.Name, description.Kind);
         Assert.Equal(FileReadNodeTypes.Shape, description.Shape);
@@ -31,7 +29,7 @@ public sealed class FileNodeTypeDescriptionTests
     [Fact]
     public void Write_description_declares_the_kind_shape_and_fields()
     {
-        FileWriteNodeTypeDescription description = new(Root, Files);
+        FileWriteNodeTypeDescription description = new(Root);
 
         Assert.Equal(FileWriteNodeTypes.Name, description.Kind);
         Assert.Equal(FileWriteNodeTypes.Shape, description.Shape);
@@ -48,9 +46,9 @@ public sealed class FileNodeTypeDescriptionTests
     public void Read_keeps_the_path_and_the_workspace_root()
     {
         List<string> failures = [];
-        INodeType type = new FileReadNodeTypeDescription(Root, Files).Read(new Reader("a/b.txt"), failures.Add);
+        INodeType type = new FileReadNodeTypeDescription(Root).Read(new Reader("a/b.txt"), failures.Add);
 
-        FileParameters parameters = Assert.IsType<FileParameters>(Assert.IsType<FileReadNodeType>(type).Parameters);
+        FileExecutionParameters parameters = Assert.IsType<FileExecutionParameters>(Assert.IsType<FileReadNodeType>(type).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal("a/b.txt", parameters.Path);
@@ -62,9 +60,9 @@ public sealed class FileNodeTypeDescriptionTests
     public void Write_keeps_the_path_and_the_workspace_root()
     {
         List<string> failures = [];
-        INodeType type = new FileWriteNodeTypeDescription(Root, Files).Read(new Reader("a/b.txt"), failures.Add);
+        INodeType type = new FileWriteNodeTypeDescription(Root).Read(new Reader("a/b.txt"), failures.Add);
 
-        FileParameters parameters = Assert.IsType<FileParameters>(Assert.IsType<FileWriteNodeType>(type).Parameters);
+        FileExecutionParameters parameters = Assert.IsType<FileExecutionParameters>(Assert.IsType<FileWriteNodeType>(type).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal("a/b.txt", parameters.Path);
@@ -76,7 +74,7 @@ public sealed class FileNodeTypeDescriptionTests
     public void Missing_path_is_reported()
     {
         List<string> failures = [];
-        _ = new FileReadNodeTypeDescription(Root, Files).Read(new Reader(), failures.Add);
+        _ = new FileReadNodeTypeDescription(Root).Read(new Reader(), failures.Add);
 
         Assert.Equal(["文件读取节点必须声明 Path。"], failures);
     }
@@ -86,10 +84,10 @@ public sealed class FileNodeTypeDescriptionTests
     {
         List<string> failures = [];
 
-        FileParameters read = Assert.IsType<FileParameters>(Assert.IsType<FileReadNodeType>(
-            new FileReadNodeTypeDescription(Root, Files).Read(new Reader("a.txt", 1200), failures.Add)).Parameters);
-        FileParameters write = Assert.IsType<FileParameters>(Assert.IsType<FileWriteNodeType>(
-            new FileWriteNodeTypeDescription(Root, Files).Read(new Reader("a.txt", 1200), failures.Add)).Parameters);
+        FileExecutionParameters read = Assert.IsType<FileExecutionParameters>(Assert.IsType<FileReadNodeType>(
+            new FileReadNodeTypeDescription(Root).Read(new Reader("a.txt", 1200), failures.Add)).Parameters);
+        FileExecutionParameters write = Assert.IsType<FileExecutionParameters>(Assert.IsType<FileWriteNodeType>(
+            new FileWriteNodeTypeDescription(Root).Read(new Reader("a.txt", 1200), failures.Add)).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal(1200, read.MaxChars);
@@ -102,11 +100,11 @@ public sealed class FileNodeTypeDescriptionTests
         Dictionary<string, string> variables = new() { ["root"] = "任务路径" };
         List<string> failures = [];
 
-        FileParameters read = Assert.IsType<FileParameters>(Assert.IsType<FileReadNodeType>(
-            new FileReadNodeTypeDescription(Root, Files)
+        FileExecutionParameters read = Assert.IsType<FileExecutionParameters>(Assert.IsType<FileReadNodeType>(
+            new FileReadNodeTypeDescription(Root)
                 .Read(new Reader("{root}/a.txt", variables: variables), failures.Add)).Parameters);
-        FileParameters write = Assert.IsType<FileParameters>(Assert.IsType<FileWriteNodeType>(
-            new FileWriteNodeTypeDescription(Root, Files)
+        FileExecutionParameters write = Assert.IsType<FileExecutionParameters>(Assert.IsType<FileWriteNodeType>(
+            new FileWriteNodeTypeDescription(Root)
                 .Read(new Reader("{root}/a.txt", variables: variables), failures.Add)).Parameters);
 
         Assert.Empty(failures);
@@ -118,7 +116,7 @@ public sealed class FileNodeTypeDescriptionTests
     public void Negative_MaxChars_is_reported()
     {
         List<string> failures = [];
-        _ = new FileReadNodeTypeDescription(Root, Files).Read(new Reader("a.txt", -1), failures.Add);
+        _ = new FileReadNodeTypeDescription(Root).Read(new Reader("a.txt", -1), failures.Add);
 
         Assert.Equal(["MaxChars 不能是负数。"], failures);
     }
@@ -128,7 +126,7 @@ public sealed class FileNodeTypeDescriptionTests
     {
         RecordingRegistry registry = new();
 
-        FileNodeTypeDescriptions.RegisterInto(registry, Root, Files);
+        FileNodeTypeDescriptions.RegisterInto(registry, Root);
 
         Assert.Equal([FileReadNodeTypes.Name, FileWriteNodeTypes.Name], registry.Kinds);
     }

@@ -265,6 +265,7 @@ public sealed class TestEnvironment : IDisposable
             }
         }
 
+        services.AddBuiltinGraphExecutionRunners(composition.Value, CreateGraphOptions(process));
         services.AddSingleton<IExecutionRunnerFactory>(runner);
         services.AddSingleton<IExecutionRestorer>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());

@@ -46,7 +46,7 @@ public sealed class KuroeComposition
     /// <summary>任务是否写存档并占用租约。</summary>
     public bool PersistTasks { get; }
 
-    /// <summary>本次装配使用的输入登记，节点类型与宿主共用同一实例。</summary>
+    /// <summary>本次装配使用的输入登记，宿主与运行器共用同一实例。</summary>
     public IInputChannel InputChannel { get; }
 
     /// <summary>已装载的配置命令工具，供状态查询工具呈现。</summary>

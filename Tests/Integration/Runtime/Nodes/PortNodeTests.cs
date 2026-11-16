@@ -122,8 +122,10 @@ public sealed class PortNodeTests
 
         ExecutionSnapshot execution = Assert.Single(environment.GraphExecutions(done, 0));
 
-        // 系统指令只由节点声明的恒定块组成
-        Assert.Equal("固定背景一\n固定背景二", Assert.IsType<LlmNodeType>(execution.Input.Type).SystemPrompt());
+        // 系统指令来自节点声明的恒定块，组合发生在建立执行参数时
+        LlmParameters declared = Assert.IsType<LlmNodeType>(execution.Input.Type).Parameters
+            ?? throw new InvalidOperationException("Llm 节点缺少参数声明。");
+        Assert.Equal(["固定背景一", "固定背景二"], declared.SystemPrompt);
     }
 
     [Fact]

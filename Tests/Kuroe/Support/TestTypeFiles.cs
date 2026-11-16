@@ -1,6 +1,5 @@
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
-using Kuroe.Input.Shared;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Node.Approval;
 using Kuroe.Node.Input;
@@ -25,21 +24,21 @@ public static class TestTypeFiles
         .. new TimeToolSource(TimeProvider.System).Definitions,
     ]);
 
-    /// <summary>建出一份含全部可用类型的注册表，外部输入协议取调用方给出的实例。</summary>
-    public static NodeTypeDescriptionRegistry Registry(IInputChannel inputs)
+    /// <summary>建出一份含全部可用类型的节点类型描述注册表。</summary>
+    public static NodeTypeDescriptionRegistry Registry()
     {
         NodeTypeDescriptionRegistry files = new();
         ContainerNodeTypeDescriptions.RegisterInto(files);
         LlmNodeTypeDescriptions.RegisterInto(files, Contracts);
-        RegisterAll(files, inputs);
+        RegisterAll(files);
 
         return files;
     }
 
     /// <summary>把输入与审批节点描述注册进注册表。</summary>
-    public static void RegisterAll(INodeTypeDescriptionRegistry files, IInputChannel inputs)
+    public static void RegisterAll(INodeTypeDescriptionRegistry files)
     {
-        InputNodeTypeDescriptions.RegisterInto(files, inputs);
-        ApprovalNodeTypeDescriptions.RegisterInto(files, inputs);
+        InputNodeTypeDescriptions.RegisterInto(files);
+        ApprovalNodeTypeDescriptions.RegisterInto(files);
     }
 }

@@ -187,7 +187,6 @@ internal sealed class DialogueFlowControl(
     {
         await gateway.RunAsync(
             execution,
-            null,
             target).ConfigureAwait(false);
 
         lock (task.Gate)

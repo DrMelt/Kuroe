@@ -7,8 +7,7 @@ namespace Kuroe.Node.Input.Tests;
 /// <summary>输入节点的描述契约：字段表与提问文本的读取。</summary>
 public sealed class InputNodeTypeDescriptionTests
 {
-    private static readonly StubInputChannel Channel = new();
-    private static readonly InputNodeTypeDescription File = new(Channel);
+    private static readonly InputNodeTypeDescription File = new();
 
     [Fact]
     public void Kind_is_the_input_node_type() =>

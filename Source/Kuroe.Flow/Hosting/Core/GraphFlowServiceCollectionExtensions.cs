@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
-using Kuroe.Files.Shared;
+using Kuroe.Execution.Shared;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
@@ -21,10 +21,17 @@ using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Persistence.Graph;
+using Kuroe.Node.Approval;
 using Kuroe.Node.Command;
+using Kuroe.Node.Input;
 using Kuroe.Node.File;
 using Kuroe.Node.Llm;
 using Kuroe.Process;
+using Kuroe.Runner;
+using Kuroe.Runner.Approval;
+using Kuroe.Runner.Command;
+using Kuroe.Runner.File;
+using Kuroe.Runner.Input;
 using Kuroe.Tool;
 using Kuroe.Tasks.Records.Shared;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,7 +42,7 @@ namespace Kuroe.Flow.Hosting;
 public sealed record GraphFlowOptions
 {
     /// <summary>追加节点类型描述。图流程固定注册 Container、Llm、FileRead、FileWrite 与 Command。</summary>
-    public Action<INodeTypeDescriptionRegistry, IInputChannel>? RegisterNodeTypes { get; init; }
+    public Action<INodeTypeDescriptionRegistry>? RegisterNodeTypes { get; init; }
 
     /// <summary>流程库个别流程编译失败时是否继续装配。为 false 时按启动错误返回。</summary>
     public bool AllowFlowFailures { get; init; }
@@ -55,7 +62,6 @@ public static class GraphFlowServiceCollectionExtensions
     {
         GraphFlowOptions graphOptions = options ?? new GraphFlowOptions();
         KuroePaths paths = composition.Paths;
-        IWorkspaceFiles files = composition.Files;
 
         ErrorOr<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> hostForms =
             new HostStartInputsStore(paths.HostStartInputsFile).Load();
@@ -85,9 +91,9 @@ public static class GraphFlowServiceCollectionExtensions
         IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
         LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
-        FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, files);
-        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, graphOptions.CommandNodeProcessRunner);
-        graphOptions.RegisterNodeTypes?.Invoke(typeFiles, composition.InputChannel);
+        FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
+        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
+        graphOptions.RegisterNodeTypes?.Invoke(typeFiles);
 
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(
@@ -139,6 +145,30 @@ public static class GraphFlowServiceCollectionExtensions
             new GraphFlowPresentation(),
             new GraphFlowRecordSource()));
 
+        AddBuiltinGraphExecutionRunners(services, composition, graphOptions);
+
         return Result.Success;
+    }
+
+    /// <summary>注册图节点运行器。种类由节点类型给出，运行器实现不认识节点。</summary>
+    public static void AddBuiltinGraphExecutionRunners(
+        this IServiceCollection services,
+        KuroeComposition composition,
+        GraphFlowOptions? options = null)
+    {
+        GraphFlowOptions graphOptions = options ?? new GraphFlowOptions();
+        IProcessRunner process = graphOptions.CommandNodeProcessRunner ?? new ProcessRunner();
+        IInputChannel channel = composition.InputChannel;
+
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new CommandExecutionRunnerFactory(CommandNodeTypes.Name.Value, process));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new FileReadExecutionRunnerFactory(FileReadNodeTypes.Name.Value, composition.Files));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new FileWriteExecutionRunnerFactory(FileWriteNodeTypes.Name.Value, composition.Files));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new InputExecutionRunnerFactory(InputNodeTypes.Name.Value, channel));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new ApprovalExecutionRunnerFactory(ApprovalNodeTypes.Name.Value, channel));
     }
 }

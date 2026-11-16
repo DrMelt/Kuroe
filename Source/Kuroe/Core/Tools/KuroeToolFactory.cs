@@ -1,5 +1,6 @@
 using Kuroe.Execution.Shared;
-using Kuroe.Node.Llm;
+using Kuroe.Runner;
+using Kuroe.Runner.Llm;
 using Kuroe.Tool;
 
 namespace Kuroe.Tools;
@@ -15,29 +16,25 @@ internal sealed class KuroeToolFactory(
         ExecutionRequest request,
         LlmExecutionParameters parameters)
     {
-        Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>> portsByTool = [];
-        IReadOnlyList<ToolPath> paths = parameters.ToolPaths(request.OutputPorts);
-        if (parameters.Parameters is { } declared)
-        {
-            List<(ToolPath Prefix, IReadOnlyDictionary<string, string> Ports)> mappings =
-            [
-                .. declared.ToolPorts
-                    .Select(pair => (Prefix: new ToolPath(pair.Key), Ports: pair.Value))
-                    .OrderByDescending(mapping => mapping.Prefix.Value.Length),
-            ];
+        IReadOnlyList<ToolPath> paths = ExecutionToolPaths.For(parameters.Tools, request.OutputPorts);
+        List<(ToolPath Prefix, IReadOnlyDictionary<string, string> Ports)> mappings =
+        [
+            .. parameters.ToolPorts
+                .Select(pair => (Prefix: new ToolPath(pair.Key), Ports: pair.Value))
+                .OrderByDescending(mapping => mapping.Prefix.Value.Length),
+        ];
 
-            portsByTool = sources
-                .SelectMany(source => source.Definitions)
-                .Select(definition => (
-                    Definition: definition,
-                    Match: mappings.FirstOrDefault(mapping => mapping.Prefix.Allows(definition.Path.Value))))
-                .Where(entry => entry.Match.Ports is not null)
-                .ToDictionary(
-                    entry => entry.Definition.Path.Value,
-                    entry => (IReadOnlyDictionary<string, ExecutionPortName>)entry.Match.Ports.ToDictionary(
-                        pair => pair.Key,
-                        pair => new ExecutionPortName(pair.Value)));
-        }
+        Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>> portsByTool = sources
+            .SelectMany(source => source.Definitions)
+            .Select(definition => (
+                Definition: definition,
+                Match: mappings.FirstOrDefault(mapping => mapping.Prefix.Allows(definition.Path.Value))))
+            .Where(entry => entry.Match.Ports is not null)
+            .ToDictionary(
+                entry => entry.Definition.Path.Value,
+                entry => (IReadOnlyDictionary<string, ExecutionPortName>)entry.Match.Ports.ToDictionary(
+                    pair => pair.Key,
+                    pair => new ExecutionPortName(pair.Value)));
 
         ToolContext context = new(
             new ExecutionPortAccess(request),

@@ -2,7 +2,6 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Input.Runtime;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Node.Approval;
@@ -20,13 +19,12 @@ public sealed class DocFlowExamplesTests
     /// <summary>按当前注册的节点类型编译一份文档。</summary>
     private static ErrorOr<CompiledDocument> Compile(FlowDocument document)
     {
-        var inputs = new InputChannelRegistry();
         NodeTypeDescriptionRegistry files = new();
         ContainerNodeTypeDescriptions.RegisterInto(files);
         LlmNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Contracts);
-        InputNodeTypeDescriptions.RegisterInto(files, inputs);
-        ApprovalNodeTypeDescriptions.RegisterInto(files, inputs);
-        FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath(), new InMemoryWorkspaceFiles());
+        InputNodeTypeDescriptions.RegisterInto(files);
+        ApprovalNodeTypeDescriptions.RegisterInto(files);
+        FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath());
 
         IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
         return compiler.Compile(document, []);

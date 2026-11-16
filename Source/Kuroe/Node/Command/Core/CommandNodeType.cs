@@ -3,19 +3,16 @@ using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Process;
+using Kuroe.Runner;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点类型：派发执行，按命令变量展开执行目录与参数并执行一次命令，把合并输出按内容产出发布到文本端口。</summary>
-public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunner process)
-    : INodeType, INodeTypeValidation, IExecutionRunnerFactory, IExecutionParameterProvider
+/// <summary>命令节点类型：按命令变量展开执行目录与参数并执行一次命令，把合并输出按内容产出发布到文本端口。</summary>
+public sealed class CommandNodeType(CommandExecutionParameters? parameters)
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
-    public CommandParameters? Parameters { get; } = parameters;
-
-    /// <summary>进程执行边界。</summary>
-    public IProcessRunner Process { get; } = process;
+    public CommandExecutionParameters? Parameters { get; } = parameters;
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => CommandNodeTypes.Name;
@@ -44,15 +41,6 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
 
         Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
-
-    /// <inheritdoc/>
-    string IExecutionRunnerFactory.Kind => Kind.Value;
-
-    /// <summary>为一次执行建立命令运行器。</summary>
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
-        target.Parameters is CommandParameters declared
-            ? new CommandExecutionRunner(declared, Process)
-            : throw new InvalidOperationException("命令执行节点的参数类型不匹配。");
 
     /// <summary>按本次执行建立命令参数。</summary>
     public IExecutionParameters Create(ExecutionParameterContext context) =>

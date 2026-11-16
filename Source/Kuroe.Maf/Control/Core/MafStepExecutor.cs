@@ -44,7 +44,7 @@ internal sealed class MafStepExecutor(
         using CancellationTokenRegistration registration = cancellationToken.Register(
             () => gateway.Interrupt(execution, "MAF 流程取消。"));
 
-        ErrorOr<Success> run = await gateway.RunAsync(execution, null, target).ConfigureAwait(false);
+        ErrorOr<Success> run = await gateway.RunAsync(execution, target).ConfigureAwait(false);
 
         ExecutionSnapshot snapshot = execution.Snapshot();
         if (snapshot.State == ExecutionState.Interrupted)

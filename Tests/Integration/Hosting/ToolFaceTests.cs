@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Assistant;
 using Kuroe.Configuration.Files;
-using Kuroe.Node.Llm.Tools;
+using Kuroe.Runner.Llm.Tools;
 using Kuroe.Tool;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

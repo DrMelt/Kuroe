@@ -28,9 +28,8 @@ public sealed class TaskExecutionGateway(
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionRunnerFactory? own,
         IExecutionTarget target) =>
-        runtime.RunAsync(execution, own, target);
+        runtime.RunAsync(execution, target);
 
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunRestoreAsync(

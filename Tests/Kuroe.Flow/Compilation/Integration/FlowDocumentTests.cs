@@ -4,7 +4,6 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.NodeLibrary;
-using Kuroe.Input.Runtime;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
@@ -17,11 +16,8 @@ namespace Kuroe.Flow.Compilation.Integration.Tests;
 /// <summary>流程文档的转换、编译规则与读写往返。</summary>
 public sealed class FlowDocumentTests
 {
-    /// <summary>解析与读写往返用的外部输入协议实例，这些用例不驱动节点执行。</summary>
-    private static readonly InputChannelRegistry Inputs = new();
-
     private static IFlowDescriptionCompiler Compiler =>
-        new FlowDescriptionCompiler(TestTypeFiles.Registry(Inputs), new NodeLibraryExpander());
+        new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander());
 
     [Fact]
     public void Flow_without_root_node_is_rejected() =>
@@ -1021,7 +1017,7 @@ public sealed class FlowDocumentTests
     /// <summary>按给定类型描述编译一份文档，读取失败时给读取错误。</summary>
     private static ErrorOr<CompiledDocument> CompileWith(INodeTypeDescription description, string json)
     {
-        NodeTypeDescriptionRegistry files = TestTypeFiles.Registry(Inputs);
+        NodeTypeDescriptionRegistry files = TestTypeFiles.Registry();
         files.Register(description);
         IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
         ErrorOr<FlowDocument> document = FlowDocumentSource.Read(json);

@@ -1,4 +1,3 @@
-using Kuroe.Input.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
@@ -22,7 +21,7 @@ public static class InputNodeTypes
         OutputTypes = [PortTypes.Text],
     };
 
-    /// <summary>按类型专属声明建出类型实例，未声明时取默认声明。外部输入协议是建运行期对象所需的运行期依赖，由装配处给出。</summary>
-    public static INodeType Create(InputParameters? parameters, IInputChannel channel) =>
-        new InputNodeType(parameters, channel);
+    /// <summary>按类型专属声明建出类型实例，未声明时取默认声明。</summary>
+    public static INodeType Create(InputParameters? parameters) =>
+        new InputNodeType(parameters);
 }

@@ -1,7 +1,6 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
-using Kuroe.Process;
 using Xunit;
 
 namespace Kuroe.Node.Command.Tests;
@@ -14,7 +13,7 @@ public sealed class CommandNodeTypeDescriptionTests
     [Fact]
     public void Description_declares_the_kind_shape_and_fields()
     {
-        CommandNodeTypeDescription description = new(Root, new FakeProcessRunner());
+        CommandNodeTypeDescription description = new(Root);
 
         Assert.Equal(CommandNodeTypes.Name, description.Kind);
         Assert.Equal(CommandNodeTypes.Shape, description.Shape);
@@ -35,12 +34,12 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Read_keeps_program_arguments_directory_and_limits()
     {
         List<string> failures = [];
-        INodeType type = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
+        INodeType type = new CommandNodeTypeDescription(Root)
             .Read(new Reader("dotnet", ["build", "--no-restore"], "{root}/src", 30, 1200,
                 new Dictionary<string, string> { ["root"] = "任务路径" }, failOnNonZeroExitCode: true), failures.Add);
 
-        CommandParameters parameters =
-            Assert.IsType<CommandParameters>(Assert.IsType<CommandNodeType>(type).Parameters);
+        CommandExecutionParameters parameters =
+            Assert.IsType<CommandExecutionParameters>(Assert.IsType<CommandNodeType>(type).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal("dotnet", parameters.Program);
@@ -57,7 +56,7 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Missing_program_is_reported()
     {
         List<string> failures = [];
-        _ = new CommandNodeTypeDescription(Root, new FakeProcessRunner()).Read(new Reader(), failures.Add);
+        _ = new CommandNodeTypeDescription(Root).Read(new Reader(), failures.Add);
 
         Assert.Equal(["命令执行节点必须声明 Program。"], failures);
     }
@@ -66,7 +65,7 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Non_positive_timeout_is_reported()
     {
         List<string> failures = [];
-        _ = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
+        _ = new CommandNodeTypeDescription(Root)
             .Read(new Reader("dotnet", timeoutSeconds: 0), failures.Add);
 
         Assert.Equal(["TimeoutSeconds 必须是正整数。"], failures);
@@ -76,7 +75,7 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Negative_max_chars_is_reported()
     {
         List<string> failures = [];
-        _ = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
+        _ = new CommandNodeTypeDescription(Root)
             .Read(new Reader("dotnet", maxChars: -1), failures.Add);
 
         Assert.Equal(["MaxChars 不能是负数。"], failures);
@@ -86,11 +85,11 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Defaults_use_the_workspace_root_and_declared_limits()
     {
         List<string> failures = [];
-        INodeType type = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
+        INodeType type = new CommandNodeTypeDescription(Root)
             .Read(new Reader("dotnet"), failures.Add);
 
-        CommandParameters parameters =
-            Assert.IsType<CommandParameters>(Assert.IsType<CommandNodeType>(type).Parameters);
+        CommandExecutionParameters parameters =
+            Assert.IsType<CommandExecutionParameters>(Assert.IsType<CommandNodeType>(type).Parameters);
 
         Assert.Empty(failures);
         Assert.Null(parameters.Directory);
@@ -105,7 +104,7 @@ public sealed class CommandNodeTypeDescriptionTests
     {
         RecordingRegistry registry = new();
 
-        CommandNodeTypeDescriptions.RegisterInto(registry, Root, new FakeProcessRunner());
+        CommandNodeTypeDescriptions.RegisterInto(registry, Root);
 
         Assert.Equal([CommandNodeTypes.Name], registry.Kinds);
     }
@@ -162,14 +161,4 @@ public sealed class CommandNodeTypeDescriptionTests
         public IReadOnlyList<NodeKind> Kinds => [.. _descriptions.Select(description => description.Kind)];
     }
 
-    /// <summary>测试用的进程执行替身，描述读取阶段不会调用。</summary>
-    private sealed class FakeProcessRunner : IProcessRunner
-    {
-        public ProcessResult Run(
-            string program,
-            IReadOnlyList<string> arguments,
-            string workingDirectory,
-            TimeSpan timeout) =>
-            new(string.Empty, 0, TimedOut: false);
-    }
 }

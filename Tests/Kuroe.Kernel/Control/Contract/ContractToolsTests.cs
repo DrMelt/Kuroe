@@ -126,7 +126,6 @@ internal sealed class FakeGateway : ITaskExecutionGateway
 
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionRunnerFactory? own,
         IExecutionTarget target) =>
         throw new NotSupportedException();
 

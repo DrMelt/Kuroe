@@ -1,3 +1,5 @@
+using Kuroe.Execution.Shared;
+using Kuroe.Runner;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm;
@@ -17,4 +19,11 @@ public sealed record LlmParameters
     /// <summary>工具路径到路径变量映射的对应表，键是工具路径，值是变量名到输入端口名。</summary>
     public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> ToolPorts { get; init; } =
         new Dictionary<string, IReadOnlyDictionary<string, string>>();
+
+    /// <summary>按本次执行使用的模型建立执行参数，会话种子由调用方给出。</summary>
+    public LlmExecutionParameters ToExecutionParameters(string? model, ExecutionRestoreState? seed = null) =>
+        new(Prompt, [.. Tools.Select(tool => tool.Value)], SystemPrompt, ToolPorts, model)
+        {
+            ConversationSeed = seed,
+        };
 }

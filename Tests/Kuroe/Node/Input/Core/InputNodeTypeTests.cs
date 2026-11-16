@@ -11,8 +11,7 @@ namespace Kuroe.Node.Input.Tests;
 /// <summary>输入节点类型的形状与类型规则：启动执行后等待回答，只以用户回答为产出。</summary>
 public sealed class InputNodeTypeTests
 {
-    private static readonly StubInputChannel Channel = new();
-    private static readonly InputNodeType NodeType = new(null, Channel);
+    private static readonly InputNodeType NodeType = new(null);
 
     [Fact]
     public void Name_is_the_kind_written_in_files()
@@ -24,7 +23,7 @@ public sealed class InputNodeTypeTests
     [Fact]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType type = InputNodeTypes.Create(new InputParameters { Question = "要做什么" }, Channel);
+        INodeType type = InputNodeTypes.Create(new InputParameters { Question = "要做什么" });
 
         Assert.Equal(InputNodeTypes.Name, type.Kind);
         Assert.Equal("要做什么", Assert.IsType<InputNodeType>(type).Parameters?.Question);
@@ -74,7 +73,7 @@ public sealed class InputNodeTypeTests
     private static NodeSpec Node(ExecutableSpec? spec = null) => new()
     {
         Label = new NodeLabel("收话"),
-        Type = InputNodeTypes.Create(null, Channel),
+        Type = InputNodeTypes.Create(null),
         Spec = spec ?? new ExecutableSpec(),
     };
 }

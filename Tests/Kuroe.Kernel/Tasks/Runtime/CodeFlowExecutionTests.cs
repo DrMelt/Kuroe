@@ -26,7 +26,7 @@ public sealed class CodeFlowExecutionTests
         Harness harness = Harness.Create();
         IExecution execution = harness.Open();
 
-        await harness.RunAsync(
+        await Harness.RunAsync(
             execution,
             new PortRunnerFactory(harness.Submitter, Conclusion, "得出结论"),
             new CodeTarget());
@@ -152,8 +152,8 @@ public sealed class CodeFlowExecutionTests
             return execution;
         }
 
-        public Task<ErrorOr<Success>> RunAsync(IExecution execution, IExecutionRunnerFactory runner, IExecutionTarget target) =>
-            Runtime.RunAsync(execution, runner, target);
+        public static Task<ErrorOr<Success>> RunAsync(IExecution execution, IExecutionRunnerFactory runner, IExecutionTarget target) =>
+            new ExecutionRuntime(new ExecutionDispatcher(), new ExecutionRunnerRegistry([runner]), new ExecutionRestorerRegistry()).RunAsync(execution, target);
     }
 }
 internal sealed class CodeIdentity : IFlowIdentity
@@ -233,7 +233,6 @@ internal sealed class CodeTarget : IExecutionTarget
 
     public string Kind => "code";
 
-    public bool UsesDefaultRunner => false;
 
     public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;
 }

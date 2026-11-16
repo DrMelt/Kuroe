@@ -1,19 +1,18 @@
 using Kuroe.Execution.Shared;
 using Kuroe.Flow.Compilation.Shared.Validation;
-using Kuroe.Input.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Runner;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Node.Input;
 
-/// <summary>输入节点类型：启动执行后等待用户回答，回答即产出放行下游。
-/// 外部输入协议是执行运行器的运行期依赖，随类型实例带到运行期对象。</summary>
-public sealed class InputNodeType(InputParameters? parameters, IInputChannel channel)
-    : INodeType, INodeTypeValidation, IExecutionRunnerFactory, INodeOutputProjection
+/// <summary>输入节点类型：启动执行后等待用户回答，回答即产出放行下游。</summary>
+public sealed class InputNodeType(InputParameters? parameters)
+    : INodeType, INodeTypeValidation, INodeOutputProjection, IExecutionParameterProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public InputParameters? Parameters { get; } = parameters;
@@ -23,9 +22,6 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
 
     /// <summary>输入节点类型的静态形状。</summary>
     public NodeTypeShape Shape => InputNodeTypes.Shape;
-
-    /// <summary>执行运行器的种类。</summary>
-    string IExecutionRunnerFactory.Kind => InputNodeTypes.Name.Value;
 
     /// <summary>输入节点的类型规则：只以用户输入为产出。</summary>
     public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
@@ -42,9 +38,9 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
         Reject(node.Outputs.Any(port => port.Trigger), "输入节点的输出端口不能使用触发。");
     }
 
-    /// <summary>输入节点的执行运行器。</summary>
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
-        new InputExecutionRunner(channel, Parameters?.Question);
+    /// <summary>按本次执行建立输入参数，等待步骤取执行目标。</summary>
+    public IExecutionParameters Create(ExecutionParameterContext context) =>
+        new InputExecutionParameters(Parameters?.Question, ExecutionTargetPaths.StepPath(context.Target));
 
     /// <summary>把回答文本投影为承载文本的输出端口，出处指向本节点的输入。</summary>
     public Publication Project(ExecutionId execution, GraphExecutionInput input, ExecutionOutput output)

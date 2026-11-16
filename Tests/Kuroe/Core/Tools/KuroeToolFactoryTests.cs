@@ -1,5 +1,5 @@
 using Kuroe.Execution.Shared;
-using Kuroe.Node.Llm;
+using Kuroe.Runner;
 using Kuroe.Shared;
 using Kuroe.Tool;
 using Kuroe.Tools;
@@ -17,15 +17,16 @@ public sealed class KuroeToolFactoryTests
             new ToolDefinition(new ToolPath("group/tool"), "父", [], ["root"]),
             new ToolDefinition(new ToolPath("group/sub/tool"), "子", [], ["project"]));
 
-        LlmParameters parameters = new()
-        {
-            Tools = [new ToolPath("group")],
-            ToolPorts = new Dictionary<string, IReadOnlyDictionary<string, string>>
+        LlmExecutionParameters parameters = new(
+            null,
+            ["group"],
+            [],
+            new Dictionary<string, IReadOnlyDictionary<string, string>>
             {
                 ["group"] = new Dictionary<string, string> { [PathVariables.RootName] = "任务路径" },
                 ["group/sub"] = new Dictionary<string, string> { ["project"] = "项目路径" },
             },
-        };
+            null);
         ExecutionRequest request = Request(new Dictionary<ExecutionPortName, string>
         {
             [new ExecutionPortName("任务路径")] = "任务值",
@@ -36,7 +37,7 @@ public sealed class KuroeToolFactoryTests
             .Create(
                 new ExecutionId(1),
                 request,
-                new LlmExecutionParameters(parameters, null, LlmNodeTypes.Kind));
+                parameters);
         CapturingTool parent = Assert.IsType<CapturingTool>(
             tools.Single(tool => tool.Functions.Single().Definition.Path.Value == "group/tool"));
         CapturingTool child = Assert.IsType<CapturingTool>(
@@ -51,13 +52,13 @@ public sealed class KuroeToolFactoryTests
     {
         CapturingToolSource source = new(new ToolDefinition(new ToolPath("group/tool"), "父", [], [PathVariables.RootName]));
         ExecutionRequest request = ToolInput(staticPort: true, "任务值", "动态值");
-        LlmParameters parameters = ToolParameters();
+        LlmExecutionParameters parameters = ToolParameters();
 
         CapturingTool tool = Assert.IsType<CapturingTool>(Assert.Single(
             new KuroeToolFactory([source], "C:/workspace").Create(
                 new ExecutionId(1),
                 request,
-                new LlmExecutionParameters(parameters, null, LlmNodeTypes.Kind))));
+                parameters)));
 
         Assert.Equal("任务值", tool.Binding.Variable(PathVariables.RootName));
     }
@@ -67,13 +68,13 @@ public sealed class KuroeToolFactoryTests
     {
         CapturingToolSource source = new(new ToolDefinition(new ToolPath("group/tool"), "父", [], [PathVariables.RootName]));
         ExecutionRequest request = ToolInput(staticPort: false, "静态值", "动态值");
-        LlmParameters parameters = ToolParameters();
+        LlmExecutionParameters parameters = ToolParameters();
 
         CapturingTool tool = Assert.IsType<CapturingTool>(Assert.Single(
             new KuroeToolFactory([source], "C:/workspace").Create(
                 new ExecutionId(1),
                 request,
-                new LlmExecutionParameters(parameters, null, LlmNodeTypes.Kind))));
+                parameters)));
 
         Assert.Equal("动态值", tool.Binding.Variable(PathVariables.RootName));
     }
@@ -88,14 +89,15 @@ public sealed class KuroeToolFactoryTests
         });
     }
 
-    private static LlmParameters ToolParameters() => new()
-    {
-        Tools = [new ToolPath("group")],
-        ToolPorts = new Dictionary<string, IReadOnlyDictionary<string, string>>
+    private static LlmExecutionParameters ToolParameters() => new(
+        null,
+        ["group"],
+        [],
+        new Dictionary<string, IReadOnlyDictionary<string, string>>
         {
             ["group"] = new Dictionary<string, string> { [PathVariables.RootName] = "任务路径" },
         },
-    };
+        null);
 
     private static ExecutionRequest Request(IReadOnlyDictionary<ExecutionPortName, string> texts) =>
         new(

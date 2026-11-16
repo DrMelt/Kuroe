@@ -14,7 +14,7 @@ using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 using Kuroe.Tasks.Persistence.Saving.Shared;
-using Kuroe.Node.Llm.Tools;
+using Kuroe.Runner.Llm.Tools;
 using Kuroe.Assistant;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant.Dialogue;
@@ -192,7 +192,16 @@ public sealed class TestEnvironment : IDisposable
             return assistant.ErrorsOrEmptyList;
         }
 
-        // 后注册的同类型解析时胜出，据此把真实执行器换成假的
+        for (int index = services.Count - 1; index >= 0; index--)
+        {
+            if (services[index].ServiceType == typeof(Execution.Shared.IExecutionRunnerFactory)
+                || services[index].ServiceType == typeof(Execution.Shared.IExecutionRestorer))
+            {
+                services.RemoveAt(index);
+            }
+        }
+
+        services.AddBuiltinGraphExecutionRunners(composition.Value);
         services.AddSingleton<Execution.Shared.IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();

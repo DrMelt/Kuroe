@@ -18,6 +18,12 @@
     <Project Path="Source/Kuroe/Tool/Implementation/Contract/Core/Kuroe.Tool.Contract.csproj" />
     <Project Path="Source/Kuroe/Tool/Implementation/KuroeInfo/Core/Kuroe.Tool.KuroeInfo.csproj" />
     <Project Path="Source/Kuroe/Node/Llm/Core/Kuroe.Node.Llm.csproj" />
+    <Project Path="Source/Kuroe.Runner/Shared/Kuroe.Runner.Shared.csproj" />
+    <Project Path="Source/Kuroe.Runner/Llm/Core/Kuroe.Runner.Llm.csproj" />
+    <Project Path="Source/Kuroe.Runner/Command/Core/Kuroe.Runner.Command.csproj" />
+    <Project Path="Source/Kuroe.Runner/File/Core/Kuroe.Runner.File.csproj" />
+    <Project Path="Source/Kuroe.Runner/Input/Core/Kuroe.Runner.Input.csproj" />
+    <Project Path="Source/Kuroe.Runner/Approval/Core/Kuroe.Runner.Approval.csproj" />
     <Project Path="Source/Kuroe/Node/File/Core/Kuroe.Node.File.csproj" />
     <Project Path="Source/Kuroe/Node/Command/Core/Kuroe.Node.Command.csproj" />
     <Project Path="Source/Kuroe/Node/Input/Core/Kuroe.Node.Input.csproj" />
@@ -118,6 +124,11 @@
     <Project Path="Tests/Kuroe.Flow/Persistence/Serialization/Json/Kuroe.Tasks.Persistence.Json.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Persistence/Serialization/Shared/Kuroe.Tasks.Persistence.Serialization.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Persistence/Files/Kuroe.Tasks.Persistence.Files.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Runner/Command/Core/Kuroe.Runner.Command.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Runner/File/Core/Kuroe.Runner.File.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Runner/Input/Core/Kuroe.Runner.Input.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Runner/Approval/Core/Kuroe.Runner.Approval.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Runner/Llm/Core/Kuroe.Runner.Llm.Tests.csproj" />
     <Project Path="Tests/Kuroe.Console/Kuroe.Console.Tests.csproj" />
     <Project Path="Tests/Kuroe.Cli/Kuroe.Cli.Tests.csproj" />
 </Solution>

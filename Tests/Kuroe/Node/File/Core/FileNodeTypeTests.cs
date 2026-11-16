@@ -4,7 +4,6 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
-using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Node.File.Tests;
@@ -12,7 +11,7 @@ namespace Kuroe.Node.File.Tests;
 /// <summary>文件节点类型的形状与类型规则：派发执行，按版本读写工作目录内文件。</summary>
 public sealed class FileNodeTypeTests
 {
-    private static readonly FileParameters Parameters = new()
+    private static readonly FileExecutionParameters Parameters = new()
     {
         Path = "{root}/a.txt",
         Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
@@ -20,9 +19,8 @@ public sealed class FileNodeTypeTests
         MaxChars = 8000,
     };
 
-    private static readonly InMemoryWorkspaceFiles Files = new();
-    private static readonly FileReadNodeType ReadType = new(Parameters, Files);
-    private static readonly FileWriteNodeType WriteType = new(Parameters, Files);
+    private static readonly FileReadNodeType ReadType = new(Parameters);
+    private static readonly FileWriteNodeType WriteType = new(Parameters);
 
     [Fact]
     public void Names_are_the_kinds_written_in_files()
@@ -36,8 +34,8 @@ public sealed class FileNodeTypeTests
     [Fact]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType read = FileReadNodeTypes.Create(Parameters, Files);
-        INodeType write = FileWriteNodeTypes.Create(Parameters, Files);
+        INodeType read = FileReadNodeTypes.Create(Parameters);
+        INodeType write = FileWriteNodeTypes.Create(Parameters);
 
         Assert.Same(Parameters, Assert.IsType<FileReadNodeType>(read).Parameters);
         Assert.Same(Parameters, Assert.IsType<FileWriteNodeType>(write).Parameters);

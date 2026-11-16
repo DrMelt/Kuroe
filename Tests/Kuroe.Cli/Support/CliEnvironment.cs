@@ -43,7 +43,19 @@ internal sealed class CliEnvironment : IAsyncDisposable
         StubRunner runner = new();
         ErrorOr<CliSession> created = CliSession.Create(
             root,
-            services => services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(runner));
+            services =>
+            {
+                for (int index = services.Count - 1; index >= 0; index--)
+                {
+                    if (services[index].ServiceType == typeof(Kuroe.Execution.Shared.IExecutionRunnerFactory)
+                        || services[index].ServiceType == typeof(Kuroe.Execution.Shared.IExecutionRestorer))
+                    {
+                        services.RemoveAt(index);
+                    }
+                }
+
+                services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(runner);
+            });
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join('；', created.ErrorsOrEmptyList.Select(error => error.Description)));

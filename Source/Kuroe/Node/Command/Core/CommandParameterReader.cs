@@ -1,5 +1,6 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Runner;
 
 namespace Kuroe.Node.Command;
 
@@ -7,7 +8,7 @@ namespace Kuroe.Node.Command;
 internal static class CommandParameterReader
 {
     /// <summary>读出程序、参数、执行目录、命令变量、超时、输出上限与退出码策略，缺失或非法时经 fail 报出。</summary>
-    internal static CommandParameters Read(
+    internal static CommandExecutionParameters Read(
         IParameterReader values,
         ValidationMessageHandler fail,
         string rootDirectory)
@@ -43,7 +44,7 @@ internal static class CommandParameterReader
 
         bool? failOnNonZeroExitCode = values.Boolean(CommandParameterNames.FailOnNonZeroExitCode);
 
-        return new CommandParameters
+        return new CommandExecutionParameters
         {
             Program = program,
             Arguments = arguments,

@@ -2,20 +2,16 @@ using Kuroe.Execution.Shared;
 
 namespace Kuroe.Execution;
 
-/// <summary>按执行种类选择运行器。节点类型自带运行器时优先，其次同种类注册，最后通配注册。</summary>
+/// <summary>按执行种类选择运行器：同种类注册优先，其次通配注册。</summary>
 public sealed class ExecutionRunnerRegistry(
-    IReadOnlyList<IExecutionRunnerFactory>? runners = null,
-    IExecutionRunnerFactory? fallback = null)
+    IReadOnlyList<IExecutionRunnerFactory>? runners = null)
 {
     /// <summary>为一次执行建立运行器。</summary>
     public IExecutionRunner Create(
-        IExecutionRunnerFactory? own,
         IExecutionTarget target,
         ExecutionId execution)
     {
-        IExecutionRunnerFactory? factory = own
-            ?? (target.UsesDefaultRunner ? fallback : null)
-            ?? runners?.FirstOrDefault(candidate => candidate.Kind == target.Kind)
+        IExecutionRunnerFactory? factory = runners?.FirstOrDefault(candidate => candidate.Kind == target.Kind)
             ?? runners?.FirstOrDefault(candidate => candidate.Kind == "*");
 
         return factory is null

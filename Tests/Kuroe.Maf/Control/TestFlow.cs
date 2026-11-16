@@ -49,7 +49,7 @@ internal static class TestFlow
         new(new MafStepId(from), new MafStepId(to));
 
     internal static MafStepTarget Target() =>
-        new(FakeRunnerFactory.KindName, false, _ => EmptyExecutionParameters.Instance);
+        new(FakeRunnerFactory.KindName, _ => EmptyExecutionParameters.Instance);
 
     internal static StartInputs Inputs() => new(
     [
@@ -152,7 +152,6 @@ internal sealed class UnusedGateway : ITaskExecutionGateway
 
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionRunnerFactory? own,
         IExecutionTarget target) => throw new NotSupportedException();
 
     public Task<ErrorOr<Success>> RunRestoreAsync(

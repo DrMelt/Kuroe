@@ -2,6 +2,7 @@ using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
+using Kuroe.Runner;
 using Kuroe.Shared;
 
 namespace Kuroe.Node.File;
@@ -12,7 +13,7 @@ internal static class FilePathVariables
     /// <summary>校验声明并返回映射到的输入端口名。</summary>
     internal static IReadOnlySet<string> Validate(
         NodeSpec node,
-        FileParameters? parameters,
+        FileExecutionParameters? parameters,
         ValidationMessageHandler fail)
     {
         IReadOnlyDictionary<string, string> variables =
