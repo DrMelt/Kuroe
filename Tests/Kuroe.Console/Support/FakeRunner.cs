@@ -19,7 +19,7 @@ namespace Kuroe.Console.Tests.Support;
 public sealed class FakeRunner : NeutralExecutionRunnerFactory
 {
     /// <inheritdoc/>
-    public string Kind => "*";
+    public ExecutionKind Kind => ExecutionKind.Any;
 
     /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
     public IExecutionPortSubmitter? PortSubmitter { get; set; }

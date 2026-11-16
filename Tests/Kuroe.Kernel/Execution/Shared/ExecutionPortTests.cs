@@ -28,7 +28,7 @@ public sealed class ExecutionPortTests
         ExecutionRequest request = new(
             new ExecutionOwnerId("task"),
             new ExecutionTargetId("step"),
-            "test",
+            new ExecutionKind("test"),
             1,
             [new ExecutionInputPort(input, ExecutionPortKind.Text, ExecutionPortRole.Content, true, null)],
             [new ExecutionInputValue(input, "hello", "start")],
@@ -37,7 +37,7 @@ public sealed class ExecutionPortTests
 
         Assert.Equal("task", request.Owner.Value);
         Assert.Equal("step", request.Target.Value);
-        Assert.Equal("test", request.Kind);
+        Assert.Equal(new ExecutionKind("test"), request.Kind);
         Assert.Equal(1, request.Attempt);
         Assert.Equal(input, Assert.Single(request.InputPorts).Name);
         Assert.Equal("hello", Assert.Single(request.Inputs).Text);

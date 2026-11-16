@@ -134,7 +134,7 @@ public sealed class CodeFlowExecutionTests
             ExecutionRequest request = new(
                 new ExecutionOwnerId(Task.Id.Value),
                 new ExecutionTargetId("回话"),
-                "code",
+                new ExecutionKind("code"),
                 1,
                 [new ExecutionInputPort(Input, ExecutionPortKind.Text, ExecutionPortRole.Content, true, null)],
                 [new ExecutionInputValue(Input, "目标", null)],
@@ -231,7 +231,7 @@ internal sealed class CodeTarget : IExecutionTarget
 {
     public ExecutionTargetId Id => new("回话");
 
-    public string Kind => "code";
+    public ExecutionKind Kind => new("code");
 
 
     public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;
@@ -242,7 +242,7 @@ internal sealed class PortRunnerFactory(
     ExecutionPortName port,
     string text) : IExecutionRunnerFactory
 {
-    public string Kind => "code";
+    public ExecutionKind Kind => new("code");
 
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         new PortRunner(submitter, execution, port, text);

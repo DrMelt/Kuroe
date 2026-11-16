@@ -6,12 +6,12 @@ namespace Kuroe.Runner.Llm.Executions;
 
 /// <summary>为 Llm 执行节点建立单次执行的运行器，并校验与建立恢复执行。</summary>
 public sealed class LlmExecutionRunnerFactory(
-    string kind,
+    ExecutionKind kind,
     SessionFactory sessions,
     IExecutionStatusReader status) : IExecutionRunnerFactory, IExecutionRestorer
 {
     /// <inheritdoc/>
-    public string Kind => kind;
+    public ExecutionKind Kind => kind;
 
     /// <summary>为一次普通执行建立运行器。</summary>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>

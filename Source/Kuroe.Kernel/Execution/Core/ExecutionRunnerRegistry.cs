@@ -2,7 +2,7 @@ using Kuroe.Execution.Shared;
 
 namespace Kuroe.Execution;
 
-/// <summary>按执行种类选择运行器：同种类注册优先，其次通配注册。</summary>
+/// <summary>按执行种类选择运行器：同种类注册优先，其次 <see cref="ExecutionKind.Any"/> 通配注册。</summary>
 public sealed class ExecutionRunnerRegistry(
     IReadOnlyList<IExecutionRunnerFactory>? runners = null)
 {
@@ -12,10 +12,10 @@ public sealed class ExecutionRunnerRegistry(
         ExecutionId execution)
     {
         IExecutionRunnerFactory? factory = runners?.FirstOrDefault(candidate => candidate.Kind == target.Kind)
-            ?? runners?.FirstOrDefault(candidate => candidate.Kind == "*");
+            ?? runners?.FirstOrDefault(candidate => candidate.Kind == ExecutionKind.Any);
 
         return factory is null
-            ? throw new InvalidOperationException($"执行种类 {target.Kind} 没有可用的执行器。")
+            ? throw new InvalidOperationException($"执行种类 {target.Kind.Value} 没有可用的执行器。")
             : factory.Create(target, execution);
     }
 }

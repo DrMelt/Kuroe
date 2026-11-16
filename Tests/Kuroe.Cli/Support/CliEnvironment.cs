@@ -3,6 +3,7 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Microsoft.Extensions.DependencyInjection;
 using NeutralExecutionId = Kuroe.Execution.Shared.ExecutionId;
+using NeutralExecutionKind = Kuroe.Execution.Shared.ExecutionKind;
 using NeutralExecutionOutput = Kuroe.Execution.Shared.ExecutionOutput;
 using NeutralExecutionRequest = Kuroe.Execution.Shared.ExecutionRequest;
 using NeutralExecutionRunner = Kuroe.Execution.Shared.IExecutionRunner;
@@ -134,7 +135,7 @@ internal sealed class CliEnvironment : IAsyncDisposable
 internal sealed class StubRunner : NeutralExecutionRunnerFactory
 {
     /// <inheritdoc/>
-    public string Kind => "*";
+    public NeutralExecutionKind Kind => NeutralExecutionKind.Any;
 
     /// <summary>每次执行播发的文本。</summary>
     public string Text { get; set; } = "输出";

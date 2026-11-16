@@ -97,7 +97,7 @@ public sealed class ContractToolsTests
         ExecutionRequest request = new(
             new ExecutionOwnerId(task.Id.Value),
             new ExecutionTargetId("步骤"),
-            "test",
+            new ExecutionKind("test"),
             1,
             [],
             [],

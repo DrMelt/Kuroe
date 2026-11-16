@@ -5,11 +5,11 @@ namespace Kuroe.Runner.Input;
 
 /// <summary>为输入执行建立运行器。</summary>
 public sealed class InputExecutionRunnerFactory(
-    string kind,
+    ExecutionKind kind,
     IInputChannel channel) : IExecutionRunnerFactory
 {
     /// <inheritdoc/>
-    public string Kind => kind;
+    public ExecutionKind Kind => kind;
 
     /// <inheritdoc/>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>

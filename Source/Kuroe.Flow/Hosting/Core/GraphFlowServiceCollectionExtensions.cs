@@ -161,14 +161,14 @@ public static class GraphFlowServiceCollectionExtensions
         IInputChannel channel = composition.InputChannel;
 
         services.AddSingleton<IExecutionRunnerFactory>(
-            new CommandExecutionRunnerFactory(CommandNodeTypes.Name.Value, process));
+            new CommandExecutionRunnerFactory(CommandNodeTypes.Kind, process));
         services.AddSingleton<IExecutionRunnerFactory>(
-            new FileReadExecutionRunnerFactory(FileReadNodeTypes.Name.Value, composition.Files));
+            new FileReadExecutionRunnerFactory(FileReadNodeTypes.Kind, composition.Files));
         services.AddSingleton<IExecutionRunnerFactory>(
-            new FileWriteExecutionRunnerFactory(FileWriteNodeTypes.Name.Value, composition.Files));
+            new FileWriteExecutionRunnerFactory(FileWriteNodeTypes.Kind, composition.Files));
         services.AddSingleton<IExecutionRunnerFactory>(
-            new InputExecutionRunnerFactory(InputNodeTypes.Name.Value, channel));
+            new InputExecutionRunnerFactory(InputNodeTypes.Kind, channel));
         services.AddSingleton<IExecutionRunnerFactory>(
-            new ApprovalExecutionRunnerFactory(ApprovalNodeTypes.Name.Value, channel));
+            new ApprovalExecutionRunnerFactory(ApprovalNodeTypes.Kind, channel));
     }
 }

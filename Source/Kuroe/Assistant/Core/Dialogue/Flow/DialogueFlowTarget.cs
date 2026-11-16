@@ -13,7 +13,7 @@ internal sealed class DialogueFlowTarget(
     public ExecutionTargetId Id => new(DialogueFlow.ReplyLabel);
 
     /// <inheritdoc/>
-    public string Kind => LlmNodeTypes.Kind;
+    public ExecutionKind Kind => LlmNodeTypes.Kind;
 
     /// <inheritdoc/>
     public IExecutionParameters Parameters { get; } = parameters.ToExecutionParameters(model, seed);

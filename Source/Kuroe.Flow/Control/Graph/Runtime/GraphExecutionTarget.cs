@@ -11,7 +11,7 @@ internal sealed class GraphExecutionTarget : IExecutionTarget
     {
         Input = input;
         Id = GraphRecordTargets.Format(input.Node);
-        Kind = input.Type.Kind.Value;
+        Kind = new ExecutionKind(input.Type.Kind.Value);
         Parameters = input.Type is IExecutionParameterProvider provider
             ? provider.Create(context)
             : EmptyExecutionParameters.Instance;
@@ -21,7 +21,7 @@ internal sealed class GraphExecutionTarget : IExecutionTarget
     public ExecutionTargetId Id { get; }
 
     /// <summary>执行种类，取节点类型名。</summary>
-    public string Kind { get; }
+    public ExecutionKind Kind { get; }
 
     /// <summary>节点类型给出的参数。</summary>
     public IExecutionParameters Parameters { get; }

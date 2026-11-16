@@ -30,10 +30,10 @@ namespace Kuroe.Integration.Tests.Support;
 public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecutionRestorer
 {
     /// <inheritdoc/>
-    string NeutralExecutionRunnerFactory.Kind => "*";
+    ExecutionKind NeutralExecutionRunnerFactory.Kind => ExecutionKind.Any;
 
     /// <inheritdoc/>
-    string NeutralExecutionRestorer.Kind => "*";
+    ExecutionKind NeutralExecutionRestorer.Kind => ExecutionKind.Any;
     private readonly Lock _gate = new();
     private readonly List<IGraphExecution> _started = [];
 

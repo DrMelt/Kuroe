@@ -5,11 +5,11 @@ namespace Kuroe.Runner.Command;
 
 /// <summary>为命令执行建立运行器。</summary>
 public sealed class CommandExecutionRunnerFactory(
-    string kind,
+    ExecutionKind kind,
     IProcessRunner process) : IExecutionRunnerFactory
 {
     /// <inheritdoc/>
-    public string Kind => kind;
+    public ExecutionKind Kind => kind;
 
     /// <inheritdoc/>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>

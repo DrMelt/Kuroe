@@ -39,7 +39,7 @@ public sealed class WiringTests : IDisposable
         IReadOnlyList<string> kinds =
         [
             .. provider.GetServices<Kuroe.Execution.Shared.IExecutionRunnerFactory>()
-                .Select(factory => factory.Kind)
+                .Select(factory => factory.Kind.Value)
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(kind => kind, StringComparer.Ordinal),
         ];

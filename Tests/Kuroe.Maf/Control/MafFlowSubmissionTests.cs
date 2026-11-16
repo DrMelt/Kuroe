@@ -272,7 +272,7 @@ public sealed class MafFlowSubmissionTests
         new(new MafStepId(from), new MafStepId(to));
 
     private static MafStepTarget Target() =>
-        new("test", _ => EmptyExecutionParameters.Instance);
+        new(new ExecutionKind("test"), _ => EmptyExecutionParameters.Instance);
 
     private sealed class FailingTargetFactory : IMafStepTargetFactory
     {
@@ -290,7 +290,7 @@ public sealed class MafFlowSubmissionTests
     {
         public ExecutionTargetId Id => new("其他");
 
-        public string Kind => "test";
+        public ExecutionKind Kind => new("test");
 
 
         public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;

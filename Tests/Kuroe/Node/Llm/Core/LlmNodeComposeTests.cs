@@ -40,7 +40,7 @@ public sealed class LlmNodeComposeTests
         new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("实施"),
-            "Llm",
+            new ExecutionKind("Llm"),
             attempt,
             [],
             [],

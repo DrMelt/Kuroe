@@ -65,7 +65,7 @@ public sealed class SessionFactoryTests
     private static ExecutionRequest Request() => new(
         new ExecutionOwnerId("1"),
         new ExecutionTargetId("实施"),
-        "Llm",
+        new ExecutionKind("Llm"),
         1,
         [],
         [],

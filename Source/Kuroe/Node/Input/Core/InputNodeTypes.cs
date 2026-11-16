@@ -1,3 +1,4 @@
+using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
@@ -9,6 +10,9 @@ public static class InputNodeTypes
 {
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Input");
+
+    /// <summary>执行种类，运行器按它选择。</summary>
+    public static ExecutionKind Kind { get; } = new(Name.Value);
 
     /// <summary>输入节点类型的静态形状：不派发执行，输入侧只作驱动与内容引用，输出侧只写回答。</summary>
     public static NodeTypeShape Shape { get; } = new()

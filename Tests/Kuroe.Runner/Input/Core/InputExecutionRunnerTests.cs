@@ -53,7 +53,7 @@ public sealed class InputExecutionRunnerTests
         new(
             new ExecutionOwnerId("task-1"),
             ExecutionTargetPaths.Target(Path),
-            "Input",
+            new ExecutionKind("Input"),
             1,
             [],
             [],

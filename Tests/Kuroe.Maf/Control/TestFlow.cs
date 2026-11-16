@@ -61,10 +61,10 @@ internal static class TestFlow
 /// <summary>按种类建立测试运行器，保留建立的运行器供测试驱动。</summary>
 internal sealed class FakeRunnerFactory(Func<FakeRunner> create) : IExecutionRunnerFactory
 {
-    internal const string KindName = "test";
+    internal static ExecutionKind KindName { get; } = new("test");
     private readonly List<FakeRunner> _runners = [];
 
-    public string Kind => KindName;
+    public ExecutionKind Kind => KindName;
 
     internal IReadOnlyList<FakeRunner> Runners
     {

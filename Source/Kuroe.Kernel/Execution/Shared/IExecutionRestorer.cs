@@ -17,7 +17,7 @@ public sealed record ExecutionRestoreContext(
 public interface IExecutionRestorer
 {
     /// <summary>执行种类，用于选择恢复器。</summary>
-    string Kind { get; }
+    ExecutionKind Kind { get; }
 
     /// <summary>校验恢复负载并装配一次恢复。不能恢复时返回错误。</summary>
     ErrorOr<IExecutionRestoreData> Prepare(ExecutionRestoreContext context);

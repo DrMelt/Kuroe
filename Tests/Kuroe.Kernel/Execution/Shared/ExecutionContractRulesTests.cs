@@ -63,7 +63,7 @@ public sealed class ExecutionContractRulesTests
         new(
             new ExecutionOwnerId("task"),
             new ExecutionTargetId("step"),
-            "test",
+            new ExecutionKind("test"),
             1,
             [],
             [],

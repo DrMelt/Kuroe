@@ -153,7 +153,7 @@ public sealed class DialogueHistoryViewTests
         ExecutionRequest request = new(
             new ExecutionOwnerId("task"),
             new ExecutionTargetId("回话"),
-            "llm",
+            new ExecutionKind("llm"),
             1,
             [],
             [new ExecutionInputValue(new ExecutionPortName("回答"), input, null)],

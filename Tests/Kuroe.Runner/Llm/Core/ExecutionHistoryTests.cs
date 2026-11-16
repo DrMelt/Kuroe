@@ -54,7 +54,7 @@ public sealed class ExecutionHistoryTests
         new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("实施"),
-            "Llm",
+            new ExecutionKind("Llm"),
             1,
             [],
             inputs,

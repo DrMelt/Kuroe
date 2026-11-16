@@ -5,11 +5,11 @@ namespace Kuroe.Runner.Approval;
 
 /// <summary>为审批执行建立运行器。</summary>
 public sealed class ApprovalExecutionRunnerFactory(
-    string kind,
+    ExecutionKind kind,
     IInputChannel channel) : IExecutionRunnerFactory
 {
     /// <inheritdoc/>
-    public string Kind => kind;
+    public ExecutionKind Kind => kind;
 
     /// <inheritdoc/>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>

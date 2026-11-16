@@ -103,7 +103,7 @@ public sealed class KuroeToolFactoryTests
         new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("流程/节点"),
-            "Llm",
+            new ExecutionKind("Llm"),
             1,
             [],
             [],

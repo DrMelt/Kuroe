@@ -4,7 +4,7 @@ namespace Kuroe.Execution.Shared;
 public interface IExecutionRunnerFactory
 {
     /// <summary>执行种类，用于选择运行器。</summary>
-    string Kind { get; }
+    ExecutionKind Kind { get; }
 
     /// <summary>为一次执行建立运行器。</summary>
     IExecutionRunner Create(IExecutionTarget target, ExecutionId execution);
