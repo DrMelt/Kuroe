@@ -1,5 +1,5 @@
-global using ProcessContent = Kuroe.Execution.Shared.ProcessContent;
-global using ProcessContentKind = Kuroe.Execution.Shared.ProcessContentKind;
-global using ProcessObserver = Kuroe.Execution.Shared.ProcessObserver;
-global using JournalEntry = Kuroe.Execution.Shared.JournalEntry;
-global using JournalLevel = Kuroe.Execution.Shared.JournalLevel;
+global using ProcessContent = Kuroe.Execution.Shared.Journal.ProcessContent;
+global using ProcessContentKind = Kuroe.Execution.Shared.Journal.ProcessContentKind;
+global using ProcessObserver = Kuroe.Execution.Shared.Journal.ProcessObserver;
+global using JournalEntry = Kuroe.Execution.Shared.Journal.JournalEntry;
+global using JournalLevel = Kuroe.Execution.Shared.Journal.JournalLevel;

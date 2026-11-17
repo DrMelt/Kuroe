@@ -1,7 +1,10 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Execution.Shared;
 using Xunit;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Tool.Contract.Tests;
 

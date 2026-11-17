@@ -1,5 +1,5 @@
-using Kuroe.Execution.Shared;
 using Xunit;
+using Kuroe.Execution.Shared.Usage;
 
 namespace Kuroe.Presentation.Shared.Tests;
 

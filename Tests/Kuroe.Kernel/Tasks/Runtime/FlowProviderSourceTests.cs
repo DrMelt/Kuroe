@@ -171,7 +171,7 @@ public sealed class FlowProviderSourceTests
 
         public void Pause(ITaskFlowContext task) => throw new NotSupportedException();
 
-        public ErrorOr<Success> StopExecution(ITaskFlowContext task, Kuroe.Execution.Shared.ExecutionId id) =>
+        public ErrorOr<Success> StopExecution(ITaskFlowContext task, Kuroe.Execution.Shared.Identity.ExecutionId id) =>
             throw new NotSupportedException();
 
         public void ResumeTask(ITaskFlowContext task, bool continueRestores = true) =>

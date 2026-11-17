@@ -1,28 +1,28 @@
 using ErrorOr;
 using Kuroe.Flow.Control.Graph.Runtime;
 using Kuroe.Flow.Control.Graph.Runtime.Graph;
-using Kuroe.Execution.Shared;
 using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Control.Runtime;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Tool;
-using NeutralExecutionId = Kuroe.Execution.Shared.ExecutionId;
-using NeutralExecutionOutput = Kuroe.Execution.Shared.ExecutionOutput;
-using NeutralExecutionOutputPort = Kuroe.Execution.Shared.ExecutionOutputPort;
-using NeutralExecutionRequest = Kuroe.Execution.Shared.ExecutionRequest;
-using NeutralExecutionRestoreContext = Kuroe.Execution.Shared.ExecutionRestoreContext;
-using NeutralExecutionRestoreData = Kuroe.Execution.Shared.IExecutionRestoreData;
-using NeutralExecutionRestoreDataSource = Kuroe.Execution.Shared.IExecutionRestoreDataSource;
-using NeutralExecutionRestoreState = Kuroe.Execution.Shared.ExecutionRestoreState;
-using NeutralExecutionRunner = Kuroe.Execution.Shared.IExecutionRunner;
-using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.IExecutionRunnerFactory;
-using NeutralExecutionRestorer = Kuroe.Execution.Shared.IExecutionRestorer;
-using NeutralExecutionTarget = Kuroe.Execution.Shared.IExecutionTarget;
-using NeutralExecutionUsage = Kuroe.Execution.Shared.ExecutionUsage;
-using NeutralExecutionUsageSource = Kuroe.Execution.Shared.IExecutionUsageSource;
-using NeutralPortKind = Kuroe.Execution.Shared.ExecutionPortKind;
+using NeutralExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
+using NeutralExecutionOutput = Kuroe.Execution.Shared.Ports.ExecutionOutput;
+using NeutralExecutionOutputPort = Kuroe.Execution.Shared.Ports.ExecutionOutputPort;
+using NeutralExecutionRequest = Kuroe.Execution.Shared.Request.ExecutionRequest;
+using NeutralExecutionRestoreContext = Kuroe.Execution.Shared.Restore.ExecutionRestoreContext;
+using NeutralExecutionRestoreData = Kuroe.Execution.Shared.Restore.IExecutionRestoreData;
+using NeutralExecutionRestoreDataSource = Kuroe.Execution.Shared.Restore.IExecutionRestoreDataSource;
+using NeutralExecutionRestoreState = Kuroe.Execution.Shared.Restore.ExecutionRestoreState;
+using NeutralExecutionRunner = Kuroe.Execution.Shared.Runtime.IExecutionRunner;
+using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionRunnerFactory;
+using NeutralExecutionRestorer = Kuroe.Execution.Shared.Restore.IExecutionRestorer;
+using NeutralExecutionTarget = Kuroe.Execution.Shared.Identity.IExecutionTarget;
+using NeutralExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
+using NeutralExecutionUsageSource = Kuroe.Execution.Shared.Runtime.IExecutionUsageSource;
+using NeutralPortKind = Kuroe.Execution.Shared.Ports.ExecutionPortKind;
+using Kuroe.Execution.Shared.Ports;
 
 namespace Kuroe.Integration.Tests.Support;
 
@@ -91,13 +91,13 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     public Func<IGraphExecution, string>? Reply { get; set; }
 
     /// <summary>代码流程执行的回复文本，按中性执行给出。</summary>
-    public Func<Kuroe.Execution.Shared.IExecution, string>? CodeReply { get; set; }
+    public Func<Kuroe.Execution.Shared.State.IExecution, string>? CodeReply { get; set; }
 
     /// <summary>代码流程执行期间写进过程记录的内容。</summary>
-    internal Action<Kuroe.Execution.Shared.IExecution, RecordingJournal>? CodeEmits { get; set; }
+    internal Action<Kuroe.Execution.Shared.State.IExecution, RecordingJournal>? CodeEmits { get; set; }
 
     /// <summary>代码流程的执行观察点，按进入顺序。</summary>
-    public IReadOnlyList<Kuroe.Execution.Shared.IExecution> StartedCode
+    public IReadOnlyList<Kuroe.Execution.Shared.State.IExecution> StartedCode
     {
         get
         {
@@ -108,7 +108,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         }
     }
 
-    private readonly List<Kuroe.Execution.Shared.IExecution> _startedCode = [];
+    private readonly List<Kuroe.Execution.Shared.State.IExecution> _startedCode = [];
 
     /// <summary>本次执行期间写进过程记录的内容，用于断言记录与过程事件。</summary>
     internal Action<IGraphExecution, RecordingJournal>? Emits { get; set; }
@@ -205,7 +205,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         lock (_gate)
         {
             _starts.Add(data is TestRestoreData restored
-                ? new Kuroe.Execution.Shared.ExecutionRestoreState(restored.Value.Format, restored.Value.Payload)
+                ? new Kuroe.Execution.Shared.Restore.ExecutionRestoreState(restored.Value.Format, restored.Value.Payload)
                 : null);
         }
 
@@ -282,8 +282,8 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     /// <summary>按执行号取图侧执行；不是图流程执行时为空。</summary>
     private static GraphExecution? FindGraphExecution(ExecutionIndex executions, ExecutionId execution)
     {
-        ErrorOr<(Kuroe.Execution.Shared.IExecution Execution, Kuroe.Control.Shared.ITaskFlowContext Owner)> found =
-            executions.FindOwned(new Kuroe.Execution.Shared.ExecutionId(execution.Value));
+        ErrorOr<(Kuroe.Execution.Shared.State.IExecution Execution, Kuroe.Control.Shared.ITaskFlowContext Owner)> found =
+            executions.FindOwned(new Kuroe.Execution.Shared.Identity.ExecutionId(execution.Value));
         if (found.IsError || found.Value.Owner.FlowState is not IGraphFlowState state)
         {
             return null;
@@ -301,14 +301,14 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     {
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
-        ErrorOr<(Kuroe.Execution.Shared.IExecution Execution, Kuroe.Control.Shared.ITaskFlowContext Owner)> found =
-            executions.FindOwned(new Kuroe.Execution.Shared.ExecutionId(execution.Value));
+        ErrorOr<(Kuroe.Execution.Shared.State.IExecution Execution, Kuroe.Control.Shared.ITaskFlowContext Owner)> found =
+            executions.FindOwned(new Kuroe.Execution.Shared.Identity.ExecutionId(execution.Value));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        Kuroe.Execution.Shared.IExecution started = found.Value.Execution;
+        Kuroe.Execution.Shared.State.IExecution started = found.Value.Execution;
         lock (_gate)
         {
             _startedCode.Add(started);

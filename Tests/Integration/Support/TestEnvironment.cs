@@ -2,7 +2,6 @@ using Kuroe.Flow.Control.Graph.Runtime.Graph;
 using Kuroe.Flow.Control.Graph.Runtime;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
-using Kuroe.Execution.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
@@ -29,6 +28,8 @@ using Kuroe.Tool;
 using Kuroe.Tool.Contract;
 using Kuroe.Flow.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Ports;
 
 namespace Kuroe.Integration.Tests.Support;
 

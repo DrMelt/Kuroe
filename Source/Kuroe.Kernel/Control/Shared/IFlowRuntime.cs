@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
 using Kuroe.Tasks.Shared;
+using Kuroe.Execution.Shared.Identity;
 
 namespace Kuroe.Control.Shared;
 

@@ -1,17 +1,17 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.TestSupport;
-using NeutralExecutionId = Kuroe.Execution.Shared.ExecutionId;
-using NeutralExecutionOutput = Kuroe.Execution.Shared.ExecutionOutput;
-using NeutralExecutionOutputPort = Kuroe.Execution.Shared.ExecutionOutputPort;
-using NeutralExecutionOutputValue = Kuroe.Execution.Shared.ExecutionOutputValue;
-using NeutralExecutionPortName = Kuroe.Execution.Shared.ExecutionPortName;
-using NeutralExecutionRequest = Kuroe.Execution.Shared.ExecutionRequest;
-using NeutralExecutionRunner = Kuroe.Execution.Shared.IExecutionRunner;
-using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.IExecutionRunnerFactory;
-using NeutralExecutionTarget = Kuroe.Execution.Shared.IExecutionTarget;
-using NeutralPortKind = Kuroe.Execution.Shared.ExecutionPortKind;
+using NeutralExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
+using NeutralExecutionOutput = Kuroe.Execution.Shared.Ports.ExecutionOutput;
+using NeutralExecutionOutputPort = Kuroe.Execution.Shared.Ports.ExecutionOutputPort;
+using NeutralExecutionOutputValue = Kuroe.Execution.Shared.Ports.ExecutionOutputValue;
+using NeutralExecutionPortName = Kuroe.Execution.Shared.Ports.ExecutionPortName;
+using NeutralExecutionRequest = Kuroe.Execution.Shared.Request.ExecutionRequest;
+using NeutralExecutionRunner = Kuroe.Execution.Shared.Runtime.IExecutionRunner;
+using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionRunnerFactory;
+using NeutralExecutionTarget = Kuroe.Execution.Shared.Identity.IExecutionTarget;
+using NeutralPortKind = Kuroe.Execution.Shared.Ports.ExecutionPortKind;
+using Kuroe.Execution.Shared.Contract;
 
 namespace Kuroe.Console.Tests.Support;
 

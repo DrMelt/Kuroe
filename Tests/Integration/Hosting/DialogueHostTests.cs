@@ -3,7 +3,6 @@ using ErrorOr;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Tasks.Shared;
 using Kuroe.Tool;
@@ -11,6 +10,9 @@ using Kuroe.Node.Llm;
 using Kuroe.Runner.Llm;
 using Kuroe.Pending;
 using Xunit;
+using Kuroe.Execution.Shared.Notice;
+using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Integration.Tests.Hosting;
 
@@ -475,7 +477,7 @@ public sealed class DialogueHostTests
         }
 
         await WaitUntilAsync(() => !execution.IsLive);
-        Assert.Equal(Kuroe.Execution.Shared.ExecutionState.Interrupted, execution.State);
+        Assert.Equal(Kuroe.Execution.Shared.State.ExecutionState.Interrupted, execution.State);
         Assert.True((await running.WaitAsync(TestContext.Current.CancellationToken)).IsError);
 
         lock (owner.Gate)

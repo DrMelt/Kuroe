@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Kuroe.Execution.Shared;
+using Kuroe.Execution.Shared.Ports;
 
 namespace Kuroe.Tool.Contract;
 

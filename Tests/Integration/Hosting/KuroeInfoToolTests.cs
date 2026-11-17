@@ -45,10 +45,10 @@ public sealed class KuroeInfoToolTests
     public async Task GetExecution_renders_execution_process_and_tool_entry()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Usage = new Execution.Shared.ExecutionUsage(
+        environment.Runner.Usage = new Execution.Shared.Usage.ExecutionUsage(
             1,
             0,
-            new Execution.Shared.TokenUsage(12, 3, 15, null, null))
+            new Execution.Shared.Usage.TokenUsage(12, 3, 15, null, null))
         {
             ContextTokens = 12,
         };
@@ -86,11 +86,11 @@ public sealed class KuroeInfoToolTests
 
         TaskId id = environment.Submit("做一个测试任务");
         TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executions
-            .Any(execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Running
+            .Any(execution => execution.State == Kuroe.Execution.Shared.State.ExecutionState.Running
                 && execution.Progress.Contains("调用工具 file/ReadFile", StringComparison.Ordinal)));
 
         ExecutionId executionId = new(running.Executions
-            .First(execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Running)
+            .First(execution => execution.State == Kuroe.Execution.Shared.State.ExecutionState.Running)
             .Id.Value);
 
         TaskKuroeInfoTool tool = new(environment.TaskReader);
@@ -117,11 +117,11 @@ public sealed class KuroeInfoToolTests
 
         TaskId id = environment.Submit("做一个测试任务");
         TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executions
-            .Any(execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Running
+            .Any(execution => execution.State == Kuroe.Execution.Shared.State.ExecutionState.Running
                 && execution.Progress == "输出"));
 
         ExecutionId executionId = new(running.Executions
-            .First(execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Running)
+            .First(execution => execution.State == Kuroe.Execution.Shared.State.ExecutionState.Running)
             .Id.Value);
 
         TaskKuroeInfoTool tool = new(environment.TaskReader);

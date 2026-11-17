@@ -1,9 +1,17 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared;
 using Kuroe.Execution;
 using Kuroe.Tasks.Shared;
 using Xunit;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Errors;
+using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Journal;
+using Kuroe.Execution.Shared.Notice;
+using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Control.Contract.Tests;
 

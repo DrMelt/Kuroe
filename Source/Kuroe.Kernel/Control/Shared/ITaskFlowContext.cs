@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
+using Kuroe.Execution.Shared.Notice;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Control.Shared;
 

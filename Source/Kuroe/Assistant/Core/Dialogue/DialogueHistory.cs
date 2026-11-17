@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
+using Kuroe.Execution.Shared.Conversation;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Assistant.Dialogue;
 

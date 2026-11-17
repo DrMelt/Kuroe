@@ -1,6 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Execution.Shared;
+using Kuroe.Execution.Shared.Ports;
 
 namespace Kuroe.Tool.Contract;
 

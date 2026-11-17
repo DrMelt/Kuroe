@@ -1,4 +1,5 @@
 using Xunit;
+using Kuroe.Execution.Shared.Journal;
 
 namespace Kuroe.Execution.Shared.Tests;
 

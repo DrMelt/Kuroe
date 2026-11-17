@@ -1,10 +1,15 @@
 using Kuroe.Console.Views;
-using Kuroe.Execution.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Spectre.Console.Testing;
 using Xunit;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.State;
+using Kuroe.Execution.Shared.Usage;
 
 namespace Kuroe.Console.Tests.Views;
 

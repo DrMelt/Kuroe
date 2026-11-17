@@ -4,12 +4,13 @@ using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared;
 using Kuroe.Input.Shared;
 using Kuroe.Tasks;
 using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;
+using Kuroe.Execution.Shared.Conversation;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Assistant.Dialogue;
 

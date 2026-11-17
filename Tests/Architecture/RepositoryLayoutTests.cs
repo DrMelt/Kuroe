@@ -1476,6 +1476,7 @@ public sealed class RepositoryLayoutTests
             KernelRoot,
             "Execution",
             "Shared",
+            "Runtime",
             "IExecutionRuntime.cs");
         string text = File.ReadAllText(file);
         string[] forbidden =

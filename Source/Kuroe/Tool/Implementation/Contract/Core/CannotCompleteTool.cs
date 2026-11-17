@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Identity;
 
 namespace Kuroe.Tool.Contract;
 

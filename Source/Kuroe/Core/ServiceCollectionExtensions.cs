@@ -7,7 +7,6 @@ using Kuroe.Control.Contract;
 using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
-using Kuroe.Execution.Shared;
 using Kuroe.Files;
 using Kuroe.Files.Shared;
 using Kuroe.Input.Runtime;
@@ -38,6 +37,9 @@ using Kuroe.Tool.Json;
 using Kuroe.Tool.Time;
 using Kuroe.Tools;
 using Microsoft.Extensions.DependencyInjection;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Conversation;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe;
 
@@ -201,7 +203,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IExecutionConversationReader, ExecutionConversationReader>();
         services.AddSingleton(sp => new LlmExecutionRunnerFactory(
             sp.GetRequiredService<SessionFactory>(),
-            sp.GetRequiredService<Kuroe.Execution.Shared.IExecutionStatusReader>()));
+            sp.GetRequiredService<Kuroe.Execution.Shared.Contract.IExecutionStatusReader>()));
         services.AddSingleton(sp => new ExecutionRunnerRegistration(
             LlmNodeTypes.RunnerFactoryType,
             sp.GetRequiredService<LlmExecutionRunnerFactory>()));

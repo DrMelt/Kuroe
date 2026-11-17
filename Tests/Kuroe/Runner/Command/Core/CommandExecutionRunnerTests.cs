@@ -1,7 +1,9 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
 using Kuroe.Process;
 using Xunit;
+using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Request;
 
 namespace Kuroe.Runner.Command.Tests;
 

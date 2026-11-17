@@ -1,8 +1,8 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared;
 using Kuroe.Tasks.Shared;
 using Microsoft.Agents.AI.Workflows;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Maf.Control;
 

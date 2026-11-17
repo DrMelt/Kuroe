@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Integration.Tests.Hosting;
 
@@ -83,7 +83,7 @@ public sealed class TaskDomainTests
 
         Assert.False(reply.IsError);
         Assert.Equal(1, dialogue.Id.Value);
-        IReadOnlyList<Execution.Shared.ExecutionSnapshot> executions = [.. done.Executions];
+        IReadOnlyList<Execution.Shared.State.ExecutionSnapshot> executions = [.. done.Executions];
         Assert.NotEmpty(executions);
         Assert.All(executions, execution => Assert.True(execution.Id.Value > dialogue.Id.Value));
         Assert.All(executions, execution =>

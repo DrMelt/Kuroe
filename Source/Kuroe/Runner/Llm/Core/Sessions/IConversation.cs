@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
+using Kuroe.Execution.Shared.Usage;
 
 namespace Kuroe.Runner.Llm.Sessions;
 

@@ -105,7 +105,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         ExecutionRecord first = record.Executions[0] with
         {
             RestoreData = new ExecutionRestoreRecord("test", """{"payload":true}"""),
-            ContinuedFrom = new Kuroe.Execution.Shared.ExecutionId(6),
+            ContinuedFrom = new Kuroe.Execution.Shared.Identity.ExecutionId(6),
         };
         TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };
         TaskRecordCodec codec = TaskRecordCodecs.Codec();
@@ -122,10 +122,10 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     public void Write_and_read_preserve_execution_contract()
     {
         TaskRecord record = TaskRecordFixture.Create();
-        Kuroe.Execution.Shared.ExecutionPortName port = new("结论");
-        Kuroe.Execution.Shared.ExecutionOutputValue value = new(port, "内容", false);
+        Kuroe.Execution.Shared.Ports.ExecutionPortName port = new("结论");
+        Kuroe.Execution.Shared.Ports.ExecutionOutputValue value = new(port, "内容", false);
         ExecutionContractRecord contract = new(
-            new Dictionary<Kuroe.Execution.Shared.ExecutionPortName, Kuroe.Execution.Shared.ExecutionOutputValue> { [port] = value },
+            new Dictionary<Kuroe.Execution.Shared.Ports.ExecutionPortName, Kuroe.Execution.Shared.Ports.ExecutionOutputValue> { [port] = value },
             "缺少资料");
         ExecutionRecord first = record.Executions[0] with { Contract = contract };
         TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };

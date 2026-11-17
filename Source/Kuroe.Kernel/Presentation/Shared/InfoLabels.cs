@@ -1,5 +1,5 @@
-using ExecutionUsage = Kuroe.Execution.Shared.ExecutionUsage;
-using TokenUsage = Kuroe.Execution.Shared.TokenUsage;
+using ExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
+using TokenUsage = Kuroe.Execution.Shared.Usage.TokenUsage;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Presentation.Shared;

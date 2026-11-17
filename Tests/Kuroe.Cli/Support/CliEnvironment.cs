@@ -4,14 +4,14 @@ using ErrorOr;
 using Kuroe.Execution;
 using Kuroe.Node.Llm;
 using Microsoft.Extensions.DependencyInjection;
-using NeutralExecutionId = Kuroe.Execution.Shared.ExecutionId;
-using NeutralExecutionOutput = Kuroe.Execution.Shared.ExecutionOutput;
-using NeutralExecutionRequest = Kuroe.Execution.Shared.ExecutionRequest;
-using NeutralExecutionRunner = Kuroe.Execution.Shared.IExecutionRunner;
-using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.IExecutionRunnerFactory;
-using NeutralExecutionTarget = Kuroe.Execution.Shared.IExecutionTarget;
-using NeutralExecutionUsage = Kuroe.Execution.Shared.ExecutionUsage;
-using NeutralExecutionUsageSource = Kuroe.Execution.Shared.IExecutionUsageSource;
+using NeutralExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
+using NeutralExecutionOutput = Kuroe.Execution.Shared.Ports.ExecutionOutput;
+using NeutralExecutionRequest = Kuroe.Execution.Shared.Request.ExecutionRequest;
+using NeutralExecutionRunner = Kuroe.Execution.Shared.Runtime.IExecutionRunner;
+using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionRunnerFactory;
+using NeutralExecutionTarget = Kuroe.Execution.Shared.Identity.IExecutionTarget;
+using NeutralExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
+using NeutralExecutionUsageSource = Kuroe.Execution.Shared.Runtime.IExecutionUsageSource;
 
 namespace Kuroe.Cli.Tests.Support;
 

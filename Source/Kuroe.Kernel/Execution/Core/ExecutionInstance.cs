@@ -1,5 +1,13 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Journal;
+using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Execution.Shared.State;
+using Kuroe.Execution.Shared.Usage;
 namespace Kuroe.Execution;
 
 /// <summary>一次执行的状态机：排队、运行、收口、中断与过程记录。执行只使用执行请求与中性产出，不读取节点与图。</summary>

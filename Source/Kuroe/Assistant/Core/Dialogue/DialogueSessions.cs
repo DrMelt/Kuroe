@@ -7,6 +7,7 @@ using Kuroe.Runner;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Shared;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Assistant.Dialogue;
 

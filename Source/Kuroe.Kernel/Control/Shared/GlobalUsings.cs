@@ -1,2 +1,2 @@
-global using JournalEntry = Kuroe.Execution.Shared.JournalEntry;
-global using JournalLevel = Kuroe.Execution.Shared.JournalLevel;
+global using JournalEntry = Kuroe.Execution.Shared.Journal.JournalEntry;
+global using JournalLevel = Kuroe.Execution.Shared.Journal.JournalLevel;

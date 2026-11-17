@@ -1,7 +1,10 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared;
-using ExecutionStatus = Kuroe.Execution.Shared.ExecutionStatus;
+using ExecutionStatus = Kuroe.Execution.Shared.Contract.ExecutionStatus;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Control.Contract;
 

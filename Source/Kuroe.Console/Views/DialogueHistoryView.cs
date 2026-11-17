@@ -1,7 +1,8 @@
 using Kuroe.Assistant.Dialogue;
-using Kuroe.Execution.Shared;
 using Spectre.Console;
 using Spectre.Console.Rendering;
+using Kuroe.Execution.Shared.Conversation;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Console.Views;
 

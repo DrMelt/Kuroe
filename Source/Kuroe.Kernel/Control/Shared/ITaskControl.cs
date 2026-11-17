@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
-using ProcessObserver = Kuroe.Execution.Shared.ProcessObserver;
+using ProcessObserver = Kuroe.Execution.Shared.Journal.ProcessObserver;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
+using Kuroe.Execution.Shared.Identity;
 
 namespace Kuroe.Control.Shared;
 

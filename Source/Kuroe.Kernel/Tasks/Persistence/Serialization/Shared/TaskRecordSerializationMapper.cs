@@ -1,11 +1,12 @@
 using ErrorOr;
-using Kuroe.Execution.Shared;
 using Kuroe.Execution.Records.Shared;
 using Kuroe.Tasks.Records.Shared;
-using RecordExecutionId = Kuroe.Execution.Shared.ExecutionId;
-using RecordExecutionPortName = Kuroe.Execution.Shared.ExecutionPortName;
-using RecordExecutionOutputValue = Kuroe.Execution.Shared.ExecutionOutputValue;
+using RecordExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
+using RecordExecutionPortName = Kuroe.Execution.Shared.Ports.ExecutionPortName;
+using RecordExecutionOutputValue = Kuroe.Execution.Shared.Ports.ExecutionOutputValue;
 using Kuroe.Tasks.Shared;
+using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Journal;
 
 namespace Kuroe.Tasks.Persistence.Serialization.Shared;
 

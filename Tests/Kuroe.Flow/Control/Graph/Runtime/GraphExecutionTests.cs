@@ -1,9 +1,9 @@
 using Kuroe.Flow.Control.Graph.Runtime;
-using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Tasks.Shared;
 using Xunit;
+using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Flow.Control.Graph.Tests.Runtime;
 
@@ -42,8 +42,8 @@ public sealed class GraphExecutionTests
             ],
         };
 
-        Kuroe.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(input);
-        Kuroe.Execution.Shared.ExecutionOutputPort port = Assert.Single(request.OutputPorts);
+        Kuroe.Execution.Shared.Request.ExecutionRequest request = GraphExecution.BuildRequest(input);
+        Kuroe.Execution.Shared.Ports.ExecutionOutputPort port = Assert.Single(request.OutputPorts);
 
         Assert.Equal("结论", port.Name.Value);
         Assert.True(port.Required);
@@ -53,7 +53,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Request_carries_the_execution_limit()
     {
-        Kuroe.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(Input() with { MaxAttempts = 7 });
+        Kuroe.Execution.Shared.Request.ExecutionRequest request = GraphExecution.BuildRequest(Input() with { MaxAttempts = 7 });
 
         Assert.Equal(7, request.MaxAttempts);
     }
@@ -61,9 +61,9 @@ public sealed class GraphExecutionTests
     private static GraphExecution Create()
     {
         GraphExecutionInput input = Input();
-        Kuroe.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(input);
-        Kuroe.Execution.Shared.IExecution unit = Runtime().Create(
-            new Kuroe.Execution.Shared.ExecutionId(1),
+        Kuroe.Execution.Shared.Request.ExecutionRequest request = GraphExecution.BuildRequest(input);
+        Kuroe.Execution.Shared.State.IExecution unit = Runtime().Create(
+            new Kuroe.Execution.Shared.Identity.ExecutionId(1),
             request);
 
         return new GraphExecution(input, unit, 0);
