@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\Registry\Kuroe.Execution.Registry.csproj" />
     </ItemGroup>
 
 </Project>

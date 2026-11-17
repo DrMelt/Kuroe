@@ -130,21 +130,58 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Execution_core_references_only_execution_shared()
+    public void Execution_core_references_only_execution_contracts()
     {
         string shared = Path.Combine(
             KernelRoot,
             "Execution",
             "Shared",
             "Kuroe.Execution.Shared.csproj");
+        string registry = Path.Combine(
+            KernelRoot,
+            "Execution",
+            "Registry",
+            "Kuroe.Execution.Registry.csproj");
         string core = Path.Combine(
             KernelRoot,
             "Execution",
             "Core",
             "Kuroe.Execution.csproj");
-        IReadOnlyList<string> references = ProjectReferences(core);
 
-        Assert.Equal([shared], references);
+        Assert.Equal([shared, registry], ProjectReferences(core));
+    }
+
+    [Fact]
+    public void Execution_registry_references_only_execution_shared()
+    {
+        string shared = Path.Combine(
+            KernelRoot,
+            "Execution",
+            "Shared",
+            "Kuroe.Execution.Shared.csproj");
+        string registry = Path.Combine(
+            KernelRoot,
+            "Execution",
+            "Registry",
+            "Kuroe.Execution.Registry.csproj");
+
+        Assert.Equal([shared], ProjectReferences(registry));
+    }
+
+    [Fact]
+    public void Flow_hosting_does_not_reference_execution_core()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Hosting",
+            "Core",
+            "Kuroe.Flow.Hosting.csproj");
+        string execution = Path.Combine(KernelRoot, "Execution", "Core");
+
+        Assert.DoesNotContain(
+            ProjectReferences(project),
+            reference => IsUnder(reference, execution));
     }
 
     [Fact]

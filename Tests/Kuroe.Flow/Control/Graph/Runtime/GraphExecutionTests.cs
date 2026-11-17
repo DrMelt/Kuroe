@@ -14,7 +14,7 @@ public sealed class GraphExecutionTests
     private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(
             new Kuroe.Execution.ExecutionDispatcher(),
-            new Kuroe.Execution.ExecutionRunnerRegistry());
+            new Kuroe.Execution.Registry.ExecutionRunnerRegistry());
 
     [Fact]
     public void Snapshot_without_journal_has_no_entries()

@@ -1,18 +1,11 @@
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Runtime;
 
+namespace Kuroe.Execution.Registry;
 
-
-namespace Kuroe.Execution;
-
-/// <summary>执行器工厂的注册项，按工厂类型选择。</summary>
-public sealed record ExecutionRunnerRegistration(
-    Type RunnerFactoryType,
-    IExecutionRunnerFactory Factory);
-
-/// <summary>按执行器工厂类型选择运行器。没有注册时明确失败。</summary>
+/// <summary>执行器工厂注册表：按工厂类型精确匹配，没有注册时明确失败。</summary>
 public sealed class ExecutionRunnerRegistry(
-    IReadOnlyList<ExecutionRunnerRegistration>? registrations = null)
+    IReadOnlyList<ExecutionRunnerRegistration>? registrations = null) : IExecutionRunnerRegistry
 {
     private readonly IReadOnlyList<ExecutionRunnerRegistration> _registrations = registrations ?? [];
 

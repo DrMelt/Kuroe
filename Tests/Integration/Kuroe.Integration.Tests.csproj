@@ -45,6 +45,7 @@
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Registry\Kuroe.Execution.Registry.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Tasks\Persistence\Serialization\Shared\Kuroe.Tasks.Persistence.Serialization.Shared.csproj" />

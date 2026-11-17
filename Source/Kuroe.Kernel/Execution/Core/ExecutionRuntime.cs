@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Execution.Registry;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
@@ -10,7 +11,7 @@ namespace Kuroe.Execution;
 /// <summary>执行单元的控制面：选择运行器、派发执行、等待收口与退出收口。执行状态迁移不出执行单元。</summary>
 public sealed class ExecutionRuntime(
     ExecutionDispatcher dispatcher,
-    ExecutionRunnerRegistry runners) : IExecutionRuntime
+    IExecutionRunnerRegistry runners) : IExecutionRuntime
 {
     /// <inheritdoc/>
     public IExecution Create(ExecutionId id, ExecutionRequest request) => ExecutionFactory.Create(id, request);

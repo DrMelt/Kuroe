@@ -6,7 +6,7 @@ using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
-namespace Kuroe.Execution.Tests;
+namespace Kuroe.Execution.Registry.Tests;
 
 /// <summary>运行器选择：按执行器工厂类型精确匹配，没有匹配时拒绝。</summary>
 public sealed class ExecutionRunnerRegistryTests

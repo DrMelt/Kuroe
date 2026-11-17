@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
+using Kuroe.Execution.Registry;
 using Kuroe.Control.Runtime;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Runtime.Persistence;

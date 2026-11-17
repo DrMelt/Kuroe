@@ -7,6 +7,7 @@ using Kuroe.Control.Contract;
 using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
+using Kuroe.Execution.Registry;
 using Kuroe.Files;
 using Kuroe.Files.Shared;
 using Kuroe.Input.Runtime;
@@ -136,11 +137,11 @@ public static class ServiceCollectionExtensions
             sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
-        services.AddSingleton(sp => new ExecutionRunnerRegistry(
+        services.AddSingleton<IExecutionRunnerRegistry>(sp => new ExecutionRunnerRegistry(
             [.. sp.GetServices<ExecutionRunnerRegistration>()]));
         services.AddSingleton(sp => new ExecutionRuntime(
             sp.GetRequiredService<ExecutionDispatcher>(),
-            sp.GetRequiredService<ExecutionRunnerRegistry>()));
+            sp.GetRequiredService<IExecutionRunnerRegistry>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
         services.AddSingleton<IExecutionOwnerIndex>(executions);
         services.AddSingleton<IExecutionIndex>(executions);

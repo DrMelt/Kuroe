@@ -17,7 +17,7 @@ public sealed class WorkTaskTests
     private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(
             new Kuroe.Execution.ExecutionDispatcher(),
-            new Kuroe.Execution.ExecutionRunnerRegistry());
+            new Kuroe.Execution.Registry.ExecutionRunnerRegistry());
     [Fact]
     public void Pause_accepts_transient_done_snapshot()
     {
