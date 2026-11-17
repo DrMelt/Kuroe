@@ -2,10 +2,11 @@ using Kuroe.Node.Llm;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
 
-/// <summary>对话执行的类型目标：Llm 执行器工厂类型、对话参数与上一轮会话快照。</summary>
+/// <summary>对话执行的类型目标：Llm 执行运行器键、对话参数与上一轮会话快照。</summary>
 internal sealed class DialogueFlowTarget(
     LlmParameters parameters,
     string model,
@@ -15,7 +16,7 @@ internal sealed class DialogueFlowTarget(
     public ExecutionTargetId Id => new(DialogueFlow.ReplyLabel);
 
     /// <inheritdoc/>
-    public Type RunnerFactoryType => LlmNodeTypes.RunnerFactoryType;
+    public ExecutionRunnerKey RunnerKey => LlmNodeTypes.RunnerKey;
 
     /// <inheritdoc/>
     public IExecutionParameters Parameters { get; } = parameters.ToExecutionParameters(model, seed);

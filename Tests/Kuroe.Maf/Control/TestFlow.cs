@@ -55,7 +55,7 @@ internal static class TestFlow
         new(new MafStepId(from), new MafStepId(to));
 
     internal static MafStepTarget Target() =>
-        new(typeof(FakeRunnerFactory), _ => EmptyExecutionParameters.Instance);
+        new(FakeRunnerFactory.Key, _ => EmptyExecutionParameters.Instance);
 
     internal static StartInputs Inputs() => new(
     [
@@ -67,6 +67,12 @@ internal static class TestFlow
 /// <summary>建立测试运行器，保留建立的运行器供测试驱动。</summary>
 internal sealed class FakeRunnerFactory(Func<FakeRunner> create) : IExecutionRunnerFactory
 {
+    /// <summary>本工厂的注册键。</summary>
+    public static ExecutionRunnerKey Key { get; } = new("Test");
+
+    /// <inheritdoc/>
+    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
+
     private readonly List<FakeRunner> _runners = [];
 
     internal IReadOnlyList<FakeRunner> Runners

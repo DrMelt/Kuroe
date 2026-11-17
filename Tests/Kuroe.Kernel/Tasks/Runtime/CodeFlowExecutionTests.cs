@@ -159,8 +159,7 @@ public sealed class CodeFlowExecutionTests
         public static Task<ErrorOr<Success>> RunAsync(IExecution execution, IExecutionRunnerFactory runner, IExecutionTarget target) =>
             new ExecutionRuntime(
                 new ExecutionDispatcher(),
-                new ExecutionRunnerRegistry(
-                    [new ExecutionRunnerRegistration(typeof(PortRunnerFactory), runner)]))
+                new ExecutionRunnerRegistry([runner]))
             .RunAsync(execution, target);
     }
 }
@@ -239,7 +238,7 @@ internal sealed class CodeTarget : IExecutionTarget
 {
     public ExecutionTargetId Id => new("回话");
 
-    public Type RunnerFactoryType => typeof(PortRunnerFactory);
+    public ExecutionRunnerKey RunnerKey => PortRunnerFactory.Key;
 
     public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;
 }
@@ -249,6 +248,12 @@ internal sealed class PortRunnerFactory(
     ExecutionPortName port,
     string text) : IExecutionRunnerFactory
 {
+    /// <summary>本工厂的注册键。</summary>
+    public static ExecutionRunnerKey Key { get; } = new("Port");
+
+    /// <inheritdoc/>
+    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
+
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         new PortRunner(submitter, execution, port, text);
 

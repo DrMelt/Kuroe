@@ -23,12 +23,17 @@ using NeutralExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
 using NeutralExecutionUsageSource = Kuroe.Execution.Shared.Runtime.IExecutionUsageSource;
 using NeutralPortKind = Kuroe.Execution.Shared.Ports.ExecutionPortKind;
 using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Runner.Llm.Executions;
 
 namespace Kuroe.Integration.Tests.Support;
 
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，按声明收口，并提供恢复能力。</summary>
 public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecutionRestorer
 {
+    /// <summary>本执行器的注册键，与 Llm 节点一致。</summary>
+    public ExecutionRunnerKey Key => LlmExecutionRunnerFactory.Key;
+
     private readonly Lock _gate = new();
     private readonly List<IGraphExecution> _started = [];
 

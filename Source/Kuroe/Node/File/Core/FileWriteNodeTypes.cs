@@ -2,6 +2,7 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Runner.File;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.File;
 
@@ -11,8 +12,8 @@ public static class FileWriteNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("FileWrite");
 
-    /// <summary>执行器工厂类型，运行器按它选择。</summary>
-    public static Type RunnerFactoryType { get; } = typeof(FileWriteExecutionRunnerFactory);
+    /// <summary>执行运行器键，运行器按它选择。</summary>
+    public static ExecutionRunnerKey RunnerKey { get; } = FileWriteExecutionRunnerFactory.Key;
 
     /// <summary>未声明 MaxChars 时的写入上限，0 表示不限制。</summary>
     public const int DefaultMaxChars = 0;

@@ -8,6 +8,12 @@ namespace Kuroe.Runner.Approval;
 public sealed class ApprovalExecutionRunnerFactory(
     IInputChannel channel) : IExecutionRunnerFactory
 {
+    /// <summary>本工厂的注册键。</summary>
+    public static ExecutionRunnerKey Key { get; } = new("Approval");
+
+    /// <inheritdoc/>
+    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
+
     /// <inheritdoc/>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         target.Parameters is ApprovalExecutionParameters parameters

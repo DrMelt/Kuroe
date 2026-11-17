@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Registry;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
@@ -21,9 +20,7 @@ using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Persistence.Graph;
-using Kuroe.Node.Approval;
 using Kuroe.Node.Command;
-using Kuroe.Node.Input;
 using Kuroe.Node.File;
 using Kuroe.Node.Llm;
 using Kuroe.Process;
@@ -34,6 +31,7 @@ using Kuroe.Runner.File;
 using Kuroe.Runner.Input;
 using Kuroe.Tool;
 using Kuroe.Tasks.Records.Shared;
+using Kuroe.Execution.Shared.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Flow.Hosting;
@@ -150,7 +148,7 @@ public static class GraphFlowServiceCollectionExtensions
         return Result.Success;
     }
 
-    /// <summary>注册图节点运行器。执行器工厂类型由节点类型给出，运行器实现不认识节点。</summary>
+    /// <summary>注册图节点运行器。执行运行器键由节点类型给出，运行器实现不认识节点。</summary>
     public static void AddBuiltinGraphExecutionRunners(
         this IServiceCollection services,
         KuroeComposition composition,
@@ -160,20 +158,15 @@ public static class GraphFlowServiceCollectionExtensions
         IProcessRunner process = graphOptions.CommandNodeProcessRunner ?? new ProcessRunner();
         IInputChannel channel = composition.InputChannel;
 
-        services.AddSingleton(new ExecutionRunnerRegistration(
-            CommandNodeTypes.RunnerFactoryType,
-            new CommandExecutionRunnerFactory(process)));
-        services.AddSingleton(new ExecutionRunnerRegistration(
-            FileReadNodeTypes.RunnerFactoryType,
-            new FileReadExecutionRunnerFactory(composition.Files)));
-        services.AddSingleton(new ExecutionRunnerRegistration(
-            FileWriteNodeTypes.RunnerFactoryType,
-            new FileWriteExecutionRunnerFactory(composition.Files)));
-        services.AddSingleton(new ExecutionRunnerRegistration(
-            InputNodeTypes.RunnerFactoryType,
-            new InputExecutionRunnerFactory(channel)));
-        services.AddSingleton(new ExecutionRunnerRegistration(
-            ApprovalNodeTypes.RunnerFactoryType,
-            new ApprovalExecutionRunnerFactory(channel)));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new CommandExecutionRunnerFactory(process));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new FileReadExecutionRunnerFactory(composition.Files));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new FileWriteExecutionRunnerFactory(composition.Files));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new InputExecutionRunnerFactory(channel));
+        services.AddSingleton<IExecutionRunnerFactory>(
+            new ApprovalExecutionRunnerFactory(channel));
     }
 }

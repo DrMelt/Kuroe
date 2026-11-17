@@ -8,6 +8,12 @@ namespace Kuroe.Runner.File;
 public sealed class FileWriteExecutionRunnerFactory(
     IWorkspaceFiles files) : IExecutionRunnerFactory
 {
+    /// <summary>本工厂的注册键。</summary>
+    public static ExecutionRunnerKey Key { get; } = new("FileWrite");
+
+    /// <inheritdoc/>
+    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
+
     /// <inheritdoc/>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         target.Parameters is FileExecutionParameters parameters

@@ -22,11 +22,11 @@ public sealed class ExecutionRuntime(
     /// <inheritdoc/>
     public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context)
     {
-        if (runners.Find(context.Target.RunnerFactoryType) is not IExecutionRestorer restorer)
+        if (runners.Find(context.Target.RunnerKey) is not IExecutionRestorer restorer)
         {
             return Error.Failure(
                 "Execution.Restore",
-                $"执行器工厂 {context.Target.RunnerFactoryType.FullName ?? context.Target.RunnerFactoryType.Name} 不支持恢复。");
+                $"执行器工厂 {context.Target.RunnerKey} 不支持恢复。");
         }
 
         ErrorOr<IExecutionRestoreData> data = restorer.Prepare(context);
@@ -62,9 +62,9 @@ public sealed class ExecutionRuntime(
         try
         {
             Unit(execution).ContinueFrom(Unit(source));
-            IExecutionRestorer restorer = runners.Find(prepared.Context.Target.RunnerFactoryType) as IExecutionRestorer
+            IExecutionRestorer restorer = runners.Find(prepared.Context.Target.RunnerKey) as IExecutionRestorer
                 ?? throw new InvalidOperationException(
-                    $"执行器工厂 {prepared.Context.Target.RunnerFactoryType.FullName ?? prepared.Context.Target.RunnerFactoryType.Name} 不支持恢复。");
+                    $"执行器工厂 {prepared.Context.Target.RunnerKey} 不支持恢复。");
             IExecutionRunner runner = restorer.CreateRestored(prepared.Context with { Execution = execution.Id }, prepared.Data);
 
             return DispatchAsync(execution, runner);

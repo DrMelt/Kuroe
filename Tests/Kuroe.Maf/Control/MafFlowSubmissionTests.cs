@@ -8,12 +8,15 @@ using System.Text.Json;
 using Xunit;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Maf.Control.Tests;
 
 /// <summary>MAF 流程的提交与恢复：开始输入校验、默认值补齐与存档往返。</summary>
 public sealed class MafFlowSubmissionTests
 {
+    private static ExecutionRunnerKey TestRunnerKey { get; } = new("Test");
+
     [Theory]
     [InlineData("")]
     [InlineData("  ")]
@@ -273,7 +276,7 @@ public sealed class MafFlowSubmissionTests
         new(new MafStepId(from), new MafStepId(to));
 
     private static MafStepTarget Target() =>
-        new(typeof(ITestRunnerFactory), _ => EmptyExecutionParameters.Instance);
+        new(TestRunnerKey, _ => EmptyExecutionParameters.Instance);
 
     private sealed class FailingTargetFactory : IMafStepTargetFactory
     {
@@ -291,12 +294,8 @@ public sealed class MafFlowSubmissionTests
     {
         public ExecutionTargetId Id => new("其他");
 
-        public Type RunnerFactoryType => typeof(ITestRunnerFactory);
+        public ExecutionRunnerKey RunnerKey => TestRunnerKey;
 
         public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;
-    }
-
-    private interface ITestRunnerFactory
-    {
     }
 }

@@ -9,13 +9,16 @@ namespace Kuroe.Flow.TestSupport;
 
 /// <summary>测试用的执行节点类型：派发执行，端口取值域与执行节点一致，不接受任何类型专属声明。</summary>
 public sealed class TestExecutableNodeType(bool withContractInput = true)
-    : INodeType, INodeTypeValidation, IExecutionRunnerFactoryProvider
+    : INodeType, INodeTypeValidation, IExecutionRunnerKeyProvider
 {
+    /// <summary>测试执行节点使用的执行运行器键。</summary>
+    public static ExecutionRunnerKey Key { get; } = new("Test");
+
     /// <summary>类型名。</summary>
     public NodeKind Kind => TestNodeTypes.ExecutableKind;
 
-    /// <summary>测试执行节点使用的执行器工厂类型。</summary>
-    public Type RunnerFactoryType => typeof(ITestRunnerFactory);
+    /// <summary>本节点使用的执行运行器键。</summary>
+    public ExecutionRunnerKey RunnerKey => Key;
 
     /// <summary>测试执行节点使用的静态输入端口名。</summary>
     public static PortName StaticPort { get; } = new("静态值");
@@ -40,9 +43,4 @@ public sealed class TestExecutableNodeType(bool withContractInput = true)
             fail(scope.Node(node.Label.Value, "MaxExecutions 必须是正整数。"));
         }
     }
-}
-
-/// <summary>测试执行节点使用的执行器工厂类型标记。</summary>
-public interface ITestRunnerFactory
-{
 }

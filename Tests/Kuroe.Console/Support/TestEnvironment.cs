@@ -1,6 +1,5 @@
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Registry;
-using Kuroe.Node.Llm;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
@@ -196,14 +195,14 @@ public sealed class TestEnvironment : IDisposable
 
         for (int index = services.Count - 1; index >= 0; index--)
         {
-            if (services[index].ServiceType == typeof(ExecutionRunnerRegistration))
+            if (services[index].ServiceType == typeof(IExecutionRunnerFactory))
             {
                 services.RemoveAt(index);
             }
         }
 
         services.AddBuiltinGraphExecutionRunners(composition.Value);
-        services.AddSingleton(new ExecutionRunnerRegistration(LlmNodeTypes.RunnerFactoryType, runner));
+        services.AddSingleton<IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
         TaskLoadReport loaded = composition.Value.PersistTasks

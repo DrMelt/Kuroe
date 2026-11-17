@@ -12,7 +12,6 @@ using Kuroe.Files;
 using Kuroe.Files.Shared;
 using Kuroe.Input.Runtime;
 using Kuroe.Input.Shared;
-using Kuroe.Node.Llm;
 using Kuroe.Runner;
 using Kuroe.Runner.Llm;
 using Kuroe.Runner.Llm.Executions;
@@ -138,7 +137,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
         services.AddSingleton<IExecutionRunnerRegistry>(sp => new ExecutionRunnerRegistry(
-            [.. sp.GetServices<ExecutionRunnerRegistration>()]));
+            [.. sp.GetServices<IExecutionRunnerFactory>()]));
         services.AddSingleton(sp => new ExecutionRuntime(
             sp.GetRequiredService<ExecutionDispatcher>(),
             sp.GetRequiredService<IExecutionRunnerRegistry>()));
@@ -202,12 +201,9 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IToolFactory>(),
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<IExecutionConversationReader, ExecutionConversationReader>();
-        services.AddSingleton(sp => new LlmExecutionRunnerFactory(
+        services.AddSingleton<IExecutionRunnerFactory>(sp => new LlmExecutionRunnerFactory(
             sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<Kuroe.Execution.Shared.Contract.IExecutionStatusReader>()));
-        services.AddSingleton(sp => new ExecutionRunnerRegistration(
-            LlmNodeTypes.RunnerFactoryType,
-            sp.GetRequiredService<LlmExecutionRunnerFactory>()));
 
         return composition;
     }

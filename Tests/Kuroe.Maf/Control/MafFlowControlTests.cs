@@ -274,7 +274,7 @@ public sealed class MafFlowControlTests
             ExecutionIndex index = new();
             IExecutionRuntime executions = new ExecutionRuntime(
                 new ExecutionDispatcher(),
-                new ExecutionRunnerRegistry([new ExecutionRunnerRegistration(typeof(FakeRunnerFactory), factory)]));
+                new ExecutionRunnerRegistry([factory]));
             TaskRegistry registry = new(index, pauseOnRestore: false);
             Gateway = new TaskExecutionGateway(index, executions);
             Flow = new FlowRuntime(executions);

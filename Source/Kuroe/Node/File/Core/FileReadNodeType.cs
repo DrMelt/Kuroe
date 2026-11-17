@@ -10,7 +10,7 @@ namespace Kuroe.Node.File;
 
 /// <summary>文件读取节点类型：按路径变量解析路径并读取文件内容，内容作为产出写入唯一的输出端口。</summary>
 public sealed class FileReadNodeType(FileExecutionParameters? parameters)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerKeyProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public FileExecutionParameters? Parameters { get; } = parameters;
@@ -18,8 +18,8 @@ public sealed class FileReadNodeType(FileExecutionParameters? parameters)
     /// <summary>类型名。</summary>
     public NodeKind Kind => FileReadNodeTypes.Name;
 
-    /// <summary>本节点使用的执行器工厂类型。</summary>
-    public Type RunnerFactoryType => FileReadNodeTypes.RunnerFactoryType;
+    /// <summary>本节点使用的执行运行器键。</summary>
+    public ExecutionRunnerKey RunnerKey => FileReadNodeTypes.RunnerKey;
 
     /// <summary>文件读取节点类型的静态形状。</summary>
     public NodeTypeShape Shape => FileReadNodeTypes.Shape;

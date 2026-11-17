@@ -12,12 +12,17 @@ using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionR
 using NeutralExecutionTarget = Kuroe.Execution.Shared.Identity.IExecutionTarget;
 using NeutralPortKind = Kuroe.Execution.Shared.Ports.ExecutionPortKind;
 using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Runner.Llm.Executions;
 
 namespace Kuroe.Console.Tests.Support;
 
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，并按声明收口。</summary>
 public sealed class FakeRunner : NeutralExecutionRunnerFactory
 {
+    /// <summary>本执行器的注册键，与 Llm 节点一致。</summary>
+    public ExecutionRunnerKey Key => LlmExecutionRunnerFactory.Key;
+
     /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
     public IExecutionPortSubmitter? PortSubmitter { get; set; }
 

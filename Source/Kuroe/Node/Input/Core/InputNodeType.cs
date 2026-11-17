@@ -15,7 +15,7 @@ namespace Kuroe.Node.Input;
 
 /// <summary>输入节点类型：启动执行后等待用户回答，回答即产出放行下游。</summary>
 public sealed class InputNodeType(InputParameters? parameters)
-    : INodeType, INodeTypeValidation, INodeOutputProjection, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
+    : INodeType, INodeTypeValidation, INodeOutputProjection, IExecutionParameterProvider, IExecutionRunnerKeyProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public InputParameters? Parameters { get; } = parameters;
@@ -23,8 +23,8 @@ public sealed class InputNodeType(InputParameters? parameters)
     /// <summary>类型名。</summary>
     public NodeKind Kind => InputNodeTypes.Name;
 
-    /// <summary>本节点使用的执行器工厂类型。</summary>
-    public Type RunnerFactoryType => InputNodeTypes.RunnerFactoryType;
+    /// <summary>本节点使用的执行运行器键。</summary>
+    public ExecutionRunnerKey RunnerKey => InputNodeTypes.RunnerKey;
 
     /// <summary>输入节点类型的静态形状。</summary>
     public NodeTypeShape Shape => InputNodeTypes.Shape;

@@ -3,6 +3,7 @@ using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Runner.Command;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Command;
 
@@ -12,8 +13,8 @@ public static class CommandNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Command");
 
-    /// <summary>执行器工厂类型，运行器按它选择。</summary>
-    public static Type RunnerFactoryType { get; } = typeof(CommandExecutionRunnerFactory);
+    /// <summary>执行运行器键，运行器按它选择。</summary>
+    public static ExecutionRunnerKey RunnerKey { get; } = CommandExecutionRunnerFactory.Key;
 
     /// <summary>未声明 TimeoutSeconds 时的等待上限秒数。</summary>
     public const int DefaultTimeoutSeconds = 120;

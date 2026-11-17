@@ -1,8 +1,7 @@
 using Kuroe.Flow.Control.Graph.Runtime.Graph;
 using Kuroe.Flow.Control.Graph.Runtime;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Registry;
-using Kuroe.Node.Llm;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
@@ -261,14 +260,14 @@ public sealed class TestEnvironment : IDisposable
         // 替身执行器替换真实执行与恢复能力
         for (int index = services.Count - 1; index >= 0; index--)
         {
-            if (services[index].ServiceType == typeof(ExecutionRunnerRegistration))
+            if (services[index].ServiceType == typeof(IExecutionRunnerFactory))
             {
                 services.RemoveAt(index);
             }
         }
 
         services.AddBuiltinGraphExecutionRunners(composition.Value, CreateGraphOptions(process));
-        services.AddSingleton(new ExecutionRunnerRegistration(LlmNodeTypes.RunnerFactoryType, runner));
+        services.AddSingleton<IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
         // 不写存档的装配不注册恢复服务

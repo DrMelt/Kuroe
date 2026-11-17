@@ -12,6 +12,12 @@ public sealed class LlmExecutionRunnerFactory(
     SessionFactory sessions,
     IExecutionStatusReader status) : IExecutionRunnerFactory, IExecutionRestorer
 {
+    /// <summary>本工厂的注册键。</summary>
+    public static ExecutionRunnerKey Key { get; } = new("Llm");
+
+    /// <inheritdoc/>
+    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
+
     /// <summary>为一次普通执行建立运行器。</summary>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         target.Parameters is LlmExecutionParameters parameters

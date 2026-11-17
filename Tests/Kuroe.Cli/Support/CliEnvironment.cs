@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Execution.Registry;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Node.Llm;
 using Microsoft.Extensions.DependencyInjection;
 using NeutralExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
@@ -49,13 +49,13 @@ internal sealed class CliEnvironment : IAsyncDisposable
             {
                 for (int index = services.Count - 1; index >= 0; index--)
                 {
-                    if (services[index].ServiceType == typeof(ExecutionRunnerRegistration))
+                    if (services[index].ServiceType == typeof(IExecutionRunnerFactory))
                     {
                         services.RemoveAt(index);
                     }
                 }
 
-                services.AddSingleton(new ExecutionRunnerRegistration(LlmNodeTypes.RunnerFactoryType, runner));
+                services.AddSingleton<IExecutionRunnerFactory>(runner);
             });
         if (created.IsError)
         {
@@ -134,6 +134,9 @@ internal sealed class CliEnvironment : IAsyncDisposable
 /// <summary>不接模型的执行器：只播发固定文本，不提交端口产出。</summary>
 internal sealed class StubRunner : NeutralExecutionRunnerFactory
 {
+    /// <summary>本执行器的注册键，与 Llm 节点一致。</summary>
+    public ExecutionRunnerKey Key => LlmNodeTypes.RunnerKey;
+
     /// <summary>每次执行播发的文本。</summary>
     public string Text { get; set; } = "输出";
 

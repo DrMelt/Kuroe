@@ -10,7 +10,7 @@ namespace Kuroe.Node.File;
 
 /// <summary>文件写入节点类型：按路径变量解析路径，把唯一的内容 Text 输入写入文件，写入内容作为产出。</summary>
 public sealed class FileWriteNodeType(FileExecutionParameters? parameters)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerKeyProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public FileExecutionParameters? Parameters { get; } = parameters;
@@ -18,8 +18,8 @@ public sealed class FileWriteNodeType(FileExecutionParameters? parameters)
     /// <summary>类型名。</summary>
     public NodeKind Kind => FileWriteNodeTypes.Name;
 
-    /// <summary>本节点使用的执行器工厂类型。</summary>
-    public Type RunnerFactoryType => FileWriteNodeTypes.RunnerFactoryType;
+    /// <summary>本节点使用的执行运行器键。</summary>
+    public ExecutionRunnerKey RunnerKey => FileWriteNodeTypes.RunnerKey;
 
     /// <summary>文件写入节点类型的静态形状。</summary>
     public NodeTypeShape Shape => FileWriteNodeTypes.Shape;

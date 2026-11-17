@@ -9,6 +9,7 @@ using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm.Tests.Executions;
 
@@ -87,7 +88,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     {
         public ExecutionTargetId Id { get; } = new("实施");
 
-        public Type RunnerFactoryType => typeof(LlmExecutionRunnerFactory);
+        public ExecutionRunnerKey RunnerKey => LlmExecutionRunnerFactory.Key;
 
         public IExecutionParameters Parameters { get; } = parameters;
     }

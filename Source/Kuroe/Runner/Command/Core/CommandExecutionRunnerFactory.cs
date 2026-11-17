@@ -8,6 +8,12 @@ namespace Kuroe.Runner.Command;
 public sealed class CommandExecutionRunnerFactory(
     IProcessRunner process) : IExecutionRunnerFactory
 {
+    /// <summary>本工厂的注册键。</summary>
+    public static ExecutionRunnerKey Key { get; } = new("Command");
+
+    /// <inheritdoc/>
+    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
+
     /// <inheritdoc/>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         target.Parameters is CommandExecutionParameters parameters

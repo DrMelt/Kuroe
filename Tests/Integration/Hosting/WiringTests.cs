@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Assistant;
 using Kuroe.Control.Shared;
-using Kuroe.Execution.Registry;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Node.Approval;
 using Kuroe.Node.Command;
 using Kuroe.Node.File;
@@ -32,35 +32,35 @@ public sealed class WiringTests : IDisposable
     {
         using ServiceProvider provider = Services();
 
-        Assert.NotEmpty(provider.GetServices<ExecutionRunnerRegistration>());
+        Assert.NotEmpty(provider.GetServices<IExecutionRunnerFactory>());
         Assert.NotNull(provider.GetRequiredService<Kuroe.Execution.ExecutionRuntime>());
         Assert.NotNull(provider.GetRequiredService<SessionFactory>());
     }
 
     [Fact]
-    public void Builtin_execution_runners_cover_every_builtin_factory_type()
+    public void Builtin_execution_runners_cover_every_builtin_runner_key()
     {
         using ServiceProvider provider = Services();
 
-        List<Type> expected =
+        List<ExecutionRunnerKey> expected =
         [
-            ApprovalNodeTypes.RunnerFactoryType,
-            CommandNodeTypes.RunnerFactoryType,
-            FileReadNodeTypes.RunnerFactoryType,
-            FileWriteNodeTypes.RunnerFactoryType,
-            InputNodeTypes.RunnerFactoryType,
-            LlmNodeTypes.RunnerFactoryType,
+            ApprovalNodeTypes.RunnerKey,
+            CommandNodeTypes.RunnerKey,
+            FileReadNodeTypes.RunnerKey,
+            FileWriteNodeTypes.RunnerKey,
+            InputNodeTypes.RunnerKey,
+            LlmNodeTypes.RunnerKey,
         ];
-        List<Type> actual =
+        List<ExecutionRunnerKey> actual =
         [
-            .. provider.GetServices<ExecutionRunnerRegistration>()
-                .Select(registration => registration.RunnerFactoryType)
+            .. provider.GetServices<IExecutionRunnerFactory>()
+                .Select(factory => factory.Key)
                 .Distinct()
-                .OrderBy(type => type.FullName, StringComparer.Ordinal),
+                .OrderBy(key => key.Value, StringComparer.Ordinal),
         ];
 
         Assert.Equal(
-            [.. expected.OrderBy(type => type.FullName, StringComparer.Ordinal)],
+            [.. expected.OrderBy(key => key.Value, StringComparer.Ordinal)],
             actual);
     }
 
