@@ -10,7 +10,9 @@ namespace Kuroe.Assistant.Dialogue.Flow;
 internal sealed class DialogueFlowTarget(
     LlmParameters parameters,
     string model,
-    ExecutionRestoreState? seed) : IExecutionTarget
+    ExecutionRestoreState? seed,
+    int attempt,
+    int maxAttempts) : IExecutionTarget
 {
     /// <inheritdoc/>
     public ExecutionTargetId Id => new(DialogueFlow.ReplyLabel);
@@ -19,5 +21,6 @@ internal sealed class DialogueFlowTarget(
     public ExecutionRunnerKey RunnerKey => LlmNodeTypes.RunnerKey;
 
     /// <inheritdoc/>
-    public IExecutionParameters Parameters { get; } = parameters.ToExecutionParameters(model, seed);
+    public IExecutionParameters Parameters { get; } =
+        parameters.ToExecutionParameters(model, seed, attempt, maxAttempts);
 }

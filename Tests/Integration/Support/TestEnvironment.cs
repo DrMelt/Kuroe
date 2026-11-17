@@ -135,6 +135,8 @@ public sealed class TestEnvironment : IDisposable
             new Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>>(),
             Root,
             new ExecutionId(execution.Id.Value),
+            execution.Input.ExecutionCount,
+            execution.Input.MaxAttempts,
             [
                 new ToolPath(ContractTools.Port),
                 new ToolPath(ContractTools.CannotComplete),

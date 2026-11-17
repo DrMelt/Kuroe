@@ -54,13 +54,13 @@ public sealed class MafFlowSubmission(
                 $"开始端口 {MafFlowDefinition.ModelPort} 没有给出模型。")];
         }
 
-        ErrorOr<Dictionary<MafStepId, IExecutionTarget>> targets = ResolveTargets(definition, model);
+        ErrorOr<Success> targets = ValidateTargets(definition, model, id);
         if (targets.IsError)
         {
             return targets.ErrorsOrEmptyList;
         }
 
-        MafFlowState state = new(definition, effective, new FlowTexts(Texts(effective)), model, targets.Value);
+        MafFlowState state = new(definition, effective, new FlowTexts(Texts(effective)), model);
 
         return new FlowSubmission(
             state,
@@ -125,7 +125,7 @@ public sealed class MafFlowSubmission(
             }
         }
 
-        ErrorOr<Dictionary<MafStepId, IExecutionTarget>> targets = ResolveTargets(flow, model);
+        ErrorOr<Success> targets = ValidateTargets(flow, model, record.Identity.Id);
         if (targets.IsError)
         {
             return targets.ErrorsOrEmptyList;
@@ -135,8 +135,7 @@ public sealed class MafFlowSubmission(
             flow,
             saved.Inputs,
             new FlowTexts(saved.StartTexts.Texts),
-            model,
-            targets.Value)
+            model)
         {
             Checkpoint = checkpoint,
         };
@@ -196,7 +195,6 @@ public sealed class MafFlowSubmission(
         ExecutionRequest request = new(
             new ExecutionOwnerId(taskId.Value),
             record.Target,
-            record.Attempt,
             [.. record.Inputs.Select(input => new ExecutionInputPort(
                 input.Port,
                 ExecutionPortKind.Text,
@@ -248,16 +246,26 @@ public sealed class MafFlowSubmission(
         return null;
     }
 
-    /// <summary>按模型建立全部步骤的执行目标；目标建立失败或标识不一致时返回错误。</summary>
-    private static ErrorOr<Dictionary<MafStepId, IExecutionTarget>> ResolveTargets(
+    /// <summary>按模型校验全部步骤的执行目标；目标建立失败或标识不一致时返回错误。</summary>
+    private static ErrorOr<Success> ValidateTargets(
         MafFlowDefinition definition,
-        string model)
+        string model,
+        TaskId task)
     {
-        Dictionary<MafStepId, IExecutionTarget> targets = [];
         List<Error> errors = [];
         foreach (MafStep step in definition.Steps)
         {
-            ErrorOr<IExecutionTarget> target = step.TargetFactory.Create(step.Id, model);
+            ExecutionParameterContext context = new(
+                new ExecutionOwnerId(task.Value),
+                step.ExecutionTargetId,
+                1,
+                1,
+                [],
+                [],
+                new Dictionary<ExecutionPortName, string>(),
+                [],
+                model);
+            ErrorOr<IExecutionTarget> target = step.TargetFactory.Create(step.Id, model, context);
             if (target.IsError)
             {
                 errors.AddRange(target.ErrorsOrEmptyList);
@@ -269,18 +277,10 @@ public sealed class MafFlowSubmission(
                 errors.Add(FlowErrors.Body(
                     definition.Name.Value,
                     $"步骤「{step.Id.Value}」的执行目标标识 {target.Value.Id.Value} 与步骤标识不一致。"));
-                continue;
             }
-
-            targets[step.Id] = target.Value;
         }
 
-        if (errors.Count > 0)
-        {
-            return errors;
-        }
-
-        return targets;
+        return errors.Count > 0 ? errors : Result.Success;
     }
 
     /// <summary>提交输入必须覆盖全部不带默认值的开始端口，不能重复，也不能落在未声明的端口上。</summary>

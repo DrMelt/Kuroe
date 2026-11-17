@@ -42,4 +42,24 @@ public sealed record TaskSnapshot(
     /// <summary>步骤在步骤表里的顺位，用于展示；分组或未收录的步骤给最末顺位之后。</summary>
     public int OrdinalOf(string path) =>
         View.IndexOf(path) is { } index ? index + 1 : View.Steps.Count + 1;
+
+    /// <summary>该执行在所属目标上的轮次，按执行序列计算。</summary>
+    public int RoundOf(ExecutionSnapshot execution)
+    {
+        int round = 0;
+        foreach (ExecutionSnapshot candidate in Executions)
+        {
+            if (candidate.Request.Target == execution.Request.Target)
+            {
+                round++;
+            }
+
+            if (candidate.Id == execution.Id)
+            {
+                return round;
+            }
+        }
+
+        return round;
+    }
 }

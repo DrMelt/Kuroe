@@ -20,10 +20,16 @@ public sealed record LlmParameters
     public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> ToolPorts { get; init; } =
         new Dictionary<string, IReadOnlyDictionary<string, string>>();
 
-    /// <summary>按本次执行使用的模型建立执行参数，会话种子由调用方给出。</summary>
-    public LlmExecutionParameters ToExecutionParameters(string? model, ExecutionRestoreState? seed = null) =>
+    /// <summary>按本次执行使用的模型、轮次与会话种子建立执行参数。</summary>
+    public LlmExecutionParameters ToExecutionParameters(
+        string? model,
+        ExecutionRestoreState? seed = null,
+        int attempt = 1,
+        int maxAttempts = 1) =>
         new(Prompt, [.. Tools.Select(tool => tool.Value)], SystemPrompt, ToolPorts, model)
         {
             ConversationSeed = seed,
+            Attempt = attempt,
+            MaxAttempts = maxAttempts,
         };
 }

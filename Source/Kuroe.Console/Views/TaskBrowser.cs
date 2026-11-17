@@ -373,7 +373,7 @@ internal sealed class TaskBrowser(
             $"{found.Value.Task.Id} {found.Value.Task.Title}",
             $"{found.Value.Execution.Id} {found.Value.Execution.Request.Target}");
         executionView.Print(found.Value.Task, found.Value.Execution);
-        terminal.Hint($"› {found.Value.Execution.Id} · 第 {found.Value.Execution.Request.Attempt} 轮"
+        terminal.Hint($"› {found.Value.Execution.Id} · 第 {found.Value.Task.RoundOf(found.Value.Execution)} 轮"
             + $" · {found.Value.Execution.State}");
     }
 

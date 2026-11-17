@@ -87,7 +87,6 @@ public sealed class ExecutionTests
         new(
             new ExecutionOwnerId("任务"),
             new ExecutionTargetId("节点"),
-            1,
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),

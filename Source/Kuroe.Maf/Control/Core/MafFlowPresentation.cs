@@ -35,7 +35,7 @@ public sealed class MafFlowPresentation : IFlowPresentation
         [
             .. task.Executions
                 .Where(execution => execution.Request.Target == step.ExecutionTargetId)
-                .Select(Execution),
+                .Select((execution, index) => Execution(execution, index + 1)),
         ];
         FlowExecutionView? last = executions.LastOrDefault(
             execution => execution.State is ExecutionState.Failed or ExecutionState.Interrupted);
@@ -54,7 +54,7 @@ public sealed class MafFlowPresentation : IFlowPresentation
         };
     }
 
-    private static FlowExecutionView Execution(IExecution execution)
+    private static FlowExecutionView Execution(IExecution execution, int round)
     {
         ExecutionSnapshot snapshot = execution.Snapshot();
 
@@ -64,7 +64,7 @@ public sealed class MafFlowPresentation : IFlowPresentation
             snapshot.Progress,
             [])
         {
-            Round = snapshot.Request.Attempt,
+            Round = round,
             CreatedAt = snapshot.CreatedAt,
             StartedAt = snapshot.StartedAt,
             FinishedAt = snapshot.FinishedAt,

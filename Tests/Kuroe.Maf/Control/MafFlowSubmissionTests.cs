@@ -281,13 +281,13 @@ public sealed class MafFlowSubmissionTests
 
     private sealed class FailingTargetFactory : IMafStepTargetFactory
     {
-        public ErrorOr<IExecutionTarget> Create(MafStepId step, string model) =>
+        public ErrorOr<IExecutionTarget> Create(MafStepId step, string model, ExecutionParameterContext context) =>
             Error.Validation("Maf.Target", "没有执行目标。");
     }
 
     private sealed class MismatchedTargetFactory : IMafStepTargetFactory
     {
-        public ErrorOr<IExecutionTarget> Create(MafStepId step, string model) =>
+        public ErrorOr<IExecutionTarget> Create(MafStepId step, string model, ExecutionParameterContext context) =>
             new MismatchedTarget();
     }
 

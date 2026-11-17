@@ -1,17 +1,15 @@
 using Kuroe.Control.Shared;
 using Kuroe.Maf.Definition;
 using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Identity;
 
 namespace Kuroe.Maf.Control;
 
-/// <summary>MAF 流程状态：开始输入、模型、执行目标、运行期检查点与未走完的步骤。</summary>
+/// <summary>MAF 流程状态：开始输入、模型、运行期检查点与未走完的步骤。</summary>
 internal sealed class MafFlowState(
     MafFlowDefinition definition,
     StartInputs inputs,
     FlowTexts startTexts,
-    string model,
-    IReadOnlyDictionary<MafStepId, IExecutionTarget> targets) : IFlowState
+    string model) : IFlowState
 {
     /// <inheritdoc/>
     public StartInputs Inputs { get; } = inputs;
@@ -24,12 +22,6 @@ internal sealed class MafFlowState(
 
     /// <summary>执行使用的模型名。</summary>
     internal string Model { get; } = model;
-
-    /// <summary>按步骤取已解析的执行目标。</summary>
-    internal IExecutionTarget Target(MafStepId step) =>
-        targets.TryGetValue(step, out IExecutionTarget? target)
-            ? target
-            : throw new InvalidOperationException($"步骤 {step.Value} 没有执行目标。");
 
     /// <summary>运行期检查点。</summary>
     internal MafWorkflowCheckpoint? Checkpoint { get; set; }

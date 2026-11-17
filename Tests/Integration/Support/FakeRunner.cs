@@ -35,6 +35,19 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     public ExecutionRunnerKey Key => LlmExecutionRunnerFactory.Key;
 
     private readonly Lock _gate = new();
+    private readonly Dictionary<string, int> _rounds = [];
+
+    /// <summary>本执行器看到的该目标轮次，按执行序列递增。</summary>
+    private int NextRound(string target)
+    {
+        lock (_gate)
+        {
+            int round = _rounds.GetValueOrDefault(target) + 1;
+            _rounds[target] = round;
+
+            return round;
+        }
+    }
     private readonly List<IGraphExecution> _started = [];
 
     /// <summary>执行闸门：替身执行器在此登记进入并保持，测试等待进入并放行。</summary>
@@ -238,7 +251,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
             _started.Add(started);
         }
 
-        ExecutionHandle handle = Gate.Arrive(execution, node, request.Attempt);
+        ExecutionHandle handle = Gate.Arrive(execution, node, NextRound(request.Target.Value));
         try
         {
             Emits?.Invoke(started, journal);
@@ -323,7 +336,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
             [.. request.Target.Value
                 .Split('/', StringSplitOptions.RemoveEmptyEntries)
                 .Select(level => new NodeLabel(Uri.UnescapeDataString(level)))]);
-        ExecutionHandle handle = Gate.Arrive(execution, node, request.Attempt);
+        ExecutionHandle handle = Gate.Arrive(execution, node, NextRound(request.Target.Value));
         try
         {
             await Gate.WaitOpen(handle).WaitAsync(cancellationToken);

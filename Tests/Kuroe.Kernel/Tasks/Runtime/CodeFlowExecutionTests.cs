@@ -41,7 +41,6 @@ public sealed class CodeFlowExecutionTests
 
         ExecutionStatus status = harness.Status.Read(execution.Id).ThrowIfError();
         Assert.Empty(status.OutstandingOutputs);
-        Assert.Equal(5, status.MaxAttempts);
         Assert.Equal("得出结论：目标", execution.Contract.Outputs![Conclusion].Text);
 
         TaskSnapshot snapshot = harness.Task.Snapshot();
@@ -139,12 +138,10 @@ public sealed class CodeFlowExecutionTests
             ExecutionRequest request = new(
                 new ExecutionOwnerId(Task.Id.Value),
                 new ExecutionTargetId("回话"),
-                1,
                 [new ExecutionInputPort(Input, ExecutionPortKind.Text, ExecutionPortRole.Content, true, null)],
                 [new ExecutionInputValue(Input, "目标", null)],
                 new Dictionary<ExecutionPortName, string> { [Input] = "目标" },
-                [new ExecutionOutputPort(Conclusion, ExecutionPortKind.Text, true, false)],
-                MaxAttempts: 5);
+                [new ExecutionOutputPort(Conclusion, ExecutionPortKind.Text, true, false)]);
             IExecution execution = Index.Open(Task, request, Runtime.Create);
             Task.UnderLock(() =>
             {

@@ -12,7 +12,6 @@ public static class ExecutionRecordCapture
         new(
             snapshot.Id,
             snapshot.Request.Target,
-            snapshot.Request.Attempt,
             snapshot.State,
             snapshot.Progress,
             snapshot.CreatedAt,

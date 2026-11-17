@@ -24,7 +24,7 @@ internal sealed class MafStepExecutor(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
     MafStep step,
-    IExecutionTarget target,
+    string model,
     IMafStepRunControl control)
 {
     /// <summary>执行一次步骤，把交回的端口作为上游产出交给下游。</summary>
@@ -39,7 +39,24 @@ internal sealed class MafStepExecutor(
 
         ExecutionTargetId targetId = step.ExecutionTargetId;
         int attempt = task.Executions.Count(execution => execution.Request.Target == targetId) + 1;
-        IExecution execution = gateway.Open(task, Request(message, attempt));
+        ExecutionRequest request = Request(message);
+        ExecutionParameterContext context = new(
+            request.Owner,
+            request.Target,
+            attempt,
+            1,
+            request.InputPorts,
+            request.Inputs,
+            request.Texts,
+            request.OutputPorts,
+            model);
+        ErrorOr<IExecutionTarget> target = step.TargetFactory.Create(step.Id, model, context);
+        if (target.IsError)
+        {
+            throw new InvalidOperationException(target.FirstError.Description);
+        }
+
+        IExecution execution = gateway.Open(task, request);
         lock (task.Gate)
         {
             task.AttachExecution(execution);
@@ -48,7 +65,7 @@ internal sealed class MafStepExecutor(
         using CancellationTokenRegistration registration = cancellationToken.Register(
             () => gateway.Interrupt(execution, "MAF 流程取消。"));
 
-        ErrorOr<Success> run = await gateway.RunAsync(execution, target).ConfigureAwait(false);
+        ErrorOr<Success> run = await gateway.RunAsync(execution, target.Value).ConfigureAwait(false);
 
         ExecutionSnapshot snapshot = execution.Snapshot();
         if (snapshot.State == ExecutionState.Interrupted)
@@ -78,11 +95,10 @@ internal sealed class MafStepExecutor(
     }
 
     /// <summary>本次执行的请求：上游文本作为输入，步骤输出端口要求交回。</summary>
-    private ExecutionRequest Request(MafStepMessage message, int attempt) =>
+    private ExecutionRequest Request(MafStepMessage message) =>
         new(
             new ExecutionOwnerId(task.Id.Value),
             step.ExecutionTargetId,
-            attempt,
             [.. message.Outputs.Select(output => new ExecutionInputPort(
                 new ExecutionPortName(output.Port.Value),
                 ExecutionPortKind.Text,

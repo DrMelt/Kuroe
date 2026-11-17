@@ -223,7 +223,6 @@ public sealed class FileExecutionRunnerTests
         new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId(node.Path.Value),
-            1,
             [
                 .. node.Inputs.Select(port => new ExecutionInputPort(
                     new ExecutionPortName(port.Name.Value),

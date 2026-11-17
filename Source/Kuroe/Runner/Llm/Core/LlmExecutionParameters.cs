@@ -16,8 +16,14 @@ public sealed record LlmExecutionParameters(
     /// <summary>本轮的会话历史种子，来自此前执行留下的 Llm 会话快照。不写入执行记录。</summary>
     public ExecutionRestoreState? ConversationSeed { get; init; }
 
+    /// <summary>本轮轮次，由流程控制注入。</summary>
+    public int Attempt { get; init; } = 1;
+
+    /// <summary>本轮执行上限，由流程控制注入。</summary>
+    public int MaxAttempts { get; init; } = 1;
+
     /// <summary>本轮要做的事：执行要求在请求最前，随后是轮次。没有内容时为空。</summary>
-    public string? Instruction(ExecutionRequest request)
+    public string? Instruction()
     {
         List<string> instruction = [];
         if (Prompt is { Length: > 0 } prompt)
@@ -25,9 +31,9 @@ public sealed record LlmExecutionParameters(
             instruction.Add(prompt);
         }
 
-        if (request.Attempt > 1)
+        if (Attempt > 1)
         {
-            instruction.Add($"这是第 {request.Attempt} 轮实施。");
+            instruction.Add($"这是第 {Attempt} 轮实施。");
         }
 
         return instruction.Count == 0 ? null : string.Join('\n', instruction);

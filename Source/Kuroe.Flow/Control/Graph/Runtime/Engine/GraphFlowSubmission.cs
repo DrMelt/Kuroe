@@ -143,6 +143,7 @@ public sealed class GraphFlowSubmission(
         };
 
         List<IExecution> units = [];
+        Dictionary<string, int> rounds = [];
         try
         {
             foreach (ExecutionRecord executionRecord in record.Executions)
@@ -155,7 +156,9 @@ public sealed class GraphFlowSubmission(
                         $"存档执行节点 {path} 不在流程图中。")];
                 }
 
-                GraphExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord, flow.Graph);
+                int attempt = rounds.GetValueOrDefault(executionRecord.Target.Value) + 1;
+                rounds[executionRecord.Target.Value] = attempt;
+                GraphExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord, flow.Graph, attempt);
                 GraphExecution execution = GraphExecution.Restore(executionRecord, input, executions);
                 state.Bind(execution.Unit.Id, input, execution.ControlVersion);
                 units.Add(execution.Unit);
@@ -173,14 +176,19 @@ public sealed class GraphFlowSubmission(
             saved.Pending);
     }
 
-    private GraphExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved, NodeGraph graph)
+    private GraphExecutionInput BuildInput(
+        TaskId task,
+        ExecutableNode node,
+        ExecutionRecord saved,
+        NodeGraph graph,
+        int attempt)
     {
         GraphExecutionInput input = new()
         {
             Task = task,
             Node = node.Path,
             Type = node.Type,
-            ExecutionCount = saved.Attempt,
+            ExecutionCount = attempt,
             MaxAttempts = node.MaxExecutions,
             Inputs =
             [

@@ -56,7 +56,6 @@ public sealed class ExecutionHistoryTests
         new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("实施"),
-            1,
             [],
             inputs,
             new Dictionary<ExecutionPortName, string>(),

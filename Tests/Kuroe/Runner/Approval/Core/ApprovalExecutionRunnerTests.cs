@@ -55,7 +55,6 @@ public sealed class ApprovalExecutionRunnerTests
         new(
             new ExecutionOwnerId("task-1"),
             ExecutionTargetPaths.Target(Path),
-            1,
             [new ExecutionInputPort(new ExecutionPortName("正文"), ExecutionPortKind.Text, ExecutionPortRole.Content, true, null)],
             [new ExecutionInputValue(new ExecutionPortName("正文"), "内容", null)],
             new Dictionary<ExecutionPortName, string> { [new ExecutionPortName("正文")] = "内容" },

@@ -20,6 +20,21 @@ namespace Kuroe.Console.Tests.Support;
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，并按声明收口。</summary>
 public sealed class FakeRunner : NeutralExecutionRunnerFactory
 {
+    private readonly Lock _gate = new();
+    private readonly Dictionary<string, int> _rounds = [];
+
+    /// <summary>本执行器看到的该目标轮次，按执行序列递增。</summary>
+    private int NextRound(string target)
+    {
+        lock (_gate)
+        {
+            int round = _rounds.GetValueOrDefault(target) + 1;
+            _rounds[target] = round;
+
+            return round;
+        }
+    }
+
     /// <summary>本执行器的注册键，与 Llm 节点一致。</summary>
     public ExecutionRunnerKey Key => LlmExecutionRunnerFactory.Key;
 
@@ -55,7 +70,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
             [.. request.Target.Value
                 .Split('/', StringSplitOptions.RemoveEmptyEntries)
                 .Select(level => new NodeLabel(Uri.UnescapeDataString(level)))]);
-        ExecutionHandle handle = Gate.Arrive(execution, node, request.Attempt);
+        ExecutionHandle handle = Gate.Arrive(execution, node, NextRound(request.Target.Value));
         try
         {
             await Gate.WaitOpen(handle).WaitAsync(cancellationToken);

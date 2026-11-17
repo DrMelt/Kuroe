@@ -21,7 +21,7 @@ internal sealed class ExecutionDetailView(Terminal terminal)
         [
             ("任务", new Text($"{task.Id} {task.Title}")),
             ("节点", new Text(execution.Request.Target.Value)),
-            ("轮次", new Text($"第 {execution.Request.Attempt} 轮")),
+            ("轮次", new Text($"第 {task.RoundOf(execution)} 轮")),
             ("请求", new Text(ViewLabels.Requests(execution.Usage), Styles.Hint)),
             .. ViewLabels.TokenEntries(execution.Usage)
                 .Select(entry => (entry.Label, (IRenderable)new Text(entry.Value, Styles.Hint))),

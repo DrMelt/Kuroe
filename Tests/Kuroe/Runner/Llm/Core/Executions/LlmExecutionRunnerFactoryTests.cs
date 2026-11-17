@@ -68,7 +68,6 @@ public sealed class LlmExecutionRunnerFactoryTests
         ExecutionRequest request = new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("实施"),
-            1,
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),

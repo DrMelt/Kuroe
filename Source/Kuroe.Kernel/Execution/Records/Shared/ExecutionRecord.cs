@@ -10,7 +10,6 @@ namespace Kuroe.Execution.Records.Shared;
 public sealed record ExecutionRecord(
     ExecutionId Id,
     ExecutionTargetId Target,
-    int Attempt,
     ExecutionState State,
     string Progress,
     DateTimeOffset CreatedAt,

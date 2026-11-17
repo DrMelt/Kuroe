@@ -1319,6 +1319,8 @@ public sealed class FileToolsTests
             },
             _root,
             default,
+            1,
+            1,
             [new ToolPath("file/read/ReadFile")]);
 
         string output = ToolResult.Render(new ReadFileTool(context.For("file/read/ReadFile"), _files)
@@ -1336,6 +1338,8 @@ public sealed class FileToolsTests
             new Dictionary<string, IReadOnlyDictionary<string, Kuroe.Execution.Shared.Ports.ExecutionPortName>>(),
             _root,
             default,
+            1,
+            1,
             []);
 
         string output = ToolResult.Render(new ReadFileTool(context.For("file/read/ReadFile"), _files)

@@ -75,5 +75,8 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
 
     /// <summary>按本次执行建立 Llm 参数。</summary>
     public IExecutionParameters Create(ExecutionParameterContext context) =>
-        (Parameters ?? new LlmParameters()).ToExecutionParameters(context.Model);
+        (Parameters ?? new LlmParameters()).ToExecutionParameters(
+            context.Model,
+            attempt: context.Attempt,
+            maxAttempts: context.MaxAttempts);
 }

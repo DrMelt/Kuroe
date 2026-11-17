@@ -91,6 +91,29 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     }
 
     [Fact]
+    public void Read_accepts_legacy_attempt_field()
+    {
+        TaskRecordCodec codec = TaskRecordCodecs.Codec();
+        string json = codec.Write(TaskRecordFixture.Create()).ThrowIfError();
+
+        System.Text.Json.Nodes.JsonNode root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+        System.Text.Json.Nodes.JsonArray executions = root["Task"]!["Executions"]!.AsArray();
+        executions[0]!["Attempt"] = 2;
+
+        TaskRecord loaded = codec.Read(root.ToJsonString()).ThrowIfError();
+
+        Assert.Equal(TaskRecordFixture.Create().Executions[0].Id, loaded.Executions[0].Id);
+    }
+
+    [Fact]
+    public void Write_omits_legacy_attempt_field()
+    {
+        string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();
+
+        Assert.DoesNotContain("\"Attempt\"", json);
+    }
+
+    [Fact]
     public void Write_emits_context_tokens()
     {
         string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();

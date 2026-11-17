@@ -42,6 +42,8 @@ internal sealed class KuroeToolFactory(
             portsByTool,
             workspaceDirectory,
             execution,
+            parameters.Attempt,
+            parameters.MaxAttempts,
             paths);
 
         return [.. sources.SelectMany(source => source.Create(context))];

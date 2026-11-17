@@ -37,7 +37,6 @@ public sealed class ContractToolsTests
 
         Assert.False(status.IsError);
         Assert.Empty(status.Value.OutstandingOutputs);
-        Assert.Equal(3, status.Value.MaxAttempts);
         Assert.Equal("完成", execution.Contract.Outputs![Conclusion].Text);
     }
 
@@ -105,12 +104,10 @@ public sealed class ContractToolsTests
         ExecutionRequest request = new(
             new ExecutionOwnerId(task.Id.Value),
             new ExecutionTargetId("步骤"),
-            1,
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),
-            [new ExecutionOutputPort(port, ExecutionPortKind.Text, true, false)],
-            MaxAttempts: 3);
+            [new ExecutionOutputPort(port, ExecutionPortKind.Text, true, false)]);
         IExecution execution = runtime.Create(id, request);
         gateway.Register(execution, task);
 

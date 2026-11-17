@@ -34,7 +34,7 @@ internal static class PlainTaskView
                 continue;
             }
 
-            output.Hint($"节点 {execution.Request.Target} 第 {execution.Request.Attempt} 轮"
+            output.Hint($"节点 {execution.Request.Target} 第 {task.RoundOf(execution)} 轮"
                 + $" · 请求 {InfoLabels.Requests(execution.Usage)}"
                 + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
             foreach ((string label, string value) in InfoLabels.TokenEntries(execution.Usage))

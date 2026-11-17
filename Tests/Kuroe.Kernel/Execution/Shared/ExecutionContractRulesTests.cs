@@ -67,7 +67,6 @@ public sealed class ExecutionContractRulesTests
         new(
             new ExecutionOwnerId("task"),
             new ExecutionTargetId("step"),
-            1,
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),

@@ -50,14 +50,6 @@ public sealed class GraphExecutionTests
         Assert.Equal("结论文本", port.Description);
     }
 
-    [Fact]
-    public void Request_carries_the_execution_limit()
-    {
-        Kuroe.Execution.Shared.Request.ExecutionRequest request = GraphExecution.BuildRequest(Input() with { MaxAttempts = 7 });
-
-        Assert.Equal(7, request.MaxAttempts);
-    }
-
     private static GraphExecution Create()
     {
         GraphExecutionInput input = Input();

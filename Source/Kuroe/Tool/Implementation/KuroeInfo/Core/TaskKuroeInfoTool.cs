@@ -163,7 +163,7 @@ public sealed class TaskKuroeInfoTool : ITool
         {
             foreach (ExecutionSnapshot execution in task.Executions)
             {
-                text.AppendLine($"  {ExecutionLine(execution)}");
+                text.AppendLine($"  {ExecutionLine(task, execution)}");
             }
         }
 
@@ -177,7 +177,7 @@ public sealed class TaskKuroeInfoTool : ITool
     {
         var text = new StringBuilder();
         TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
-        text.AppendLine($"{execution.Id} · 第 {execution.Request.Attempt} 轮");
+        text.AppendLine($"{execution.Id} · 第 {task.RoundOf(execution)} 轮");
         text.AppendLine($"{task.Id} {task.Title} · 目标 {execution.Request.Target}");
         string stateLabel = execution.State.IsLive() && execution.Progress.Length > 0
             ? $"{execution.State.Label()}（{execution.Progress}）"
@@ -249,13 +249,13 @@ public sealed class TaskKuroeInfoTool : ITool
     }
 
     /// <summary>列表里一行的执行概况。</summary>
-    private static string ExecutionLine(ExecutionSnapshot execution)
+    private static string ExecutionLine(TaskSnapshot task, ExecutionSnapshot execution)
     {
         TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
         List<string> parts =
         [
             execution.Id.ToString(),
-            $"第 {execution.Request.Attempt} 轮",
+            $"第 {task.RoundOf(execution)} 轮",
             $"请求 {InfoLabels.Requests(execution.Usage)}",
             execution.State.ToString(),
             InfoLabels.Elapsed(elapsed),

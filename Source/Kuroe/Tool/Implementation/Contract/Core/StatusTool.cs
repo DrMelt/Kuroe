@@ -8,19 +8,31 @@ namespace Kuroe.Tool.Contract;
 
 /// <summary>查看本轮执行契约状态的通道。载体按执行换一份，查看时才知道是哪个执行在报。</summary>
 /// <remarks>按执行建立载体。</remarks>
-public sealed class StatusTool(IExecutionStatusReader reader, ExecutionId execution) : ITool
+public sealed class StatusTool(
+    IExecutionStatusReader reader,
+    ExecutionId execution,
+    int attempt,
+    int maxAttempts) : ITool
 {
     /// <summary>本载体的函数声明。</summary>
-    public IReadOnlyList<ToolFunction> Functions { get; } = Declare(reader, execution);
+    public IReadOnlyList<ToolFunction> Functions { get; } = Declare(reader, execution, attempt, maxAttempts);
 
     /// <summary>把状态定义绑上读取该执行契约状态的调用体。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(IExecutionStatusReader reader, ExecutionId execution) =>
+    private static IReadOnlyList<ToolFunction> Declare(
+        IExecutionStatusReader reader,
+        ExecutionId execution,
+        int attempt,
+        int maxAttempts) =>
     [
-        ContractToolDefinitions.Status().Bind(_ => Describe(reader, execution)),
+        ContractToolDefinitions.Status().Bind(_ => Describe(reader, execution, attempt, maxAttempts)),
     ];
 
     /// <summary>本轮契约状态的模型可见文本，读不到时把错误交回模型。</summary>
-    private static ErrorOr<string> Describe(IExecutionStatusReader reader, ExecutionId execution)
+    private static ErrorOr<string> Describe(
+        IExecutionStatusReader reader,
+        ExecutionId execution,
+        int attempt,
+        int maxAttempts)
     {
         ErrorOr<ExecutionStatus> read = reader.Read(execution);
         if (read.IsError)
@@ -29,9 +41,10 @@ public sealed class StatusTool(IExecutionStatusReader reader, ExecutionId execut
         }
 
         ExecutionStatus status = read.Value;
+        string limit = maxAttempts == int.MaxValue ? "不限" : maxAttempts.ToString();
 
         var text = new StringBuilder();
-        text.AppendLine($"节点 {status.Target} · 第 {status.Attempt} 轮 · 执行上限 {status.MaxAttempts}");
+        text.AppendLine($"节点 {status.Target} · 第 {attempt} 轮 · 执行上限 {limit}");
         text.AppendLine($"执行状态：{status.State.Label()}");
         text.AppendLine(ContractReceipts.Needs(status));
 

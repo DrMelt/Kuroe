@@ -41,8 +41,6 @@ public sealed class ExecutionStatusReader(IExecutionOwnerIndex executions) : IEx
 
         return new ExecutionStatus(
             execution.Request.Target,
-            execution.Request.Attempt,
-            execution.Request.MaxAttempts,
             execution.State,
             outstanding,
             contract.CannotCompleteReason);

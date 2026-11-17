@@ -39,5 +39,5 @@ public sealed class ContractToolSourceTests
     }
 
     private static ExecutionStatus Status() =>
-        new(new ExecutionTargetId("节点"), 1, 1, ExecutionState.Running, [], null);
+        new(new ExecutionTargetId("节点"), ExecutionState.Running, [], null);
 }

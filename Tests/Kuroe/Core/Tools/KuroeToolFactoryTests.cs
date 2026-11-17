@@ -105,7 +105,6 @@ public sealed class KuroeToolFactoryTests
         new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId("流程/节点"),
-            1,
             [],
             [],
             texts,
@@ -124,6 +123,8 @@ public sealed class KuroeToolFactoryTests
             new Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>>(),
             "C:/workspace",
             new ExecutionId(1),
+            1,
+            1,
             [new ToolPath("group/one")]);
 
         IReadOnlyList<ITool> tools = source.Create(context);

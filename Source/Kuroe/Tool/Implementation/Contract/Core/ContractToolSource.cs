@@ -26,6 +26,6 @@ public sealed class ContractToolSource(
     [
         new PortTool(ports, context.Execution, ContractPorts.DeclaredPorts(context.Ports.Outputs)),
         new CannotCompleteTool(cannotComplete, context.Execution),
-        new StatusTool(status, context.Execution),
+        new StatusTool(status, context.Execution, context.Attempt, context.MaxAttempts),
     ];
 }

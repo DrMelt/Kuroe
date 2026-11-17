@@ -47,7 +47,6 @@ public sealed record FlowData(
 public sealed record ExecutionData(
     int Id,
     string? Target,
-    int Attempt,
     ExecutionState State,
     string? Progress,
     DateTimeOffset CreatedAt,
@@ -59,7 +58,11 @@ public sealed record ExecutionData(
     Dictionary<string, string>? Texts,
     RestorePayloadData? RestoreData = null,
     int? ContinuedFrom = null,
-    ExecutionContractData? Contract = null);
+    ExecutionContractData? Contract = null)
+{
+    /// <summary>旧存档读取兼容字段，当前不写出也不参与恢复。</summary>
+    public int? Attempt { get; init; }
+}
 
 /// <summary>一次执行进入某个输入端口的取值与来源标识。</summary>
 public sealed record ExecutionInputData(string? Port, string? Source, string? Text);

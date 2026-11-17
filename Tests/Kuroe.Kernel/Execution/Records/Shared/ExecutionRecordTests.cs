@@ -18,7 +18,6 @@ public sealed class ExecutionRecordTests
         ExecutionRecord record = new(
             new ExecutionId(3),
             new ExecutionTargetId("整体/计划"),
-            2,
             ExecutionState.Succeeded,
             "完成",
             DateTimeOffset.UnixEpoch,
@@ -48,7 +47,6 @@ public sealed class ExecutionRecordTests
         ExecutionRecord record = new(
             new ExecutionId(1),
             new ExecutionTargetId("步骤"),
-            1,
             ExecutionState.Queued,
             "",
             DateTimeOffset.UnixEpoch,
@@ -96,7 +94,6 @@ public sealed class ExecutionRecordTests
         new ExecutionRequest(
             new ExecutionOwnerId("task"),
             new ExecutionTargetId("step"),
-            1,
             [],
             [input],
             new Dictionary<ExecutionPortName, string> { [input.Port] = input.Text },

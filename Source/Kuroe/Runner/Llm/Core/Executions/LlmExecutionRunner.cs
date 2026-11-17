@@ -91,7 +91,7 @@ internal sealed class LlmExecutionRunner(
         {
             ErrorOr<Success> reply = await AskWithReminders(
                 text => session.AskAsync(text, cancellationToken),
-                session.IsRestored ? null : _parameters.Instruction(request),
+                session.IsRestored ? null : _parameters.Instruction(),
                 () => _reminder.Text(execution));
 
             if (reply.IsError)

@@ -16,7 +16,7 @@ public sealed class CannotCompleteToolTests
         FakeSubmitter submitter = new()
         {
             Status = new ExecutionStatus(
-                new ExecutionTargetId("节点"), 1, 3, ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料"),
+                new ExecutionTargetId("节点"), ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料"),
         };
         CannotCompleteTool tool = new(submitter, new ExecutionId(1));
 
@@ -47,7 +47,7 @@ public sealed class CannotCompleteToolTests
     private sealed class FakeSubmitter : IExecutionCannotCompleteSubmitter
     {
         public ExecutionStatus Status { get; init; } =
-            new(new ExecutionTargetId("节点"), 1, 3, ExecutionState.Running, [], null);
+            new(new ExecutionTargetId("节点"), ExecutionState.Running, [], null);
 
         public Error? Failure { get; init; }
 

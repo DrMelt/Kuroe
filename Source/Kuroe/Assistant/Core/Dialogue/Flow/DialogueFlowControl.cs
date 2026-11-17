@@ -163,7 +163,12 @@ internal sealed class DialogueFlowControl(
             _pendingInput = null;
             execution = gateway.Open(task, Request(input));
             IExecution? previous = task.Executions.Count > 0 ? task.Executions[^1] : null;
-            target = new DialogueFlowTarget(state.Parameters, state.Model, previous?.RestoreData);
+            target = new DialogueFlowTarget(
+                state.Parameters,
+                state.Model,
+                previous?.RestoreData,
+                task.Executions.Count + 1,
+                int.MaxValue);
             task.AttachExecution(execution);
             _live = execution;
         }
@@ -175,7 +180,6 @@ internal sealed class DialogueFlowControl(
         new(
             new ExecutionOwnerId(task.Id.Value),
             new ExecutionTargetId(DialogueFlow.ReplyLabel),
-            1,
             [],
             [new ExecutionInputValue(new ExecutionPortName(DialogueFlow.InputPort.Value), text, null)],
             new Dictionary<ExecutionPortName, string>

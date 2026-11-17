@@ -341,7 +341,7 @@ internal sealed class MafFlowControl(
     /// <summary>把一个步骤接到 Kuroe 执行网关。</summary>
     private MafStepHandler Handler(MafStep step) =>
         (message, cancellationToken) =>
-            new MafStepExecutor(task, gateway, step, state.Target(step.Id), this)
+            new MafStepExecutor(task, gateway, step, state.Model, this)
                 .HandleAsync(message, cancellationToken);
 
     /// <inheritdoc/>

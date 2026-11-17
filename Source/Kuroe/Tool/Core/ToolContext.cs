@@ -4,17 +4,21 @@ using Kuroe.Execution.Shared.Ports;
 
 namespace Kuroe.Tool;
 
-/// <summary>一次执行的工具创建上下文：端口访问、执行身份、本轮可用工具面、各工具的变量到端口映射与工作区根。</summary>
+/// <summary>一次执行的工具创建上下文：端口访问、执行身份、本轮轮次与上限、本轮可用工具面、各工具的变量到端口映射与工作区根。</summary>
 /// <param name="Ports">执行输入的端口访问。</param>
 /// <param name="PortsByTool">工具路径到变量映射的对应表。</param>
 /// <param name="WorkspaceDirectory">工作区根目录。</param>
 /// <param name="Execution">所属执行。</param>
+/// <param name="Attempt">本轮轮次。</param>
+/// <param name="MaxAttempts">本轮执行上限。</param>
 /// <param name="Paths">本轮模型可用的工具路径。</param>
 public sealed record ToolContext(
     IExecutionPortAccess Ports,
     IReadOnlyDictionary<string, IReadOnlyDictionary<string, ExecutionPortName>> PortsByTool,
     string WorkspaceDirectory,
     ExecutionId Execution,
+    int Attempt,
+    int MaxAttempts,
     IReadOnlyList<ToolPath> Paths)
 {
     /// <summary>某个工具的绑定视图，变量映射只保留该工具的条目。</summary>

@@ -62,7 +62,7 @@ public sealed class ContractReminderTests
     private static ExecutionStatus Status(
         IReadOnlyList<ExecutionPortName> outstanding,
         string? reason = null) =>
-        new(new ExecutionTargetId("实施"), 1, 3, ExecutionState.Running, outstanding, reason);
+        new(new ExecutionTargetId("实施"), ExecutionState.Running, outstanding, reason);
 
     private sealed class FakeReader(ErrorOr<ExecutionStatus> result) : IExecutionStatusReader
     {

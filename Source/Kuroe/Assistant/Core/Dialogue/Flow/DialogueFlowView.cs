@@ -15,20 +15,21 @@ internal static class DialogueFlowView
     {
         IReadOnlyList<FlowExecutionView> executions =
         [
-            .. task.Executions.Select(execution => execution.Snapshot())
-                .Select(snapshot => new FlowExecutionView(
-                    snapshot.Id.Value,
-                    snapshot.State,
-                    snapshot.Progress,
+            .. task.Executions
+                .Select((execution, index) => (Snapshot: execution.Snapshot(), Round: index + 1))
+                .Select(entry => new FlowExecutionView(
+                    entry.Snapshot.Id.Value,
+                    entry.Snapshot.State,
+                    entry.Snapshot.Progress,
                     [])
                 {
-                    Round = snapshot.Request.Attempt,
-                    CreatedAt = snapshot.CreatedAt,
-                    StartedAt = snapshot.StartedAt,
-                    FinishedAt = snapshot.FinishedAt,
-                    Failures = snapshot.Failures,
-                    HasRestoreData = snapshot.RestoreData is not null,
-                    ContinuedFrom = snapshot.ContinuedFrom?.Value,
+                    Round = entry.Round,
+                    CreatedAt = entry.Snapshot.CreatedAt,
+                    StartedAt = entry.Snapshot.StartedAt,
+                    FinishedAt = entry.Snapshot.FinishedAt,
+                    Failures = entry.Snapshot.Failures,
+                    HasRestoreData = entry.Snapshot.RestoreData is not null,
+                    ContinuedFrom = entry.Snapshot.ContinuedFrom?.Value,
                 }),
         ];
 

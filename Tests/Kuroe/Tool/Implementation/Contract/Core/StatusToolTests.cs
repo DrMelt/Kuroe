@@ -15,8 +15,10 @@ public sealed class StatusToolTests
     {
         StatusTool tool = new(
             new FakeReader(new ExecutionStatus(
-                new ExecutionTargetId("节点"), 2, 5, ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料")),
-            new ExecutionId(1));
+                new ExecutionTargetId("节点"), ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料")),
+            new ExecutionId(1),
+            2,
+            5);
 
         ErrorOr<string> result = Assert.Single(tool.Functions).Invoke(new ToolArguments(new Dictionary<string, object?>()));
 
@@ -31,7 +33,9 @@ public sealed class StatusToolTests
     {
         StatusTool tool = new(
             new FakeReader(Error.NotFound("Execution.NotFound", "执行不存在。")),
-            new ExecutionId(1));
+            new ExecutionId(1),
+            1,
+            1);
 
         ErrorOr<string> result = Assert.Single(tool.Functions).Invoke(new ToolArguments(new Dictionary<string, object?>()));
 

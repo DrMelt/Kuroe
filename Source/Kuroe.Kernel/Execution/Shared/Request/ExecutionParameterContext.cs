@@ -8,6 +8,7 @@ public sealed record ExecutionParameterContext(
     ExecutionOwnerId Owner,
     ExecutionTargetId Target,
     int Attempt,
+    int MaxAttempts,
     IReadOnlyList<ExecutionInputPort> InputPorts,
     IReadOnlyList<ExecutionInputValue> Inputs,
     IReadOnlyDictionary<ExecutionPortName, string> Texts,
