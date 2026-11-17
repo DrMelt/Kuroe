@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Maf.Control;
+namespace Kuroe.Maf.Definition;
 
 /// <summary>MAF 流程定义的来源。宿主持有可供提交的 MAF 流程。</summary>
 public interface IMafFlowSource

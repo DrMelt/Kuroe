@@ -11,6 +11,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
+        <ProjectReference Include="..\Definition\Core\Kuroe.Maf.Definition.csproj" />
         <ProjectReference Include="..\Control\Core\Kuroe.Maf.Control.csproj" />
         <ProjectReference Include="..\Persistence\Core\Kuroe.Maf.Persistence.csproj" />
     </ItemGroup>

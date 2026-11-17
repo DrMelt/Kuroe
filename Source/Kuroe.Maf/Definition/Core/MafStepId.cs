@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 
-namespace Kuroe.Maf.Control;
+namespace Kuroe.Maf.Definition;
 
 /// <summary>MAF 步骤标识。步骤标识同时是执行目标标识与流程步骤路径。</summary>
 public readonly record struct MafStepId(string Value)

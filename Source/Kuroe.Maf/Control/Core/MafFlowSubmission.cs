@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.Maf.Definition;
 using Kuroe.Execution.Records.Shared;
 using Kuroe.Maf.Records.Shared;
 using Kuroe.Tasks.Records.Shared;
@@ -105,9 +106,9 @@ public sealed class MafFlowSubmission(
         {
             return [Error.Failure(FlowErrorCodes.RecordFormat, "MAF 流程状态缺少模型。")];
         }
-        MafCheckpoint? checkpoint = (saved.CheckpointSession, saved.CheckpointId, saved.CheckpointData) switch
+        MafWorkflowCheckpoint? checkpoint = (saved.CheckpointSession, saved.CheckpointId, saved.CheckpointData) switch
         {
-            ({ } session, { } id, { } data) => new MafCheckpoint(session, id, data),
+            ({ } session, { } id, { } data) => new MafWorkflowCheckpoint(session, id, data),
             _ => null,
         };
         if (checkpoint is { } savedCheckpoint)

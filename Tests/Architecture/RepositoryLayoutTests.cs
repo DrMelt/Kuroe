@@ -1914,6 +1914,7 @@ public sealed class RepositoryLayoutTests
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
         string mafRecords = Path.Combine(SourceRoot, "Kuroe.Maf", "Records", "Shared");
+        string mafDefinition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
 
         Assert.All(
             ProjectReferences(project),
@@ -1924,8 +1925,38 @@ public sealed class RepositoryLayoutTests
                     || IsUnder(reference, presentation)
                     || IsUnder(reference, tasks)
                     || IsUnder(reference, taskRecords)
-                    || IsUnder(reference, mafRecords),
-                $"Kuroe.Maf.Control 引用了契约层与 MAF 记录之外的 {reference}。"));
+                    || IsUnder(reference, mafRecords)
+                    || IsUnder(reference, mafDefinition),
+                $"Kuroe.Maf.Control 引用了契约层、MAF 记录与 MAF 定义之外的 {reference}。"));
+    }
+
+    [Fact]
+    public void Maf_definition_references_only_kernel_contracts()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Maf",
+            "Definition",
+            "Core",
+            "Kuroe.Maf.Definition.csproj");
+        string execution = Path.Combine(KernelRoot, "Execution", "Shared");
+        string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
+        string definition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, execution) || IsUnder(reference, tasks),
+                $"Kuroe.Maf.Definition 引用了执行共享与任务共享之外的 {reference}。"));
+
+        foreach (string file in SourceFiles(definition))
+        {
+            string text = File.ReadAllText(file);
+
+            Assert.DoesNotContain("Microsoft.Agents.AI.Workflows", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Kuroe.Control", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Kuroe.Presentation", text, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

@@ -43,6 +43,7 @@
     <Project Path="Source/Kuroe.Flow/Graph/Records/Shared/Kuroe.Flow.Graph.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.CodeFlow/Records/Shared/Kuroe.CodeFlow.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Maf/Records/Shared/Kuroe.Maf.Records.Shared.csproj" />
+    <Project Path="Source/Kuroe.Maf/Definition/Core/Kuroe.Maf.Definition.csproj" />
     <Project Path="Source/Kuroe.Flow/NodeLibrary/Core/Kuroe.Flow.NodeLibrary.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Json/Shared/Kuroe.Flow.Json.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Json/Core/Kuroe.Flow.Json.csproj" />

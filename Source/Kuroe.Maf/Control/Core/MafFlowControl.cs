@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.Maf.Definition;
 using Kuroe.Tasks.Shared;
-using Microsoft.Agents.AI.Workflows;
 using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Maf.Control;
@@ -10,9 +10,9 @@ namespace Kuroe.Maf.Control;
 internal sealed class MafFlowControl(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
-    MafFlowState state,
-    MafCheckpointStore checkpoints) : IFlowControl, IFlowRerun, IMafStepRunControl
+    MafFlowState state) : IFlowControl, IFlowRerun, IMafStepRunControl
 {
+    private readonly MafFlowCheckpoints _checkpoints = new(task, state);
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private CancellationTokenSource? _cancel;
     private string? _interruptReason;
@@ -203,7 +203,7 @@ internal sealed class MafFlowControl(
     }
 
     /// <summary>释放已结束的运行；释放失败不影响任务状态。</summary>
-    private static async Task DisposeRunAsync(StreamingRun? run)
+    private static async Task DisposeRunAsync(IMafWorkflowRun? run)
     {
         if (run is null)
         {
@@ -265,24 +265,18 @@ internal sealed class MafFlowControl(
             _cancel = cancel;
         }
 
-        StreamingRun? run = null;
+        IMafWorkflowRun? run = null;
         try
         {
-            Workflow workflow = MafWorkflow.Build(state.Definition, Step);
-            run = state.Checkpoint is { } checkpoint
-                ? await InProcessExecution.ResumeStreamingAsync(
-                    workflow,
-                    new CheckpointInfo(checkpoint.Session, checkpoint.Id),
-                    checkpoints.Manager,
-                    cancel.Token).ConfigureAwait(false)
-                : await InProcessExecution.RunStreamingAsync(
-                    workflow,
-                    Entry(),
-                    checkpoints.Manager,
-                    task.Id.Value,
-                    cancel.Token).ConfigureAwait(false);
+            run = await MafWorkflowRunner.StartAsync(
+                state.Definition,
+                Entry(),
+                task.Id.Value,
+                Handler,
+                _checkpoints,
+                cancel.Token).ConfigureAwait(false);
 
-            await foreach (WorkflowEvent update in run.WatchStreamAsync(cancel.Token).ConfigureAwait(false))
+            await foreach (MafWorkflowEvent update in run.WatchAsync(cancel.Token).ConfigureAwait(false))
             {
                 Handle(update);
             }
@@ -345,12 +339,10 @@ internal sealed class MafFlowControl(
     }
 
     /// <summary>把一个步骤接到 Kuroe 执行网关。</summary>
-    private FunctionExecutor<MafStepMessage, MafStepMessage> Step(MafStep step) =>
-        new(
-            step.Id.Value,
-            (message, _, cancellationToken) =>
-                new MafStepExecutor(task, gateway, step, state.Target(step.Id), this)
-                    .HandleAsync(message, cancellationToken));
+    private MafStepHandler Handler(MafStep step) =>
+        (message, cancellationToken) =>
+            new MafStepExecutor(task, gateway, step, state.Target(step.Id), this)
+                .HandleAsync(message, cancellationToken);
 
     /// <inheritdoc/>
     bool IMafStepRunControl.Halted => Halted;
@@ -407,38 +399,33 @@ internal sealed class MafFlowControl(
         task.NotifyChanged();
     }
 
-    /// <summary>把 MAF 事件落到任务过程记录与步骤状态。</summary>
-    private void Handle(WorkflowEvent update)
+    /// <summary>把运行事件落到任务过程记录与步骤状态。</summary>
+    private void Handle(MafWorkflowEvent update)
     {
         switch (update)
         {
-            case ExecutorInvokedEvent invoked:
-                MafStep? invokedStep = state.Definition.Find(invoked.ExecutorId);
+            case MafStepStarted started:
                 lock (task.Gate)
                 {
-                    if (invokedStep is not null)
-                    {
-                        state.PendingSteps.Remove(invokedStep.Id);
-                    }
-
-                    task.AppendInfo($"MAF 步骤 {invoked.ExecutorId} 开始。");
+                    state.PendingSteps.Remove(started.Step.Id);
+                    task.AppendInfo($"MAF 步骤 {started.Step.Label} 开始。");
                     task.Touch();
                 }
 
                 task.NotifyChanged();
                 break;
 
-            case ExecutorCompletedEvent completed:
+            case MafStepCompleted completed:
                 lock (task.Gate)
                 {
-                    task.AppendInfo($"MAF 步骤 {completed.ExecutorId} 完成。");
+                    task.AppendInfo($"MAF 步骤 {completed.Step.Label} 完成。");
                     task.Touch();
                 }
 
                 task.NotifyChanged();
                 break;
 
-            case ExecutorFailedEvent failed:
+            case MafStepFailed failed:
                 lock (task.Gate)
                 {
                     if (Halted)
@@ -447,13 +434,13 @@ internal sealed class MafFlowControl(
                     }
 
                     _failed = true;
-                    task.AppendError($"MAF 步骤 {failed.ExecutorId} 失败：{failed.Data}");
+                    task.AppendError($"MAF 步骤 {failed.Step.Label} 失败：{failed.Reason}");
                 }
 
                 task.NotifyChanged();
                 break;
 
-            case WorkflowErrorEvent error:
+            case MafWorkflowFailed error:
                 lock (task.Gate)
                 {
                     if (Halted)
@@ -462,7 +449,7 @@ internal sealed class MafFlowControl(
                     }
 
                     _failed = true;
-                    task.AppendError($"MAF 流程错误：{error.Exception?.Message ?? error.Data?.ToString()}");
+                    task.AppendError($"MAF 流程错误：{error.Reason}");
                 }
 
                 task.NotifyChanged();

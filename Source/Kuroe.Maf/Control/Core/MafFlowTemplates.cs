@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.Maf.Definition;
 using Kuroe.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 

@@ -1,6 +1,6 @@
 # MAF 流程
 
-MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，步骤的每次运行仍是一次 Kuroe 执行。流程定义由宿主以代码给出，不写入 `.kuroe` 目录。
+MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，步骤的每次运行仍是一次 Kuroe 执行。流程定义由宿主以代码给出，不写入 `.kuroe` 目录。流程定义类型位于 `Kuroe.Maf.Definition`，运行实例创建与任务控制位于 `Kuroe.Maf.Control`。装配入口 `AddKuroeMafFlows` 位于 `Kuroe.Maf`。
 
 ## 宿主装配
 

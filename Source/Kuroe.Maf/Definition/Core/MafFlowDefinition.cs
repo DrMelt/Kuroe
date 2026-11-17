@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 
-namespace Kuroe.Maf.Control;
+namespace Kuroe.Maf.Definition;
 
 /// <summary>MAF 流程定义：流程名、开始端口、步骤与连接。定义由宿主的代码给出。</summary>
 public sealed record MafFlowDefinition(
@@ -18,7 +18,7 @@ public sealed record MafFlowDefinition(
     public string? Description { get; init; }
 
     /// <summary>入口步骤：没有入边的步骤。定义必须恰好有一个入口。</summary>
-    internal ErrorOr<MafStep> Entry()
+    public ErrorOr<MafStep> Entry()
     {
         MafStep[] entries = [.. Steps.Where(step => Edges.All(edge => edge.To != step.Id))];
 
@@ -28,15 +28,15 @@ public sealed record MafFlowDefinition(
     }
 
     /// <summary>按步骤标识取步骤，不存在时为空。</summary>
-    internal MafStep? Find(MafStepId id) =>
+    public MafStep? Find(MafStepId id) =>
         Steps.FirstOrDefault(step => step.Id == id);
 
     /// <summary>按步骤标识文本取步骤，不存在时为空。</summary>
-    internal MafStep? Find(string id) =>
+    public MafStep? Find(string id) =>
         Steps.FirstOrDefault(step => step.Id.Value == id);
 
     /// <summary>校验定义结构：步骤标识唯一且可作路径、连接两端存在、每个步骤至多一个上游、全部步骤从入口可达、开始端口声明完整。</summary>
-    internal IReadOnlyList<Error> Validate()
+    public IReadOnlyList<Error> Validate()
     {
         List<Error> errors = [];
         if (Steps.Count == 0)
@@ -155,9 +155,3 @@ public sealed record MafStep(
 
 /// <summary>步骤之间的连接。</summary>
 public sealed record MafEdge(MafStepId From, MafStepId To);
-
-/// <summary>MAF 流程的一条上游产出，随消息在步骤之间传递。</summary>
-internal sealed record MafStepOutput(MafStepId Step, PortName Port, string Text);
-
-/// <summary>MAF 流程步骤之间传递的消息：上游步骤与它交回的端口文本。</summary>
-internal sealed record MafStepMessage(MafStepId Step, IReadOnlyList<MafStepOutput> Outputs);

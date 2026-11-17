@@ -12,7 +12,7 @@ public sealed class MafFlowRecordSource : IFlowRecordSource
     public FlowRecord CaptureRecord(ITaskFlowContext task)
     {
         MafFlowState state = MafFlowAccess.State(task);
-        MafCheckpoint? checkpoint = state.Checkpoint;
+        MafWorkflowCheckpoint? checkpoint = state.Checkpoint;
         string[] pending = task.Control is { } control
             ? [.. control.CaptureSeed().Steps.Select(step => step.Value)]
             : [.. state.PendingSteps.Select(step => step.Value)];

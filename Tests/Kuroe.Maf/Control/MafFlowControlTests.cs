@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.Maf.Definition;
 using Kuroe.Execution;
 using Kuroe.Execution.Registry;
 using Kuroe.Control.Runtime;

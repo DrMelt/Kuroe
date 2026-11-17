@@ -7,10 +7,6 @@ public sealed class MafFlowControlFactory(
     ITaskExecutionGateway gateway) : IFlowControlFactory
 {
     /// <inheritdoc/>
-    public IFlowControl CreateControl(ITaskFlowContext task)
-    {
-        MafFlowState state = MafFlowAccess.State(task);
-
-        return new MafFlowControl(task, gateway, state, new MafCheckpointStore(task, state));
-    }
+    public IFlowControl CreateControl(ITaskFlowContext task) =>
+        new MafFlowControl(task, gateway, MafFlowAccess.State(task));
 }

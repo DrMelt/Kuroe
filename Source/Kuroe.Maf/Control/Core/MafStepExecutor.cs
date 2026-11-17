@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.Maf.Definition;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;

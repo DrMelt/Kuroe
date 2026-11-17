@@ -3,7 +3,7 @@ using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
-namespace Kuroe.Maf.Control;
+namespace Kuroe.Maf.Definition;
 
 /// <summary>MAF 步骤的执行目标工厂：按步骤标识与模型建立执行目标。提交与恢复时各调用一次，返回的目标由步骤的多次运行共用。</summary>
 public interface IMafStepTargetFactory

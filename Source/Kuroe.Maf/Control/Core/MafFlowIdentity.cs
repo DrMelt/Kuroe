@@ -1,4 +1,5 @@
 using Kuroe.Control.Shared;
+using Kuroe.Maf.Definition;
 using Kuroe.Maf.Records.Shared;
 using Kuroe.Tasks.Shared;
 

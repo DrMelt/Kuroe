@@ -1,11 +1,9 @@
 using Kuroe.Control.Shared;
+using Kuroe.Maf.Definition;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 
 namespace Kuroe.Maf.Control;
-
-/// <summary>运行期检查点：会话标识、检查点标识与 JSON 文本，三者同时有效。</summary>
-internal sealed record MafCheckpoint(string Session, string Id, string Data);
 
 /// <summary>MAF 流程状态：开始输入、模型、执行目标、运行期检查点与未走完的步骤。</summary>
 internal sealed class MafFlowState(
@@ -34,7 +32,7 @@ internal sealed class MafFlowState(
             : throw new InvalidOperationException($"步骤 {step.Value} 没有执行目标。");
 
     /// <summary>运行期检查点。</summary>
-    internal MafCheckpoint? Checkpoint { get; set; }
+    internal MafWorkflowCheckpoint? Checkpoint { get; set; }
 
     /// <summary>检查点写入是否冻结。中断后恢复必须从步骤前的检查点开始。</summary>
     internal bool FreezeCheckpoint { get; set; }
