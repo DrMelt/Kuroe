@@ -35,7 +35,10 @@ public sealed class CodeFlowExecutionTests
         await Harness.RunAsync(
             execution,
             new PortRunnerFactory(harness.Submitter, Conclusion, "得出结论"),
-            new CodeTarget());
+            new ExecutionTarget(
+                new ExecutionTargetId("回话"),
+                PortRunnerFactory.Key,
+                EmptyExecutionParameters.Instance));
 
         Assert.Equal(ExecutionState.Succeeded, execution.State);
 
@@ -46,6 +49,27 @@ public sealed class CodeFlowExecutionTests
         TaskSnapshot snapshot = harness.Task.Snapshot();
         FlowStepView step = Assert.Single(snapshot.View.Steps);
         Assert.Contains(step.Outputs, port => port.Name == Conclusion.Value);
+    }
+
+    [Fact]
+    public async Task A_missing_runner_marks_the_execution_failed()
+    {
+        Harness harness = Harness.Create();
+        IExecution execution = harness.Open();
+        TaskExecutionGateway gateway = new(
+            harness.Index,
+            harness.Runtime,
+            new ExecutionInvocationFactory());
+
+        ErrorOr<Success> run = await gateway.RunAsync(
+            execution,
+            new ExecutionTarget(
+                new ExecutionTargetId("回话"),
+                new ExecutionRunnerKey("missing"),
+                EmptyExecutionParameters.Instance));
+
+        Assert.True(run.IsError);
+        Assert.Equal(ExecutionState.Failed, execution.State);
     }
 
     [Fact]
@@ -107,9 +131,7 @@ public sealed class CodeFlowExecutionTests
         public static Harness Create()
         {
             ExecutionIndex index = new();
-            ExecutionRuntime runtime = new(
-                new ExecutionDispatcher(),
-                new ExecutionRunnerRegistry());
+            ExecutionRuntime runtime = new(new ExecutionDispatcher());
             StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
             FlowProvider provider = new(
                 new CodeIdentity(),
@@ -153,11 +175,12 @@ public sealed class CodeFlowExecutionTests
             return execution;
         }
 
-        public static Task<ErrorOr<Success>> RunAsync(IExecution execution, IExecutionRunnerFactory runner, IExecutionTarget target) =>
-            new ExecutionRuntime(
-                new ExecutionDispatcher(),
-                new ExecutionRunnerRegistry([runner]))
-            .RunAsync(execution, target);
+        public static Task<ErrorOr<Success>> RunAsync(
+            IExecution execution,
+            IExecutionRunnerFactory runner,
+            ExecutionTarget target) =>
+            new ExecutionRuntime(new ExecutionDispatcher())
+                .RunAsync(execution, new ExecutionInvocation(target, runner));
     }
 }
 internal sealed class CodeIdentity : IFlowIdentity
@@ -231,15 +254,6 @@ internal sealed class CodePresentation : IFlowPresentation
 
 }
 
-internal sealed class CodeTarget : IExecutionTarget
-{
-    public ExecutionTargetId Id => new("回话");
-
-    public ExecutionRunnerKey RunnerKey => PortRunnerFactory.Key;
-
-    public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;
-}
-
 internal sealed class PortRunnerFactory(
     IExecutionPortSubmitter submitter,
     ExecutionPortName port,
@@ -251,7 +265,7 @@ internal sealed class PortRunnerFactory(
     /// <inheritdoc/>
     ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
 
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
+    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
         new PortRunner(submitter, execution, port, text);
 
     private sealed class PortRunner(

@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Runner.Llm.Sessions;
 using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
 using Kuroe.Execution.Shared.Runtime;
 
@@ -19,9 +20,9 @@ public sealed class LlmExecutionRunnerFactory(
     ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
 
     /// <summary>为一次普通执行建立运行器。</summary>
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
-        target.Parameters is LlmExecutionParameters parameters
-            ? new LlmExecutionRunner(sessions, status, execution, parameters)
+    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+        parameters is LlmExecutionParameters llm
+            ? new LlmExecutionRunner(sessions, status, execution, llm)
             : throw new InvalidOperationException("Llm 执行节点的参数类型不匹配。");
 
     /// <summary>校验恢复负载的格式与模型并装配一次恢复。历史可继续性在建立恢复会话时校验。已上报无法完成的执行不允许恢复。</summary>

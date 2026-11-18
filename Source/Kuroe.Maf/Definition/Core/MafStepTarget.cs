@@ -9,7 +9,7 @@ namespace Kuroe.Maf.Definition;
 public interface IMafStepTargetFactory
 {
     /// <summary>建立步骤的执行目标。目标标识必须与步骤标识一致。</summary>
-    ErrorOr<IExecutionTarget> Create(
+    ErrorOr<ExecutionTarget> Create(
         MafStepId step,
         string model,
         ExecutionParameterContext context);
@@ -21,7 +21,7 @@ public sealed record MafStepTarget(
     Func<ExecutionParameterContext, ErrorOr<IExecutionParameters>> Parameters) : IMafStepTargetFactory
 {
     /// <inheritdoc/>
-    public ErrorOr<IExecutionTarget> Create(
+    public ErrorOr<ExecutionTarget> Create(
         MafStepId step,
         string model,
         ExecutionParameterContext context)
@@ -32,12 +32,6 @@ public sealed record MafStepTarget(
             return parameters.ErrorsOrEmptyList;
         }
 
-        return new MafExecutionTarget(step.ToExecutionTargetId(), RunnerKey, parameters.Value);
+        return new ExecutionTarget(step.ToExecutionTargetId(), RunnerKey, parameters.Value);
     }
 }
-
-/// <summary>由框架构造的执行目标，标识来自步骤标识。</summary>
-internal sealed record MafExecutionTarget(
-    ExecutionTargetId Id,
-    ExecutionRunnerKey RunnerKey,
-    IExecutionParameters Parameters) : IExecutionTarget;

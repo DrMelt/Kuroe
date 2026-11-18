@@ -328,19 +328,26 @@ internal sealed class ExecutionInstance : IExecution
         Settle(ExecutionState.Interrupted, [text]);
     }
 
-    /// <summary>本次请求正常结束但没交回要求的内容，从已完成降级为失败。</summary>
+    /// <summary>本次请求未开始或正常结束但没交回要求的内容，降级为失败。</summary>
     internal void MarkUncollected(string reason)
     {
         lock (_gate)
         {
-            if (_state != ExecutionState.Succeeded)
+            if (_state == ExecutionState.Succeeded)
             {
+                _state = ExecutionState.Failed;
+                _failures.Add(reason);
+
                 return;
             }
 
-            _state = ExecutionState.Failed;
-            _failures.Add(reason);
+            if (_state != ExecutionState.Queued)
+            {
+                return;
+            }
         }
+
+        Settle(ExecutionState.Failed, [reason]);
     }
 
     /// <summary>当前状态的只读快照。</summary>

@@ -8,10 +8,11 @@ using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Control.Runtime;
 
-/// <summary>执行网关：把执行号归属交给任务域，其余执行操作交给执行单元。</summary>
+/// <summary>执行网关：把执行号归属交给任务域，装配执行目标，其余执行操作交给执行单元。</summary>
 public sealed class TaskExecutionGateway(
     IExecutionIndex executions,
-    IExecutionRuntime runtime) : ITaskExecutionGateway
+    IExecutionRuntime runtime,
+    IExecutionInvocationFactory invocations) : ITaskExecutionGateway
 {
     /// <inheritdoc/>
     public IExecution Open(ITaskFlowContext owner, ExecutionRequest request) =>
@@ -27,13 +28,23 @@ public sealed class TaskExecutionGateway(
 
     /// <inheritdoc/>
     public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context) =>
-        runtime.PrepareRestore(context);
+        invocations.PrepareRestore(context);
 
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionTarget target) =>
-        runtime.RunAsync(execution, target);
+        ExecutionTarget target)
+    {
+        ErrorOr<ExecutionInvocation> invocation = invocations.Create(target);
+        if (invocation.IsError)
+        {
+            runtime.Reject(execution, invocation.FirstError.Description);
+
+            return Task.FromResult<ErrorOr<Success>>(invocation.ErrorsOrEmptyList);
+        }
+
+        return runtime.RunAsync(execution, invocation.Value);
+    }
 
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunRestoreAsync(

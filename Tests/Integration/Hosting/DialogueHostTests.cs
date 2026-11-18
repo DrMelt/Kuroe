@@ -113,9 +113,9 @@ public sealed class DialogueHostTests
         await environment.SayAsync("第二问", null);
 
         LlmExecutionParameters first = Assert.IsType<LlmExecutionParameters>(
-            environment.Runner.StartedTargets[0].Parameters);
+            environment.Runner.StartedParameters[0]);
         LlmExecutionParameters second = Assert.IsType<LlmExecutionParameters>(
-            environment.Runner.StartedTargets[1].Parameters);
+            environment.Runner.StartedParameters[1]);
 
         Assert.Null(first.ConversationSeed);
         Assert.Equal(seed, second.ConversationSeed);
@@ -159,8 +159,8 @@ public sealed class DialogueHostTests
 
         Assert.Equal(
             ["fake", "fake", "second"],
-            environment.Runner.StartedTargets
-                .Select(target => Assert.IsType<LlmExecutionParameters>(target.Parameters).Model));
+            environment.Runner.StartedParameters
+                .Select(parameters => Assert.IsType<LlmExecutionParameters>(parameters).Model));
         Assert.Equal(firstOwner, environment.Runner.StartedCode[1].Request.Owner.Value);
         Assert.NotEqual(firstOwner, environment.Runner.StartedCode[2].Request.Owner.Value);
     }
@@ -515,7 +515,7 @@ public sealed class DialogueHostTests
     private static LlmParameters Parameters(TestEnvironment environment, int round)
     {
         LlmExecutionParameters execution = Assert.IsType<LlmExecutionParameters>(
-            environment.Runner.StartedTargets[round].Parameters);
+            environment.Runner.StartedParameters[round]);
 
         return new LlmParameters
         {

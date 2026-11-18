@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Execution.Registry;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
@@ -8,10 +7,9 @@ using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Execution;
 
-/// <summary>执行单元的控制面：选择运行器、派发执行、等待收口与退出收口。执行状态迁移不出执行单元。</summary>
+/// <summary>执行单元的控制面：按装配结果派发执行、等待收口与退出收口。执行状态迁移不出执行单元。</summary>
 public sealed class ExecutionRuntime(
-    ExecutionDispatcher dispatcher,
-    IExecutionRunnerRegistry runners) : IExecutionRuntime
+    ExecutionDispatcher dispatcher) : IExecutionRuntime
 {
     /// <inheritdoc/>
     public IExecution Create(ExecutionId id, ExecutionRequest request) => ExecutionFactory.Create(id, request);
@@ -20,30 +18,19 @@ public sealed class ExecutionRuntime(
     public IExecution Restore(ExecutionRestorePlan plan) => ExecutionFactory.Restore(plan);
 
     /// <inheritdoc/>
-    public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context)
-    {
-        if (runners.Find(context.Target.RunnerKey) is not IExecutionRestorer restorer)
-        {
-            return Error.Failure(
-                "Execution.Restore",
-                $"执行器工厂 {context.Target.RunnerKey} 不支持恢复。");
-        }
-
-        ErrorOr<IExecutionRestoreData> data = restorer.Prepare(context);
-
-        return data.IsError
-            ? data.ErrorsOrEmptyList
-            : new PreparedExecutionRestore(context, data.Value);
-    }
-
-    /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionTarget target)
+        ExecutionInvocation invocation)
     {
         try
         {
-            IExecutionRunner runner = runners.Create(target, execution.Id);
+            if (invocation.Target.Id != execution.Request.Target)
+            {
+                throw new InvalidOperationException(
+                    $"执行目标 {invocation.Target.Id} 与请求目标 {execution.Request.Target} 不一致。");
+            }
+
+            IExecutionRunner runner = invocation.Factory.Create(invocation.Target.Parameters, execution.Id);
 
             return DispatchAsync(execution, runner);
         }
@@ -61,11 +48,20 @@ public sealed class ExecutionRuntime(
     {
         try
         {
+            if (prepared.Context.Target.Id != prepared.Context.Request.Target
+                || prepared.Invocation.Target.Id != prepared.Context.Target.Id)
+            {
+                throw new InvalidOperationException(
+                    $"恢复目标 {prepared.Invocation.Target.Id} 与请求目标 {prepared.Context.Request.Target} 不一致。");
+            }
+
             Unit(execution).ContinueFrom(Unit(source));
-            IExecutionRestorer restorer = runners.Find(prepared.Context.Target.RunnerKey) as IExecutionRestorer
+            IExecutionRestorer restorer = prepared.Invocation.Factory as IExecutionRestorer
                 ?? throw new InvalidOperationException(
-                    $"执行器工厂 {prepared.Context.Target.RunnerKey} 不支持恢复。");
-            IExecutionRunner runner = restorer.CreateRestored(prepared.Context with { Execution = execution.Id }, prepared.Data);
+                    $"执行器工厂 {prepared.Invocation.Target.RunnerKey} 不支持恢复。");
+            IExecutionRunner runner = restorer.CreateRestored(
+                prepared.Context with { Execution = execution.Id },
+                prepared.Data);
 
             return DispatchAsync(execution, runner);
         }

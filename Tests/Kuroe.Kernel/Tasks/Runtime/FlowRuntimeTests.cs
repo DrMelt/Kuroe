@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
-using Kuroe.Execution.Registry;
 using Kuroe.Presentation.Shared;
 using Kuroe.Control.Runtime;
 using Kuroe.Tasks.Records.Shared;
@@ -218,9 +217,7 @@ internal static class FlowRuntimeTestDoubles
     }
 
     internal static IExecutionRuntime Runtime() =>
-        new ExecutionRuntime(
-            new ExecutionDispatcher(),
-            new ExecutionRunnerRegistry());
+        new ExecutionRuntime(new ExecutionDispatcher());
 }
 
 internal sealed class TestControl : IFlowControl, IFlowRerun

@@ -50,7 +50,7 @@ internal sealed class MafStepExecutor(
             request.Texts,
             request.OutputPorts,
             model);
-        ErrorOr<IExecutionTarget> target = step.TargetFactory.Create(step.Id, model, context);
+        ErrorOr<ExecutionTarget> target = step.TargetFactory.Create(step.Id, model, context);
         if (target.IsError)
         {
             throw new InvalidOperationException(target.FirstError.Description);

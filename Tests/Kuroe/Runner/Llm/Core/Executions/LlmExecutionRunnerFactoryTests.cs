@@ -9,7 +9,6 @@ using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm.Tests.Executions;
 
@@ -72,7 +71,9 @@ public sealed class LlmExecutionRunnerFactoryTests
             [],
             new Dictionary<ExecutionPortName, string>(),
             []);
-        IExecutionTarget target = new FakeTarget(
+        ExecutionTarget target = new(
+            new ExecutionTargetId("实施"),
+            LlmExecutionRunnerFactory.Key,
             new LlmExecutionParameters(null, [], [], new Dictionary<string, IReadOnlyDictionary<string, string>>(), "fake"));
 
         return new ExecutionRestoreContext(
@@ -81,15 +82,6 @@ public sealed class LlmExecutionRunnerFactoryTests
             target,
             payload,
             contract);
-    }
-
-    private sealed class FakeTarget(IExecutionParameters parameters) : IExecutionTarget
-    {
-        public ExecutionTargetId Id { get; } = new("实施");
-
-        public ExecutionRunnerKey RunnerKey => LlmExecutionRunnerFactory.Key;
-
-        public IExecutionParameters Parameters { get; } = parameters;
     }
 
     private sealed class ModelAccess : IModelAccess

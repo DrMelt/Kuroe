@@ -87,7 +87,7 @@ internal sealed class FakeRunnerFactory(Func<FakeRunner> create) : IExecutionRun
         }
     }
 
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution)
+    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution)
     {
         FakeRunner runner = create();
         lock (_runners)
@@ -162,7 +162,7 @@ internal sealed class UnusedGateway : ITaskExecutionGateway
 
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionTarget target) => throw new NotSupportedException();
+        ExecutionTarget target) => throw new NotSupportedException();
 
     public Task<ErrorOr<Success>> RunRestoreAsync(
         IExecution execution,

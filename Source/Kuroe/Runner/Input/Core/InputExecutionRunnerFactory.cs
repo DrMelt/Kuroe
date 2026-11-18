@@ -1,5 +1,6 @@
 using Kuroe.Input.Shared;
 using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Input;
@@ -15,8 +16,8 @@ public sealed class InputExecutionRunnerFactory(
     ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
 
     /// <inheritdoc/>
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
-        target.Parameters is InputExecutionParameters parameters
-            ? new InputExecutionRunner(channel, parameters)
+    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+        parameters is InputExecutionParameters input
+            ? new InputExecutionRunner(channel, input)
             : throw new InvalidOperationException("输入执行参数类型不匹配。");
 }

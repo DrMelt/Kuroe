@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Input.Shared;
+using Kuroe.Node.Llm;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
@@ -149,7 +150,7 @@ internal sealed class DialogueFlowControl(
     private void ContinueWithInput()
     {
         IExecution? execution;
-        DialogueFlowTarget target;
+        ExecutionTarget target;
         lock (task.Gate)
         {
             if (_pendingInput is not { } input
@@ -163,12 +164,14 @@ internal sealed class DialogueFlowControl(
             _pendingInput = null;
             execution = gateway.Open(task, Request(input));
             IExecution? previous = task.Executions.Count > 0 ? task.Executions[^1] : null;
-            target = new DialogueFlowTarget(
-                state.Parameters,
-                state.Model,
-                previous?.RestoreData,
-                task.Executions.Count + 1,
-                int.MaxValue);
+            target = new ExecutionTarget(
+                new ExecutionTargetId(DialogueFlow.ReplyLabel),
+                LlmNodeTypes.RunnerKey,
+                state.Parameters.ToExecutionParameters(
+                    state.Model,
+                    previous?.RestoreData,
+                    task.Executions.Count + 1,
+                    int.MaxValue));
             task.AttachExecution(execution);
             _live = execution;
         }
@@ -188,7 +191,7 @@ internal sealed class DialogueFlowControl(
             },
             []);
 
-    private async Task RunAsync(IExecution execution, DialogueFlowTarget target)
+    private async Task RunAsync(IExecution execution, ExecutionTarget target)
     {
         await gateway.RunAsync(
             execution,

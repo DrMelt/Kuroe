@@ -1,5 +1,6 @@
 using Kuroe.Process;
 using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Command;
@@ -15,8 +16,8 @@ public sealed class CommandExecutionRunnerFactory(
     ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
 
     /// <inheritdoc/>
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
-        target.Parameters is CommandExecutionParameters parameters
-            ? new CommandExecutionRunner(parameters, process)
+    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+        parameters is CommandExecutionParameters command
+            ? new CommandExecutionRunner(command, process)
             : throw new InvalidOperationException("命令执行参数类型不匹配。");
 }

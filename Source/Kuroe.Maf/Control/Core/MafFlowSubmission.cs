@@ -265,7 +265,7 @@ public sealed class MafFlowSubmission(
                 new Dictionary<ExecutionPortName, string>(),
                 [],
                 model);
-            ErrorOr<IExecutionTarget> target = step.TargetFactory.Create(step.Id, model, context);
+            ErrorOr<ExecutionTarget> target = step.TargetFactory.Create(step.Id, model, context);
             if (target.IsError)
             {
                 errors.AddRange(target.ErrorsOrEmptyList);

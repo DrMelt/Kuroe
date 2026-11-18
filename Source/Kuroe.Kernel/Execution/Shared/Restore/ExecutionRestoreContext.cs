@@ -8,6 +8,6 @@ namespace Kuroe.Execution.Shared.Restore;
 public sealed record ExecutionRestoreContext(
     ExecutionId Execution,
     ExecutionRequest Request,
-    IExecutionTarget Target,
+    ExecutionTarget Target,
     ExecutionRestoreState Payload,
     ExecutionContract Contract);

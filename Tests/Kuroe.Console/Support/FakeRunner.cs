@@ -7,9 +7,9 @@ using NeutralExecutionOutputPort = Kuroe.Execution.Shared.Ports.ExecutionOutputP
 using NeutralExecutionOutputValue = Kuroe.Execution.Shared.Ports.ExecutionOutputValue;
 using NeutralExecutionPortName = Kuroe.Execution.Shared.Ports.ExecutionPortName;
 using NeutralExecutionRequest = Kuroe.Execution.Shared.Request.ExecutionRequest;
+using NeutralExecutionParameters = Kuroe.Execution.Shared.Request.IExecutionParameters;
 using NeutralExecutionRunner = Kuroe.Execution.Shared.Runtime.IExecutionRunner;
 using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionRunnerFactory;
-using NeutralExecutionTarget = Kuroe.Execution.Shared.Identity.IExecutionTarget;
 using NeutralPortKind = Kuroe.Execution.Shared.Ports.ExecutionPortKind;
 using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Runtime;
@@ -57,7 +57,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
                 true)),
         ];
 
-    public NeutralExecutionRunner Create(NeutralExecutionTarget target, NeutralExecutionId execution) =>
+    public NeutralExecutionRunner Create(NeutralExecutionParameters parameters, NeutralExecutionId execution) =>
         new Run(this, execution);
 
     private async Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(

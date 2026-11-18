@@ -10,6 +10,7 @@ using Kuroe.Tool;
 using NeutralExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
 using NeutralExecutionOutput = Kuroe.Execution.Shared.Ports.ExecutionOutput;
 using NeutralExecutionOutputPort = Kuroe.Execution.Shared.Ports.ExecutionOutputPort;
+using NeutralExecutionParameters = Kuroe.Execution.Shared.Request.IExecutionParameters;
 using NeutralExecutionRequest = Kuroe.Execution.Shared.Request.ExecutionRequest;
 using NeutralExecutionRestoreContext = Kuroe.Execution.Shared.Restore.ExecutionRestoreContext;
 using NeutralExecutionRestoreData = Kuroe.Execution.Shared.Restore.IExecutionRestoreData;
@@ -18,7 +19,6 @@ using NeutralExecutionRestoreState = Kuroe.Execution.Shared.Restore.ExecutionRes
 using NeutralExecutionRunner = Kuroe.Execution.Shared.Runtime.IExecutionRunner;
 using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionRunnerFactory;
 using NeutralExecutionRestorer = Kuroe.Execution.Shared.Restore.IExecutionRestorer;
-using NeutralExecutionTarget = Kuroe.Execution.Shared.Identity.IExecutionTarget;
 using NeutralExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
 using NeutralExecutionUsageSource = Kuroe.Execution.Shared.Runtime.IExecutionUsageSource;
 using NeutralPortKind = Kuroe.Execution.Shared.Ports.ExecutionPortKind;
@@ -167,26 +167,26 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     }
 
     private readonly List<NeutralExecutionRestoreState?> _starts = [];
-    private readonly List<NeutralExecutionTarget> _targets = [];
+    private readonly List<NeutralExecutionParameters> _parameters = [];
 
-    /// <summary>各次执行收到的执行目标，按建立顺序。</summary>
-    public IReadOnlyList<NeutralExecutionTarget> StartedTargets
+    /// <summary>各次执行收到的执行参数，按建立顺序。</summary>
+    public IReadOnlyList<NeutralExecutionParameters> StartedParameters
     {
         get
         {
             lock (_gate)
             {
-                return [.. _targets];
+                return [.. _parameters];
             }
         }
     }
 
-    public NeutralExecutionRunner Create(NeutralExecutionTarget target, NeutralExecutionId execution)
+    public NeutralExecutionRunner Create(NeutralExecutionParameters parameters, NeutralExecutionId execution)
     {
         lock (_gate)
         {
             _starts.Add(null);
-            _targets.Add(target);
+            _parameters.Add(parameters);
         }
 
         return new Run(this, execution);

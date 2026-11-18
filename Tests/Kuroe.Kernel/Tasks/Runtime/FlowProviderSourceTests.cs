@@ -16,9 +16,7 @@ public sealed class FlowProviderSourceTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
     private static Kuroe.Execution.ExecutionRuntime Runtime() =>
-        new(
-            new Kuroe.Execution.ExecutionDispatcher(),
-            new Kuroe.Execution.Registry.ExecutionRunnerRegistry());
+        new(new Kuroe.Execution.ExecutionDispatcher());
     [Fact]
     public void Identity_finds_provider_by_implementation()
     {

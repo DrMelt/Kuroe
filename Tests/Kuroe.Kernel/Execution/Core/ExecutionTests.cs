@@ -1,3 +1,4 @@
+using ErrorOr;
 using Xunit;
 using NeutralExecution = Kuroe.Execution.ExecutionInstance;
 using Kuroe.Execution.Shared.Contract;
@@ -83,6 +84,24 @@ public sealed class ExecutionTests
         Assert.Contains("进程退出前未收口。", unit.Snapshot().Failures);
     }
 
+    [Fact]
+    public async Task Run_rejects_a_target_that_does_not_match_the_request()
+    {
+        Kuroe.Execution.ExecutionRuntime runtime = new(new Kuroe.Execution.ExecutionDispatcher());
+        IExecution execution = runtime.Create(new ExecutionId(1), Request());
+        ExecutionTarget target = new(
+            new ExecutionTargetId("其他"),
+            new ExecutionRunnerKey("test"),
+            EmptyExecutionParameters.Instance);
+
+        ErrorOr<Success> result = await runtime.RunAsync(
+            execution,
+            new ExecutionInvocation(target, new UnusedFactory()));
+
+        Assert.True(result.IsError);
+        Assert.Equal(ExecutionState.Failed, execution.State);
+    }
+
     private static ExecutionRequest Request() =>
         new(
             new ExecutionOwnerId("任务"),
@@ -164,6 +183,14 @@ public sealed class ExecutionTests
         unit.MarkRunning();
 
         Assert.Equal(1, started);
+    }
+
+    private sealed class UnusedFactory : IExecutionRunnerFactory
+    {
+        public ExecutionRunnerKey Key => new("test");
+
+        public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+            throw new InvalidOperationException("目标不一致时不应建立运行器。");
     }
 
     private sealed class TestJournal : IProcessJournal

@@ -136,17 +136,17 @@ public static class ServiceCollectionExtensions
             sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
-        services.AddSingleton<IExecutionRunnerRegistry>(sp => new ExecutionRunnerRegistry(
+        services.AddSingleton<IExecutionInvocationFactory>(sp => new ExecutionInvocationFactory(
             [.. sp.GetServices<IExecutionRunnerFactory>()]));
         services.AddSingleton(sp => new ExecutionRuntime(
-            sp.GetRequiredService<ExecutionDispatcher>(),
-            sp.GetRequiredService<IExecutionRunnerRegistry>()));
+            sp.GetRequiredService<ExecutionDispatcher>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
         services.AddSingleton<IExecutionOwnerIndex>(executions);
         services.AddSingleton<IExecutionIndex>(executions);
         services.AddSingleton<ITaskExecutionGateway>(sp => new TaskExecutionGateway(
             executions,
-            sp.GetRequiredService<IExecutionRuntime>()));
+            sp.GetRequiredService<IExecutionRuntime>(),
+            sp.GetRequiredService<IExecutionInvocationFactory>()));
         services.AddSingleton<IExecutionContractWriter, ExecutionContractWriter>();
         services.AddSingleton(sp => new PortSubmitter(
             sp.GetRequiredService<IExecutionOwnerIndex>(),

@@ -137,18 +137,13 @@ public sealed class RepositoryLayoutTests
             "Execution",
             "Shared",
             "Kuroe.Execution.Shared.csproj");
-        string registry = Path.Combine(
-            KernelRoot,
-            "Execution",
-            "Registry",
-            "Kuroe.Execution.Registry.csproj");
         string core = Path.Combine(
             KernelRoot,
             "Execution",
             "Core",
             "Kuroe.Execution.csproj");
 
-        Assert.Equal([shared, registry], ProjectReferences(core));
+        Assert.Equal([shared], ProjectReferences(core));
     }
 
     [Fact]
@@ -1028,7 +1023,7 @@ public sealed class RepositoryLayoutTests
         Assert.True(File.Exists(Path.Combine(flow, "DialogueFlow.cs")));
         Assert.True(File.Exists(Path.Combine(flow, "DialogueFlowControl.cs")));
         Assert.True(File.Exists(Path.Combine(flow, "DialogueFlowView.cs")));
-        Assert.True(File.Exists(Path.Combine(flow, "DialogueFlowTarget.cs")));
+        Assert.False(File.Exists(Path.Combine(flow, "DialogueFlowTarget.cs")));
         Assert.False(Directory.Exists(Path.Combine(core, "Flows")));
     }
 

@@ -10,6 +10,7 @@ using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 using Kuroe.Execution.Shared.Usage;
 
@@ -77,7 +78,7 @@ public sealed class GraphExecution : IGraphExecution
     public ExecutionRequest Request { get; }
 
     /// <summary>本次执行的图侧目标。</summary>
-    internal IExecutionTarget Target { get; }
+    internal ExecutionTarget Target { get; }
 
     /// <summary>执行创建时刻。</summary>
     public DateTimeOffset CreatedAt => _unit.CreatedAt;
@@ -187,8 +188,9 @@ public sealed class GraphExecution : IGraphExecution
                 }),
             ]);
 
-    internal static IExecutionTarget BuildTarget(GraphExecutionInput input, ExecutionRequest request) =>
-        new GraphExecutionTarget(input, new ExecutionParameterContext(
+    internal static ExecutionTarget BuildTarget(GraphExecutionInput input, ExecutionRequest request)
+    {
+        ExecutionParameterContext context = new(
             request.Owner,
             request.Target,
             input.ExecutionCount,
@@ -197,7 +199,20 @@ public sealed class GraphExecution : IGraphExecution
             request.Inputs,
             request.Texts,
             request.OutputPorts,
-            input.Declaration?.Model));
+            input.Declaration?.Model);
+
+        ExecutionRunnerKey runnerKey = input.Type is IExecutionRunnerKeyProvider runnerProvider
+            ? runnerProvider.RunnerKey
+            : throw new InvalidOperationException($"节点类型 {input.Type.Kind.Value} 没有提供执行运行器键。");
+        IExecutionParameters parameters = input.Type is IExecutionParameterProvider parameterProvider
+            ? parameterProvider.Create(context)
+            : EmptyExecutionParameters.Instance;
+
+        return new ExecutionTarget(
+            GraphRecordTargets.Format(input.Node),
+            runnerKey,
+            parameters);
+    }
 
     private static ExecutionPortRole RoleOf(InputRole role) => role switch
     {

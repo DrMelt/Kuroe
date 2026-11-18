@@ -1,5 +1,6 @@
 using Kuroe.Input.Shared;
 using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Approval;
@@ -15,8 +16,8 @@ public sealed class ApprovalExecutionRunnerFactory(
     ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
 
     /// <inheritdoc/>
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
-        target.Parameters is ApprovalExecutionParameters parameters
-            ? new ApprovalExecutionRunner(channel, parameters)
+    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+        parameters is ApprovalExecutionParameters approval
+            ? new ApprovalExecutionRunner(channel, approval)
             : throw new InvalidOperationException("审批执行参数类型不匹配。");
 }

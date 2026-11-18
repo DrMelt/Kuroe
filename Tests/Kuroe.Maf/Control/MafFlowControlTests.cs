@@ -274,10 +274,10 @@ public sealed class MafFlowControlTests
             MafFlowCatalog flows = new([flow]);
             ExecutionIndex index = new();
             IExecutionRuntime executions = new ExecutionRuntime(
-                new ExecutionDispatcher(),
-                new ExecutionRunnerRegistry([factory]));
+                new ExecutionDispatcher());
+            IExecutionInvocationFactory invocations = new ExecutionInvocationFactory([factory]);
             TaskRegistry registry = new(index, pauseOnRestore: false);
-            Gateway = new TaskExecutionGateway(index, executions);
+            Gateway = new TaskExecutionGateway(index, executions, invocations);
             Flow = new FlowRuntime(executions);
             FlowProvider provider = new(
                 new MafFlowIdentity(flows),

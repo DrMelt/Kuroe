@@ -9,7 +9,7 @@ using NeutralExecutionOutput = Kuroe.Execution.Shared.Ports.ExecutionOutput;
 using NeutralExecutionRequest = Kuroe.Execution.Shared.Request.ExecutionRequest;
 using NeutralExecutionRunner = Kuroe.Execution.Shared.Runtime.IExecutionRunner;
 using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionRunnerFactory;
-using NeutralExecutionTarget = Kuroe.Execution.Shared.Identity.IExecutionTarget;
+using NeutralExecutionParameters = Kuroe.Execution.Shared.Request.IExecutionParameters;
 using NeutralExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
 using NeutralExecutionUsageSource = Kuroe.Execution.Shared.Runtime.IExecutionUsageSource;
 
@@ -143,7 +143,7 @@ internal sealed class StubRunner : NeutralExecutionRunnerFactory
     /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
     public NeutralExecutionUsage Usage { get; set; } = NeutralExecutionUsage.None;
 
-    public NeutralExecutionRunner Create(NeutralExecutionTarget target, NeutralExecutionId execution) =>
+    public NeutralExecutionRunner Create(NeutralExecutionParameters parameters, NeutralExecutionId execution) =>
         new Run(this);
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的替身状态。</summary>

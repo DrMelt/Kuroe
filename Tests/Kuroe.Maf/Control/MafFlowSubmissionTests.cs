@@ -281,22 +281,16 @@ public sealed class MafFlowSubmissionTests
 
     private sealed class FailingTargetFactory : IMafStepTargetFactory
     {
-        public ErrorOr<IExecutionTarget> Create(MafStepId step, string model, ExecutionParameterContext context) =>
+        public ErrorOr<ExecutionTarget> Create(MafStepId step, string model, ExecutionParameterContext context) =>
             Error.Validation("Maf.Target", "没有执行目标。");
     }
 
     private sealed class MismatchedTargetFactory : IMafStepTargetFactory
     {
-        public ErrorOr<IExecutionTarget> Create(MafStepId step, string model, ExecutionParameterContext context) =>
-            new MismatchedTarget();
-    }
-
-    private sealed class MismatchedTarget : IExecutionTarget
-    {
-        public ExecutionTargetId Id => new("其他");
-
-        public ExecutionRunnerKey RunnerKey => TestRunnerKey;
-
-        public IExecutionParameters Parameters => EmptyExecutionParameters.Instance;
+        public ErrorOr<ExecutionTarget> Create(MafStepId step, string model, ExecutionParameterContext context) =>
+            new ExecutionTarget(
+                new ExecutionTargetId("其他"),
+                TestRunnerKey,
+                EmptyExecutionParameters.Instance);
     }
 }

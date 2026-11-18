@@ -15,13 +15,10 @@ public interface IExecutionRuntime
     /// <summary>按存档数据重建一次已收口的执行。</summary>
     IExecution Restore(ExecutionRestorePlan plan);
 
-    /// <summary>校验恢复负载并准备一次恢复。</summary>
-    ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context);
-
-    /// <summary>选择运行器、派发执行并等待收口。派发异常把执行收为失败并返回错误。</summary>
+    /// <summary>按装配结果建立运行器、派发执行并等待收口。派发异常把执行收为失败并返回错误。</summary>
     Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionTarget target);
+        ExecutionInvocation invocation);
 
     /// <summary>选择恢复运行器、记录来源执行、派发恢复执行并等待收口。派发异常把执行收为失败并返回错误。</summary>
     Task<ErrorOr<Success>> RunRestoreAsync(
@@ -32,7 +29,7 @@ public interface IExecutionRuntime
     /// <summary>请求中断执行。排队与在跑的执行都按执行状态收口。</summary>
     void Interrupt(IExecution execution, string reason);
 
-    /// <summary>把已完成但未交回要求的执行降级为失败。</summary>
+    /// <summary>把未开始或未交回要求的执行降级为失败。</summary>
     void Reject(IExecution execution, string reason);
 
     /// <summary>中断排队与在跑的执行并等待收口。</summary>

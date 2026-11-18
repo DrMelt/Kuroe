@@ -1,5 +1,6 @@
 using Kuroe.Files.Shared;
 using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.File;
@@ -15,8 +16,8 @@ public sealed class FileReadExecutionRunnerFactory(
     ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
 
     /// <inheritdoc/>
-    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
-        target.Parameters is FileExecutionParameters parameters
-            ? new FileReadExecutionRunner(parameters, files)
+    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+        parameters is FileExecutionParameters fileParameters
+            ? new FileReadExecutionRunner(fileParameters, files)
             : throw new InvalidOperationException("文件读取执行参数类型不匹配。");
 }

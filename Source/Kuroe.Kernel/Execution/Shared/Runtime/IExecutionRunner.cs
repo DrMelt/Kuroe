@@ -5,7 +5,7 @@ using Kuroe.Execution.Shared.Request;
 
 namespace Kuroe.Execution.Shared.Runtime;
 
-/// <summary>一次执行运行器。运行器只读取执行请求与执行目标，不读取节点与图。</summary>
+/// <summary>一次执行运行器。运行器只读取执行请求与自身执行参数，不读取节点与图。</summary>
 public interface IExecutionRunner
 {
     /// <summary>本次执行的过程记录，执行开始前即可读取。</summary>

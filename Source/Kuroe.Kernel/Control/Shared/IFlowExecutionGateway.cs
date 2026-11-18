@@ -18,10 +18,10 @@ public interface ITaskExecutionGateway : IExecutionOwnerIndex
     /// <summary>校验恢复负载并准备一次恢复。</summary>
     ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context);
 
-    /// <summary>选择运行器、派发执行并等待收口。</summary>
+    /// <summary>装配执行目标、派发执行并等待收口。</summary>
     Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionTarget target);
+        ExecutionTarget target);
 
     /// <summary>选择恢复运行器、记录来源执行、派发恢复执行并等待收口。</summary>
     Task<ErrorOr<Success>> RunRestoreAsync(
@@ -32,6 +32,6 @@ public interface ITaskExecutionGateway : IExecutionOwnerIndex
     /// <summary>请求中断执行。</summary>
     void Interrupt(IExecution execution, string reason);
 
-    /// <summary>把已完成但未交回要求的执行降级为失败。</summary>
+    /// <summary>把未开始或未交回要求的执行降级为失败。</summary>
     void Reject(IExecution execution, string reason);
 }

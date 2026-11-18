@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
-using Kuroe.Execution.Registry;
 using Kuroe.Tasks.Shared;
 using Xunit;
 using Kuroe.Execution.Shared.Contract;
@@ -90,9 +89,7 @@ public sealed class ContractToolsTests
     }
 
     private static ExecutionRuntime Runtime() =>
-        new(
-            new ExecutionDispatcher(),
-            new ExecutionRunnerRegistry());
+        new(new ExecutionDispatcher());
 
     private static IExecution Create(
         ExecutionRuntime runtime,
@@ -130,7 +127,7 @@ internal sealed class FakeGateway : ITaskExecutionGateway
 
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        IExecutionTarget target) =>
+        ExecutionTarget target) =>
         throw new NotSupportedException();
 
     public Task<ErrorOr<Success>> RunRestoreAsync(
