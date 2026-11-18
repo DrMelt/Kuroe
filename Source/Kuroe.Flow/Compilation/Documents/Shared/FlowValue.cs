@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Compilation.Shared;
+namespace Kuroe.Flow.Compilation.Documents.Shared;
 
 /// <summary>描述层的中立值：承载参数段与原始键值，不依赖承载格式。</summary>
 public abstract record FlowValue

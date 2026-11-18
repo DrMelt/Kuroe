@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Compilation.Documents.Shared;
 using Xunit;
 
 namespace Kuroe.Flow.Json.Tests;

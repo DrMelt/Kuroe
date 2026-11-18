@@ -1,5 +1,5 @@
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Compilation.Documents.Shared;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;

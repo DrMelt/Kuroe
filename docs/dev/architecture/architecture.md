@@ -39,7 +39,8 @@ graph TD
         FlowShared["Flow.Shared<br>节点名 / 类型名 / 节点路径"]
         FlowNodeShared["Flow.Node.Shared<br>图结构 / 运行期节点 / 图执行输入"]
         FlowGraphRecordsShared["Flow.Graph.Records.Shared<br>图流程记录与种类"]
-        FlowCompilationShared["Flow.Compilation.Shared<br>流程描述 / 参数读取 / 节点规则"]
+        FlowCompilationDocumentsShared["Flow.Compilation.Documents.Shared<br>流程描述 / 参数段"]
+        FlowCompilationShared["Flow.Compilation.Shared<br>编译契约 / 类型描述 / 节点规则"]
         FlowCompilation["Flow.Compilation<br>流程描述编译与图编译"]
         FlowJsonShared["Flow.Json.Shared<br>流程文件格式端口"]
         FlowJson["Flow.Json<br>流程文件 JSON 读写"]
@@ -182,18 +183,22 @@ graph TD
 
     %% flow 域：模型、编译、控制与装配分层，装配根向下接节点与运行器
     FlowCompilation --> FlowCompilationShared
+    FlowCompilation --> FlowCompilationDocumentsShared
     FlowCompilation --> FlowShared
     FlowCompilation --> TasksShared
     FlowCompilation --> FlowNodeShared
     FlowJson --> FlowJsonShared
     FlowJson --> FlowCompilationShared
+    FlowJson --> FlowCompilationDocumentsShared
     FlowJson --> FlowShared
     FlowJson --> TasksShared
     FlowJson --> FlowNodeShared
-    FlowJsonShared --> FlowCompilationShared
+    FlowJsonShared --> FlowCompilationDocumentsShared
+    FlowCompilationShared --> FlowCompilationDocumentsShared
     FlowCompilationShared --> FlowShared
     FlowCompilationShared --> TasksShared
     FlowCompilationShared --> FlowNodeShared
+    FlowCompilationDocumentsShared --> FlowNodeShared
     FlowControlGraph --> ControlShared
     FlowControlGraph --> FlowShared
     FlowControlGraph --> ExecutionShared
@@ -216,6 +221,7 @@ graph TD
     FlowHosting --> FlowNodeShared
     FlowHosting --> FlowGraphRecordsShared
     FlowHosting --> FlowCompilationShared
+    FlowHosting --> FlowCompilationDocumentsShared
     FlowHosting --> FlowCompilation
     FlowHosting --> FlowJsonShared
     FlowHosting --> FlowJson

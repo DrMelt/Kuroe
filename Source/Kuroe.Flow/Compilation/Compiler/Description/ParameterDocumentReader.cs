@@ -1,6 +1,6 @@
 using System.Globalization;
 using ErrorOr;
-using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Compilation.Documents.Shared;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;

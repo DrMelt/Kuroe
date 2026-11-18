@@ -12,9 +12,10 @@
 ## 边界外
 
 - 不含格式端口：读写接口与导入类别在 Kuroe.Flow.Json.Shared。
-- 不含描述模型、校验与编译。
+- 不含描述模型：在 Kuroe.Flow.Compilation.Documents.Shared。
+- 不含校验与编译：在 Kuroe.Flow.Compilation.Shared 与 Kuroe.Flow.Compilation。
 - 不含流程控制与持久化。
 
 ## 依赖
 
-- Kuroe.Flow.Json.Shared、Kuroe.Flow.Compilation.Shared、Kuroe.Flow.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Node.Shared。
+- Kuroe.Flow.Json.Shared、Kuroe.Flow.Compilation.Documents.Shared、Kuroe.Flow.Compilation.Shared、Kuroe.Flow.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Node.Shared。

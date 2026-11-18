@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Compilation.Documents.Shared;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Xunit;
 

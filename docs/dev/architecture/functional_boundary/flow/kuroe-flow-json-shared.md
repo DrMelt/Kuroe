@@ -11,9 +11,9 @@
 ## 边界外
 
 - 不含 JSON 实现：在 Kuroe.Flow.Json。
-- 不含描述模型与编译：在 Kuroe.Flow.Compilation.Shared。
+- 不含描述模型：在 Kuroe.Flow.Compilation.Documents.Shared。不含编译：在 Kuroe.Flow.Compilation。
 - 不含流程控制与持久化。
 
 ## 依赖
 
-- Kuroe.Flow.Compilation.Shared。
+- Kuroe.Flow.Compilation.Documents.Shared。
