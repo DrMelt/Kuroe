@@ -7,24 +7,6 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>流程区域边界：共享层是纯模型，节点与图各自持有实现，流程区域与代码流程互不引用。</summary>
 public sealed class FlowAreaTests
 {
-    [Fact(DisplayName = "流程共享层只含纯模型")]
-    public void Flow_shared_project_is_a_pure_model()
-    {
-        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
-        string project = Path.Combine(shared, "Kuroe.Flow.Shared.csproj");
-
-        Assert.Empty(ProjectReferences(project));
-        Assert.False(File.Exists(Path.Combine(shared, "GlobalUsings.cs")), $"{Path.Combine(shared, "GlobalUsings.cs")} 不应存在。");
-
-        foreach (string file in SourceFiles(shared))
-        {
-            string text = File.ReadAllText(file);
-
-            Assert.DoesNotContain("using Kuroe.Execution", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("using Kuroe.Tasks", text, StringComparison.Ordinal);
-        }
-    }
-
     [Fact(DisplayName = "流程宿主不引用执行核")]
     public void Flow_hosting_does_not_reference_execution_core()
     {
@@ -89,23 +71,8 @@ public sealed class FlowAreaTests
             "Kuroe.Flow.Node.Shared.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
 
-        ReferencesStayUnder(project, "Kuroe.Flow.Node.Shared", "契约层", tasks, execution, shared);
-    }
-
-    [Fact(DisplayName = "流程共享层只引用中性共享层")]
-    public void Flow_shared_project_references_only_neutral_shared()
-    {
-        string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
-            "Shared",
-            "Kuroe.Flow.Shared.csproj");
-        string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
-        string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-
-        ReferencesStayUnder(project, "Kuroe.Flow.Shared", "中性共享", tasks, execution);
+        ReferencesStayUnder(project, "Kuroe.Flow.Node.Shared", "契约层", tasks, execution);
     }
 
     [Fact(DisplayName = "流程 JSON 共享层只引用描述文档")]
@@ -261,7 +228,6 @@ public sealed class FlowAreaTests
             "Core",
             "Kuroe.Flow.Control.csproj");
         string control = Path.Combine(KernelRoot, "Control", "Shared");
-        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
@@ -275,7 +241,6 @@ public sealed class FlowAreaTests
             "Kuroe.Flow.Control",
             "契约层与图记录",
             control,
-            shared,
             execution,
             executionRecords,
             graphRecords,

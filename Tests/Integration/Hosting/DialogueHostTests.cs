@@ -3,7 +3,7 @@ using ErrorOr;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
-using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Node.Shared.Model;
 using Kuroe.Tasks.Shared;
 using Kuroe.Tool;
 using Kuroe.Node.Llm;

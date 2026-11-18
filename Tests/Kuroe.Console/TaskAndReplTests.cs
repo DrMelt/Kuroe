@@ -1,7 +1,7 @@
 using ApiHub.Shared.Models;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Console.Views;
-using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Node.Shared.Model;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Pending;

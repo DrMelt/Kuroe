@@ -21,7 +21,6 @@
         <ProjectReference Include="..\..\..\Source\Kuroe.CodeFlow\Persistence\Core\Kuroe.CodeFlow.Persistence.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Tasks\Persistence\Serialization\Shared\Kuroe.Tasks.Persistence.Serialization.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Tasks\Persistence\Files\Shared\Kuroe.Tasks.Persistence.Files.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Control\Core\Kuroe.Flow.Control.csproj" />

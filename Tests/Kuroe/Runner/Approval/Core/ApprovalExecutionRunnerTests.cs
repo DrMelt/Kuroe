@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Node.Shared.Model;
 using Kuroe.Input.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.TestSupport;

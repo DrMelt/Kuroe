@@ -47,8 +47,6 @@ public sealed class HostAndToolBoundaryTests
                 IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core")));
             Assert.DoesNotContain(references, reference =>
                 IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared")));
-            Assert.DoesNotContain(references, reference =>
-                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Shared")));
         }
     }
 

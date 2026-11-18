@@ -16,21 +16,19 @@ public sealed class RecordPersistenceTests
             "Records",
             "Shared",
             "Kuroe.Flow.Records.Shared.csproj");
-        string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string tasksRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
 
         ReferencesStayUnder(
             project,
             Path.GetFileName(project),
             "图记录边界",
-            graph,
+            nodes,
             tasks,
             tasksRecords,
-            execution,
-            nodes);
+            execution);
     }
 
     [Fact(DisplayName = "持久化项目只引用共享边界")]
@@ -86,12 +84,10 @@ public sealed class RecordPersistenceTests
         ];
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
         string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
-        string flowContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string[] forbidden =
         [
             "Kuroe.Flow.Node",
             "Kuroe.Flow.Records",
-            "Kuroe.Flow.Shared",
             "GraphFlowDefinitionRecord",
             "CodeFlowDefinitionRecord",
         ];
@@ -103,8 +99,7 @@ public sealed class RecordPersistenceTests
                 Path.GetFileName(project),
                 "图或节点模型",
                 graphRecords,
-                nodeContracts,
-                flowContracts);
+                nodeContracts);
             SourcesExclude(DirectoryOf(project), "图或节点词汇", forbidden);
         }
     }

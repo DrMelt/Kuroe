@@ -3,7 +3,7 @@ using Kuroe.Flow.Control.Runtime;
 using Kuroe.Flow.Control.Runtime.Graph;
 using Kuroe.Flow.Records.Shared;
 using Kuroe.Control.Runtime;
-using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Node.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Tool;

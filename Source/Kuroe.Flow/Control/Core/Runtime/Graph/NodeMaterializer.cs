@@ -1,5 +1,5 @@
 using Kuroe.Flow.Control.Runtime.Nodes;
-using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Node.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;

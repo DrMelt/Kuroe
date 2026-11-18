@@ -1,0 +1,63 @@
+using Kuroe.Flow.Node.Shared.Model;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Tasks.Shared;
+using Xunit;
+using Kuroe.Execution.Shared.Identity;
+
+namespace Kuroe.Flow.Node.Shared.Tests.RuntimeGraph.Execution;
+
+/// <summary>内容出处：可读文本与回跳执行。</summary>
+public sealed class ContextSourceTests
+{
+    [Fact(DisplayName = "执行来源指回其执行")]
+    public void ExecutionSource_points_back_to_its_execution()
+    {
+        ExecutionId execution = new(7);
+        ExecutionSource source = new(execution, NodePath.Of("实施"), new PortName("结论"));
+
+        Assert.Equal("执行 #7 · 节点「实施」端口「结论」", source.Label);
+        Assert.Equal(execution, source.FromExecution);
+        Assert.Equal(new PortName("结论"), source.Port);
+    }
+
+    [Fact(DisplayName = "输入与开始来源标明出处")]
+    public void Input_and_start_sources_name_their_origin()
+    {
+        InputSource input = new(NodePath.Of("取舍"), new PortName("回答"));
+        StartSource start = new(new PortName("目标"));
+
+        Assert.Equal("节点「取舍」输入「回答」", input.Label);
+        Assert.Equal("流程起点端口「目标」", start.Label);
+        Assert.Null(input.FromExecution);
+        Assert.Null(start.FromExecution);
+    }
+
+    [Fact(DisplayName = "上下文值保留出处与文本")]
+    public void Context_value_keeps_origin_and_text()
+    {
+        ContextValue value = new(new StartSource(new PortName("目标")), "做出一个示例");
+
+        Assert.Equal("做出一个示例", value.Text);
+        Assert.Equal("流程起点端口「目标」", value.Origin.Label);
+    }
+
+    [Fact(DisplayName = "容器端口来源标明容器")]
+    public void Container_port_source_names_its_container()
+    {
+        ContainerPortSource container = new(NodePath.Of("文档组"), new PortName("结论"));
+
+        Assert.Equal("容器「文档组」端口「结论」", container.Label);
+        Assert.Null(container.FromExecution);
+    }
+
+    [Fact(DisplayName = "静态来源标明值出处")]
+    public void Static_sources_name_the_value_origin()
+    {
+        DefaultSource fallback = new(NodePath.Of("实施"), new PortName("格式"));
+        ConstantSource source = new(NodePath.Of("整体", "制定大纲"), new PortName("大纲"));
+
+        Assert.Equal("节点「实施」默认值", fallback.Label);
+        Assert.Equal("节点「整体/制定大纲」常量端口「大纲」", source.Label);
+        Assert.Null(source.FromExecution);
+    }
+}

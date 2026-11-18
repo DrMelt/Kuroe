@@ -11,7 +11,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Records\Shared\Kuroe.Flow.Records.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
     </ItemGroup>

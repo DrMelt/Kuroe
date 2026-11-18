@@ -88,7 +88,7 @@ public sealed class KernelTaskTests
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Shared")));
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow")));
         Assert.DoesNotContain(references, reference =>
             IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Runtime")));
         Assert.DoesNotContain(references, reference =>
