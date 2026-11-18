@@ -97,9 +97,13 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         TaskRecordCodec codec = TaskRecordCodecs.Codec();
         string json = codec.Write(TaskRecordFixture.Create()).ThrowIfError();
 
-        System.Text.Json.Nodes.JsonNode root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
-        System.Text.Json.Nodes.JsonArray executions = root["Task"]!["Executions"]!.AsArray();
-        executions[0]!["Attempt"] = 2;
+        System.Text.Json.Nodes.JsonObject root = System.Text.Json.Nodes.JsonNode.Parse(json)?.AsObject()
+            ?? throw new InvalidOperationException("存档不是 JSON 对象。");
+        System.Text.Json.Nodes.JsonArray executions = root["Task"]?["Executions"]?.AsArray()
+            ?? throw new InvalidOperationException("存档没有执行列表。");
+        System.Text.Json.Nodes.JsonObject execution = executions[0]?.AsObject()
+            ?? throw new InvalidOperationException("存档没有执行。");
+        execution["Attempt"] = 2;
 
         TaskRecord loaded = codec.Read(root.ToJsonString()).ThrowIfError();
 
@@ -162,7 +166,11 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Contains("\"Contract\":", json);
         Assert.NotNull(restored);
         Assert.Equal("缺少资料", restored.CannotCompleteReason);
-        Assert.Equal(value, Assert.Single(restored.Outputs!).Value);
+        IReadOnlyDictionary<
+            Kuroe.Execution.Shared.Ports.ExecutionPortName,
+            Kuroe.Execution.Shared.Ports.ExecutionOutputValue> outputs =
+            restored.Outputs ?? throw new InvalidOperationException("契约没有产出。");
+        Assert.Equal(value, Assert.Single(outputs).Value);
     }
 
     [Fact]

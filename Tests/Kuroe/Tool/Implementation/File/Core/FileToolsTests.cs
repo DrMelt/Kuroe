@@ -1296,18 +1296,6 @@ public sealed class FileToolsTests
             });
     }
 
-    /// <summary>大小写变体在 Windows 上按路径语义同样拒绝。</summary>
-    [Fact]
-    public void Denied_paths_are_case_insensitive_on_windows()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        Assert.Contains("黑名单", Call("ReadFile", ("path", ".KUROE/catalog.json")));
-    }
-
     [Fact]
     public void Explicit_context_reads_the_mapped_root_port()
     {

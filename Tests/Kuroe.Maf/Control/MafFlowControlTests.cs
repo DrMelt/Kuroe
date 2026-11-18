@@ -14,6 +14,7 @@ using Xunit;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
+using Kuroe.Flow.TestSupport;
 
 namespace Kuroe.Maf.Control.Tests;
 
@@ -28,7 +29,7 @@ public sealed class MafFlowControlTests
         Harness harness = new();
         harness.Start();
 
-        await WaitUntil(() => harness.Work.State == TaskState.Done);
+        await harness.WaitUntilAsync(() => harness.Work.Completed);
 
         Assert.Equal(2, harness.Work.Executions.Count);
         Assert.All(harness.Work.Executions, execution => Assert.Equal(ExecutionState.Succeeded, execution.State));
@@ -41,7 +42,7 @@ public sealed class MafFlowControlTests
         Harness harness = new();
         harness.Start();
 
-        await WaitUntil(() => harness.Work.State == TaskState.Done);
+        await harness.WaitUntilAsync(() => harness.Work.Completed);
 
         FlowRecord record = harness.Work.UnderLock(() => new MafFlowRecordSource().CaptureRecord(harness.Work));
         MafFlowStateRecord state = Assert.IsType<MafFlowStateRecord>(record.State);
@@ -78,11 +79,11 @@ public sealed class MafFlowControlTests
         ExecutionId execution = Assert.Single(harness.Work.Executions).Id;
         Assert.False(harness.Stop(execution).IsError);
 
-        await WaitUntil(() => harness.Work.Lifecycle == TaskLifecycle.Paused);
+        await harness.WaitUntilAsync(() => harness.Work.Lifecycle == TaskLifecycle.Paused);
         Assert.Equal(TaskState.Paused, harness.Work.State);
 
         harness.Resume();
-        await WaitUntil(() => harness.Work.State == TaskState.Done);
+        await harness.WaitUntilAsync(() => harness.Work.Completed);
 
         Assert.Contains(harness.Work.Executions, candidate => candidate.State == ExecutionState.Interrupted);
         Assert.Contains(harness.Work.Executions, candidate => candidate.State == ExecutionState.Succeeded);
@@ -117,9 +118,9 @@ public sealed class MafFlowControlTests
         Harness harness = new(runners, TestFlow.SingleStep(runners));
         harness.Start();
 
-        await WaitUntil(() => harness.Work.State == TaskState.Blocked);
+        await harness.WaitUntilAsync(() => harness.Work.State == TaskState.Blocked);
         Assert.Equal(1, harness.Rerun());
-        await WaitUntil(() => harness.Work.State == TaskState.Done);
+        await harness.WaitUntilAsync(() => harness.Work.Completed);
 
         Assert.Contains(harness.Work.Executions, execution => execution.State == ExecutionState.Failed);
         Assert.Contains(harness.Work.Executions, execution => execution.State == ExecutionState.Succeeded);
@@ -135,7 +136,7 @@ public sealed class MafFlowControlTests
         Harness harness = new(runners, TestFlow.SingleStep(runners));
         harness.Start();
 
-        await WaitUntil(() => harness.Work.State == TaskState.Blocked);
+        await harness.WaitUntilAsync(() => harness.Work.State == TaskState.Blocked);
         FlowStepView step = Assert.Single(harness.Work.Snapshot().View.Steps);
 
         Assert.Equal(FlowItemState.Blocked, step.State);
@@ -147,7 +148,7 @@ public sealed class MafFlowControlTests
     {
         Harness harness = new();
         harness.Start();
-        await WaitUntil(() => harness.Work.State == TaskState.Done);
+        await harness.WaitUntilAsync(() => harness.Work.Completed);
 
         ErrorOr<TaskRecord> captured = new TaskRecordCapture(harness.Work).CaptureRecord();
         Assert.False(captured.IsError);
@@ -180,7 +181,7 @@ public sealed class MafFlowControlTests
         Harness harness = new(definition: TestFlow.Fork());
         harness.Start();
 
-        await WaitUntil(() => harness.Work.State == TaskState.Done);
+        await harness.WaitUntilAsync(() => harness.Work.Completed);
 
         Assert.Equal(
             ForkedSteps.Order(StringComparer.Ordinal),
@@ -195,10 +196,10 @@ public sealed class MafFlowControlTests
         Harness harness = new(runners, TestFlow.Definition(runners));
         harness.Start();
         await WaitForRunner(runners, 1);
-        await WaitUntil(() => harness.Pending().SequenceEqual(["第二步"]));
+        await harness.WaitUntilAsync(() => harness.Pending().SequenceEqual(["第二步"]));
 
         Assert.False(harness.Terminate().IsError);
-        await WaitUntil(() => harness.Flow.ActiveControls == 0);
+        await harness.WaitUntilAsync(() => harness.Work.Executions.All(execution => !execution.IsLive));
 
         Assert.Equal(TaskLifecycle.Terminated, harness.Work.Lifecycle);
         Assert.Equal(["第二步"], harness.Pending());
@@ -220,11 +221,11 @@ public sealed class MafFlowControlTests
         await WaitForRunner(runners, 1);
 
         Assert.False(harness.Pause().IsError);
-        await WaitUntil(() => harness.Work.State == TaskState.Paused);
-        await WaitUntil(() => harness.Pending().Length == 2);
+        await harness.WaitUntilAsync(() => harness.Work.State == TaskState.Paused);
+        await harness.WaitUntilAsync(() => harness.Pending().Length == 2);
 
         harness.Resume();
-        await WaitUntil(() => harness.Work.State == TaskState.Done);
+        await harness.WaitUntilAsync(() => harness.Work.Completed);
 
         Assert.Equal(2, harness.Work.Executions.Count(execution => execution.Request.Step.Value == "第一步"));
         Assert.Single(harness.Work.Executions, execution => execution.Request.Step.Value == "第二步");
@@ -233,35 +234,25 @@ public sealed class MafFlowControlTests
             entry => entry.Text.Contains("可恢复阻塞", StringComparison.Ordinal));
     }
 
-    private static async Task WaitUntil(Func<bool> condition)
-    {
-        for (int attempt = 0; attempt < 250; attempt++)
-        {
-            if (condition())
-            {
-                return;
-            }
-
-            await Task.Delay(20);
-        }
-
-        throw new TimeoutException("任务没有在预期时间内到达预期状态。");
-    }
-
     private static async Task<FakeRunner> WaitForRunner(FakeRunnerFactory runners, int index)
     {
-        for (int attempt = 0; attempt < 250; attempt++)
-        {
-            IReadOnlyList<FakeRunner> created = runners.Runners;
-            if (created.Count >= index && created[index - 1].Started.Task.IsCompleted)
-            {
-                return created[index - 1];
-            }
+        ChangeWaiter waiter = new();
+        void OnCreated(FakeRunner runner) => waiter.Raise();
 
-            await Task.Delay(10);
+        runners.Created += OnCreated;
+        try
+        {
+            await waiter.UntilAsync(() => runners.Runners.Count >= index);
+        }
+        finally
+        {
+            runners.Created -= OnCreated;
         }
 
-        throw new TimeoutException("没有等到执行运行。");
+        FakeRunner created = runners.Runners[index - 1];
+        await created.Started.Task.WaitAsync(TestTimeouts.HangGuard);
+
+        return created;
     }
 
     private sealed class Harness
@@ -274,7 +265,7 @@ public sealed class MafFlowControlTests
             ExecutionIndex index = new();
             IExecutionRuntime executions = new ExecutionRuntime(
                 new ExecutionDispatcher());
-            TaskRegistry registry = new(index, pauseOnRestore: false);
+            Registry = new TaskRegistry(index, pauseOnRestore: false);
             Gateway = new TaskExecutionGateway(index, executions);
             Flow = new FlowRuntime(executions);
             FlowProvider provider = new(
@@ -289,7 +280,7 @@ public sealed class MafFlowControlTests
                 .Prepare(new TaskId(1), TestFlow.Name, TestFlow.Inputs(), "标题")
                 .Value;
             Work = new WorkTask(
-                registry,
+                Registry,
                 executions,
                 new TaskId(1),
                 submission.State.Inputs,
@@ -299,14 +290,33 @@ public sealed class MafFlowControlTests
                 submission.State,
                 submission.Definition,
                 observer: null);
-            registry.Adopt(Work);
+            Registry.Adopt(Work);
         }
+
+        internal TaskRegistry Registry { get; }
 
         internal TaskExecutionGateway Gateway { get; }
 
         internal FlowRuntime Flow { get; }
 
         internal WorkTask Work { get; }
+
+        /// <summary>等任务状态满足条件，靠任务域的变更通知唤醒。</summary>
+        internal async Task WaitUntilAsync(Func<bool> condition)
+        {
+            ChangeWaiter waiter = new();
+            void OnChanged(TaskId _) => waiter.Raise();
+
+            Registry.Changed += OnChanged;
+            try
+            {
+                await waiter.UntilAsync(condition);
+            }
+            finally
+            {
+                Registry.Changed -= OnChanged;
+            }
+        }
 
         internal void Start() =>
             Work.UnderLock(() =>

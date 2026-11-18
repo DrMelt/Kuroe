@@ -110,7 +110,7 @@ public sealed class StartPathsTests
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal("用户给的路径", done.Inputs.Text(new PortName("WORKSPACE_PATH")));
-        Assert.Null(done.StartTexts!.Text(new PortName("WORKSPACE_PATH")));
+        Assert.Null(Texts(done).Text(new PortName("WORKSPACE_PATH")));
     }
 
     /// <summary>带默认值的开始端口进表后由宿主给值，默认值不生效。</summary>
@@ -122,7 +122,7 @@ public sealed class StartPathsTests
         TaskSnapshot done = environment.Settle(environment.Submit("整理目录"));
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(environment.Root, done.StartTexts!.Text(new PortName("启动")));
+        Assert.Equal(environment.Root, Texts(done).Text(new PortName("启动")));
         Assert.DoesNotContain(done.Inputs.Values, value => value.Text == "fallback");
     }
 
@@ -358,4 +358,8 @@ public sealed class StartPathsTests
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal("正文产出", File.ReadAllText(Path.Combine(taskDirectory, "out", "result.txt")));
     }
+
+    /// <summary>任务启动时的开始端口文本，任务没有开始端口文本时失败。</summary>
+    private static FlowTexts Texts(TaskSnapshot snapshot) =>
+        snapshot.StartTexts ?? throw new InvalidOperationException("任务没有开始端口文本。");
 }

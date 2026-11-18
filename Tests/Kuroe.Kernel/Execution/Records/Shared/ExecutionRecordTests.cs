@@ -37,7 +37,11 @@ public sealed class ExecutionRecordTests
 
         Assert.Equal(new ExecutionStepId("整体/计划"), record.Step);
         Assert.Equal("start:目标", Assert.Single(record.Inputs).Source);
-        Assert.Equal("完成", record.Contract!.Outputs![port].Text);
+        ExecutionContractRecord contract = record.Contract
+            ?? throw new InvalidOperationException("记录没有执行契约。");
+        IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> outputs = contract.Outputs
+            ?? throw new InvalidOperationException("契约没有产出。");
+        Assert.Equal("完成", outputs[port].Text);
         Assert.Equal(10, record.Usage.Tokens.Input);
     }
 

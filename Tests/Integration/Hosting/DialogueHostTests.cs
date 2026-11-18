@@ -13,6 +13,7 @@ using Xunit;
 using Kuroe.Execution.Shared.Notice;
 using Kuroe.Execution.Shared.Restore;
 using Kuroe.Execution.Shared.State;
+using ChangeWaiter = Kuroe.Flow.TestSupport.ChangeWaiter;
 
 namespace Kuroe.Integration.Tests.Hosting;
 
@@ -476,7 +477,7 @@ public sealed class DialogueHostTests
             environment.Driver.Pause(owner);
         }
 
-        await WaitUntilAsync(() => !execution.IsLive);
+        await WaitUntilSettledAsync(execution);
         Assert.Equal(Kuroe.Execution.Shared.State.ExecutionState.Interrupted, execution.State);
         Assert.True((await running.WaitAsync(TestContext.Current.CancellationToken)).IsError);
 
@@ -494,19 +495,21 @@ public sealed class DialogueHostTests
         Assert.Equal(2, environment.Runner.StartedCode.Count);
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition)
+    /// <summary>等执行收口，靠执行的变更通知唤醒。</summary>
+    private static async Task WaitUntilSettledAsync(IExecution execution)
     {
-        for (int attempt = 0; attempt < 100; attempt++)
+        ChangeWaiter waiter = new();
+        void OnChanged() => waiter.Raise();
+
+        execution.Changed += OnChanged;
+        try
         {
-            if (condition())
-            {
-                return;
-            }
-
-            await Task.Delay(10);
+            await waiter.UntilAsync(() => !execution.IsLive);
         }
-
-        Assert.Fail("等待超时。");
+        finally
+        {
+            execution.Changed -= OnChanged;
+        }
     }
 
     private static string ErrorText<T>(ErrorOr<T> result) =>

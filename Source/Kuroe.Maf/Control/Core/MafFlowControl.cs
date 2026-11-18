@@ -374,6 +374,7 @@ internal sealed class MafFlowControl(
         }
 
         Cancel(cancel);
+        task.NotifyChanged();
     }
 
     /// <summary>中断收口：控制动作发生在这次运行期间时保留推进，否则把任务停在可恢复阻塞。</summary>

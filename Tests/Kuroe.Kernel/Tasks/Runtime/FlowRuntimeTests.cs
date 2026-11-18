@@ -56,7 +56,7 @@ public sealed class FlowRuntimeTests
 
         control.Finish();
 
-        await WaitUntil(() => runtime.ActiveControls == 0);
+        await runtime.SettledAsync(task);
 
         lock (task.Gate)
         {
@@ -115,16 +115,15 @@ public sealed class FlowRuntimeTests
         Assert.Equal(0, secondControl.Pauses);
 
         firstControl.Finish();
-        await WaitUntil(() =>
-        {
-            int before = firstControl.Pauses;
-            lock (first.Gate)
-            {
-                runtime.Pause(first);
-            }
+        await runtime.SettledAsync(first);
 
-            return firstControl.Pauses == before;
+        first.UnderLock(() =>
+        {
+            runtime.Pause(first);
+            return true;
         });
+
+        Assert.Equal(1, firstControl.Pauses);
 
         second.UnderLock(() =>
         {
@@ -171,21 +170,6 @@ public sealed class FlowRuntimeTests
     private static WorkTask CreateTask(TestControl control) => FlowRuntimeTestDoubles.CreateTask(control);
 
     private static IExecutionRuntime Runtime() => FlowRuntimeTestDoubles.Runtime();
-
-    private static async Task WaitUntil(Func<bool> condition)
-    {
-        for (int attempt = 0; attempt < 100; attempt++)
-        {
-            if (condition())
-            {
-                return;
-            }
-
-            await Task.Delay(10);
-        }
-
-        Assert.Fail("等待超时。");
-    }
 }
 internal static class FlowRuntimeTestDoubles
 {

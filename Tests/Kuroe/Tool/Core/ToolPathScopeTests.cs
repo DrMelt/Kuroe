@@ -105,6 +105,22 @@ public sealed class ToolPathScopeTests
         Assert.Equal("src", scope.Display("src"));
     }
 
+    [Fact]
+    public void Resolve_matches_deny_entries_with_the_access_comparison()
+    {
+        string root = Root();
+        ToolPathScope scope = new(root, root, "工作目录");
+        ToolPathAccess insensitive = new([], [".kuroe"]) { Comparison = StringComparison.OrdinalIgnoreCase };
+        ToolPathAccess sensitive = new([], [".kuroe"]) { Comparison = StringComparison.Ordinal };
+
+        ErrorOr<string> denied = scope.Resolve(Path.Combine(".KUROE", "catalog.json"), insensitive);
+        ErrorOr<string> allowed = scope.Resolve(Path.Combine(".KUROE", "catalog.json"), sensitive);
+
+        Assert.True(denied.IsError);
+        Assert.Contains("黑名单", denied.FirstError.Description, StringComparison.Ordinal);
+        Assert.False(allowed.IsError);
+    }
+
     /// <summary>临时测试根目录，路径不需要实际存在。</summary>
     private static string Root() => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 }

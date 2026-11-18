@@ -6,17 +6,24 @@ namespace Kuroe.TestSupport;
 /// <summary>内存文件访问：按完整路径保存文件字节与目录集合，供核心逻辑测试替代真实磁盘。</summary>
 public sealed class InMemoryWorkspaceFiles : IWorkspaceFiles
 {
-    private static readonly StringComparer Comparer = OperatingSystem.IsWindows()
-        ? StringComparer.OrdinalIgnoreCase
-        : StringComparer.Ordinal;
-
     private readonly Lock _gate = new();
-    private readonly HashSet<string> _directories = new(Comparer);
-    private readonly Dictionary<string, byte[]> _files = new(Comparer);
-    private readonly Dictionary<string, FileFacts> _facts = new(Comparer);
+    private readonly StringComparer _comparer;
+    private readonly StringComparison _comparison;
+    private readonly HashSet<string> _directories;
+    private readonly Dictionary<string, byte[]> _files;
+    private readonly Dictionary<string, FileFacts> _facts;
 
     /// <summary>建立内存文件访问，当前目录视为已存在，与真实文件系统一致。</summary>
-    public InMemoryWorkspaceFiles() => AddDirectoryCore(Directory.GetCurrentDirectory());
+    /// <param name="comparison">路径键的比较规则，默认按序数比较。</param>
+    public InMemoryWorkspaceFiles(StringComparison comparison = StringComparison.Ordinal)
+    {
+        _comparison = comparison;
+        _comparer = StringComparer.FromComparison(comparison);
+        _directories = new HashSet<string>(_comparer);
+        _files = new Dictionary<string, byte[]>(_comparer);
+        _facts = new Dictionary<string, FileFacts>(_comparer);
+        AddDirectoryCore(Directory.GetCurrentDirectory());
+    }
 
     /// <summary>加入一个目录，父目录一并加入。</summary>
     public InMemoryWorkspaceFiles AddDirectory(string path)
@@ -276,15 +283,9 @@ public sealed class InMemoryWorkspaceFiles : IWorkspaceFiles
     private static string Full(string path) => Path.GetFullPath(path);
 
     /// <summary>路径是否在目录内，目录本身与后代都算在内。</summary>
-    private static bool IsWithin(string path, string directory)
-    {
-        StringComparison comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-
-        return Comparer.Equals(path, directory)
-            || path.StartsWith(directory + Path.DirectorySeparatorChar, comparison);
-    }
+    private bool IsWithin(string path, string directory) =>
+        _comparer.Equals(path, directory)
+        || path.StartsWith(directory + Path.DirectorySeparatorChar, _comparison);
 
     /// <summary>目录的直接子项，文件与目录按完整路径返回。</summary>
     private IReadOnlyList<string> Children(
@@ -302,8 +303,8 @@ public sealed class InMemoryWorkspaceFiles : IWorkspaceFiles
 
             return
             [
-                .. files.Where(file => Comparer.Equals(Path.GetDirectoryName(file), root)),
-                .. directories.Where(item => Comparer.Equals(Path.GetDirectoryName(item), root)),
+                .. files.Where(file => _comparer.Equals(Path.GetDirectoryName(file), root)),
+                .. directories.Where(item => _comparer.Equals(Path.GetDirectoryName(item), root)),
             ];
         }
     }
@@ -315,7 +316,7 @@ public sealed class InMemoryWorkspaceFiles : IWorkspaceFiles
         {
             _directories.Add(current);
             string? parent = Path.GetDirectoryName(current);
-            if (string.IsNullOrEmpty(parent) || Comparer.Equals(parent, current))
+            if (string.IsNullOrEmpty(parent) || _comparer.Equals(parent, current))
             {
                 break;
             }

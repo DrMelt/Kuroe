@@ -14,6 +14,7 @@ public sealed class FlowRuntime(
 {
     private readonly Lock _gate = new();
     private readonly Dictionary<ITaskFlowContext, IFlowControl> _controls = [];
+    private readonly Dictionary<ITaskFlowContext, Task> _settled = [];
 
     /// <summary>要求持有任务 Gate：启动该任务的推进循环。</summary>
     public void Start(ITaskFlowHost task)
@@ -47,18 +48,43 @@ public sealed class FlowRuntime(
     /// <summary>控制实例完成后把控制移出索引。</summary>
     private void Track(ITaskFlowHost task, IFlowControl control)
     {
-        _ = Task.Run(async () =>
+        TaskCompletionSource settled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_gate)
         {
-            await control.Completion.ConfigureAwait(false);
-            lock (_gate)
+            _settled[task] = settled.Task;
+        }
+
+        _ = RemoveWhenCompletedAsync(task, control, settled);
+    }
+
+    /// <summary>控制实例的循环收口后清掉索引条目，并给出移出完成的信号。</summary>
+    private async Task RemoveWhenCompletedAsync(
+        ITaskFlowHost task,
+        IFlowControl control,
+        TaskCompletionSource settled)
+    {
+        await control.Completion.ConfigureAwait(false);
+        lock (_gate)
+        {
+            if (_controls.TryGetValue(task, out IFlowControl? current)
+                && ReferenceEquals(current, control))
             {
-                if (_controls.TryGetValue(task, out IFlowControl? current)
-                    && ReferenceEquals(current, control))
-                {
-                    _controls.Remove(task);
-                }
+                _controls.Remove(task);
             }
-        });
+
+            _settled.Remove(task);
+        }
+
+        settled.TrySetResult();
+    }
+
+    /// <summary>控制实例移出活跃索引的完成：此后该任务不再接受流程命令。</summary>
+    public Task SettledAsync(ITaskFlowContext task)
+    {
+        lock (_gate)
+        {
+            return _settled.TryGetValue(task, out Task? settled) ? settled : Task.CompletedTask;
+        }
     }
 
     /// <summary>要求持有任务 Gate：暂停任务的推进循环并中断在跑执行。</summary>
@@ -133,6 +159,14 @@ public sealed class FlowRuntime(
         {
             await control.Completion.ConfigureAwait(false);
         }
+
+        Task[] settled;
+        lock (_gate)
+        {
+            settled = [.. _settled.Values];
+        }
+
+        await Task.WhenAll(settled).ConfigureAwait(false);
 
         lock (_gate)
         {

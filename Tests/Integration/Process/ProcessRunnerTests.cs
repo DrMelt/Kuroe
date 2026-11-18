@@ -19,17 +19,11 @@ public sealed class ProcessRunnerTests
     public void Output_and_exit_code_are_returned()
     {
         ProcessRunner runner = new();
-        (string program, string[] arguments) = Echo("kuroe-output");
 
-        ProcessResult result = runner.Run(program, arguments, Path.GetTempPath(), TimeSpan.FromSeconds(30));
+        ProcessResult result = runner.Run("dotnet", ["--version"], Path.GetTempPath(), TimeSpan.FromSeconds(30));
 
         Assert.False(result.TimedOut);
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("kuroe-output", result.Output, StringComparison.Ordinal);
+        Assert.Matches(@"^\d+\.\d+", result.Output.Trim());
     }
-
-    private static (string Program, string[] Arguments) Echo(string text) =>
-        OperatingSystem.IsWindows()
-            ? ("cmd", ["/c", "echo", text])
-            : ("/bin/sh", ["-c", $"echo {text}"]);
 }

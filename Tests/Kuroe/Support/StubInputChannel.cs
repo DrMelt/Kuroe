@@ -1,10 +1,10 @@
 using Kuroe.Input.Shared;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Runner.Input.Tests;
+namespace Kuroe.TestSupport;
 
-/// <summary>测试用的输入通道替身：记录声明与撤销，供用例断言。</summary>
-internal sealed class StubInputChannel : IInputChannel
+/// <summary>输入通道替身：记录声明与撤销，供用例断言。</summary>
+public sealed class StubInputChannel : IInputChannel
 {
     /// <inheritdoc/>
     public event Action<TaskId>? Changed;

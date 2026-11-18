@@ -30,40 +30,57 @@ public sealed class DocFlowExamplesTests
         return compiler.Compile(document, []);
     }
 
-    [Theory]
-    [InlineData("docs/user/reference/流程示例.md")]
-    public void Documented_flow_examples_compile(string relative)
-    {
-        string path = Path.Combine(RepositoryRoot(), relative);
-        List<Section> sections = Sections(File.ReadAllLines(path));
-        int examples = 0;
-        foreach (Section section in sections)
-        {
-            List<string> nodeBlocks =
-                [.. section.Blocks.Select(block => Property(block, "Nodes")).OfType<string>()];
-            string nodes = nodeBlocks.FirstOrDefault() ?? "[]";
+    private const string Page = "docs/user/reference/流程示例.md";
 
-            foreach (string flows in section.Blocks.Select(block => Property(block, "Flows")).OfType<string>())
+    /// <summary>文档页面的流程示例，每个 Flows 代码块一条。</summary>
+    public static TheoryData<string, string, string> Examples() => ExamplesOf(Page);
+
+    [Theory]
+    [MemberData(nameof(Examples))]
+    public void Documented_flow_example_reads_and_compiles(string heading, string nodes, string flows)
+    {
+        string json = $"{{\"Nodes\":{nodes},\"Flows\":{flows}}}";
+
+        ErrorOr<FlowDocument> read = FlowDocumentSource.Read(json);
+        Assert.False(read.IsError, $"{Page} 的「{heading}」读取失败：{Describe(read.ErrorsOrEmptyList)}");
+
+        ErrorOr<CompiledDocument> compiled = Compile(read.Value);
+        Assert.False(compiled.IsError, $"{Page} 的「{heading}」编译失败：{Describe(compiled.ErrorsOrEmptyList)}");
+    }
+
+    /// <summary>从文档页面取出每个 Flows 代码块，与所在小节的 Nodes 代码块配对。格式不合法时直接失败。</summary>
+    private static TheoryData<string, string, string> ExamplesOf(string relative)
+    {
+        TheoryData<string, string, string> examples = new();
+        int count = 0;
+        foreach (Section section in Sections(relative, File.ReadAllLines(Path.Combine(RepositoryRoot(), relative))))
+        {
+            string? nodes = section.Blocks
+                .Select(block => Property(relative, section.Heading, block, "Nodes"))
+                .OfType<string>()
+                .FirstOrDefault();
+            foreach (string flows in section.Blocks
+                .Select(block => Property(relative, section.Heading, block, "Flows"))
+                .OfType<string>())
             {
-                examples++;
-                string json = $"{{\"Nodes\":{nodes},\"Flows\":{flows}}}";
-                ErrorOr<FlowDocument> read = FlowDocumentSource.Read(json);
-                Assert.False(read.IsError,
-                    $"{relative} 的「{section.Heading}」读取失败：{string.Join("；", read.ErrorsOrEmptyList.Select(error => error.Description))}");
-                ErrorOr<CompiledDocument> compiled = Compile(read.Value);
-                Assert.False(compiled.IsError,
-                    $"{relative} 的「{section.Heading}」编译失败：{string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description))}");
+                examples.Add(section.Heading, nodes ?? "[]", flows);
+                count++;
             }
         }
 
-        Assert.True(examples > 0, $"{relative} 没有可编译的流程示例。");
+        if (count == 0)
+        {
+            throw new InvalidOperationException($"{relative} 没有可编译的流程示例。");
+        }
+
+        return examples;
     }
 
     /// <summary>Markdown 的一节：二级标题与其下的 json 代码块。</summary>
     private sealed record Section(string Heading, List<string> Blocks);
 
     /// <summary>按二级标题分组提取 json 代码块。</summary>
-    private static List<Section> Sections(string[] lines)
+    private static List<Section> Sections(string relative, string[] lines)
     {
         List<Section> sections = [];
         Section current = new(string.Empty, []);
@@ -96,6 +113,11 @@ public sealed class DocFlowExamplesTests
                 end++;
             }
 
+            if (end >= lines.Length)
+            {
+                throw new InvalidOperationException($"{relative} 的「{current.Heading}」有未闭合的 json 代码块。");
+            }
+
             current.Blocks.Add(string.Join('\n', lines.Skip(start).Take(end - start)));
             index = end + 1;
         }
@@ -108,16 +130,26 @@ public sealed class DocFlowExamplesTests
         return sections;
     }
 
-    /// <summary>取 json 对象的顶层字段原文，没有该字段或不是对象时为 null。</summary>
-    private static string? Property(string json, string name)
+    /// <summary>取 json 对象的顶层字段原文，不是对象或没有该字段时为 null，json 不合法时失败。</summary>
+    private static string? Property(string relative, string heading, string json, string name)
     {
+        JsonDocument document;
         try
         {
-            using JsonDocument document = JsonDocument.Parse(json, new JsonDocumentOptions
+            document = JsonDocument.Parse(json, new JsonDocumentOptions
             {
                 CommentHandling = JsonCommentHandling.Skip,
                 AllowTrailingCommas = true,
             });
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"{relative} 的「{heading}」json 代码块不是合法 JSON：{ex.Message}", ex);
+        }
+
+        using (document)
+        {
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
                 return null;
@@ -131,13 +163,12 @@ public sealed class DocFlowExamplesTests
                 }
             }
         }
-        catch (JsonException)
-        {
-            return null;
-        }
 
         return null;
     }
+
+    private static string Describe(IReadOnlyList<Error> errors) =>
+        string.Join("；", errors.Select(error => error.Description));
 
     /// <summary>仓库根目录，按解决方案文件向上查找。</summary>
     private static string RepositoryRoot()

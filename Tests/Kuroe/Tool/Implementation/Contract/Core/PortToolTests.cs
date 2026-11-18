@@ -114,7 +114,9 @@ public sealed class PortToolTests
             .Invoke(Given(("valuesJson", """{ " 结论 ": "完成" }""")));
 
         Assert.False(result.IsError);
-        Assert.True(submitter.Submitted is { } submitted && submitted.Any(value => value.Port == Conclusion));
+        IReadOnlyList<ExecutionOutputValue> submitted = submitter.Submitted
+            ?? throw new InvalidOperationException("端口没有提交。");
+        Assert.Contains(submitted, value => value.Port == Conclusion);
     }
 
     /// <summary>去掉首尾空白后同名的端口键按重复提交拒绝。</summary>

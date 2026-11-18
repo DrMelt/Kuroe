@@ -21,9 +21,12 @@ public sealed class WorkspacePathTests
     }
 
     [Fact]
-    public void IsSame_compares_case_by_platform_rules()
+    public void IsSame_compares_with_the_given_rule()
     {
-        Assert.Equal(OperatingSystem.IsWindows(), WorkspacePath.IsSame(Root, Root.ToUpperInvariant()));
+        string upper = Root.ToUpperInvariant();
+
+        Assert.True(WorkspacePath.IsSame(Root, upper, StringComparison.OrdinalIgnoreCase));
+        Assert.False(WorkspacePath.IsSame(Root, upper, StringComparison.Ordinal));
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 namespace Kuroe.Console.Tests.Persistence;
 
-/// <summary>Console 宿主的任务持久化验收。验收涉及跨进程重载，默认作为手动场景保留。</summary>
+/// <summary>Console 宿主的任务持久化验收：真实工作目录里跨会话重载任务。</summary>
 public sealed class ConsoleTaskPersistenceAcceptanceTests : TaskPersistenceAcceptanceTests
 {
     protected override string CreateRoot() =>

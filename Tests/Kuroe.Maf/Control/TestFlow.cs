@@ -92,6 +92,9 @@ internal sealed class FakeRunnerFactory(Func<FakeRunner> create) : IExecutionRun
         }
     }
 
+    /// <summary>建立一个新的运行器。</summary>
+    internal event Action<FakeRunner>? Created;
+
     public IExecutionRunner Create(
         IExecutionParameters parameters,
         IExecutionRequestEntry requests)
@@ -101,6 +104,8 @@ internal sealed class FakeRunnerFactory(Func<FakeRunner> create) : IExecutionRun
         {
             _runners.Add(runner);
         }
+
+        Created?.Invoke(runner);
 
         return runner;
     }
