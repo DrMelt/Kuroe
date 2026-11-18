@@ -12,6 +12,8 @@ using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Hosting;
 using Kuroe.Flow.Hosting.Workflows.Flows;
+using Kuroe.Node.Approval;
+using Kuroe.Node.Input;
 using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Tasks.Persistence.Saving.Shared;
 using Kuroe.Flow.Shared.Model;
@@ -27,7 +29,6 @@ using Kuroe.Tool;
 using Kuroe.Tool.Contract;
 using Kuroe.Flow.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
-using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Ports;
 
 namespace Kuroe.Integration.Tests.Support;
@@ -53,12 +54,9 @@ public sealed class TestEnvironment : IDisposable
         _waiter = new NotifiedTaskWaiter(
             TaskReader,
             provider.GetRequiredService<ITaskChangeSource>());
-        _contractTools = new ContractToolSource(
-            provider.GetRequiredService<IExecutionPortSubmitter>(),
-            provider.GetRequiredService<IExecutionCannotCompleteSubmitter>(),
-            provider.GetRequiredService<IExecutionStatusReader>());
-        runner.ContractToolFactory = execution =>
-            CreateContractTools(GraphExecution(new ExecutionId(execution.Value)));
+        _contractTools = new ContractToolSource();
+        runner.ContractToolFactory = requests =>
+            CreateContractTools(GraphExecution(requests.Id), requests);
     }
 
     /// <summary>临时工作目录。</summary>
@@ -129,12 +127,14 @@ public sealed class TestEnvironment : IDisposable
     public ITool StatusToolFor(ExecutionId execution) => ContractTool(execution, ContractTools.Status);
 
     /// <summary>按执行创建全部契约工具。</summary>
-    public IReadOnlyList<ITool> CreateContractTools(GraphExecution execution) =>
+    public IReadOnlyList<ITool> CreateContractTools(
+        GraphExecution execution,
+        IExecutionRequestEntry requests) =>
         _contractTools.Create(new ToolContext(
-            new ExecutionPortAccess(execution.Request),
+            new ExecutionPortAccess(requests.Request),
             new Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>>(),
             Root,
-            new ExecutionId(execution.Id.Value),
+            requests,
             execution.Input.ExecutionCount,
             execution.Input.MaxAttempts,
             [
@@ -147,7 +147,7 @@ public sealed class TestEnvironment : IDisposable
     private ITool ContractTool(ExecutionId execution, string path)
     {
         GraphExecution found = GraphExecution(new ExecutionId(execution.Value));
-        IReadOnlyList<ITool> tools = CreateContractTools(found);
+        IReadOnlyList<ITool> tools = CreateContractTools(found, Runner.EntryFor(execution));
 
         return tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
     }
@@ -211,11 +211,18 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>完整装配的核心选项。默认不写存档，持久化用例显式打开。</summary>
     internal static KuroeCoreOptions Options => new() { PersistTasks = false };
 
-    private static GraphFlowOptions CreateGraphOptions(IProcessRunner? process) => new()
-    {
-        RegisterNodeTypes = TestTypeFiles.RegisterAll,
-        CommandNodeProcessRunner = process,
-    };
+    private static GraphFlowOptions CreateGraphOptions(
+        IProcessRunner? process,
+        IExecutionRunnerFactory runner) => new()
+        {
+            RegisterNodeTypes = (types, runners) =>
+            {
+                InputNodeTypeDescriptions.RegisterInto(types, runners.Input);
+                ApprovalNodeTypeDescriptions.RegisterInto(types, runners.Approval);
+            },
+            CommandNodeProcessRunner = process,
+            LlmRunnerFactory = runner,
+        };
 
     /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试自带流程，flowsJson 传空对象即空流程库。</summary>
     public static ErrorOr<TestEnvironment> TryCreate(
@@ -247,7 +254,9 @@ public sealed class TestEnvironment : IDisposable
             return composition.ErrorsOrEmptyList;
         }
 
-        ErrorOr<Success> graph = services.AddKuroeGraphFlows(composition.Value, CreateGraphOptions(process));
+        ErrorOr<Success> graph = services.AddKuroeGraphFlows(
+            composition.Value,
+            CreateGraphOptions(process, runner));
         if (graph.IsError)
         {
             return graph.ErrorsOrEmptyList;
@@ -268,7 +277,6 @@ public sealed class TestEnvironment : IDisposable
             }
         }
 
-        services.AddBuiltinGraphExecutionRunners(composition.Value, CreateGraphOptions(process));
         services.AddSingleton<IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();

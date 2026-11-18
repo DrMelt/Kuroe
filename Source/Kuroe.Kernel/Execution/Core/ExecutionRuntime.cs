@@ -24,15 +24,15 @@ public sealed class ExecutionRuntime(
     {
         try
         {
-            if (invocation.Target.Id != execution.Request.Target)
+            if (invocation.Target != execution.Request.Target)
             {
                 throw new InvalidOperationException(
-                    $"执行目标 {invocation.Target.Id} 与请求目标 {execution.Request.Target} 不一致。");
+                    $"执行目标 {invocation.Target} 与请求目标 {execution.Request.Target} 不一致。");
             }
 
-            IExecutionRunner runner = invocation.Factory.Create(invocation.Target.Parameters, execution.Id);
+            ExecutionRun run = ExecutionRun.Create(Unit(execution), invocation);
 
-            return DispatchAsync(execution, runner);
+            return DispatchAsync(execution, run);
         }
         catch (Exception ex)
         {
@@ -48,22 +48,21 @@ public sealed class ExecutionRuntime(
     {
         try
         {
-            if (prepared.Context.Target.Id != prepared.Context.Request.Target
-                || prepared.Invocation.Target.Id != prepared.Context.Target.Id)
+            if (prepared.Context.Invocation.Target != prepared.Context.Request.Target
+                || prepared.Invocation.Target != prepared.Context.Invocation.Target)
             {
                 throw new InvalidOperationException(
-                    $"恢复目标 {prepared.Invocation.Target.Id} 与请求目标 {prepared.Context.Request.Target} 不一致。");
+                    $"恢复目标 {prepared.Invocation.Target} 与请求目标 {prepared.Context.Request.Target} 不一致。");
             }
 
             Unit(execution).ContinueFrom(Unit(source));
-            IExecutionRestorer restorer = prepared.Invocation.Factory as IExecutionRestorer
-                ?? throw new InvalidOperationException(
-                    $"执行器工厂 {prepared.Invocation.Target.RunnerKey} 不支持恢复。");
-            IExecutionRunner runner = restorer.CreateRestored(
+            ExecutionRun run = ExecutionRun.Restore(
+                Unit(execution),
+                prepared.Invocation,
                 prepared.Context with { Execution = execution.Id },
                 prepared.Data);
 
-            return DispatchAsync(execution, runner);
+            return DispatchAsync(execution, run);
         }
         catch (Exception ex)
         {
@@ -80,11 +79,11 @@ public sealed class ExecutionRuntime(
     /// <inheritdoc/>
     public Task ShutdownAsync() => dispatcher.ShutdownAsync();
 
-    private async Task<ErrorOr<Success>> DispatchAsync(IExecution execution, IExecutionRunner runner)
+    private async Task<ErrorOr<Success>> DispatchAsync(IExecution execution, ExecutionRun run)
     {
         try
         {
-            await dispatcher.DispatchAsync(Unit(execution), runner, CancellationToken.None).ConfigureAwait(false);
+            await dispatcher.DispatchAsync(run, CancellationToken.None).ConfigureAwait(false);
 
             return Result.Success;
         }

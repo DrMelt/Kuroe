@@ -17,10 +17,19 @@ internal static class TestFlow
 {
     internal static FlowName Name { get; } = new("测试");
 
+    internal static FakeRunnerFactory Factory { get; } = new(() => new FakeRunner());
+
     internal static MafFlowDefinition Definition() => Definition(
         [
-            Step("第一步"),
-            Step("第二步"),
+            Step("第一步", Factory),
+            Step("第二步", Factory),
+        ],
+        [Edge("第一步", "第二步")]);
+
+    internal static MafFlowDefinition Definition(FakeRunnerFactory factory) => Definition(
+        [
+            Step("第一步", factory),
+            Step("第二步", factory),
         ],
         [Edge("第一步", "第二步")]);
 
@@ -37,26 +46,28 @@ internal static class TestFlow
             Description = "顺序编排",
         };
 
-    internal static MafFlowDefinition SingleStep() => Definition(
-        [Step("唯一")],
+    internal static MafFlowDefinition SingleStep() => SingleStep(Factory);
+
+    internal static MafFlowDefinition SingleStep(FakeRunnerFactory factory) => Definition(
+        [Step("唯一", factory)],
         []);
 
     internal static MafFlowDefinition Fork() => Definition(
         [
-            Step("起点"),
-            Step("左"),
-            Step("右"),
+            Step("起点", Factory),
+            Step("左", Factory),
+            Step("右", Factory),
         ],
         [Edge("起点", "左"), Edge("起点", "右")]);
 
-    internal static MafStep Step(string id) =>
-        new(new MafStepId(id), id, [new PortName("输出")], Target());
+    internal static MafStep Step(string id, FakeRunnerFactory factory) =>
+        new(new MafStepId(id), id, [new PortName("输出")], Target(factory));
 
     internal static MafEdge Edge(string from, string to) =>
         new(new MafStepId(from), new MafStepId(to));
 
-    internal static MafStepTarget Target() =>
-        new(FakeRunnerFactory.Key, _ => EmptyExecutionParameters.Instance);
+    internal static MafStepTarget Target(FakeRunnerFactory factory) =>
+        new(factory, _ => EmptyExecutionParameters.Instance);
 
     internal static StartInputs Inputs() => new(
     [
@@ -68,12 +79,6 @@ internal static class TestFlow
 /// <summary>建立测试运行器，保留建立的运行器供测试驱动。</summary>
 internal sealed class FakeRunnerFactory(Func<FakeRunner> create) : IExecutionRunnerFactory
 {
-    /// <summary>本工厂的注册键。</summary>
-    public static ExecutionRunnerKey Key { get; } = new("Test");
-
-    /// <inheritdoc/>
-    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
-
     private readonly List<FakeRunner> _runners = [];
 
     internal IReadOnlyList<FakeRunner> Runners
@@ -87,7 +92,9 @@ internal sealed class FakeRunnerFactory(Func<FakeRunner> create) : IExecutionRun
         }
     }
 
-    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution)
+    public IExecutionRunner Create(
+        IExecutionParameters parameters,
+        IExecutionRequestEntry requests)
     {
         FakeRunner runner = create();
         lock (_runners)
@@ -133,7 +140,6 @@ internal sealed class FakeRunner : IExecutionRunner, IProcessJournal
     }
 
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
         Started.TrySetResult();
@@ -162,7 +168,7 @@ internal sealed class UnusedGateway : ITaskExecutionGateway
 
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        ExecutionTarget target) => throw new NotSupportedException();
+        ExecutionInvocation invocation) => throw new NotSupportedException();
 
     public Task<ErrorOr<Success>> RunRestoreAsync(
         IExecution execution,

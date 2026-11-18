@@ -5,9 +5,11 @@ using Kuroe.Tool;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Xunit;
+using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm.Tests;
 
@@ -20,8 +22,7 @@ public sealed class SessionFactoryTests
         using SessionFactory factory = new(new Access(), new ToolFactory(), new ToolJson());
 
         ErrorOr<IConversation> created = await factory.ForExecutionAsync(
-            new ExecutionId(1),
-            Request(),
+            new Entry(Request()),
             Parameters(null),
             new ProcessJournal(),
             null,
@@ -38,8 +39,7 @@ public sealed class SessionFactoryTests
         using SessionFactory factory = new(new Access(), new ToolFactory(), new ToolJson());
 
         ErrorOr<IConversation> created = await factory.ForExecutionAsync(
-            new ExecutionId(1),
-            Request(),
+            new Entry(Request()),
             Parameters("fake"),
             new ProcessJournal(),
             null,
@@ -83,11 +83,25 @@ public sealed class SessionFactoryTests
         public ErrorOr<Success> Check(ModelName model) => Result.Success;
     }
 
+    private sealed class Entry(ExecutionRequest request) : IExecutionRequestEntry
+    {
+        public ExecutionId Id => new(1);
+
+        ExecutionRequest IExecutionRequestEntry.Request => request;
+
+        public ExecutionStatus ReadStatus() => throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
+    }
+
     private sealed class ToolFactory : IToolFactory
     {
         public IReadOnlyList<ITool> Create(
-            ExecutionId execution,
-            ExecutionRequest request,
+            IExecutionRequestEntry requests,
             LlmExecutionParameters parameters) => [];
     }
 

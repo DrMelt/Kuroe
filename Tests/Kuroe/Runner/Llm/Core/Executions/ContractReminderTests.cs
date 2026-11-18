@@ -4,6 +4,8 @@ using Xunit;
 using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Runner.Llm.Tests.Executions;
@@ -17,9 +19,9 @@ public sealed class ContractReminderTests
     [Fact]
     public void Missing_port_values_remind_the_port_and_the_contract_tool()
     {
-        ContractReminder reminder = new(new FakeReader(Status([Conclusion])));
+        ContractReminder reminder = new(new FakeEntry(Status([Conclusion])));
 
-        string text = Assert.IsType<string>(reminder.Text(new ExecutionId(1)));
+        string text = Assert.IsType<string>(reminder.Text());
 
         Assert.Contains("「结论」", text, StringComparison.Ordinal);
         Assert.Contains(ContractTools.Port, text, StringComparison.Ordinal);
@@ -28,17 +30,17 @@ public sealed class ContractReminderTests
     [Fact]
     public void Collected_outputs_give_no_reminder()
     {
-        ContractReminder reminder = new(new FakeReader(Status([])));
+        ContractReminder reminder = new(new FakeEntry(Status([])));
 
-        Assert.Null(reminder.Text(new ExecutionId(1)));
+        Assert.Null(reminder.Text());
     }
 
     [Fact]
     public void Missing_signal_port_reminds_the_same_way()
     {
-        ContractReminder reminder = new(new FakeReader(Status([Completion])));
+        ContractReminder reminder = new(new FakeEntry(Status([Completion])));
 
-        string text = Assert.IsType<string>(reminder.Text(new ExecutionId(1)));
+        string text = Assert.IsType<string>(reminder.Text());
 
         Assert.Contains("「完成」", text, StringComparison.Ordinal);
     }
@@ -46,17 +48,9 @@ public sealed class ContractReminderTests
     [Fact]
     public void Cannot_complete_report_gives_no_reminder()
     {
-        ContractReminder reminder = new(new FakeReader(Status([Conclusion], "缺少输入资料")));
+        ContractReminder reminder = new(new FakeEntry(Status([Conclusion], "缺少输入资料")));
 
-        Assert.Null(reminder.Text(new ExecutionId(1)));
-    }
-
-    [Fact]
-    public void Read_error_gives_no_reminder()
-    {
-        ContractReminder reminder = new(new FakeReader(Error.NotFound("Execution.NotFound", "执行不存在。")));
-
-        Assert.Null(reminder.Text(new ExecutionId(1)));
+        Assert.Null(reminder.Text());
     }
 
     private static ExecutionStatus Status(
@@ -64,8 +58,18 @@ public sealed class ContractReminderTests
         string? reason = null) =>
         new(new ExecutionTargetId("实施"), ExecutionState.Running, outstanding, reason);
 
-    private sealed class FakeReader(ErrorOr<ExecutionStatus> result) : IExecutionStatusReader
+    private sealed class FakeEntry(ExecutionStatus status) : IExecutionRequestEntry
     {
-        public ErrorOr<ExecutionStatus> Read(ExecutionId id) => result;
+        public ExecutionId Id => new(1);
+
+        ExecutionRequest IExecutionRequestEntry.Request => throw new NotSupportedException();
+
+        public ExecutionStatus ReadStatus() => status;
+
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
     }
 }

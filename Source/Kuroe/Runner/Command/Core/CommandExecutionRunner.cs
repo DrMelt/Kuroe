@@ -7,18 +7,22 @@ using Kuroe.Execution.Shared.Runtime;
 namespace Kuroe.Runner.Command;
 
 /// <summary>命令节点的一次执行：按命令变量展开执行目录与参数，执行一次命令并给出合并输出。失败原因随执行交回。</summary>
-internal sealed class CommandExecutionRunner(CommandExecutionParameters parameters, IProcessRunner process) : IExecutionRunner
+internal sealed class CommandExecutionRunner(
+    CommandExecutionParameters parameters,
+    IProcessRunner process,
+    IExecutionRequestEntry requests) : IExecutionRunner
 {
     private readonly ExecutionJournal _journal = new();
+    private readonly IExecutionRequestEntry _requests = requests;
 
     /// <summary>本次执行的过程记录。</summary>
     public IProcessJournal Journal => _journal;
 
     /// <summary>执行一次命令，成功时给出合并输出。</summary>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
+        ExecutionRequest request = _requests.Request;
         ErrorOr<CommandVariableValues> variables = CommandVariableExpansion.Resolve(
             parameters.Variables,
             port => request.Texts.GetValueOrDefault(new ExecutionPortName(port)),

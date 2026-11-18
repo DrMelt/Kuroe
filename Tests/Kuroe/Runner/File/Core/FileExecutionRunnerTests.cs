@@ -7,9 +7,11 @@ using Kuroe.Tasks.Shared;
 using Kuroe.TestSupport;
 using Xunit;
 using ExecutableNode = Kuroe.Flow.Node.Shared.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.File.Tests;
 
@@ -19,19 +21,21 @@ public sealed class FileExecutionRunnerTests
     private static readonly NodePath TargetPath = NodePath.Of("整体", "节点");
     private static readonly PortName ContentPort = new("正文");
 
+    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
+
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
     private readonly InMemoryWorkspaceFiles _files = new();
+    private readonly Entry _entry = new();
 
     [Fact]
     public async Task Read_returns_the_file_content()
     {
         _files.AddFile(Path.Combine(_root, "in.txt"), "文件内容");
         ExecutableNode node = ReadNode("in.txt");
-        FileReadExecutionRunner runner = new(Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars), _files);
+        FileReadExecutionRunner runner = Reader(Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars));
+        Input(node, ("任务路径", _root));
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(node, ("任务路径", _root)),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal(ExecutionOutputKind.Content, result.Value.Kind);
@@ -43,13 +47,10 @@ public sealed class FileExecutionRunnerTests
     {
         _files.AddFile(Path.Combine(_root, "sub/in.txt"), "基准内容");
         ExecutableNode node = ReadNode("in.txt");
+        Input(node, ("任务路径", Path.Combine(_root, "sub")));
 
-        ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", Path.Combine(_root, "sub"))),
-                CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await Reader(Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.Equal("基准内容", result.Value.Content);
     }
@@ -59,12 +60,10 @@ public sealed class FileExecutionRunnerTests
     {
         ExecutableNode node = ReadNode("missing.txt");
 
-        ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                Parameters("missing.txt", FileReadNodeTypes.DefaultMaxChars),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", _root)),
-                CancellationToken.None);
+        Input(node, ("任务路径", _root));
+
+        ErrorOr<ExecutionOutput> result = await Reader(Parameters("missing.txt", FileReadNodeTypes.DefaultMaxChars))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Contains("读取 {root}/missing.txt 失败", result.FirstError.Description);
@@ -76,12 +75,10 @@ public sealed class FileExecutionRunnerTests
         _files.AddFile(Path.Combine(_root, "in.txt"), "abcdef");
         ExecutableNode node = ReadNode("in.txt", maxChars: 3);
 
-        ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                Parameters("in.txt", 3),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", _root)),
-                CancellationToken.None);
+        Input(node, ("任务路径", _root));
+
+        ErrorOr<ExecutionOutput> result = await Reader(Parameters("in.txt", 3))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.Equal("abc…内容已截断", result.Value.Content);
     }
@@ -93,12 +90,10 @@ public sealed class FileExecutionRunnerTests
         _files.AddFile(Path.Combine(_root, "in.txt"), content);
         ExecutableNode node = ReadNode("in.txt", maxChars: 0);
 
-        ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                Parameters("in.txt", 0),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", _root)),
-                CancellationToken.None);
+        Input(node, ("任务路径", _root));
+
+        ErrorOr<ExecutionOutput> result = await Reader(Parameters("in.txt", 0))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.Equal(content, result.Value.Content);
     }
@@ -108,12 +103,10 @@ public sealed class FileExecutionRunnerTests
     {
         ExecutableNode node = ReadNode("../escape.txt");
 
-        ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                Parameters("../escape.txt", FileReadNodeTypes.DefaultMaxChars),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", _root)),
-                CancellationToken.None);
+        Input(node, ("任务路径", _root));
+
+        ErrorOr<ExecutionOutput> result = await Reader(Parameters("../escape.txt", FileReadNodeTypes.DefaultMaxChars))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Contains("Path {root}/../escape.txt 不是工作区内的合法路径", result.FirstError.Description);
@@ -124,12 +117,10 @@ public sealed class FileExecutionRunnerTests
     {
         ExecutableNode node = ReadNode("in.txt");
 
-        ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", Path.GetFullPath("..", _root))),
-                CancellationToken.None);
+        Input(node, ("任务路径", Path.GetFullPath("..", _root)));
+
+        ErrorOr<ExecutionOutput> result = await Reader(Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Contains("不是工作区内的合法路径", result.FirstError.Description);
@@ -139,15 +130,12 @@ public sealed class FileExecutionRunnerTests
     public async Task Canceled_execution_does_not_read()
     {
         ExecutableNode node = ReadNode("missing.txt");
+        Input(node, ("任务路径", _root));
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => new FileReadExecutionRunner(
-                Parameters("missing.txt", FileReadNodeTypes.DefaultMaxChars),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", _root)),
-                cancellation.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Reader(Parameters("missing.txt", FileReadNodeTypes.DefaultMaxChars))
+            .ExecuteAsync(cancellation.Token));
     }
 
     [Fact]
@@ -155,12 +143,10 @@ public sealed class FileExecutionRunnerTests
     {
         ExecutableNode node = WriteNode("out/nested/result.txt");
 
-        ErrorOr<ExecutionOutput> result = await new FileWriteExecutionRunner(
-                Parameters("out/nested/result.txt", FileWriteNodeTypes.DefaultMaxChars),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", _root), ("正文", "写入内容")),
-                CancellationToken.None);
+        Input(node, ("任务路径", _root), ("正文", "写入内容"));
+
+        ErrorOr<ExecutionOutput> result = await Writer(Parameters("out/nested/result.txt", FileWriteNodeTypes.DefaultMaxChars))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal("写入内容", result.Value.Content);
@@ -172,12 +158,10 @@ public sealed class FileExecutionRunnerTests
     {
         ExecutableNode node = WriteNode("out.txt");
 
-        ErrorOr<ExecutionOutput> result = await new FileWriteExecutionRunner(
-                Parameters("out.txt", FileWriteNodeTypes.DefaultMaxChars),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", Path.Combine(_root, "sub")), ("正文", "写入内容")),
-                CancellationToken.None);
+        Input(node, ("任务路径", Path.Combine(_root, "sub")), ("正文", "写入内容"));
+
+        ErrorOr<ExecutionOutput> result = await Writer(Parameters("out.txt", FileWriteNodeTypes.DefaultMaxChars))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal("写入内容", _files.ReadText(Path.Combine(_root, "sub/out.txt")));
@@ -188,12 +172,10 @@ public sealed class FileExecutionRunnerTests
     {
         ExecutableNode node = WriteNode("out.txt", maxChars: 100);
 
-        ErrorOr<ExecutionOutput> result = await new FileWriteExecutionRunner(
-                Parameters("out.txt", 100),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", _root), ("正文", new string('a', 101))),
-                CancellationToken.None);
+        Input(node, ("任务路径", _root), ("正文", new string('a', 101)));
+
+        ErrorOr<ExecutionOutput> result = await Writer(Parameters("out.txt", 100))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Contains("写入内容超过上限 100 字符", result.FirstError.Description);
@@ -206,21 +188,20 @@ public sealed class FileExecutionRunnerTests
         string content = new('a', 50000);
         ExecutableNode node = WriteNode("out.txt");
 
-        ErrorOr<ExecutionOutput> result = await new FileWriteExecutionRunner(
-                Parameters("out.txt", FileWriteNodeTypes.DefaultMaxChars),
-                _files)
-            .ExecuteAsync(
-                Input(node, ("任务路径", _root), ("正文", content)),
-                CancellationToken.None);
+        Input(node, ("任务路径", _root), ("正文", content));
+
+        ErrorOr<ExecutionOutput> result = await Writer(Parameters("out.txt", FileWriteNodeTypes.DefaultMaxChars))
+            .ExecuteAsync(CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal(content, _files.ReadText(Path.Combine(_root, "out.txt")));
     }
 
-    private static ExecutionRequest Input(
+    private void Input(
         ExecutableNode node,
-        params (string Port, string Text)[] texts) =>
-        new(
+        params (string Port, string Text)[] texts)
+    {
+        ExecutionRequest request = new(
             new ExecutionOwnerId("1"),
             new ExecutionTargetId(node.Path.Value),
             [
@@ -234,13 +215,21 @@ public sealed class FileExecutionRunnerTests
             [],
             texts.ToDictionary(item => new ExecutionPortName(item.Port), item => item.Text),
             []);
+        _entry.Set(request);
+    }
+
+    private FileReadExecutionRunner Reader(FileExecutionParameters parameters) =>
+        new(parameters, _files, _entry);
+
+    private FileWriteExecutionRunner Writer(FileExecutionParameters parameters) =>
+        new(parameters, _files, _entry);
 
     private ExecutableNode ReadNode(
         string relative,
         int maxChars = FileReadNodeTypes.DefaultMaxChars) => new()
         {
             Path = TargetPath,
-            Type = FileReadNodeTypes.Create(Parameters(relative, maxChars)),
+            Type = FileReadNodeTypes.Create(Parameters(relative, maxChars), RunnerFactory),
             Spec = new ExecutableSpec(),
             Inputs =
         [
@@ -271,7 +260,7 @@ public sealed class FileExecutionRunnerTests
         int maxChars = FileWriteNodeTypes.DefaultMaxChars) => new()
         {
             Path = TargetPath,
-            Type = FileWriteNodeTypes.Create(Parameters(relative, maxChars)),
+            Type = FileWriteNodeTypes.Create(Parameters(relative, maxChars), RunnerFactory),
             Spec = new ExecutableSpec(),
             Inputs =
             [
@@ -294,6 +283,34 @@ public sealed class FileExecutionRunnerTests
                     PortTypes.Text),
             ],
         };
+
+    private sealed class Entry : IExecutionRequestEntry
+    {
+        private ExecutionRequest? _request;
+
+        public ExecutionRequest Request =>
+            _request ?? throw new InvalidOperationException("测试请求尚未写入。");
+
+        public void Set(ExecutionRequest request) => _request = request;
+
+        public ExecutionId Id => new(1);
+
+        public ExecutionStatus ReadStatus() => throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
+    }
 
     private FileExecutionParameters Parameters(string relative, int maxChars) => new()
     {

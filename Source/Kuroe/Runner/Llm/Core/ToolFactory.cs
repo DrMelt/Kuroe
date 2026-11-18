@@ -1,6 +1,5 @@
 using Kuroe.Tool;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm;
 
@@ -9,7 +8,6 @@ public interface IToolFactory
 {
     /// <summary>为一次执行创建全部工具载体。</summary>
     IReadOnlyList<ITool> Create(
-        ExecutionId execution,
-        ExecutionRequest request,
+        IExecutionRequestEntry requests,
         LlmExecutionParameters parameters);
 }

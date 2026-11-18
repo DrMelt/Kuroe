@@ -838,7 +838,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 ExecutionRestoreContext context = new(
                     candidate.Id,
                     request,
-                    GraphExecution.BuildTarget(input, request),
+                    GraphExecution.BuildInvocation(input, request),
                     data,
                     GraphExecution.ToNeutralContract(candidate.Contract));
                 ErrorOr<PreparedExecutionRestore> prepared;

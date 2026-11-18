@@ -1,9 +1,11 @@
 using ErrorOr;
 using Kuroe.Process;
 using Xunit;
+using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Command.Tests;
 
@@ -17,11 +19,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns($"甲{Environment.NewLine}乙{Environment.NewLine}");
         CommandExecutionParameters parameters = Parameters();
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal(ExecutionOutputKind.Content, result.Value.Kind);
@@ -33,11 +33,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("错误", exitCode: 2);
         CommandExecutionParameters parameters = Parameters();
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal("错误", result.Value.Content);
@@ -48,11 +46,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("错误", exitCode: 2);
         CommandExecutionParameters parameters = Parameters(failOnNonZeroExitCode: true);
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Contains("退出码 2", result.FirstError.Description);
@@ -64,11 +60,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns(string.Empty, exitCode: 1);
         CommandExecutionParameters parameters = Parameters();
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal(string.Empty, result.Value.Content);
@@ -79,11 +73,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("部分输出", timedOut: true);
         CommandExecutionParameters parameters = Parameters();
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Equal("命令在 5 秒内未结束，已终止。", result.FirstError.Description);
@@ -94,11 +86,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Throws("无法启动 dotnet。");
         CommandExecutionParameters parameters = Parameters();
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Equal("无法启动 dotnet。", result.FirstError.Description);
@@ -109,9 +99,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         CommandExecutionParameters parameters = Parameters();
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        await runner.ExecuteAsync(Input(), CancellationToken.None);
+        await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.Equal("dotnet", process.Program);
         Assert.Equal(["--version"], process.Arguments);
@@ -131,14 +121,15 @@ public sealed class CommandExecutionRunnerTests
                 ["仓库地址"] = "仓库地址",
                 ["分支名"] = "分支名",
             });
-        CommandExecutionRunner runner = new(parameters, process);
-
-        await runner.ExecuteAsync(
+        CommandExecutionRunner runner = Runner(
+            parameters,
+            process,
             Input(
                 ("任务路径", Root),
                 ("仓库地址", @"D:\outside\repo.git"),
-                ("分支名", "feature/x")),
-            CancellationToken.None);
+                ("分支名", "feature/x")));
+
+        await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.Equal(["clone", "--branch", "feature/x", @"D:\outside\repo.git", "."], process.Arguments);
         Assert.Equal(Root, process.WorkingDirectory);
@@ -149,11 +140,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         CommandExecutionParameters parameters = Parameters(arguments: ["clone", "{missing}"]);
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Contains("含未映射的变量 missing", result.FirstError.Description);
@@ -165,11 +154,12 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         CommandExecutionParameters parameters = Parameters();
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(
+            parameters,
+            process,
+            Input(("任务路径", Path.Combine(Root, "sub"))));
 
-        await runner.ExecuteAsync(
-            Input(("任务路径", Path.Combine(Root, "sub"))),
-            CancellationToken.None);
+        await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
     }
@@ -179,11 +169,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         CommandExecutionParameters parameters = Parameters(directory: "sub");
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process, Input(("任务路径", Root)));
 
-        await runner.ExecuteAsync(
-            Input(("任务路径", Root)),
-            CancellationToken.None);
+        await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
     }
@@ -193,11 +181,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         CommandExecutionParameters parameters = Parameters(directory: "../escape");
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process, Input(("任务路径", Root)));
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(("任务路径", Root)),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Contains("Directory {root}/../escape 不是工作区内的合法路径", result.FirstError.Description);
@@ -209,11 +195,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         CommandExecutionParameters parameters = Parameters(directoryTemplate: "{root}");
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process, Input(("任务路径", "sub")));
 
-        await runner.ExecuteAsync(
-            Input(("任务路径", "sub")),
-            CancellationToken.None);
+        await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
     }
@@ -223,11 +207,9 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         CommandExecutionParameters parameters = Parameters(directoryTemplate: "{root}/src");
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process, Input(("任务路径", "sub")));
 
-        await runner.ExecuteAsync(
-            Input(("任务路径", "sub")),
-            CancellationToken.None);
+        await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "sub", "src"), process.WorkingDirectory);
     }
@@ -243,11 +225,12 @@ public sealed class CommandExecutionRunnerTests
                 ["root"] = "任务路径",
                 ["sub"] = "子目录",
             });
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(
+            parameters,
+            process,
+            Input(("任务路径", "task"), ("子目录", "src")));
 
-        await runner.ExecuteAsync(
-            Input(("任务路径", "task"), ("子目录", "src")),
-            CancellationToken.None);
+        await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "task", "src"), process.WorkingDirectory);
     }
@@ -257,11 +240,12 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         CommandExecutionParameters parameters = Parameters();
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(
+            parameters,
+            process,
+            Input(("任务路径", Path.GetFullPath("..", Root))));
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(("任务路径", Path.GetFullPath("..", Root))),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsError);
         Assert.Contains("不是工作区内的合法路径", result.FirstError.Description);
@@ -273,15 +257,19 @@ public sealed class CommandExecutionRunnerTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("abcdef");
         CommandExecutionParameters parameters = Parameters(maxChars: 3);
-        CommandExecutionRunner runner = new(parameters, process);
+        CommandExecutionRunner runner = Runner(parameters, process);
 
-        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(),
-            CancellationToken.None);
+        ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal("abc…输出已截断", result.Value.Content);
     }
+
+    private static CommandExecutionRunner Runner(
+        CommandExecutionParameters parameters,
+        FakeProcessRunner process,
+        ExecutionRequest? request = null) =>
+        new(parameters, process, new Entry(request ?? Input()));
 
     private static ExecutionRequest Input(
         params (string Port, string Text)[] texts)
@@ -318,6 +306,21 @@ public sealed class CommandExecutionRunnerTests
             MaxChars = maxChars,
             FailOnNonZeroExitCode = failOnNonZeroExitCode,
         };
+
+    private sealed class Entry(ExecutionRequest request) : IExecutionRequestEntry
+    {
+        public ExecutionId Id => new(1);
+
+        public ExecutionRequest Request => request;
+
+        public ExecutionStatus ReadStatus() => throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
+    }
 
     /// <summary>按入队顺序给出进程结果的替身。</summary>
     private sealed class FakeProcessRunner : IProcessRunner

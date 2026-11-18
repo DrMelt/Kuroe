@@ -1,5 +1,4 @@
 using Kuroe.Files.Shared;
-using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
@@ -9,15 +8,11 @@ namespace Kuroe.Runner.File;
 public sealed class FileWriteExecutionRunnerFactory(
     IWorkspaceFiles files) : IExecutionRunnerFactory
 {
-    /// <summary>本工厂的注册键。</summary>
-    public static ExecutionRunnerKey Key { get; } = new("FileWrite");
-
     /// <inheritdoc/>
-    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
-
-    /// <inheritdoc/>
-    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+    public IExecutionRunner Create(
+        IExecutionParameters parameters,
+        IExecutionRequestEntry requests) =>
         parameters is FileExecutionParameters fileParameters
-            ? new FileWriteExecutionRunner(fileParameters, files)
+            ? new FileWriteExecutionRunner(fileParameters, files, requests)
             : throw new InvalidOperationException("文件写入执行参数类型不匹配。");
 }

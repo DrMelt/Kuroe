@@ -4,6 +4,8 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Input.Tests;
@@ -11,7 +13,9 @@ namespace Kuroe.Node.Input.Tests;
 /// <summary>输入节点类型的形状与类型规则：启动执行后等待回答，只以用户回答为产出。</summary>
 public sealed class InputNodeTypeTests
 {
-    private static readonly InputNodeType NodeType = new(null);
+    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
+
+    private static readonly InputNodeType NodeType = new(null, RunnerFactory);
 
     [Fact]
     public void Name_is_the_kind_written_in_files()
@@ -23,7 +27,7 @@ public sealed class InputNodeTypeTests
     [Fact]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType type = InputNodeTypes.Create(new InputParameters { Question = "要做什么" });
+        INodeType type = InputNodeTypes.Create(new InputParameters { Question = "要做什么" }, RunnerFactory);
 
         Assert.Equal(InputNodeTypes.Name, type.Kind);
         Assert.Equal("要做什么", Assert.IsType<InputNodeType>(type).Parameters?.Question);
@@ -73,7 +77,15 @@ public sealed class InputNodeTypeTests
     private static NodeSpec Node(ExecutableSpec? spec = null) => new()
     {
         Label = new NodeLabel("收话"),
-        Type = InputNodeTypes.Create(null),
+        Type = InputNodeTypes.Create(null, RunnerFactory),
         Spec = spec ?? new ExecutableSpec(),
     };
+
+    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
+    }
 }

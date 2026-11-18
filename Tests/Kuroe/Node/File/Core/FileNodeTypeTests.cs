@@ -4,6 +4,8 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.File.Tests;
@@ -11,6 +13,8 @@ namespace Kuroe.Node.File.Tests;
 /// <summary>文件节点类型的形状与类型规则：派发执行，按版本读写工作目录内文件。</summary>
 public sealed class FileNodeTypeTests
 {
+    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
+
     private static readonly FileExecutionParameters Parameters = new()
     {
         Path = "{root}/a.txt",
@@ -19,8 +23,8 @@ public sealed class FileNodeTypeTests
         MaxChars = 8000,
     };
 
-    private static readonly FileReadNodeType ReadType = new(Parameters);
-    private static readonly FileWriteNodeType WriteType = new(Parameters);
+    private static readonly FileReadNodeType ReadType = new(Parameters, RunnerFactory);
+    private static readonly FileWriteNodeType WriteType = new(Parameters, RunnerFactory);
 
     [Fact]
     public void Names_are_the_kinds_written_in_files()
@@ -34,8 +38,8 @@ public sealed class FileNodeTypeTests
     [Fact]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType read = FileReadNodeTypes.Create(Parameters);
-        INodeType write = FileWriteNodeTypes.Create(Parameters);
+        INodeType read = FileReadNodeTypes.Create(Parameters, RunnerFactory);
+        INodeType write = FileWriteNodeTypes.Create(Parameters, RunnerFactory);
 
         Assert.Same(Parameters, Assert.IsType<FileReadNodeType>(read).Parameters);
         Assert.Same(Parameters, Assert.IsType<FileWriteNodeType>(write).Parameters);
@@ -248,4 +252,12 @@ public sealed class FileNodeTypeTests
             ],
         Outputs = outputs ?? [],
     };
+
+    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
+    }
 }

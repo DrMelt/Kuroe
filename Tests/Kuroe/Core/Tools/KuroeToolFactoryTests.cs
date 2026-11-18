@@ -1,11 +1,14 @@
+using ErrorOr;
 using Kuroe.Runner.Llm;
 using Kuroe.Shared;
 using Kuroe.Tool;
 using Kuroe.Tools;
 using Xunit;
+using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Tests.Tools;
 
@@ -36,10 +39,7 @@ public sealed class KuroeToolFactoryTests
         });
 
         IReadOnlyList<ITool> tools = new KuroeToolFactory([source], "C:/workspace")
-            .Create(
-                new ExecutionId(1),
-                request,
-                parameters);
+            .Create(new Entry(request), parameters);
         CapturingTool parent = Assert.IsType<CapturingTool>(
             tools.Single(tool => tool.Functions.Single().Definition.Path.Value == "group/tool"));
         CapturingTool child = Assert.IsType<CapturingTool>(
@@ -57,10 +57,7 @@ public sealed class KuroeToolFactoryTests
         LlmExecutionParameters parameters = ToolParameters();
 
         CapturingTool tool = Assert.IsType<CapturingTool>(Assert.Single(
-            new KuroeToolFactory([source], "C:/workspace").Create(
-                new ExecutionId(1),
-                request,
-                parameters)));
+            new KuroeToolFactory([source], "C:/workspace").Create(new Entry(request), parameters)));
 
         Assert.Equal("任务值", tool.Binding.Variable(PathVariables.RootName));
     }
@@ -73,10 +70,7 @@ public sealed class KuroeToolFactoryTests
         LlmExecutionParameters parameters = ToolParameters();
 
         CapturingTool tool = Assert.IsType<CapturingTool>(Assert.Single(
-            new KuroeToolFactory([source], "C:/workspace").Create(
-                new ExecutionId(1),
-                request,
-                parameters)));
+            new KuroeToolFactory([source], "C:/workspace").Create(new Entry(request), parameters)));
 
         Assert.Equal("动态值", tool.Binding.Variable(PathVariables.RootName));
     }
@@ -122,7 +116,7 @@ public sealed class KuroeToolFactoryTests
             new FixedPortAccess(new ExecutionPortName(PathVariables.RootName), "C:/workspace"),
             new Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>>(),
             "C:/workspace",
-            new ExecutionId(1),
+            new Entry(Request(new Dictionary<ExecutionPortName, string>())),
             1,
             1,
             [new ToolPath("group/one")]);
@@ -130,6 +124,21 @@ public sealed class KuroeToolFactoryTests
         IReadOnlyList<ITool> tools = source.Create(context);
 
         Assert.Equal("group/one", Assert.Single(tools).Functions[0].Definition.Path.Value);
+    }
+
+    private sealed class Entry(ExecutionRequest request) : IExecutionRequestEntry
+    {
+        public ExecutionId Id => new(1);
+
+        ExecutionRequest IExecutionRequestEntry.Request => request;
+
+        public ExecutionStatus ReadStatus() => throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
     }
 
     private sealed class FilteringToolSource(params ToolEntry[] entries) : ToolSource(entries)

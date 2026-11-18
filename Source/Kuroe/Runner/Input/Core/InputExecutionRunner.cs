@@ -9,19 +9,22 @@ using Kuroe.Execution.Shared.Runtime;
 namespace Kuroe.Runner.Input;
 
 /// <summary>输入运行器：登记等待回答，收到回答后把回答作为执行内容交回。</summary>
-internal sealed class InputExecutionRunner(IInputChannel channel, InputExecutionParameters parameters)
-    : IExecutionRunner
+internal sealed class InputExecutionRunner(
+    IInputChannel channel,
+    InputExecutionParameters parameters,
+    IExecutionRequestEntry requests) : IExecutionRunner
 {
     private readonly ExecutionJournal _journal = new();
+    private readonly IExecutionRequestEntry _requests = requests;
 
     /// <inheritdoc/>
     public IProcessJournal Journal => _journal;
 
     /// <inheritdoc/>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
+        ExecutionRequest request = _requests.Request;
         TaskId task = new(request.Owner.Value);
         FlowStepPath step = parameters.Step;
 

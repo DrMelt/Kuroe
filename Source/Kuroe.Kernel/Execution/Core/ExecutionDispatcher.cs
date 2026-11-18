@@ -1,40 +1,35 @@
-using ErrorOr;
 using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Execution;
 
-/// <summary>按并发额度推进执行。派生只入队，收口回调在额度释放后于线程池上执行，可安全再派生。</summary>
+/// <summary>按并发额度推进执行。只负责排队与调度，运行器接线与收口由 ExecutionRun 完成；收口回调在额度释放后于线程池上执行，可安全再派生。</summary>
 public sealed class ExecutionDispatcher
 {
     /// <summary>同时在跑的执行数上限，超出的排队等待。</summary>
     private const int MaxConcurrentExecutions = 4;
 
     private readonly Lock _gate = new();
-    private readonly Queue<(ExecutionInstance Instance, IExecutionRunner Runner)> _queue = [];
+    private readonly Queue<ExecutionRun> _queue = [];
     private readonly Dictionary<ExecutionId, (ExecutionInstance Instance, Task Task)> _live = [];
     private readonly Dictionary<ExecutionId, Action<IExecution>> _settled = [];
     private bool _stopping;
 
     /// <summary>入队一个执行并等它收口。推进循环用，结果由任务侧按收口处理。</summary>
-    public Task DispatchAsync(
-        IExecution execution,
-        IExecutionRunner runner,
+    internal Task DispatchAsync(
+        ExecutionRun run,
         CancellationToken cancellationToken = default)
     {
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dispatch(Unit(execution), runner, _ => completion.TrySetResult());
+        Dispatch(run, _ => completion.TrySetResult());
 
         return completion.Task.WaitAsync(cancellationToken);
     }
 
     /// <summary>入队一个执行，跑完或失败后回调 settled。</summary>
-    public void Dispatch(IExecution execution, IExecutionRunner runner, Action<IExecution> settled)
+    internal void Dispatch(ExecutionRun run, Action<IExecution> settled)
     {
-        ExecutionInstance unit = Unit(execution);
+        ExecutionInstance unit = run.Execution;
         List<ExecutionInstance> dropped = [];
         lock (_gate)
         {
@@ -46,7 +41,7 @@ public sealed class ExecutionDispatcher
             }
             else
             {
-                _queue.Enqueue((unit, runner));
+                _queue.Enqueue(run);
                 Pump(dropped);
             }
         }
@@ -62,7 +57,7 @@ public sealed class ExecutionDispatcher
         lock (_gate)
         {
             _stopping = true;
-            dropped = [.. _queue.Select(entry => entry.Instance)];
+            dropped = [.. _queue.Select(run => run.Execution)];
             _queue.Clear();
             live = [.. _live.Values];
         }
@@ -87,7 +82,8 @@ public sealed class ExecutionDispatcher
     {
         while (_queue.Count > 0 && _live.Count < MaxConcurrentExecutions)
         {
-            (ExecutionInstance instance, IExecutionRunner runner) = _queue.Dequeue();
+            ExecutionRun run = _queue.Dequeue();
+            ExecutionInstance instance = run.Execution;
             if (instance.CancellationToken.IsCancellationRequested)
             {
                 instance.MarkInterrupted();
@@ -95,71 +91,28 @@ public sealed class ExecutionDispatcher
                 continue;
             }
 
-            _live[instance.Id] = (instance, Task.Run(() => ExecuteAsync(instance, runner)));
+            _live[instance.Id] = (instance, Task.Run(() => ExecuteAsync(run)));
         }
     }
 
-    private async Task ExecuteAsync(ExecutionInstance execution, IExecutionRunner runner)
+    private async Task ExecuteAsync(ExecutionRun run)
     {
         try
         {
-            execution.AttachJournal(runner.Journal);
-            if (runner is IExecutionUsageSource usageReader)
-            {
-                execution.AttachUsageReader(usageReader);
-            }
-
-            if (runner is IExecutionRestoreDataSource restoreDataReader)
-            {
-                execution.AttachRestoreDataReader(restoreDataReader);
-            }
-
-            execution.MarkRunning();
-            ErrorOr<ExecutionOutput> outcome = await runner.ExecuteAsync(
-                execution.Request,
-                execution.CancellationToken);
-            if (outcome.IsError)
-            {
-                execution.MarkFailed(outcome.ErrorsOrEmptyList);
-            }
-            else
-            {
-                execution.MarkSucceeded(outcome.Value);
-            }
-        }
-        catch (OperationCanceledException) when (execution.CancellationToken.IsCancellationRequested)
-        {
-            execution.MarkInterrupted();
-        }
-        catch (OperationCanceledException)
-        {
-            execution.MarkFailed([Error.Failure("Execution.Timeout", "模型请求超时，执行未收口。")]);
-        }
-        catch (Exception ex)
-        {
-            execution.MarkFailed([Error.Failure("Execution.Failure", $"执行失败：{ex.Message}")]);
+            await run.ExecuteAsync().ConfigureAwait(false);
         }
         finally
         {
-            if (runner is IExecutionRestoreDataSource restoreDataReader)
+            ExecutionInstance execution = run.Execution;
+            List<ExecutionInstance> dropped = [];
+            lock (_gate)
             {
-                execution.SettleRestoreData(restoreDataReader);
+                _live.Remove(execution.Id);
+                Pump(dropped);
             }
 
-            if (runner is IExecutionUsageSource reader)
-            {
-                execution.SettleUsage(reader.Usage);
-            }
+            Settle([execution, .. dropped]);
         }
-
-        List<ExecutionInstance> dropped = [];
-        lock (_gate)
-        {
-            _live.Remove(execution.Id);
-            Pump(dropped);
-        }
-
-        Settle([execution, .. dropped]);
     }
 
     /// <summary>取回并执行收口回调。必须在锁外调用，回调里会再派生。</summary>
@@ -177,6 +130,4 @@ public sealed class ExecutionDispatcher
             settled?.Invoke(execution);
         }
     }
-
-    private static ExecutionInstance Unit(IExecution execution) => (ExecutionInstance)execution;
 }

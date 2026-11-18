@@ -9,19 +9,22 @@ using Kuroe.Execution.Shared.Runtime;
 namespace Kuroe.Runner.Approval;
 
 /// <summary>审批运行器：登记等待批准，收到批准后按停驻输入产出由节点输出投影发布。</summary>
-internal sealed class ApprovalExecutionRunner(IInputChannel channel, ApprovalExecutionParameters parameters)
-    : IExecutionRunner
+internal sealed class ApprovalExecutionRunner(
+    IInputChannel channel,
+    ApprovalExecutionParameters parameters,
+    IExecutionRequestEntry requests) : IExecutionRunner
 {
     private readonly ExecutionJournal _journal = new();
+    private readonly IExecutionRequestEntry _requests = requests;
 
     /// <inheritdoc/>
     public IProcessJournal Journal => _journal;
 
     /// <inheritdoc/>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
+        ExecutionRequest request = _requests.Request;
         TaskId task = new(request.Owner.Value);
         FlowStepPath step = parameters.Step;
 

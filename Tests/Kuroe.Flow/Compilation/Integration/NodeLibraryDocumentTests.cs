@@ -97,7 +97,7 @@ public sealed class NodeLibraryDocumentTests
     public void Library_executable_with_non_positive_max_executions_is_rejected() =>
         Assert.Equal(
             ["节点库定义 干活库：MaxExecutions 必须是正整数。"],
-            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Label = new NodeLabel("干活库"), Type = LlmNodeTypes.Create(null), Spec = new ExecutableSpec { MaxExecutions = 0 } }));
+            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Label = new NodeLabel("干活库"), Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners), Spec = new ExecutableSpec { MaxExecutions = 0 } }));
 
     /// <summary>库容器定义的非正发布次数上限，未经引用也在库校验阶段拒绝。</summary>
     [Fact]
@@ -110,7 +110,7 @@ public sealed class NodeLibraryDocumentTests
                 Label = new NodeLabel("干活组"),
                 Type = ContainerNodeTypes.Type,
                 MaxExecutions = 0,
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义必须声明子节点，缺子节点在库校验阶段拒绝。</summary>
@@ -129,9 +129,9 @@ public sealed class NodeLibraryDocumentTests
             {
                 Name = new NodeName("干活库"),
                 Label = new NodeLabel("干活库"),
-                Type = LlmNodeTypes.Create(null),
+                Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners),
                 Spec = new ExecutableSpec(),
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Spec = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners), Spec = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义的输出必须有来源。</summary>
@@ -147,7 +147,7 @@ public sealed class NodeLibraryDocumentTests
                 Label = new NodeLabel("干活组"),
                 Type = ContainerNodeTypes.Type,
                 Outputs = [new Port(new PortName("结论"), PortTypes.Text)],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
             }));
 
     /// <summary>流程名与库作用域名相同时错误仍按流程作用域给出。</summary>

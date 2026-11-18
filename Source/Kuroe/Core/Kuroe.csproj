@@ -44,7 +44,6 @@
         <ProjectReference Include="..\..\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Input\Runtime\Kuroe.Input.Runtime.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Kernel\Execution\Registry\Kuroe.Execution.Registry.csproj" />
         <ProjectReference Include="..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\Runner\Shared\Kuroe.Runner.Shared.csproj" />
         <ProjectReference Include="..\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
@@ -60,7 +59,6 @@
 
 <ItemGroup>
         <ProjectReference Include="..\..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Kernel\Control\Contract\Kuroe.Control.Contract.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>

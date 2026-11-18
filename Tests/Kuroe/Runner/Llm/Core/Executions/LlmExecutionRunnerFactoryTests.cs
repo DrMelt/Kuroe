@@ -8,6 +8,7 @@ using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.Restore;
 
 namespace Kuroe.Runner.Llm.Tests.Executions;
@@ -18,7 +19,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact]
     public void Prepare_rejects_an_execution_that_reported_cannot_complete()
     {
-        LlmExecutionRunnerFactory factory = new(Factory(), new StatusReader());
+        LlmExecutionRunnerFactory factory = new(Factory());
         ExecutionRestoreContext context = Context(new ExecutionContract(CannotCompleteReason: "缺少资料"));
 
         Assert.True(factory.Prepare(context).IsError);
@@ -27,7 +28,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact]
     public void Prepare_accepts_a_readable_session_payload()
     {
-        LlmExecutionRunnerFactory factory = new(Factory(), new StatusReader());
+        LlmExecutionRunnerFactory factory = new(Factory());
         ExecutionRestoreContext context = Context(ExecutionContract.Empty);
 
         Assert.False(factory.Prepare(context).IsError);
@@ -36,7 +37,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact]
     public void Prepare_rejects_a_payload_from_another_model()
     {
-        LlmExecutionRunnerFactory factory = new(Factory(), new StatusReader());
+        LlmExecutionRunnerFactory factory = new(Factory());
         ExecutionRestoreContext context = Context(ExecutionContract.Empty, model: "other");
 
         Assert.True(factory.Prepare(context).IsError);
@@ -45,7 +46,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact]
     public void Prepare_rejects_an_unknown_payload_format()
     {
-        LlmExecutionRunnerFactory factory = new(Factory(), new StatusReader());
+        LlmExecutionRunnerFactory factory = new(Factory());
         ExecutionRestoreContext context = Context(ExecutionContract.Empty, format: "llm.session.v2");
 
         Assert.True(factory.Prepare(context).IsError);
@@ -71,9 +72,9 @@ public sealed class LlmExecutionRunnerFactoryTests
             [],
             new Dictionary<ExecutionPortName, string>(),
             []);
-        ExecutionTarget target = new(
+        ExecutionInvocation target = new(
             new ExecutionTargetId("实施"),
-            LlmExecutionRunnerFactory.Key,
+            new LlmExecutionRunnerFactory(Factory()),
             new LlmExecutionParameters(null, [], [], new Dictionary<string, IReadOnlyDictionary<string, string>>(), "fake"));
 
         return new ExecutionRestoreContext(
@@ -95,8 +96,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     private sealed class ToolFactory : IToolFactory
     {
         public IReadOnlyList<ITool> Create(
-            ExecutionId execution,
-            ExecutionRequest request,
+            IExecutionRequestEntry requests,
             LlmExecutionParameters parameters) => [];
     }
 
@@ -108,9 +108,4 @@ public sealed class LlmExecutionRunnerFactoryTests
         public string Describe(AIFunctionArguments arguments) => string.Empty;
     }
 
-    private sealed class StatusReader : IExecutionStatusReader
-    {
-        public ErrorOr<ExecutionStatus> Read(ExecutionId id) =>
-            Error.Failure("Execution.Missing", "执行不存在。");
-    }
 }

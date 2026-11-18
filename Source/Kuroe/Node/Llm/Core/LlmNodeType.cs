@@ -10,8 +10,11 @@ using Kuroe.Execution.Shared.Runtime;
 namespace Kuroe.Node.Llm;
 
 /// <summary>Llm 类型：由模型执行并交回端口产出。运行期对象由引擎按形状建立，类型专属声明封在实例里。</summary>
-public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog? contracts = null)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerKeyProvider
+public sealed class LlmNodeType(
+    LlmParameters? parameters,
+    IExecutionRunnerFactory runnerFactory,
+    IToolContractCatalog? contracts = null)
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public LlmParameters? Parameters { get; } = parameters;
@@ -22,8 +25,8 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     /// <summary>类型名。</summary>
     public NodeKind Kind => LlmNodeTypes.Name;
 
-    /// <summary>本节点使用的执行运行器键。</summary>
-    public ExecutionRunnerKey RunnerKey => LlmNodeTypes.RunnerKey;
+    /// <summary>本节点使用的执行运行器工厂。</summary>
+    public IExecutionRunnerFactory RunnerFactory { get; } = runnerFactory;
 
     /// <summary>Llm 类型的静态形状。</summary>
     public NodeTypeShape Shape => LlmNodeTypes.Shape;

@@ -10,5 +10,8 @@ public interface IExecutionRestorer
     ErrorOr<IExecutionRestoreData> Prepare(ExecutionRestoreContext context);
 
     /// <summary>按恢复结果建立运行器。</summary>
-    IExecutionRunner CreateRestored(ExecutionRestoreContext context, IExecutionRestoreData data);
+    IExecutionRunner CreateRestored(
+        ExecutionRestoreContext context,
+        IExecutionRestoreData data,
+        IExecutionRequestEntry requests);
 }

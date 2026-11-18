@@ -12,9 +12,6 @@ public static class FileReadNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("FileRead");
 
-    /// <summary>执行运行器键，运行器按它选择。</summary>
-    public static ExecutionRunnerKey RunnerKey { get; } = FileReadExecutionRunnerFactory.Key;
-
     /// <summary>未声明 MaxChars 时的读取上限。</summary>
     public const int DefaultMaxChars = 8000;
 
@@ -27,5 +24,8 @@ public static class FileReadNodeTypes
     };
 
     /// <summary>按类型专属声明建出类型实例。</summary>
-    public static INodeType Create(FileExecutionParameters parameters) => new FileReadNodeType(parameters);
+    public static INodeType Create(
+        FileExecutionParameters parameters,
+        IExecutionRunnerFactory runnerFactory) =>
+        new FileReadNodeType(parameters, runnerFactory);
 }

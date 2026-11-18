@@ -34,14 +34,15 @@ public sealed class ExecutionTests
     [Fact]
     public void Submitted_outputs_survive_success()
     {
-        NeutralExecution unit = new(new ExecutionId(1), Request());
         ExecutionPortName port = new("结论");
-        unit.SubmitOutputs(new Dictionary<ExecutionPortName, ExecutionOutputValue>
-        {
-            [port] = new(port, "结果", false),
-        });
+        NeutralExecution unit = new(
+            new ExecutionId(1),
+            Request(new ExecutionOutputPort(port, ExecutionPortKind.Text, true, false)));
+        ErrorOr<ExecutionStatus> submitted = new ExecutionRequestEntry(unit)
+            .SubmitOutputs([new ExecutionOutputValue(port, "结果")]);
+        Assert.False(submitted.IsError, submitted.FirstError.Description);
 
-        unit.MarkSucceeded(ExecutionOutput.FromPorts([new ExecutionOutputValue(port, "结果", false)]));
+        unit.MarkSucceeded(ExecutionOutput.FromPorts([new ExecutionOutputValue(port, "结果")]));
 
         ExecutionSnapshot snapshot = unit.Snapshot();
         Assert.Equal(ExecutionState.Succeeded, snapshot.State);
@@ -89,27 +90,27 @@ public sealed class ExecutionTests
     {
         Kuroe.Execution.ExecutionRuntime runtime = new(new Kuroe.Execution.ExecutionDispatcher());
         IExecution execution = runtime.Create(new ExecutionId(1), Request());
-        ExecutionTarget target = new(
+        ExecutionInvocation invocation = new(
             new ExecutionTargetId("其他"),
-            new ExecutionRunnerKey("test"),
+            new UnusedFactory(),
             EmptyExecutionParameters.Instance);
 
         ErrorOr<Success> result = await runtime.RunAsync(
             execution,
-            new ExecutionInvocation(target, new UnusedFactory()));
+            invocation);
 
         Assert.True(result.IsError);
         Assert.Equal(ExecutionState.Failed, execution.State);
     }
 
-    private static ExecutionRequest Request() =>
+    private static ExecutionRequest Request(params ExecutionOutputPort[] ports) =>
         new(
             new ExecutionOwnerId("任务"),
             new ExecutionTargetId("节点"),
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),
-            []);
+            ports);
 
     [Fact]
     public void Journal_entries_content_and_progress_reach_the_snapshot()
@@ -187,9 +188,9 @@ public sealed class ExecutionTests
 
     private sealed class UnusedFactory : IExecutionRunnerFactory
     {
-        public ExecutionRunnerKey Key => new("test");
-
-        public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
             throw new InvalidOperationException("目标不一致时不应建立运行器。");
     }
 

@@ -5,9 +5,8 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Kuroe.Execution.Shared.Conversation;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm.Sessions;
 
@@ -21,15 +20,14 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
 
     /// <summary>一次执行的会话，工具载体与历史都由执行输入给出。带恢复数据时恢复 MAF 会话，接续历史时恢复后追加本轮输入。</summary>
     internal async Task<ErrorOr<IConversation>> ForExecutionAsync(
-        ExecutionId execution,
-        ExecutionRequest request,
+        IExecutionRequestEntry requests,
         LlmExecutionParameters parameters,
         ProcessJournal journal,
         LlmAgentSessionPayload? restored,
         LlmAgentSessionPayload? seeded,
         CancellationToken cancellationToken)
     {
-        ExecutionHistory history = new(request, parameters);
+        ExecutionHistory history = new(requests.Request, parameters);
         if (history.Model is not { } model)
         {
             return [ModelErrors.ModelNotSelected()];
@@ -43,7 +41,7 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
 
         InMemoryChatHistoryProvider provider = new(new InMemoryChatHistoryProviderOptions());
         ExecutionChatClient executionClient = new(resolved.Value.Client, journal);
-        ToolCollection collection = new(_tools.Create(execution, request, parameters), _json);
+        ToolCollection collection = new(_tools.Create(requests, parameters), _json);
         ChatClientAgent agent = CreateAgent(
             executionClient,
             provider,

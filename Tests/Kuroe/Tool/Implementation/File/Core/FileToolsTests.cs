@@ -1,8 +1,14 @@
 using System.Text;
+using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.TestSupport;
 using Kuroe.Tool.FileAccess.Shared;
+using Kuroe.Execution.Shared.Contract;
+using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Tool.File.Tests;
@@ -1318,7 +1324,7 @@ public sealed class FileToolsTests
                 },
             },
             _root,
-            default,
+            new UnusedEntry(),
             1,
             1,
             [new ToolPath("file/read/ReadFile")]);
@@ -1337,7 +1343,7 @@ public sealed class FileToolsTests
             new FixedPortAccess(new Kuroe.Execution.Shared.Ports.ExecutionPortName("工作区"), _root),
             new Dictionary<string, IReadOnlyDictionary<string, Kuroe.Execution.Shared.Ports.ExecutionPortName>>(),
             _root,
-            default,
+            new UnusedEntry(),
             1,
             1,
             []);
@@ -1377,4 +1383,19 @@ public sealed class FileToolsTests
     private static ToolParameter Parameter(IReadOnlyList<ToolDefinition> definitions, string function, string name) =>
         definitions.Single(definition => definition.Path.Name.Value == function)
             .Parameters.Single(parameter => parameter.Name.Value == name);
+
+    private sealed class UnusedEntry : IExecutionRequestEntry
+    {
+        public ExecutionId Id => new(1);
+
+        ExecutionRequest IExecutionRequestEntry.Request => throw new NotSupportedException();
+
+        public ExecutionStatus ReadStatus() => throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
+    }
 }

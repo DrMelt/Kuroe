@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Nodes;
 
-/// <summary>触发端口：交回触发值，启动组按值决定是否启动；不承载触发的端口不能给出触发位。</summary>
+/// <summary>触发端口：交回触发值，启动组按值决定是否启动；不承载触发的端口不能给出不触发值。</summary>
 public sealed class TriggerPortTests
 {
     /// <summary>TextTrigger 交回触发位：false 消耗组不启动，true 文本进入下游并启动。</summary>

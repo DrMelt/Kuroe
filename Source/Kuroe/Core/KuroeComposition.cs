@@ -1,5 +1,7 @@
 using ErrorOr;
 using Kuroe.Configuration.Files;
+using Kuroe.Control.Runtime;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Input.Shared;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
@@ -16,6 +18,8 @@ public sealed class KuroeComposition
     private readonly List<IToolSource> _sources = [];
     private readonly List<ToolDefinition> _definitions = [];
 
+    private IExecutionRunnerFactory? _llmRunner;
+
     internal KuroeComposition(
         IServiceCollection services,
         IReadOnlyList<ConfiguredTool> configuredTools,
@@ -23,7 +27,8 @@ public sealed class KuroeComposition
         IWorkspaceFiles files,
         KuroePaths paths,
         bool persistTasks,
-        IInputChannel inputChannel)
+        IInputChannel inputChannel,
+        FlowTemplateCatalog flowTemplates)
     {
         _services = services;
         ConfiguredTools = configuredTools;
@@ -32,6 +37,7 @@ public sealed class KuroeComposition
         Paths = paths;
         PersistTasks = persistTasks;
         InputChannel = inputChannel;
+        FlowTemplates = flowTemplates;
     }
 
     /// <summary>启动信息，其中的日志级别用于宿主注册日志输出。</summary>
@@ -49,8 +55,21 @@ public sealed class KuroeComposition
     /// <summary>本次装配使用的输入登记，宿主与运行器共用同一实例。</summary>
     public IInputChannel InputChannel { get; }
 
+    /// <summary>流程模板目录，流程实现装配时登记来源。</summary>
+    public FlowTemplateCatalog FlowTemplates { get; }
+
+    /// <summary>全部工具源，装配期加入后由工具工厂共用。</summary>
+    public IReadOnlyList<IToolSource> ToolSources => _sources;
+
+    /// <summary>Llm 执行运行器工厂。</summary>
+    public IExecutionRunnerFactory LlmRunner =>
+        _llmRunner ?? throw new InvalidOperationException("核心装配尚未建立 Llm 执行运行器工厂。");
+
     /// <summary>已装载的配置命令工具，供状态查询工具呈现。</summary>
     public IReadOnlyList<ConfiguredTool> ConfiguredTools { get; }
+
+    /// <summary>记下 Llm 执行运行器工厂，只在核心装配内调用。</summary>
+    internal void AttachLlmRunner(IExecutionRunnerFactory runner) => _llmRunner = runner;
 
     /// <summary>已并入的工具定义，供流程节点类型在装配期校验。</summary>
     public IReadOnlyList<ToolDefinition> ToolDefinitions => _definitions;

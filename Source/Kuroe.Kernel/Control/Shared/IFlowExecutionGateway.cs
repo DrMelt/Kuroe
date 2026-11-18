@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Control.Shared;
@@ -21,7 +21,7 @@ public interface ITaskExecutionGateway : IExecutionOwnerIndex
     /// <summary>装配执行目标、派发执行并等待收口。</summary>
     Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        ExecutionTarget target);
+        ExecutionInvocation invocation);
 
     /// <summary>选择恢复运行器、记录来源执行、派发恢复执行并等待收口。</summary>
     Task<ErrorOr<Success>> RunRestoreAsync(

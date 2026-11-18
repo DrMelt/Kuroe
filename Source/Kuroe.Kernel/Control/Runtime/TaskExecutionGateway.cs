@@ -11,8 +11,7 @@ namespace Kuroe.Control.Runtime;
 /// <summary>执行网关：把执行号归属交给任务域，装配执行目标，其余执行操作交给执行单元。</summary>
 public sealed class TaskExecutionGateway(
     IExecutionIndex executions,
-    IExecutionRuntime runtime,
-    IExecutionInvocationFactory invocations) : ITaskExecutionGateway
+    IExecutionRuntime runtime) : ITaskExecutionGateway
 {
     /// <inheritdoc/>
     public IExecution Open(ITaskFlowContext owner, ExecutionRequest request) =>
@@ -27,24 +26,32 @@ public sealed class TaskExecutionGateway(
         runtime.Restore(plan);
 
     /// <inheritdoc/>
-    public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context) =>
-        invocations.PrepareRestore(context);
+    public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context)
+    {
+        if (context.Invocation.Target != context.Request.Target)
+        {
+            return Error.Failure(
+                "Execution.Assembly",
+                $"执行目标 {context.Invocation.Target} 与请求目标 {context.Request.Target} 不一致。");
+        }
+
+        if (context.Invocation.Factory is not IExecutionRestorer restorer)
+        {
+            return Error.Failure("Execution.Assembly", "执行器工厂不支持恢复。");
+        }
+
+        ErrorOr<IExecutionRestoreData> data = restorer.Prepare(context);
+
+        return data.IsError
+            ? data.ErrorsOrEmptyList
+            : new PreparedExecutionRestore(context.Invocation, context, data.Value);
+    }
 
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
-        ExecutionTarget target)
-    {
-        ErrorOr<ExecutionInvocation> invocation = invocations.Create(target);
-        if (invocation.IsError)
-        {
-            runtime.Reject(execution, invocation.FirstError.Description);
-
-            return Task.FromResult<ErrorOr<Success>>(invocation.ErrorsOrEmptyList);
-        }
-
-        return runtime.RunAsync(execution, invocation.Value);
-    }
+        ExecutionInvocation invocation) =>
+        runtime.RunAsync(execution, invocation);
 
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunRestoreAsync(

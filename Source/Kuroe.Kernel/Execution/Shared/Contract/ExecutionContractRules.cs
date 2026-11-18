@@ -5,9 +5,63 @@ using Kuroe.Execution.Shared.Request;
 
 namespace Kuroe.Execution.Shared.Contract;
 
-/// <summary>执行契约的端口级校验：未声明端口、端口键不一致、必填缺失与空白原因。</summary>
+/// <summary>执行契约的端口整理与校验：端口一一对应、触发位规则、未声明端口、必填缺失与空白原因。</summary>
 public static class ExecutionContractRules
 {
+    /// <summary>校验交回的端口与声明需交回的端口一一对应，并整理为契约输出。</summary>
+    public static ErrorOr<IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue>> PrepareOutputs(
+        ExecutionRequest request,
+        IReadOnlyList<ExecutionOutputValue> values)
+    {
+        if (values.Count == 0)
+        {
+            return [Error.Validation(ExecutionErrorCodes.Contract, "端口产出为空。")];
+        }
+
+        Dictionary<ExecutionPortName, ExecutionOutputValue> submitted = [];
+        foreach (ExecutionOutputValue value in values)
+        {
+            ErrorOr<ExecutionPortName> name = ExecutionPortName.Create(value.Port.Value);
+            if (name.IsError)
+            {
+                return name.ErrorsOrEmptyList;
+            }
+
+            if (!submitted.TryAdd(name.Value, value with { Port = name.Value }))
+            {
+                return [Error.Validation(ExecutionErrorCodes.Contract, $"端口 {name.Value} 重复提交。")];
+            }
+        }
+
+        IReadOnlyList<ExecutionOutputPort> required = [.. request.OutputPorts.Where(port => port.Required)];
+        if (required.Count == 0)
+        {
+            return [Error.Validation(ExecutionErrorCodes.Contract, "该执行没有需要交回的输出端口。")];
+        }
+
+        IReadOnlyList<ExecutionPortName> expected = [.. required.Select(port => port.Name)];
+        if (!expected.ToHashSet().SetEquals(submitted.Keys))
+        {
+            return [Error.Validation(
+                ExecutionErrorCodes.Contract,
+                $"端口必须与需交回的端口一一对应，应提交 {string.Join('、', expected)}。")];
+        }
+
+        foreach (ExecutionOutputPort port in required)
+        {
+            if (!port.CarriesTrigger
+                && submitted.TryGetValue(port.Name, out ExecutionOutputValue? value)
+                && !value.Fires)
+            {
+                return [Error.Validation(
+                    ExecutionErrorCodes.Contract,
+                    $"端口 {port.Name} 不承载触发，必须驱动下游，不能给出不触发值。")];
+            }
+        }
+
+        return submitted;
+    }
+
     /// <summary>按执行请求校验契约。未声明端口、键不一致、缺少必填端口或原因为空白时返回错误。</summary>
     public static ErrorOr<Success> Validate(ExecutionRequest request, ExecutionContract contract)
     {

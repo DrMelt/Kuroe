@@ -1,21 +1,16 @@
 using Kuroe.Tool;
 using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm.Executions;
 
 /// <summary>本轮产出契约的补交要求：声明了输出端口却未交回时，给出写给模型的补交要求。</summary>
-internal sealed class ContractReminder(IExecutionStatusReader status)
+internal sealed class ContractReminder(IExecutionRequestEntry requests)
 {
     /// <summary>还缺交回内容时给出补交要求，齐备时为空。</summary>
-    public string? Text(ExecutionId execution)
+    public string? Text()
     {
-        if (status.Read(execution) is not { IsError: false } read)
-        {
-            return null;
-        }
-
-        ExecutionStatus round = read.Value;
+        ExecutionStatus round = requests.ReadStatus();
 
         // 已上报无法完成的执行，缺项是它主动留下的，不再追问
         if (round.CannotCompleteReason is not null || round.OutstandingOutputs.Count == 0)

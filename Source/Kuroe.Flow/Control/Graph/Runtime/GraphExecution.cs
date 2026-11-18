@@ -39,7 +39,7 @@ public sealed class GraphExecution : IGraphExecution
         Input = input;
         ControlVersion = controlVersion;
         Request = unit.Request;
-        Target = BuildTarget(input, Request);
+        Invocation = BuildInvocation(input, Request);
         _unit = unit;
     }
 
@@ -77,8 +77,8 @@ public sealed class GraphExecution : IGraphExecution
     /// <summary>本次执行的中性请求。</summary>
     public ExecutionRequest Request { get; }
 
-    /// <summary>本次执行的图侧目标。</summary>
-    internal ExecutionTarget Target { get; }
+    /// <summary>本次执行的装配结果。</summary>
+    internal ExecutionInvocation Invocation { get; }
 
     /// <summary>执行创建时刻。</summary>
     public DateTimeOffset CreatedAt => _unit.CreatedAt;
@@ -188,7 +188,7 @@ public sealed class GraphExecution : IGraphExecution
                 }),
             ]);
 
-    internal static ExecutionTarget BuildTarget(GraphExecutionInput input, ExecutionRequest request)
+    internal static ExecutionInvocation BuildInvocation(GraphExecutionInput input, ExecutionRequest request)
     {
         ExecutionParameterContext context = new(
             request.Owner,
@@ -201,16 +201,16 @@ public sealed class GraphExecution : IGraphExecution
             request.OutputPorts,
             input.Declaration?.Model);
 
-        ExecutionRunnerKey runnerKey = input.Type is IExecutionRunnerKeyProvider runnerProvider
-            ? runnerProvider.RunnerKey
-            : throw new InvalidOperationException($"节点类型 {input.Type.Kind.Value} 没有提供执行运行器键。");
+        IExecutionRunnerFactory runnerFactory = input.Type is IExecutionRunnerFactoryProvider factoryProvider
+            ? factoryProvider.RunnerFactory
+            : throw new InvalidOperationException($"节点类型 {input.Type.Kind.Value} 没有提供执行运行器工厂。");
         IExecutionParameters parameters = input.Type is IExecutionParameterProvider parameterProvider
             ? parameterProvider.Create(context)
             : EmptyExecutionParameters.Instance;
 
-        return new ExecutionTarget(
+        return new ExecutionInvocation(
             GraphRecordTargets.Format(input.Node),
-            runnerKey,
+            runnerFactory,
             parameters);
     }
 

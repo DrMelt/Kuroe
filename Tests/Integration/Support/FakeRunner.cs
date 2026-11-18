@@ -7,7 +7,6 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Tool;
-using NeutralExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
 using NeutralExecutionOutput = Kuroe.Execution.Shared.Ports.ExecutionOutput;
 using NeutralExecutionOutputPort = Kuroe.Execution.Shared.Ports.ExecutionOutputPort;
 using NeutralExecutionParameters = Kuroe.Execution.Shared.Request.IExecutionParameters;
@@ -24,18 +23,15 @@ using NeutralExecutionUsageSource = Kuroe.Execution.Shared.Runtime.IExecutionUsa
 using NeutralPortKind = Kuroe.Execution.Shared.Ports.ExecutionPortKind;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Runner.Llm.Executions;
 
 namespace Kuroe.Integration.Tests.Support;
 
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，按声明收口，并提供恢复能力。</summary>
 public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecutionRestorer
 {
-    /// <summary>本执行器的注册键，与 Llm 节点一致。</summary>
-    public ExecutionRunnerKey Key => LlmExecutionRunnerFactory.Key;
-
     private readonly Lock _gate = new();
     private readonly Dictionary<string, int> _rounds = [];
+    private readonly Dictionary<ExecutionId, IExecutionRequestEntry> _entries = [];
 
     /// <summary>本执行器看到的该目标轮次，按执行序列递增。</summary>
     private int NextRound(string target)
@@ -56,8 +52,8 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     /// <summary>执行索引，用于按执行号取执行对象供测试断言。</summary>
     public ExecutionIndex? Executions { get; set; }
 
-    /// <summary>按执行创建契约工具的工厂。</summary>
-    public Func<ExecutionId, IReadOnlyList<ITool>>? ContractToolFactory { get; set; }
+    /// <summary>按执行请求入口创建契约工具的工厂。</summary>
+    public Func<IExecutionRequestEntry, IReadOnlyList<ITool>>? ContractToolFactory { get; set; }
 
     /// <summary>声明需交回输出端口的执行节点交回的命名段。空时按执行声明的端口逐个生成，形状见 <see cref="PortValuesFor"/>。</summary>
     public string PortValuesJson { get; set; } = string.Empty;
@@ -181,15 +177,29 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         }
     }
 
-    public NeutralExecutionRunner Create(NeutralExecutionParameters parameters, NeutralExecutionId execution)
+    public NeutralExecutionRunner Create(
+        NeutralExecutionParameters parameters,
+        IExecutionRequestEntry requests)
     {
         lock (_gate)
         {
             _starts.Add(null);
             _parameters.Add(parameters);
+            _entries[requests.Id] = requests;
         }
 
-        return new Run(this, execution);
+        return new Run(this, requests);
+    }
+
+    /// <summary>按执行号取本次执行的请求入口。</summary>
+    public IExecutionRequestEntry EntryFor(ExecutionId execution)
+    {
+        lock (_gate)
+        {
+            return _entries.TryGetValue(execution, out IExecutionRequestEntry? entry)
+                ? entry
+                : throw new InvalidOperationException($"没有执行 {execution} 的请求入口。");
+        }
     }
 
     public ErrorOr<NeutralExecutionRestoreData> Prepare(NeutralExecutionRestoreContext context)
@@ -218,30 +228,33 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
 
     public NeutralExecutionRunner CreateRestored(
         NeutralExecutionRestoreContext context,
-        NeutralExecutionRestoreData data)
+        NeutralExecutionRestoreData data,
+        IExecutionRequestEntry requests)
     {
         lock (_gate)
         {
             _starts.Add(data is TestRestoreData restored
                 ? new Kuroe.Execution.Shared.Restore.ExecutionRestoreState(restored.Value.Format, restored.Value.Payload)
                 : null);
+            _entries[requests.Id] = requests;
         }
 
-        return new Run(this, context.Execution);
+        return new Run(this, requests);
     }
 
     private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionId execution,
-        NeutralExecutionRequest request,
+        IExecutionRequestEntry requests,
         RecordingJournal journal,
         CancellationToken cancellationToken)
     {
+        ExecutionId execution = requests.Id;
+        NeutralExecutionRequest request = requests.Request;
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
         IGraphExecution? started = FindGraphExecution(executions, execution);
         if (started is null)
         {
-            return await ExecuteCodeAsync(execution, request, journal, cancellationToken).ConfigureAwait(false);
+            return await ExecuteCodeAsync(requests, journal, cancellationToken).ConfigureAwait(false);
         }
 
         NodePath node = GraphRecordTargets.Parse(request.Target);
@@ -261,7 +274,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
 
             IReadOnlyList<NeutralExecutionOutputPort> requiredPorts =
                 [.. request.OutputPorts.Where(port => port.Required)];
-            IReadOnlyList<ITool> contractTools = ContractToolFactory?.Invoke(execution) ?? [];
+            IReadOnlyList<ITool> contractTools = ContractToolFactory?.Invoke(requests) ?? [];
             if (requiredPorts.Count > 0 && SubmitsPorts)
             {
                 string json = PortValuesJsonFor?.Invoke(started)
@@ -312,15 +325,16 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
 
     /// <summary>代码流程执行：不依赖图侧执行对象，直接按中性执行记录收口。</summary>
     private async Task<ErrorOr<ExecutionOutput>> ExecuteCodeAsync(
-        ExecutionId execution,
-        NeutralExecutionRequest request,
+        IExecutionRequestEntry requests,
         RecordingJournal journal,
         CancellationToken cancellationToken)
     {
+        ExecutionId execution = requests.Id;
+        NeutralExecutionRequest request = requests.Request;
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
         ErrorOr<(Kuroe.Execution.Shared.State.IExecution Execution, Kuroe.Control.Shared.ITaskFlowContext Owner)> found =
-            executions.FindOwned(new Kuroe.Execution.Shared.Identity.ExecutionId(execution.Value));
+            executions.FindOwned(requests.Id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -362,10 +376,11 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
-    private sealed class Run(FakeRunner owner, NeutralExecutionId execution)
+    private sealed class Run(FakeRunner owner, IExecutionRequestEntry requests)
         : NeutralExecutionRunner, NeutralExecutionUsageSource, NeutralExecutionRestoreDataSource
     {
         private readonly RecordingJournal _journal = new();
+        private readonly IExecutionRequestEntry _requests = requests;
 
         public IProcessJournal Journal => _journal;
 
@@ -383,12 +398,10 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         }
 
         public async Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(
-            NeutralExecutionRequest request,
             CancellationToken cancellationToken)
         {
             ErrorOr<ExecutionOutput> outcome = await owner.ExecuteAsync(
-                new ExecutionId(execution.Value),
-                request,
+                _requests,
                 _journal,
                 cancellationToken).ConfigureAwait(false);
 

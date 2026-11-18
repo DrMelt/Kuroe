@@ -147,23 +147,6 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Execution_registry_references_only_execution_shared()
-    {
-        string shared = Path.Combine(
-            KernelRoot,
-            "Execution",
-            "Shared",
-            "Kuroe.Execution.Shared.csproj");
-        string registry = Path.Combine(
-            KernelRoot,
-            "Execution",
-            "Registry",
-            "Kuroe.Execution.Registry.csproj");
-
-        Assert.Equal([shared], ProjectReferences(registry));
-    }
-
-    [Fact]
     public void Flow_hosting_does_not_reference_execution_core()
     {
         string project = Path.Combine(
@@ -760,27 +743,6 @@ public sealed class RepositoryLayoutTests
                 Assert.DoesNotContain("GraphFlowDefinitionRecord", text, StringComparison.Ordinal);
                 Assert.DoesNotContain("CodeFlowDefinitionRecord", text, StringComparison.Ordinal);
             }
-        }
-    }
-
-    [Fact]
-    public void Control_contract_project_stays_free_of_graph_and_node()
-    {
-        string contract = Path.Combine(KernelRoot, "Control", "Contract");
-        string project = Path.Combine(contract, "Kuroe.Control.Contract.csproj");
-        string control = Path.Combine(KernelRoot, "Control", "Shared");
-        string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-
-        Assert.All(ProjectReferences(project), reference => Assert.True(
-            IsUnder(reference, control) || IsUnder(reference, execution),
-            $"Kuroe.Control.Contract 引用了中性契约之外的 {reference}。"));
-
-        foreach (string file in SourceFiles(contract))
-        {
-            string text = File.ReadAllText(file);
-            Assert.DoesNotContain("GraphFlowControl", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("GraphExecution", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("NodeGraph", text, StringComparison.Ordinal);
         }
     }
 
@@ -1534,6 +1496,20 @@ public sealed class RepositoryLayoutTests
         foreach (string word in forbidden)
         {
             Assert.DoesNotContain(word, text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Execution_dispatcher_only_schedules_runs()
+    {
+        string core = Path.Combine(KernelRoot, "Execution", "Core");
+        string dispatcher = File.ReadAllText(Path.Combine(core, "ExecutionDispatcher.cs"));
+        string run = Path.Combine(core, "ExecutionRun.cs");
+
+        Assert.True(File.Exists(run));
+        foreach (string word in (string[])["AttachJournal", "IExecutionUsageSource", "IExecutionRestoreDataSource", "SettleUsage", "SettleRestoreData"])
+        {
+            Assert.DoesNotContain(word, dispatcher, StringComparison.Ordinal);
         }
     }
 

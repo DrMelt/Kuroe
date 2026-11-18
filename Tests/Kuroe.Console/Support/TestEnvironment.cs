@@ -51,7 +51,6 @@ public sealed class TestEnvironment : IDisposable
         _waiter = new NotifiedTaskWaiter(
             TaskReader,
             provider.GetRequiredService<ITaskChangeSource>());
-        runner.PortSubmitter = provider.GetRequiredService<Execution.Shared.Contract.IExecutionPortSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>
@@ -181,7 +180,11 @@ public sealed class TestEnvironment : IDisposable
 
         ErrorOr<Success> graph = services.AddKuroeGraphFlows(
             composition.Value,
-            new GraphFlowOptions { RegisterNodeTypes = NodeTypes.Register });
+            new GraphFlowOptions
+            {
+                RegisterNodeTypes = NodeTypes.Register,
+                LlmRunnerFactory = runner,
+            });
         if (graph.IsError)
         {
             return graph.ErrorsOrEmptyList;
@@ -201,7 +204,6 @@ public sealed class TestEnvironment : IDisposable
             }
         }
 
-        services.AddBuiltinGraphExecutionRunners(composition.Value);
         services.AddSingleton<IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();

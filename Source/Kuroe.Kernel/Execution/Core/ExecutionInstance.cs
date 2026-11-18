@@ -263,21 +263,70 @@ internal sealed class ExecutionInstance : IExecution
         }
     }
 
-    /// <summary>记下本次执行交回的端口值。</summary>
-    internal void SubmitOutputs(IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> outputs)
+    /// <summary>交回端口产出，成功时给出提交后的本轮契约状态。</summary>
+    internal ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values)
     {
         lock (_gate)
         {
-            _contract = _contract with { Outputs = outputs };
+            if (!_state.IsLive())
+            {
+                return Error.Validation("Tool.Argument", "只有进行中的执行能提交端口产出。");
+            }
+
+            if (_contract.Outputs is not null)
+            {
+                return Error.Validation("Tool.Argument", "端口产出已提交，无需重复提交。");
+            }
+
+            ErrorOr<IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue>> prepared =
+                ExecutionContractRules.PrepareOutputs(Request, values);
+            if (prepared.IsError)
+            {
+                return prepared.ErrorsOrEmptyList;
+            }
+
+            ExecutionContract contract = _contract with { Outputs = prepared.Value };
+            ErrorOr<Success> valid = ExecutionContractRules.Validate(Request, contract);
+            if (valid.IsError)
+            {
+                return valid.ErrorsOrEmptyList;
+            }
+
+            _contract = contract;
+
+            return ExecutionStatus.Of(Request, _contract, _state);
         }
     }
 
-    /// <summary>记下本次执行上报的无法完成原因。</summary>
-    internal void ReportCannotComplete(string reason)
+    /// <summary>上报本轮无法完成并给出原因，成功时给出上报后的本轮契约状态。</summary>
+    internal ErrorOr<ExecutionStatus> ReportCannotComplete(string reason)
     {
         lock (_gate)
         {
-            _contract = _contract with { CannotCompleteReason = reason };
+            if (!_state.IsLive())
+            {
+                return Error.Validation("Tool.Argument", "只有进行中的执行能上报无法完成。");
+            }
+
+            ExecutionContract contract = _contract with { CannotCompleteReason = reason.Trim() };
+            ErrorOr<Success> valid = ExecutionContractRules.Validate(Request, contract);
+            if (valid.IsError)
+            {
+                return valid.ErrorsOrEmptyList;
+            }
+
+            _contract = contract;
+
+            return ExecutionStatus.Of(Request, _contract, _state);
+        }
+    }
+
+    /// <summary>当前执行的本轮契约状态。</summary>
+    internal ExecutionStatus ReadStatus()
+    {
+        lock (_gate)
+        {
+            return ExecutionStatus.Of(Request, _contract, _state);
         }
     }
     /// <summary>进入成功终态并记下产出。</summary>

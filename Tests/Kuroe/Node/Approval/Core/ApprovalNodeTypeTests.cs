@@ -4,6 +4,8 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Approval.Tests;
@@ -11,7 +13,9 @@ namespace Kuroe.Node.Approval.Tests;
 /// <summary>审批节点类型的形状与类型规则：启动执行后等待批准，对外端口由输入端口派生，放行后放出停驻时的取值。</summary>
 public sealed class ApprovalNodeTypeTests
 {
-    private static readonly ApprovalNodeType NodeType = new(null);
+    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
+
+    private static readonly ApprovalNodeType NodeType = new(null, RunnerFactory);
 
     [Fact]
     public void Name_is_the_kind_written_in_files()
@@ -23,7 +27,7 @@ public sealed class ApprovalNodeTypeTests
     [Fact]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType type = ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" });
+        INodeType type = ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" }, RunnerFactory);
 
         Assert.Equal(ApprovalNodeTypes.Name, type.Kind);
         Assert.Equal("确认计划", Assert.IsType<ApprovalNodeType>(type).Parameters?.Question);
@@ -86,8 +90,16 @@ public sealed class ApprovalNodeTypeTests
     private static NodeSpec Node(IReadOnlyList<InputPort>? inputs = null) => new()
     {
         Label = new NodeLabel("把关"),
-        Type = ApprovalNodeTypes.Create(null),
+        Type = ApprovalNodeTypes.Create(null, RunnerFactory),
         Inputs = inputs ?? [],
         Spec = new ExecutableSpec(),
     };
+
+    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
+    }
 }

@@ -1,7 +1,5 @@
 using ErrorOr;
 using Kuroe.Runner.Llm.Sessions;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
 using Kuroe.Execution.Shared.Runtime;
@@ -10,19 +8,14 @@ namespace Kuroe.Runner.Llm.Executions;
 
 /// <summary>为 Llm 执行节点建立单次执行的运行器，并校验与建立恢复执行。</summary>
 public sealed class LlmExecutionRunnerFactory(
-    SessionFactory sessions,
-    IExecutionStatusReader status) : IExecutionRunnerFactory, IExecutionRestorer
+    SessionFactory sessions) : IExecutionRunnerFactory, IExecutionRestorer
 {
-    /// <summary>本工厂的注册键。</summary>
-    public static ExecutionRunnerKey Key { get; } = new("Llm");
-
-    /// <inheritdoc/>
-    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
-
     /// <summary>为一次普通执行建立运行器。</summary>
-    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
+    public IExecutionRunner Create(
+        IExecutionParameters parameters,
+        IExecutionRequestEntry requests) =>
         parameters is LlmExecutionParameters llm
-            ? new LlmExecutionRunner(sessions, status, execution, llm)
+            ? new LlmExecutionRunner(sessions, requests, llm)
             : throw new InvalidOperationException("Llm 执行节点的参数类型不匹配。");
 
     /// <summary>校验恢复负载的格式与模型并装配一次恢复。历史可继续性在建立恢复会话时校验。已上报无法完成的执行不允许恢复。</summary>
@@ -36,7 +29,7 @@ public sealed class LlmExecutionRunnerFactory(
             }
 
             LlmAgentSessionPayload restored = AgentSessionCodec.Decode(context.Payload);
-            string? model = (context.Target.Parameters as LlmExecutionParameters)?.Model;
+            string? model = (context.Invocation.Parameters as LlmExecutionParameters)?.Model;
             if (restored.Model != model)
             {
                 return Error.Failure(
@@ -55,8 +48,9 @@ public sealed class LlmExecutionRunnerFactory(
     /// <summary>按恢复结果建立运行器。</summary>
     public IExecutionRunner CreateRestored(
         ExecutionRestoreContext context,
-        IExecutionRestoreData data) =>
-        data is LlmAgentSessionPayload state && context.Target.Parameters is LlmExecutionParameters parameters
-            ? new LlmExecutionRunner(sessions, status, context.Execution, parameters, state)
+        IExecutionRestoreData data,
+        IExecutionRequestEntry requests) =>
+        data is LlmAgentSessionPayload state && context.Invocation.Parameters is LlmExecutionParameters parameters
+            ? new LlmExecutionRunner(sessions, requests, parameters, state)
             : throw new InvalidOperationException("Llm 恢复数据类型不匹配。");
 }

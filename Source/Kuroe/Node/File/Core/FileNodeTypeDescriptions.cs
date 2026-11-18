@@ -1,4 +1,5 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.File;
 
@@ -8,9 +9,11 @@ public static class FileNodeTypeDescriptions
     /// <summary>把文件读取与文件写入节点的描述注册进注册表。工作区根是路径解析的边界，由装配处给出。</summary>
     public static void RegisterInto(
         INodeTypeDescriptionRegistry registry,
-        string rootDirectory)
+        string rootDirectory,
+        IExecutionRunnerFactory readRunnerFactory,
+        IExecutionRunnerFactory writeRunnerFactory)
     {
-        registry.Register(new FileReadNodeTypeDescription(rootDirectory));
-        registry.Register(new FileWriteNodeTypeDescription(rootDirectory));
+        registry.Register(new FileReadNodeTypeDescription(rootDirectory, readRunnerFactory));
+        registry.Register(new FileWriteNodeTypeDescription(rootDirectory, writeRunnerFactory));
     }
 }

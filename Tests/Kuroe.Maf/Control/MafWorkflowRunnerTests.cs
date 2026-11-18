@@ -1,5 +1,3 @@
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Maf.Definition;
 using Kuroe.Tasks.Shared;
 using Xunit;
@@ -51,7 +49,7 @@ public sealed class MafWorkflowRunnerTests
             [new MafEdge(new MafStepId("第一步"), new MafStepId("第二步"))]);
 
     private static MafStepTarget Target() =>
-        new(new ExecutionRunnerKey("Test"), _ => EmptyExecutionParameters.Instance);
+        TestFlow.Target(TestFlow.Factory);
 
     private sealed class MemoryCheckpoints : IMafWorkflowCheckpoints
     {

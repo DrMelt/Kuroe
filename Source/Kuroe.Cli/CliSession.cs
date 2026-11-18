@@ -53,7 +53,8 @@ internal sealed class CliSession : IAsyncDisposable
     /// <summary>装配一次调用的服务。工作目录为空时用进程当前目录，装配失败时返回全部启动错误。</summary>
     public static ErrorOr<CliSession> Create(
         string? workDirectory,
-        Action<IServiceCollection>? configure = null)
+        Action<IServiceCollection>? configure = null,
+        GraphFlowOptions? graphOptions = null)
     {
         ErrorOr<KuroePaths> paths = KuroePaths.Resolve(workDirectory);
         if (paths.IsError)
@@ -70,9 +71,10 @@ internal sealed class CliSession : IAsyncDisposable
             return composition.ErrorsOrEmptyList;
         }
 
+        GraphFlowOptions options = (graphOptions ?? new GraphFlowOptions()) with { AllowFlowFailures = true };
         ErrorOr<Success> graph = services.AddKuroeGraphFlows(
             composition.Value,
-            new GraphFlowOptions { AllowFlowFailures = true });
+            options);
         if (graph.IsError)
         {
             return graph.ErrorsOrEmptyList;

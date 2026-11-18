@@ -1,3 +1,4 @@
+using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,8 +13,9 @@ public sealed class MafRegistrationTests
     public void Registration_exposes_one_provider_and_one_codec()
     {
         ServiceCollection services = new();
+        FlowTemplateCatalog templates = new([]);
         services.AddSingleton<ITaskExecutionGateway>(new UnusedGateway());
-        services.AddKuroeMafFlows(TestFlow.Definition());
+        services.AddKuroeMafFlows(templates, TestFlow.Definition());
 
         using ServiceProvider provider = services.BuildServiceProvider();
 

@@ -1,5 +1,7 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Approval.Tests;
@@ -7,7 +9,9 @@ namespace Kuroe.Node.Approval.Tests;
 /// <summary>审批节点的描述契约：字段表与提问文本的读取。</summary>
 public sealed class ApprovalNodeTypeDescriptionTests
 {
-    private static readonly ApprovalNodeTypeDescription File = new();
+    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
+
+    private static readonly ApprovalNodeTypeDescription File = new(RunnerFactory);
 
     [Fact]
     public void Kind_is_the_approval_node_type() =>
@@ -55,5 +59,13 @@ public sealed class ApprovalNodeTypeDescriptionTests
 
         public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name) =>
             new Dictionary<string, IReadOnlyDictionary<string, string>>();
+    }
+
+    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
     }
 }

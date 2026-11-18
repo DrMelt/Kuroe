@@ -1,5 +1,7 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Input.Tests;
@@ -7,7 +9,9 @@ namespace Kuroe.Node.Input.Tests;
 /// <summary>输入节点的描述契约：字段表与提问文本的读取。</summary>
 public sealed class InputNodeTypeDescriptionTests
 {
-    private static readonly InputNodeTypeDescription File = new();
+    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
+
+    private static readonly InputNodeTypeDescription File = new(RunnerFactory);
 
     [Fact]
     public void Kind_is_the_input_node_type() =>
@@ -55,5 +59,13 @@ public sealed class InputNodeTypeDescriptionTests
 
         public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name) =>
             new Dictionary<string, IReadOnlyDictionary<string, string>>();
+    }
+
+    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
     }
 }

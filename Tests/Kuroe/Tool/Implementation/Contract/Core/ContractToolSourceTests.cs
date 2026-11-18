@@ -1,9 +1,4 @@
-using ErrorOr;
 using Xunit;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Tool.Contract.Tests;
 
@@ -13,31 +8,10 @@ public sealed class ContractToolSourceTests
     [Fact]
     public void Definitions_cover_the_three_contract_paths()
     {
-        ContractToolSource source = new(new FakePorts(), new FakeCannotComplete(), new FakeStatus());
+        ContractToolSource source = new();
 
         Assert.Equal(
             [ContractTools.Port, ContractTools.CannotComplete, ContractTools.Status],
             source.Definitions.Select(definition => definition.Path.Value));
     }
-
-    private sealed class FakePorts : IExecutionPortSubmitter
-    {
-        public ErrorOr<ExecutionStatus> Submit(
-            ExecutionId id,
-            IReadOnlyList<ExecutionOutputValue> values) =>
-            Status();
-    }
-
-    private sealed class FakeCannotComplete : IExecutionCannotCompleteSubmitter
-    {
-        public ErrorOr<ExecutionStatus> Report(ExecutionId id, string reason) => Status();
-    }
-
-    private sealed class FakeStatus : IExecutionStatusReader
-    {
-        public ErrorOr<ExecutionStatus> Read(ExecutionId id) => Status();
-    }
-
-    private static ExecutionStatus Status() =>
-        new(new ExecutionTargetId("节点"), ExecutionState.Running, [], null);
 }

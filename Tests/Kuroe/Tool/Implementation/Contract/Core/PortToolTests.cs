@@ -4,6 +4,8 @@ using Xunit;
 using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Tool.Contract.Tests;
@@ -17,7 +19,7 @@ public sealed class PortToolTests
     [Fact]
     public void Description_states_the_purpose_without_repeating_ports()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1), [Port(Conclusion), Port(Reason)]);
+        PortTool tool = new(new FakeEntry(), [Port(Conclusion), Port(Reason)]);
 
         ToolFunction function = Assert.Single(tool.Functions);
         Assert.Equal("提交本执行节点命名输出端口的值。", function.Definition.Description);
@@ -31,11 +33,11 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_renders_the_recorded_ports_and_the_remaining_ones()
     {
-        FakeSubmitter submitter = new()
+        FakeEntry submitter = new()
         {
             Outcome = Status([Reason]),
         };
-        PortTool tool = new(submitter, new ExecutionId(1), [Port(Conclusion), Port(Reason)]);
+        PortTool tool = new(submitter, [Port(Conclusion), Port(Reason)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
             .Invoke(Given(("valuesJson", """{ "结论": "完成" }""")));
@@ -49,7 +51,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_a_top_level_trigger_key_as_an_unknown_port()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1), [Port(Conclusion)]);
+        PortTool tool = new(new FakeEntry(), [Port(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
             .Invoke(Given(("valuesJson", """{ "结论": "完成", "trigger": false }""")));
@@ -63,7 +65,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_a_case_different_port_name()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [Port(new ExecutionPortName("Trigger"))]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -78,7 +80,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_accepts_a_port_named_trigger()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [Port(new ExecutionPortName("trigger"))]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -91,7 +93,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_a_case_different_object_field()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TextTrigger(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -105,8 +107,8 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_normalizes_surrounding_whitespace_in_port_names()
     {
-        FakeSubmitter submitter = new();
-        PortTool tool = new(submitter, new ExecutionId(1), [Port(Conclusion)]);
+        FakeEntry submitter = new();
+        PortTool tool = new(submitter, [Port(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
             .Invoke(Given(("valuesJson", """{ " 结论 ": "完成" }""")));
@@ -119,7 +121,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_duplicate_port_names_after_normalization()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1), [Port(Conclusion)]);
+        PortTool tool = new(new FakeEntry(), [Port(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
             .Invoke(Given(("valuesJson", """{ "结论": "完成", " 结论 ": "重复" }""")));
@@ -132,7 +134,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_a_null_plain_port_value()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1), [Port(Conclusion)]);
+        PortTool tool = new(new FakeEntry(), [Port(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
             .Invoke(Given(("valuesJson", """{ "结论": null }""")));
@@ -145,7 +147,7 @@ public sealed class PortToolTests
     public void Submit_accepts_strict_trigger_objects()
     {
         ExecutionPortName signal = new("信号");
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
         [
             TextTrigger(Conclusion),
             TriggerSignal(signal),
@@ -163,7 +165,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_a_text_trigger_port_written_as_text()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TextTrigger(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -176,7 +178,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_a_text_trigger_object_without_the_trigger_bit()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TextTrigger(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -190,7 +192,7 @@ public sealed class PortToolTests
     public void Submit_rejects_a_signal_trigger_port_written_as_a_boolean()
     {
         ExecutionPortName signal = new("信号");
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TriggerSignal(signal)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -204,7 +206,7 @@ public sealed class PortToolTests
     public void Submit_rejects_a_signal_trigger_object_without_the_trigger_bit()
     {
         ExecutionPortName signal = new("信号");
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TriggerSignal(signal)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -219,7 +221,7 @@ public sealed class PortToolTests
     {
         ExecutionPortName signal = new("信号");
         ExecutionPortName completed = new("完成");
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
         [
             new ExecutionOutputPort(Conclusion, ExecutionPortKind.Text, true, true, "是否通过"),
             TriggerSignal(signal),
@@ -257,8 +259,8 @@ public sealed class PortToolTests
     [Fact]
     public void Definition_omits_the_parameter_schema_without_ports()
     {
-        PortTool withoutPorts = new(new FakeSubmitter(), new ExecutionId(1), null);
-        PortTool withEmptyList = new(new FakeSubmitter(), new ExecutionId(1), []);
+        PortTool withoutPorts = new(new FakeEntry(), null);
+        PortTool withEmptyList = new(new FakeEntry(), []);
 
         Assert.False(Assert.Single(Assert.Single(withoutPorts.Functions).Definition.Parameters).Schema.HasValue);
         Assert.False(Assert.Single(Assert.Single(withEmptyList.Functions).Definition.Parameters).Schema.HasValue);
@@ -267,7 +269,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_a_text_trigger_object_without_text()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TextTrigger(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -280,7 +282,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_a_non_text_text_value()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TextTrigger(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -293,7 +295,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_an_unknown_key_in_a_trigger_object()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TextTrigger(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -307,7 +309,7 @@ public sealed class PortToolTests
     public void Submit_rejects_a_non_boolean_trigger_bit()
     {
         ExecutionPortName signal = new("信号");
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TriggerSignal(signal)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
@@ -320,7 +322,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_rejects_an_object_on_a_plain_text_port()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1), [Port(Conclusion)]);
+        PortTool tool = new(new FakeEntry(), [Port(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
             .Invoke(Given(("valuesJson", """{ "结论": { "text": "完成" } }""")));
@@ -332,7 +334,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_reads_a_structured_argument_from_the_model()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TextTrigger(Conclusion)]);
 
         using JsonDocument document = JsonDocument.Parse("""{ "结论": { "text": "完成", "trigger": true } }""");
@@ -350,7 +352,7 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_reads_a_dictionary_argument_after_restore()
     {
-        PortTool tool = new(new FakeSubmitter(), new ExecutionId(1),
+        PortTool tool = new(new FakeEntry(),
             [TextTrigger(Conclusion)]);
 
         ToolArguments arguments = new(new Dictionary<string, object?>
@@ -374,11 +376,11 @@ public sealed class PortToolTests
     [Fact]
     public void Submit_error_is_returned_to_the_model()
     {
-        FakeSubmitter submitter = new()
+        FakeEntry submitter = new()
         {
             Failure = Error.Validation("Port.Rejected", "端口值不合法。"),
         };
-        PortTool tool = new(submitter, new ExecutionId(1), [Port(Conclusion)]);
+        PortTool tool = new(submitter, [Port(Conclusion)]);
 
         ErrorOr<string> result = Assert.Single(tool.Functions)
             .Invoke(Given(("valuesJson", """{ "结论": "完成" }""")));
@@ -408,8 +410,17 @@ public sealed class PortToolTests
     private static ToolArguments Given(params (string Name, object? Value)[] values) =>
         new(values.ToDictionary(value => value.Name, value => value.Value));
 
-    private sealed class FakeSubmitter : IExecutionPortSubmitter
+    private sealed class FakeEntry : IExecutionRequestEntry
     {
+        public ExecutionId Id => new(1);
+
+        ExecutionRequest IExecutionRequestEntry.Request => throw new NotSupportedException();
+
+        public ExecutionStatus ReadStatus() => Outcome;
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
+
         public ExecutionStatus Outcome { get; init; } =
             new(new ExecutionTargetId("节点"), ExecutionState.Running, [], null);
 
@@ -417,9 +428,7 @@ public sealed class PortToolTests
 
         public IReadOnlyList<ExecutionOutputValue>? Submitted { get; private set; }
 
-        public ErrorOr<ExecutionStatus> Submit(
-            ExecutionId id,
-            IReadOnlyList<ExecutionOutputValue> values)
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values)
         {
             Submitted = values;
 

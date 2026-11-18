@@ -658,7 +658,7 @@ internal sealed class GraphFlowControl(
             run = restore is null
                 ? await gateway.RunAsync(
                     execution.Unit,
-                    execution.Target).ConfigureAwait(false)
+                    execution.Invocation).ConfigureAwait(false)
                 : await gateway.RunRestoreAsync(
                     execution.Unit,
                     restore.Source.Unit,

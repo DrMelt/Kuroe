@@ -1,9 +1,6 @@
 using ErrorOr;
 using Kuroe.Runner.Llm.Sessions;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
 using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.Usage;
@@ -14,8 +11,7 @@ namespace Kuroe.Runner.Llm.Executions;
 /// 工具调用由 MAF 在同一会话内完成，产出契约未满足时补发要求再请求。</summary>
 internal sealed class LlmExecutionRunner(
     SessionFactory sessions,
-    IExecutionStatusReader status,
-    ExecutionId execution,
+    IExecutionRequestEntry requests,
     LlmExecutionParameters parameters,
     LlmAgentSessionPayload? restored = null) : IExecutionRunner, IExecutionUsageSource, IExecutionRestoreDataSource
 {
@@ -23,8 +19,9 @@ internal sealed class LlmExecutionRunner(
     private const int ReminderLimit = 2;
 
     private readonly SessionFactory _sessions = sessions;
-    private readonly ContractReminder _reminder = new(status);
+    private readonly ContractReminder _reminder = new(requests);
     private readonly ProcessJournal _journal = new();
+    private readonly IExecutionRequestEntry _requests = requests;
     private readonly LlmExecutionParameters _parameters = parameters;
     private readonly LlmAgentSessionPayload? _restored = restored;
     private volatile IConversation? _session;
@@ -44,7 +41,6 @@ internal sealed class LlmExecutionRunner(
 
     /// <summary>执行一次 Llm 请求，按产出契约补发要求。恢复数据存在时从上次中断处继续，会话种子存在时接续上一轮历史。</summary>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
         LlmAgentSessionPayload? seeded = null;
@@ -67,8 +63,7 @@ internal sealed class LlmExecutionRunner(
         }
 
         ErrorOr<IConversation> created = await _sessions.ForExecutionAsync(
-            execution,
-            request,
+            _requests,
             _parameters,
             _journal,
             _restored,
@@ -92,7 +87,7 @@ internal sealed class LlmExecutionRunner(
             ErrorOr<Success> reply = await AskWithReminders(
                 text => session.AskAsync(text, cancellationToken),
                 session.IsRestored ? null : _parameters.Instruction(),
-                () => _reminder.Text(execution));
+                () => _reminder.Text());
 
             if (reply.IsError)
             {

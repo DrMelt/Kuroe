@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
@@ -9,19 +8,19 @@ namespace Kuroe.Maf.Definition;
 public interface IMafStepTargetFactory
 {
     /// <summary>建立步骤的执行目标。目标标识必须与步骤标识一致。</summary>
-    ErrorOr<ExecutionTarget> Create(
+    ErrorOr<ExecutionInvocation> Create(
         MafStepId step,
         string model,
         ExecutionParameterContext context);
 }
 
-/// <summary>MAF 步骤的执行目标声明：执行运行器键与按本次执行上下文构造的参数。</summary>
+/// <summary>MAF 步骤的执行目标声明：执行运行器工厂与按本次执行上下文构造的参数。</summary>
 public sealed record MafStepTarget(
-    ExecutionRunnerKey RunnerKey,
+    IExecutionRunnerFactory Factory,
     Func<ExecutionParameterContext, ErrorOr<IExecutionParameters>> Parameters) : IMafStepTargetFactory
 {
     /// <inheritdoc/>
-    public ErrorOr<ExecutionTarget> Create(
+    public ErrorOr<ExecutionInvocation> Create(
         MafStepId step,
         string model,
         ExecutionParameterContext context)
@@ -32,6 +31,6 @@ public sealed record MafStepTarget(
             return parameters.ErrorsOrEmptyList;
         }
 
-        return new ExecutionTarget(step.ToExecutionTargetId(), RunnerKey, parameters.Value);
+        return new ExecutionInvocation(step.ToExecutionTargetId(), Factory, parameters.Value);
     }
 }

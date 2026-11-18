@@ -7,6 +7,8 @@ using Kuroe.Flow.NodeType.Container;
 
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Tests.Support;
 using Kuroe.Flow.Hosting.Workflows.Flows;
 using Kuroe.Flow.Hosting.Workflows.Flows.Files;
@@ -17,6 +19,8 @@ namespace Kuroe.Tests.Workflows.Flows;
 /// <summary>流程服务按流程隔离编译：不支持的节点只让所在流程不可用。</summary>
 public sealed class FlowServiceTests
 {
+    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
+
     [Fact]
     public void Tolerant_load_keeps_compilable_flows_and_reports_unavailable()
     {
@@ -55,7 +59,7 @@ public sealed class FlowServiceTests
         {
             NodeTypeDescriptionRegistry types = new();
             ContainerNodeTypeDescriptions.RegisterInto(types);
-            LlmNodeTypeDescriptions.RegisterInto(types);
+            LlmNodeTypeDescriptions.RegisterInto(types, RunnerFactory);
             FlowDescriptionCompiler compiler = new(types, new NodeLibraryExpander());
             JsonNodeFormat nodeFormat = new();
             JsonFlowFormat flowFormat = new();
@@ -100,4 +104,12 @@ public sealed class FlowServiceTests
           ]
         }
         """;
+
+    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
+    }
 }

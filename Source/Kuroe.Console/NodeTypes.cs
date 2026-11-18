@@ -1,4 +1,5 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Hosting;
 using Kuroe.Node.Approval;
 using Kuroe.Node.Input;
 
@@ -8,9 +9,11 @@ namespace Kuroe.Console;
 internal static class NodeTypes
 {
     /// <summary>把输入与审批节点描述注册进流程编译层。</summary>
-    public static void Register(INodeTypeDescriptionRegistry types)
+    public static void Register(
+        INodeTypeDescriptionRegistry types,
+        GraphExecutionRunners runners)
     {
-        InputNodeTypeDescriptions.RegisterInto(types);
-        ApprovalNodeTypeDescriptions.RegisterInto(types);
+        InputNodeTypeDescriptions.RegisterInto(types, runners.Input);
+        ApprovalNodeTypeDescriptions.RegisterInto(types, runners.Approval);
     }
 }

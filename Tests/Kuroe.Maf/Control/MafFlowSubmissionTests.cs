@@ -16,7 +16,8 @@ namespace Kuroe.Maf.Control.Tests;
 /// <summary>MAF 流程的提交与恢复：开始输入校验、默认值补齐与存档往返。</summary>
 public sealed class MafFlowSubmissionTests
 {
-    private static ExecutionRunnerKey TestRunnerKey { get; } = new("Test");
+    private static IExecutionRunnerFactory TestRunner { get; } =
+        new FakeRunnerFactory(() => new FakeRunner());
 
     [Theory]
     [InlineData("")]
@@ -277,20 +278,20 @@ public sealed class MafFlowSubmissionTests
         new(new MafStepId(from), new MafStepId(to));
 
     private static MafStepTarget Target() =>
-        new(TestRunnerKey, _ => EmptyExecutionParameters.Instance);
+        new(TestRunner, _ => EmptyExecutionParameters.Instance);
 
     private sealed class FailingTargetFactory : IMafStepTargetFactory
     {
-        public ErrorOr<ExecutionTarget> Create(MafStepId step, string model, ExecutionParameterContext context) =>
+        public ErrorOr<ExecutionInvocation> Create(MafStepId step, string model, ExecutionParameterContext context) =>
             Error.Validation("Maf.Target", "没有执行目标。");
     }
 
     private sealed class MismatchedTargetFactory : IMafStepTargetFactory
     {
-        public ErrorOr<ExecutionTarget> Create(MafStepId step, string model, ExecutionParameterContext context) =>
-            new ExecutionTarget(
+        public ErrorOr<ExecutionInvocation> Create(MafStepId step, string model, ExecutionParameterContext context) =>
+            new ExecutionInvocation(
                 new ExecutionTargetId("其他"),
-                TestRunnerKey,
+                TestRunner,
                 EmptyExecutionParameters.Instance);
     }
 }

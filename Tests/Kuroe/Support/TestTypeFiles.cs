@@ -9,6 +9,8 @@ using Kuroe.Tool.Dotnet;
 using Kuroe.Tool.File;
 using Kuroe.Tool.Git;
 using Kuroe.Tool.Time;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.TestSupport;
 
@@ -24,12 +26,15 @@ public static class TestTypeFiles
         .. new TimeToolSource(TimeProvider.System).Definitions,
     ]);
 
+    /// <summary>测试节点类型使用的执行运行器工厂，不建立运行器。</summary>
+    public static IExecutionRunnerFactory Runners { get; } = new UnusedRunnerFactory();
+
     /// <summary>建出一份含全部可用类型的节点类型描述注册表。</summary>
     public static NodeTypeDescriptionRegistry Registry()
     {
         NodeTypeDescriptionRegistry files = new();
         ContainerNodeTypeDescriptions.RegisterInto(files);
-        LlmNodeTypeDescriptions.RegisterInto(files, Contracts);
+        LlmNodeTypeDescriptions.RegisterInto(files, Runners, Contracts);
         RegisterAll(files);
 
         return files;
@@ -38,7 +43,15 @@ public static class TestTypeFiles
     /// <summary>把输入与审批节点描述注册进注册表。</summary>
     public static void RegisterAll(INodeTypeDescriptionRegistry files)
     {
-        InputNodeTypeDescriptions.RegisterInto(files);
-        ApprovalNodeTypeDescriptions.RegisterInto(files);
+        InputNodeTypeDescriptions.RegisterInto(files, Runners);
+        ApprovalNodeTypeDescriptions.RegisterInto(files, Runners);
+    }
+
+    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
     }
 }

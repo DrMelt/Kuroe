@@ -36,7 +36,8 @@ internal static class DialogueHostFactory
             null,
             new DialogueFlowControlFactory(
                 gateway,
-                services.GetRequiredService<IInputChannel>()),
+                services.GetRequiredService<IInputChannel>(),
+                services.GetRequiredService<IExecutionRunnerFactory>()),
             new DialogueFlowPresentation(),
             new DialogueFlowRecordSource());
         FlowProviderSource providers = new([provider]);

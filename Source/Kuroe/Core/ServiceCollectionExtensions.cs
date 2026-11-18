@@ -3,11 +3,9 @@ using Kuroe.Catalogs;
 using Kuroe.Catalogs.Files;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Control.Contract;
 using Kuroe.Control.Runtime;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
-using Kuroe.Execution.Registry;
 using Kuroe.Files;
 using Kuroe.Files.Shared;
 using Kuroe.Input.Runtime;
@@ -37,7 +35,6 @@ using Kuroe.Tool.Json;
 using Kuroe.Tool.Time;
 using Kuroe.Tools;
 using Microsoft.Extensions.DependencyInjection;
-using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Conversation;
 using Kuroe.Execution.Shared.Runtime;
 
@@ -81,6 +78,7 @@ public static class ServiceCollectionExtensions
         }
 
         InputChannelRegistry inputs = new();
+        FlowTemplateCatalog flowTemplates = new([]);
         KuroeComposition composition = new(
             services,
             configuredTools.Value,
@@ -88,7 +86,8 @@ public static class ServiceCollectionExtensions
             files,
             paths,
             coreOptions.PersistTasks,
-            inputs);
+            inputs,
+            flowTemplates);
 
         List<IToolSource> definitionSources =
         [
@@ -109,8 +108,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(catalog.Value);
         services.AddSingleton<IModelAccess>(catalog.Value);
         services.AddSingleton(configuredTools.Value);
-        services.AddSingleton<IFlowTemplateCatalog>(sp => new FlowTemplateCatalog(
-            sp.GetServices<IFlowTemplateSource>()));
+        services.AddSingleton(flowTemplates);
+        services.AddSingleton<IFlowTemplateCatalog>(flowTemplates);
 
         ModelService modelService = new(settings.Value, catalog.Value);
         services.AddSingleton(modelService);
@@ -120,10 +119,10 @@ public static class ServiceCollectionExtensions
         ErrorOr<Success> registered = RegisterTools(
             services,
             composition,
+            flowTemplates,
             settings.Value,
             catalog.Value,
             modelService,
-            paths.WorkingDirectory,
             taskRegistry,
             executions);
         if (registered.IsError)
@@ -131,13 +130,20 @@ public static class ServiceCollectionExtensions
             return registered.ErrorsOrEmptyList;
         }
 
-        services.AddSingleton<IToolJson, ToolJson>();
+        ToolJson toolJson = new();
+        KuroeToolFactory toolFactory = new(composition.ToolSources, paths.WorkingDirectory);
+        SessionFactory sessions = new(catalog.Value, toolFactory, toolJson);
+        LlmExecutionRunnerFactory llmRunner = new(sessions);
+        composition.AttachLlmRunner(llmRunner);
+
+        services.AddSingleton<IToolJson>(toolJson);
+        services.AddSingleton<IToolFactory>(toolFactory);
+        services.AddSingleton<SessionFactory>(_ => sessions);
+        services.AddSingleton<IExecutionRunnerFactory>(llmRunner);
         services.AddSingleton(sp => ToolCollection.ForDisplay(
-            sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
-            sp.GetRequiredService<IToolJson>()));
+            composition.ToolSources.SelectMany(source => source.Definitions),
+            toolJson));
         services.AddSingleton<ExecutionDispatcher>();
-        services.AddSingleton<IExecutionInvocationFactory>(sp => new ExecutionInvocationFactory(
-            [.. sp.GetServices<IExecutionRunnerFactory>()]));
         services.AddSingleton(sp => new ExecutionRuntime(
             sp.GetRequiredService<ExecutionDispatcher>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
@@ -145,24 +151,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IExecutionIndex>(executions);
         services.AddSingleton<ITaskExecutionGateway>(sp => new TaskExecutionGateway(
             executions,
-            sp.GetRequiredService<IExecutionRuntime>(),
-            sp.GetRequiredService<IExecutionInvocationFactory>()));
-        services.AddSingleton<IExecutionContractWriter, ExecutionContractWriter>();
-        services.AddSingleton(sp => new PortSubmitter(
-            sp.GetRequiredService<IExecutionOwnerIndex>(),
-            sp.GetRequiredService<IExecutionContractWriter>()));
-        services.AddSingleton<IExecutionPortSubmitter>(sp => sp.GetRequiredService<PortSubmitter>());
-        services.AddSingleton(sp => new CannotCompleteSubmitter(
-            sp.GetRequiredService<IExecutionOwnerIndex>(),
-            sp.GetRequiredService<IExecutionContractWriter>()));
-        services.AddSingleton<IExecutionCannotCompleteSubmitter>(sp => sp.GetRequiredService<CannotCompleteSubmitter>());
-        services.AddSingleton(sp => new ExecutionStatusReader(
-            sp.GetRequiredService<IExecutionOwnerIndex>()));
-        services.AddSingleton<IExecutionStatusReader>(sp => sp.GetRequiredService<ExecutionStatusReader>());
-        services.AddSingleton<IToolSource>(sp => new ContractToolSource(
-            sp.GetRequiredService<IExecutionPortSubmitter>(),
-            sp.GetRequiredService<IExecutionCannotCompleteSubmitter>(),
-            sp.GetRequiredService<IExecutionStatusReader>()));
+            sp.GetRequiredService<IExecutionRuntime>()));
         services.AddSingleton<IInputChannel>(inputs);
         services.AddSingleton<IInputDelivery>(inputs);
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
@@ -196,14 +185,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(sp => new TaskService(sp.GetRequiredService<TaskDomain>().Actions));
         services.AddSingleton<ITaskControl>(sp => sp.GetRequiredService<TaskService>());
-        services.AddSingleton(sp => new SessionFactory(
-            sp.GetRequiredService<IModelAccess>(),
-            sp.GetRequiredService<IToolFactory>(),
-            sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<IExecutionConversationReader, ExecutionConversationReader>();
-        services.AddSingleton<IExecutionRunnerFactory>(sp => new LlmExecutionRunnerFactory(
-            sp.GetRequiredService<SessionFactory>(),
-            sp.GetRequiredService<Kuroe.Execution.Shared.Contract.IExecutionStatusReader>()));
 
         return composition;
     }
@@ -212,45 +194,30 @@ public static class ServiceCollectionExtensions
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
         KuroeComposition composition,
+        FlowTemplateCatalog flowTemplates,
         SettingsProvider settings,
         CatalogService catalog,
         ModelService models,
-        string workingDirectory,
         TaskRegistry taskRegistry,
         ExecutionIndex executions)
     {
         TaskSnapshotReader taskReader = new(taskRegistry);
-        FlowTemplateCatalog definitionCatalog = new([]);
-        KuroeInfoToolSource definitions = new(
+        KuroeInfoToolSource info = new(
             taskReader,
             new ToolCatalogView(catalog, models),
-            definitionCatalog,
+            flowTemplates,
             settings);
 
-        ErrorOr<Success> added = composition.AddToolDefinitions(definitions.Definitions);
+        ErrorOr<Success> added = composition.AddToolSources([info, new ContractToolSource()]);
         if (added.IsError)
         {
-            return added.ErrorsOrEmptyList;
-        }
-
-        ErrorOr<Success> contractDefinitions = composition.AddToolDefinitions(ContractToolSource.AllDefinitions);
-        if (contractDefinitions.IsError)
-        {
-            return contractDefinitions.ErrorsOrEmptyList;
+            return added;
         }
 
         services.AddSingleton(executions);
         services.AddSingleton(taskRegistry);
         services.AddSingleton<ITaskChangeSource>(taskRegistry);
         services.AddSingleton<ITaskReader>(taskReader);
-        services.AddSingleton<IToolSource>(sp => new KuroeInfoToolSource(
-            taskReader,
-            new ToolCatalogView(catalog, models),
-            sp.GetRequiredService<IFlowTemplateCatalog>(),
-            settings));
-        services.AddSingleton<IToolFactory>(sp => new KuroeToolFactory(
-            [.. sp.GetServices<IToolSource>()],
-            workingDirectory));
 
         return Result.Success;
     }

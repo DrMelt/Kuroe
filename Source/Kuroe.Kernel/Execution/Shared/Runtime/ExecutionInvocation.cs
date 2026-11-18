@@ -1,8 +1,10 @@
 using Kuroe.Execution.Shared.Identity;
+using Kuroe.Execution.Shared.Request;
 
 namespace Kuroe.Execution.Shared.Runtime;
 
-/// <summary>装配后的执行：目标描述与已解析的执行器工厂。</summary>
+/// <summary>一次执行的装配：目标标识、运行器工厂与类型专属参数。</summary>
 public sealed record ExecutionInvocation(
-    ExecutionTarget Target,
-    IExecutionRunnerFactory Factory);
+    ExecutionTargetId Target,
+    IExecutionRunnerFactory Factory,
+    IExecutionParameters Parameters);

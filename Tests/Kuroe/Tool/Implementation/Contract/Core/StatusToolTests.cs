@@ -3,6 +3,8 @@ using Xunit;
 using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
+using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Tool.Contract.Tests;
@@ -14,9 +16,8 @@ public sealed class StatusToolTests
     public void Describe_renders_the_round_contract()
     {
         StatusTool tool = new(
-            new FakeReader(new ExecutionStatus(
+            new FakeEntry(new ExecutionStatus(
                 new ExecutionTargetId("节点"), ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料")),
-            new ExecutionId(1),
             2,
             5);
 
@@ -28,23 +29,18 @@ public sealed class StatusToolTests
         Assert.Contains("已上报无法完成：缺少输入资料", result.Value, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void Read_error_is_returned_to_the_model()
+    private sealed class FakeEntry(ExecutionStatus status) : IExecutionRequestEntry
     {
-        StatusTool tool = new(
-            new FakeReader(Error.NotFound("Execution.NotFound", "执行不存在。")),
-            new ExecutionId(1),
-            1,
-            1);
+        public ExecutionId Id => new(1);
 
-        ErrorOr<string> result = Assert.Single(tool.Functions).Invoke(new ToolArguments(new Dictionary<string, object?>()));
+        ExecutionRequest IExecutionRequestEntry.Request => throw new NotSupportedException();
 
-        Assert.True(result.IsError);
-        Assert.Equal("执行不存在。", result.FirstError.Description);
-    }
+        public ExecutionStatus ReadStatus() => status;
 
-    private sealed class FakeReader(ErrorOr<ExecutionStatus> result) : IExecutionStatusReader
-    {
-        public ErrorOr<ExecutionStatus> Read(ExecutionId id) => result;
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
     }
 }

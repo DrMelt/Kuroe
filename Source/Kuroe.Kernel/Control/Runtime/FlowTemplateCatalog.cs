@@ -6,9 +6,13 @@ using Kuroe.Tasks.Shared;
 namespace Kuroe.Control.Runtime;
 
 /// <summary>流程模板目录：聚合各流程实现提供的模板来源。</summary>
-public sealed class FlowTemplateCatalog(IEnumerable<IFlowTemplateSource> sources) : IFlowTemplateCatalog
+public sealed class FlowTemplateCatalog(IEnumerable<IFlowTemplateSource> sources)
+    : IFlowTemplateCatalog, IFlowTemplateRegistrar
 {
-    private readonly IReadOnlyList<IFlowTemplateSource> _sources = [.. sources];
+    private readonly List<IFlowTemplateSource> _sources = [.. sources];
+
+    /// <inheritdoc/>
+    public void Register(IFlowTemplateSource source) => _sources.Add(source);
 
     /// <inheritdoc/>
     public IReadOnlyList<FlowTemplateView> All() =>

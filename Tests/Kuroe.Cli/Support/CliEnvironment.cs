@@ -2,11 +2,9 @@ using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Node.Llm;
+using Kuroe.Flow.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using NeutralExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
 using NeutralExecutionOutput = Kuroe.Execution.Shared.Ports.ExecutionOutput;
-using NeutralExecutionRequest = Kuroe.Execution.Shared.Request.ExecutionRequest;
 using NeutralExecutionRunner = Kuroe.Execution.Shared.Runtime.IExecutionRunner;
 using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionRunnerFactory;
 using NeutralExecutionParameters = Kuroe.Execution.Shared.Request.IExecutionParameters;
@@ -56,7 +54,8 @@ internal sealed class CliEnvironment : IAsyncDisposable
                 }
 
                 services.AddSingleton<IExecutionRunnerFactory>(runner);
-            });
+            },
+            new GraphFlowOptions { LlmRunnerFactory = runner });
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join('；', created.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -134,16 +133,15 @@ internal sealed class CliEnvironment : IAsyncDisposable
 /// <summary>不接模型的执行器：只播发固定文本，不提交端口产出。</summary>
 internal sealed class StubRunner : NeutralExecutionRunnerFactory
 {
-    /// <summary>本执行器的注册键，与 Llm 节点一致。</summary>
-    public ExecutionRunnerKey Key => LlmNodeTypes.RunnerKey;
-
     /// <summary>每次执行播发的文本。</summary>
     public string Text { get; set; } = "输出";
 
     /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
     public NeutralExecutionUsage Usage { get; set; } = NeutralExecutionUsage.None;
 
-    public NeutralExecutionRunner Create(NeutralExecutionParameters parameters, NeutralExecutionId execution) =>
+    public NeutralExecutionRunner Create(
+        NeutralExecutionParameters parameters,
+        IExecutionRequestEntry requests) =>
         new Run(this);
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的替身状态。</summary>
@@ -155,9 +153,7 @@ internal sealed class StubRunner : NeutralExecutionRunnerFactory
 
         public NeutralExecutionUsage Usage => owner.Usage;
 
-        public Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(
-            NeutralExecutionRequest request,
-            CancellationToken cancellationToken)
+        public Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(CancellationToken cancellationToken)
         {
             _journal.AppendContent(ProcessContentKind.Reply, owner.Text);
 

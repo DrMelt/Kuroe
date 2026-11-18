@@ -3,22 +3,25 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
+using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Flow.TestSupport;
 
 /// <summary>测试用的执行节点类型：派发执行，端口取值域与执行节点一致，不接受任何类型专属声明。</summary>
-public sealed class TestExecutableNodeType(bool withContractInput = true)
-    : INodeType, INodeTypeValidation, IExecutionRunnerKeyProvider
+public sealed class TestExecutableNodeType(
+    bool withContractInput = true,
+    IExecutionRunnerFactory? runnerFactory = null)
+    : INodeType, INodeTypeValidation, IExecutionRunnerFactoryProvider
 {
-    /// <summary>测试执行节点使用的执行运行器键。</summary>
-    public static ExecutionRunnerKey Key { get; } = new("Test");
+    /// <summary>测试执行节点默认使用的执行运行器工厂，不用于真正建立运行器。</summary>
+    public static IExecutionRunnerFactory Factory { get; } = new UnusedFactory();
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => TestNodeTypes.ExecutableKind;
 
-    /// <summary>本节点使用的执行运行器键。</summary>
-    public ExecutionRunnerKey RunnerKey => Key;
+    /// <summary>本节点使用的执行运行器工厂。</summary>
+    public IExecutionRunnerFactory RunnerFactory { get; } = runnerFactory ?? Factory;
 
     /// <summary>测试执行节点使用的静态输入端口名。</summary>
     public static PortName StaticPort { get; } = new("静态值");
@@ -42,5 +45,13 @@ public sealed class TestExecutableNodeType(bool withContractInput = true)
         {
             fail(scope.Node(node.Label.Value, "MaxExecutions 必须是正整数。"));
         }
+    }
+
+    private sealed class UnusedFactory : IExecutionRunnerFactory
+    {
+        public IExecutionRunner Create(
+            IExecutionParameters parameters,
+            IExecutionRequestEntry requests) =>
+            throw new InvalidOperationException("测试节点类型不建立运行器。");
     }
 }

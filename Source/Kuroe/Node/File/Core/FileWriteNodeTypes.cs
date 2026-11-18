@@ -12,9 +12,6 @@ public static class FileWriteNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("FileWrite");
 
-    /// <summary>执行运行器键，运行器按它选择。</summary>
-    public static ExecutionRunnerKey RunnerKey { get; } = FileWriteExecutionRunnerFactory.Key;
-
     /// <summary>未声明 MaxChars 时的写入上限，0 表示不限制。</summary>
     public const int DefaultMaxChars = 0;
 
@@ -27,5 +24,8 @@ public static class FileWriteNodeTypes
     };
 
     /// <summary>按类型专属声明建出类型实例。</summary>
-    public static INodeType Create(FileExecutionParameters parameters) => new FileWriteNodeType(parameters);
+    public static INodeType Create(
+        FileExecutionParameters parameters,
+        IExecutionRunnerFactory runnerFactory) =>
+        new FileWriteNodeType(parameters, runnerFactory);
 }

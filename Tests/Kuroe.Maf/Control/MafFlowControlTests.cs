@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Maf.Definition;
 using Kuroe.Execution;
-using Kuroe.Execution.Registry;
 using Kuroe.Control.Runtime;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Runtime.Persistence;
@@ -72,7 +71,7 @@ public sealed class MafFlowControlTests
         {
             Block = Interlocked.Increment(ref created) == 1,
         });
-        Harness harness = new(runners, TestFlow.SingleStep());
+        Harness harness = new(runners, TestFlow.SingleStep(runners));
         harness.Start();
 
         await WaitForRunner(runners, 1);
@@ -93,7 +92,7 @@ public sealed class MafFlowControlTests
     public async Task Shutdown_waits_for_the_loop_to_stop()
     {
         FakeRunnerFactory runners = new(() => new FakeRunner { Block = true });
-        Harness harness = new(runners, TestFlow.SingleStep());
+        Harness harness = new(runners, TestFlow.SingleStep(runners));
         harness.Start();
         await WaitForRunner(runners, 1);
 
@@ -115,7 +114,7 @@ public sealed class MafFlowControlTests
                 ? Error.Failure("Test.Failure", "第一步失败")
                 : null,
         });
-        Harness harness = new(runners, TestFlow.SingleStep());
+        Harness harness = new(runners, TestFlow.SingleStep(runners));
         harness.Start();
 
         await WaitUntil(() => harness.Work.State == TaskState.Blocked);
@@ -133,7 +132,7 @@ public sealed class MafFlowControlTests
         {
             Failure = Error.Failure("Test.Failure", "失败"),
         });
-        Harness harness = new(runners, TestFlow.SingleStep());
+        Harness harness = new(runners, TestFlow.SingleStep(runners));
         harness.Start();
 
         await WaitUntil(() => harness.Work.State == TaskState.Blocked);
@@ -193,7 +192,7 @@ public sealed class MafFlowControlTests
     public async Task Terminate_keeps_unfinished_steps()
     {
         FakeRunnerFactory runners = new(() => new FakeRunner { Block = true });
-        Harness harness = new(runners, TestFlow.Definition());
+        Harness harness = new(runners, TestFlow.Definition(runners));
         harness.Start();
         await WaitForRunner(runners, 1);
         await WaitUntil(() => harness.Pending().SequenceEqual(["第二步"]));
@@ -216,7 +215,7 @@ public sealed class MafFlowControlTests
         {
             Block = Interlocked.Increment(ref created) == 1,
         });
-        Harness harness = new(runners, TestFlow.Definition());
+        Harness harness = new(runners, TestFlow.Definition(runners));
         harness.Start();
         await WaitForRunner(runners, 1);
 
@@ -270,14 +269,13 @@ public sealed class MafFlowControlTests
         internal Harness(FakeRunnerFactory? runners = null, MafFlowDefinition? definition = null)
         {
             FakeRunnerFactory factory = runners ?? new FakeRunnerFactory(() => new FakeRunner());
-            MafFlowDefinition flow = definition ?? TestFlow.Definition();
+            MafFlowDefinition flow = definition ?? TestFlow.Definition(factory);
             MafFlowCatalog flows = new([flow]);
             ExecutionIndex index = new();
             IExecutionRuntime executions = new ExecutionRuntime(
                 new ExecutionDispatcher());
-            IExecutionInvocationFactory invocations = new ExecutionInvocationFactory([factory]);
             TaskRegistry registry = new(index, pauseOnRestore: false);
-            Gateway = new TaskExecutionGateway(index, executions, invocations);
+            Gateway = new TaskExecutionGateway(index, executions);
             Flow = new FlowRuntime(executions);
             FlowProvider provider = new(
                 new MafFlowIdentity(flows),

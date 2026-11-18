@@ -4,9 +4,11 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Input.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;
+using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Input.Tests;
 
@@ -20,9 +22,12 @@ public sealed class InputExecutionRunnerTests
     public async Task Execution_declares_reception_and_returns_the_answer()
     {
         StubInputChannel channel = new();
-        InputExecutionRunner runner = new(channel, new InputExecutionParameters("要做什么", Step));
+        InputExecutionRunner runner = new(
+            channel,
+            new InputExecutionParameters("要做什么", Step),
+            new Entry(Request()));
 
-        Task<ErrorOr<ExecutionOutput>> running = runner.ExecuteAsync(Request(), CancellationToken.None);
+        Task<ErrorOr<ExecutionOutput>> running = runner.ExecuteAsync(CancellationToken.None);
 
         (FlowStepPath step, FlowPendingKind kind, string? question, InputReceiver receive) = Assert.Single(channel.Declared);
         Assert.Equal(Step, step);
@@ -41,10 +46,13 @@ public sealed class InputExecutionRunnerTests
     public async Task Cancellation_declines_the_wait()
     {
         StubInputChannel channel = new();
-        InputExecutionRunner runner = new(channel, new InputExecutionParameters(null, Step));
+        InputExecutionRunner runner = new(
+            channel,
+            new InputExecutionParameters(null, Step),
+            new Entry(Request()));
         using CancellationTokenSource cancellation = new();
 
-        Task<ErrorOr<ExecutionOutput>> running = runner.ExecuteAsync(Request(), cancellation.Token);
+        Task<ErrorOr<ExecutionOutput>> running = runner.ExecuteAsync(cancellation.Token);
         await cancellation.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => running);
@@ -59,4 +67,19 @@ public sealed class InputExecutionRunnerTests
             [],
             new Dictionary<ExecutionPortName, string>(),
             []);
+
+    private sealed class Entry(ExecutionRequest request) : IExecutionRequestEntry
+    {
+        public ExecutionId Id => new(1);
+
+        ExecutionRequest IExecutionRequestEntry.Request => request;
+
+        public ExecutionStatus ReadStatus() => throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
+    }
 }

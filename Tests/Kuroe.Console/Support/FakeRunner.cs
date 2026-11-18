@@ -11,9 +11,7 @@ using NeutralExecutionParameters = Kuroe.Execution.Shared.Request.IExecutionPara
 using NeutralExecutionRunner = Kuroe.Execution.Shared.Runtime.IExecutionRunner;
 using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.Runtime.IExecutionRunnerFactory;
 using NeutralPortKind = Kuroe.Execution.Shared.Ports.ExecutionPortKind;
-using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Runner.Llm.Executions;
 
 namespace Kuroe.Console.Tests.Support;
 
@@ -35,12 +33,6 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
         }
     }
 
-    /// <summary>本执行器的注册键，与 Llm 节点一致。</summary>
-    public ExecutionRunnerKey Key => LlmExecutionRunnerFactory.Key;
-
-    /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
-    public IExecutionPortSubmitter? PortSubmitter { get; set; }
-
     /// <summary>执行闸门：替身执行器在此登记进入并保持，测试等待进入并放行。</summary>
     public IExecutionGate Gate { get; } = new ExecutionGate();
 
@@ -57,15 +49,18 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
                 true)),
         ];
 
-    public NeutralExecutionRunner Create(NeutralExecutionParameters parameters, NeutralExecutionId execution) =>
-        new Run(this, execution);
+    public NeutralExecutionRunner Create(
+        NeutralExecutionParameters parameters,
+        IExecutionRequestEntry requests) =>
+        new Run(this, requests);
 
     private async Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(
-        NeutralExecutionId execution,
-        NeutralExecutionRequest request,
+        IExecutionRequestEntry requests,
         OutputJournal journal,
         CancellationToken cancellationToken)
     {
+        NeutralExecutionId execution = requests.Id;
+        NeutralExecutionRequest request = requests.Request;
         NodePath node = new(
             [.. request.Target.Value
                 .Split('/', StringSplitOptions.RemoveEmptyEntries)
@@ -79,9 +74,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
                 [.. request.OutputPorts.Where(port => port.Required)];
             if (ports.Count > 0 && SubmitsPorts)
             {
-                IExecutionPortSubmitter submitter = PortSubmitter
-                    ?? throw new InvalidOperationException("测试环境没有提供端口提交器。");
-                _ = submitter.Submit(execution, PortValuesFor(ports));
+                _ = requests.SubmitOutputs(PortValuesFor(ports));
             }
 
             journal.AppendContent(ProcessContentKind.Reply, $"{node}产出");
@@ -160,15 +153,14 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
     }
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
-    private sealed class Run(FakeRunner owner, NeutralExecutionId execution) : NeutralExecutionRunner
+    private sealed class Run(FakeRunner owner, IExecutionRequestEntry requests) : NeutralExecutionRunner
     {
         private readonly OutputJournal _journal = new();
 
         public IProcessJournal Journal => _journal;
 
         public Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(
-            NeutralExecutionRequest request,
             CancellationToken cancellationToken) =>
-            owner.ExecuteAsync(execution, request, _journal, cancellationToken);
+            owner.ExecuteAsync(requests, _journal, cancellationToken);
     }
 }

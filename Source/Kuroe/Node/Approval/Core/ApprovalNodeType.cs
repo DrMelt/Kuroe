@@ -14,8 +14,10 @@ using Kuroe.Execution.Shared.Runtime;
 namespace Kuroe.Node.Approval;
 
 /// <summary>审批节点类型：启动执行后等待批准，批准即按同名输出端口放出停驻取值。取消后不再接收外部输入。</summary>
-public sealed class ApprovalNodeType(ApprovalParameters? parameters)
-    : INodeType, INodeTypeValidation, INodeOutputProjection, IExecutionParameterProvider, IExecutionRunnerKeyProvider
+public sealed class ApprovalNodeType(
+    ApprovalParameters? parameters,
+    IExecutionRunnerFactory runnerFactory)
+    : INodeType, INodeTypeValidation, INodeOutputProjection, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public ApprovalParameters? Parameters { get; } = parameters;
@@ -23,8 +25,8 @@ public sealed class ApprovalNodeType(ApprovalParameters? parameters)
     /// <summary>类型名。</summary>
     public NodeKind Kind => ApprovalNodeTypes.Name;
 
-    /// <summary>本节点使用的执行运行器键。</summary>
-    public ExecutionRunnerKey RunnerKey => ApprovalNodeTypes.RunnerKey;
+    /// <summary>本节点使用的执行运行器工厂。</summary>
+    public IExecutionRunnerFactory RunnerFactory { get; } = runnerFactory;
 
     /// <summary>审批节点类型的静态形状。</summary>
     public NodeTypeShape Shape => ApprovalNodeTypes.Shape;

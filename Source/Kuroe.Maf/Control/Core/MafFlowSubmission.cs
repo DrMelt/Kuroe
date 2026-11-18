@@ -11,6 +11,7 @@ using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Restore;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 using Kuroe.Execution.Shared.Usage;
 
@@ -147,10 +148,15 @@ public sealed class MafFlowSubmission(
                 record.Identity.Id,
                 flow,
                 execution,
-                out IExecution restoredExecution);
+                out IExecution? restoredExecution);
             if (failure is { } error)
             {
                 return [error];
+            }
+
+            if (restoredExecution is null)
+            {
+                return [Error.Failure(FlowErrorCodes.RecordFormat, "恢复执行没有建立。")];
             }
 
             restored.Add(restoredExecution);
@@ -182,9 +188,9 @@ public sealed class MafFlowSubmission(
         TaskId taskId,
         MafFlowDefinition definition,
         ExecutionRecord record,
-        out IExecution execution)
+        out IExecution? execution)
     {
-        execution = null!;
+        execution = null;
         MafStep? step = definition.Steps.FirstOrDefault(candidate => candidate.ExecutionTargetId == record.Target);
         if (step is null)
         {
@@ -265,18 +271,18 @@ public sealed class MafFlowSubmission(
                 new Dictionary<ExecutionPortName, string>(),
                 [],
                 model);
-            ErrorOr<ExecutionTarget> target = step.TargetFactory.Create(step.Id, model, context);
+            ErrorOr<ExecutionInvocation> target = step.TargetFactory.Create(step.Id, model, context);
             if (target.IsError)
             {
                 errors.AddRange(target.ErrorsOrEmptyList);
                 continue;
             }
 
-            if (target.Value.Id != step.ExecutionTargetId)
+            if (target.Value.Target != step.ExecutionTargetId)
             {
                 errors.Add(FlowErrors.Body(
                     definition.Name.Value,
-                    $"步骤「{step.Id.Value}」的执行目标标识 {target.Value.Id.Value} 与步骤标识不一致。"));
+                    $"步骤「{step.Id.Value}」的执行目标标识 {target.Value.Target.Value} 与步骤标识不一致。"));
             }
         }
 

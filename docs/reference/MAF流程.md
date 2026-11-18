@@ -4,10 +4,11 @@ MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，步骤的�
 
 ## 宿主装配
 
-宿主在核心装配之后注册流程定义：
+宿主在核心装配之后注册流程定义。`composition` 是 `AddKuroeCore` 的返回值，`FlowTemplates` 用于登记流程模板，`LlmRunner` 是核心预建的 Llm 执行运行器工厂：
 
 ```csharp
 services.AddKuroeMafFlows(
+    composition.FlowTemplates,
     new MafFlowDefinition(
         new FlowName("计划执行"),
         [
@@ -19,12 +20,12 @@ services.AddKuroeMafFlows(
                 new MafStepId("计划"),
                 "计划",
                 [new PortName("计划")],
-                new MafStepTarget(LlmExecutionRunnerFactory.Key, context => CreateParameters(context))),
+                new MafStepTarget(composition.LlmRunner, context => CreateParameters(context))),
             new MafStep(
                 new MafStepId("执行"),
                 "执行",
                 [new PortName("结论")],
-                new MafStepTarget(LlmExecutionRunnerFactory.Key, context => CreateParameters(context))),
+                new MafStepTarget(composition.LlmRunner, context => CreateParameters(context))),
         ],
         [
             new MafEdge(new MafStepId("计划"), new MafStepId("执行")),
@@ -34,7 +35,7 @@ services.AddKuroeMafFlows(
     });
 ```
 
-`CreateParameters` 接收 `ExecutionParameterContext`，返回 `ErrorOr<IExecutionParameters>`，由宿主按模型与当前轮次构造参数。步骤的每次运行建立一次参数。`MafStepTarget` 由框架建立执行目标，目标标识直接来自步骤标识，运行器按目标执行运行器键选择。宿主必须注册具有该键的执行器工厂。需要自定义执行目标时实现 `IMafStepTargetFactory`，提交时校验目标标识必须与步骤标识一致。`AddKuroeMafFlows` 同时注册流程实现、存档编解码与流程模板，流程进入流程目录，可以从 Console 与 CLI 按名字提交。传入 `IMafFlowSource` 时按该来源取定义。
+`CreateParameters` 接收 `ExecutionParameterContext`，返回 `ErrorOr<IExecutionParameters>`，由宿主按模型与当前轮次构造参数。步骤的每次运行建立一次参数。`MafStepTarget` 持有执行运行器工厂实例，由框架建立执行装配结果，目标标识直接来自步骤标识。需要自定义执行装配时实现 `IMafStepTargetFactory`，提交时校验目标标识必须与步骤标识一致。`AddKuroeMafFlows` 同时注册流程实现、存档编解码与流程模板，流程进入流程目录，可以从 Console 与 CLI 按名字提交。传入 `IMafFlowSource` 时按该来源取定义。
 
 ## 定义
 
@@ -46,7 +47,7 @@ services.AddKuroeMafFlows(
 | `Edges` | 步骤之间的连接 |
 | `Description` | 流程说明，进入流程目录 |
 
-步骤标识同时是执行目标标识与流程步骤路径，标识不能为空，也不能含 `/`。执行目标工厂给出的 `ExecutionTarget.Id` 必须与步骤标识一致，提交时校验。一个步骤至多一个上游，分叉后的步骤可以并行执行，多个上游的收敛不支持。
+步骤标识同时是执行目标标识与流程步骤路径，标识不能为空，也不能含 `/`。执行装配结果的 `ExecutionInvocation.Target` 必须与步骤标识一致，提交时校验。一个步骤至多一个上游，分叉后的步骤可以并行执行，多个上游的收敛不支持。
 
 ## 输入与产出
 

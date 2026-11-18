@@ -1,8 +1,6 @@
 using ErrorOr;
-using Kuroe.Control.Contract;
 using Kuroe.Control.Shared;
 using Kuroe.Execution;
-using Kuroe.Execution.Registry;
 using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Presentation.Shared;
@@ -34,15 +32,11 @@ public sealed class CodeFlowExecutionTests
 
         await Harness.RunAsync(
             execution,
-            new PortRunnerFactory(harness.Submitter, Conclusion, "得出结论"),
-            new ExecutionTarget(
-                new ExecutionTargetId("回话"),
-                PortRunnerFactory.Key,
-                EmptyExecutionParameters.Instance));
+            new PortRunnerFactory(Conclusion, "得出结论"));
 
         Assert.Equal(ExecutionState.Succeeded, execution.State);
 
-        ExecutionStatus status = harness.Status.Read(execution.Id).ThrowIfError();
+        ExecutionStatus status = ExecutionStatus.Of(execution.Request, execution.Contract, execution.State);
         Assert.Empty(status.OutstandingOutputs);
         Assert.Equal("得出结论：目标", execution.Contract.Outputs![Conclusion].Text);
 
@@ -56,30 +50,22 @@ public sealed class CodeFlowExecutionTests
     {
         Harness harness = Harness.Create();
         IExecution execution = harness.Open();
-        TaskExecutionGateway gateway = new(
-            harness.Index,
-            harness.Runtime,
-            new ExecutionInvocationFactory());
 
-        ErrorOr<Success> run = await gateway.RunAsync(
-            execution,
-            new ExecutionTarget(
-                new ExecutionTargetId("回话"),
-                new ExecutionRunnerKey("missing"),
-                EmptyExecutionParameters.Instance));
+        ErrorOr<Success> run = await Harness.RunAsync(execution, new ThrowingRunnerFactory());
 
         Assert.True(run.IsError);
         Assert.Equal(ExecutionState.Failed, execution.State);
     }
 
     [Fact]
-    public void A_code_flow_reports_cannot_complete_and_keeps_the_reason()
+    public async Task A_code_flow_reports_cannot_complete_and_keeps_the_reason()
     {
         Harness harness = Harness.Create();
         IExecution execution = harness.Open();
 
-        ExecutionStatus status = harness.CannotComplete.Report(execution.Id, "缺少资料").ThrowIfError();
+        await Harness.RunAsync(execution, new CannotCompleteRunnerFactory());
 
+        ExecutionStatus status = ExecutionStatus.Of(execution.Request, execution.Contract, execution.State);
         Assert.Equal("缺少资料", status.CannotCompleteReason);
         Assert.Equal([Conclusion], status.OutstandingOutputs);
     }
@@ -111,9 +97,6 @@ public sealed class CodeFlowExecutionTests
             Task = task;
             Index = index;
             Runtime = runtime;
-            Submitter = new PortSubmitter(index, new ExecutionContractWriter());
-            CannotComplete = new CannotCompleteSubmitter(index, new ExecutionContractWriter());
-            Status = new ExecutionStatusReader(index);
         }
 
         public WorkTask Task { get; }
@@ -121,12 +104,6 @@ public sealed class CodeFlowExecutionTests
         public ExecutionIndex Index { get; }
 
         public ExecutionRuntime Runtime { get; }
-
-        public PortSubmitter Submitter { get; }
-
-        public CannotCompleteSubmitter CannotComplete { get; }
-
-        public ExecutionStatusReader Status { get; }
 
         public static Harness Create()
         {
@@ -177,10 +154,14 @@ public sealed class CodeFlowExecutionTests
 
         public static Task<ErrorOr<Success>> RunAsync(
             IExecution execution,
-            IExecutionRunnerFactory runner,
-            ExecutionTarget target) =>
+            IExecutionRunnerFactory factory) =>
             new ExecutionRuntime(new ExecutionDispatcher())
-                .RunAsync(execution, new ExecutionInvocation(target, runner));
+                .RunAsync(
+                    execution,
+                    new ExecutionInvocation(
+                        execution.Request.Target,
+                        factory,
+                        EmptyExecutionParameters.Instance));
     }
 }
 internal sealed class CodeIdentity : IFlowIdentity
@@ -255,38 +236,64 @@ internal sealed class CodePresentation : IFlowPresentation
 }
 
 internal sealed class PortRunnerFactory(
-    IExecutionPortSubmitter submitter,
     ExecutionPortName port,
     string text) : IExecutionRunnerFactory
 {
-    /// <summary>本工厂的注册键。</summary>
-    public static ExecutionRunnerKey Key { get; } = new("Port");
-
-    /// <inheritdoc/>
-    ExecutionRunnerKey IExecutionRunnerFactory.Key => Key;
-
-    public IExecutionRunner Create(IExecutionParameters parameters, ExecutionId execution) =>
-        new PortRunner(submitter, execution, port, text);
+    public IExecutionRunner Create(
+        IExecutionParameters parameters,
+        IExecutionRequestEntry requests) =>
+        new PortRunner(requests, port, text);
 
     private sealed class PortRunner(
-        IExecutionPortSubmitter submitter,
-        ExecutionId execution,
+        IExecutionRequestEntry requests,
         ExecutionPortName port,
         string text) : IExecutionRunner
     {
         public IProcessJournal Journal { get; } = new ExecutionJournal();
 
-        public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-            ExecutionRequest request,
-            CancellationToken cancellationToken)
+        public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(CancellationToken cancellationToken)
         {
             await Task.Yield();
-            ErrorOr<ExecutionStatus> submitted = submitter.Submit(
-                execution,
-                [new ExecutionOutputValue(port, $"{text}：{request.Texts[new ExecutionPortName("输入")]}")]);
+            ErrorOr<ExecutionStatus> submitted = requests.SubmitOutputs(
+                [
+                    new ExecutionOutputValue(
+                        port,
+                        $"{text}：{requests.Request.Texts[new ExecutionPortName("输入")]}"),
+                ]);
 
             return submitted.IsError
                 ? submitted.ErrorsOrEmptyList
+                : ExecutionOutput.FromPorts([]);
+        }
+    }
+}
+
+internal sealed class ThrowingRunnerFactory : IExecutionRunnerFactory
+{
+    public IExecutionRunner Create(
+        IExecutionParameters parameters,
+        IExecutionRequestEntry requests) =>
+        throw new InvalidOperationException("测试执行器工厂失败。");
+}
+
+internal sealed class CannotCompleteRunnerFactory : IExecutionRunnerFactory
+{
+    public IExecutionRunner Create(
+        IExecutionParameters parameters,
+        IExecutionRequestEntry requests) =>
+        new Runner(requests);
+
+    private sealed class Runner(IExecutionRequestEntry requests) : IExecutionRunner
+    {
+        public IProcessJournal Journal { get; } = new ExecutionJournal();
+
+        public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+            ErrorOr<ExecutionStatus> reported = requests.ReportCannotComplete("缺少资料");
+
+            return reported.IsError
+                ? reported.ErrorsOrEmptyList
                 : ExecutionOutput.FromPorts([]);
         }
     }

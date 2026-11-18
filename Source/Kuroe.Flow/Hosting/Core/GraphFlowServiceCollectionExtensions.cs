@@ -15,7 +15,6 @@ using Kuroe.Flow.Hosting.Workflows.Flows;
 using Kuroe.Flow.Hosting.Workflows.Flows.Files;
 using Kuroe.Flow.Hosting.Workflows.Tasks;
 using Kuroe.Flow.Json;
-using Kuroe.Input.Shared;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
@@ -40,13 +39,19 @@ namespace Kuroe.Flow.Hosting;
 public sealed record GraphFlowOptions
 {
     /// <summary>追加节点类型描述。图流程固定注册 Container、Llm、FileRead、FileWrite 与 Command。</summary>
-    public Action<INodeTypeDescriptionRegistry>? RegisterNodeTypes { get; init; }
+    public Action<INodeTypeDescriptionRegistry, GraphExecutionRunners>? RegisterNodeTypes { get; init; }
 
     /// <summary>流程库个别流程编译失败时是否继续装配。为 false 时按启动错误返回。</summary>
     public bool AllowFlowFailures { get; init; }
 
     /// <summary>命令节点的进程执行边界，未给出时使用系统进程。命令工具使用自己的进程边界。</summary>
     public IProcessRunner? CommandNodeProcessRunner { get; init; }
+
+    /// <summary>Llm 节点使用的执行运行器工厂，未给出时使用核心装配的工厂。</summary>
+    public IExecutionRunnerFactory? LlmRunnerFactory { get; init; }
+
+    /// <summary>其余内置节点使用的执行运行器工厂，未给出时按组合结果建立。</summary>
+    public GraphExecutionRunners? ExecutionRunners { get; init; }
 }
 
 /// <summary>图流程装配入口：注册流程库、节点类型、图流程实现与图记录编解码。</summary>
@@ -81,6 +86,14 @@ public static class GraphFlowServiceCollectionExtensions
         }
 
         ToolContractCatalog contracts = new(composition.ToolDefinitions);
+        IProcessRunner process = graphOptions.CommandNodeProcessRunner ?? new ProcessRunner();
+        IExecutionRunnerFactory llmRunner = graphOptions.LlmRunnerFactory ?? composition.LlmRunner;
+        GraphExecutionRunners runners = graphOptions.ExecutionRunners ?? new(
+            new CommandExecutionRunnerFactory(process),
+            new FileReadExecutionRunnerFactory(composition.Files),
+            new FileWriteExecutionRunnerFactory(composition.Files),
+            new InputExecutionRunnerFactory(composition.InputChannel),
+            new ApprovalExecutionRunnerFactory(composition.InputChannel));
         NodeTypeDescriptionRegistry typeFiles = new();
         JsonNodeFormat nodeFormat = new();
         JsonFlowFormat flowFormat = new();
@@ -88,10 +101,14 @@ public static class GraphFlowServiceCollectionExtensions
         IFlowExpander expander = new NodeLibraryExpander();
         IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
-        LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
-        FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
-        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
-        graphOptions.RegisterNodeTypes?.Invoke(typeFiles);
+        LlmNodeTypeDescriptions.RegisterInto(typeFiles, llmRunner, contracts);
+        FileNodeTypeDescriptions.RegisterInto(
+            typeFiles,
+            paths.WorkingDirectory,
+            runners.FileRead,
+            runners.FileWrite);
+        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, runners.Command);
+        graphOptions.RegisterNodeTypes?.Invoke(typeFiles, runners);
 
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(
@@ -103,7 +120,7 @@ public static class GraphFlowServiceCollectionExtensions
                 flowFormat,
                 flowFormat,
                 importFormat),
-            BuiltinNodeCatalog.Nodes,
+            BuiltinNodeCatalog.Create(llmRunner),
             descriptionCompiler,
             graphOptions.AllowFlowFailures);
         if (flows.IsError)
@@ -124,8 +141,9 @@ public static class GraphFlowServiceCollectionExtensions
         services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
         services.AddSingleton<IExecutionTargetResolver>(sp => new ExecutionTargetResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
-        services.AddSingleton<IFlowTemplateSource>(new GraphFlowTemplateSource(
-            flows.Value, hostStartInputs.Value));
+        GraphFlowTemplateSource templates = new(flows.Value, hostStartInputs.Value);
+        composition.FlowTemplates.Register(templates);
+        services.AddSingleton<IFlowTemplateSource>(templates);
         services.AddSingleton(sp => new FlowProvider(
             new GraphFlowIdentity(flows.Value),
             new GraphFlowSubmission(
@@ -143,30 +161,6 @@ public static class GraphFlowServiceCollectionExtensions
             new GraphFlowPresentation(),
             new GraphFlowRecordSource()));
 
-        AddBuiltinGraphExecutionRunners(services, composition, graphOptions);
-
         return Result.Success;
-    }
-
-    /// <summary>注册图节点运行器。执行运行器键由节点类型给出，运行器实现不认识节点。</summary>
-    public static void AddBuiltinGraphExecutionRunners(
-        this IServiceCollection services,
-        KuroeComposition composition,
-        GraphFlowOptions? options = null)
-    {
-        GraphFlowOptions graphOptions = options ?? new GraphFlowOptions();
-        IProcessRunner process = graphOptions.CommandNodeProcessRunner ?? new ProcessRunner();
-        IInputChannel channel = composition.InputChannel;
-
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new CommandExecutionRunnerFactory(process));
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new FileReadExecutionRunnerFactory(composition.Files));
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new FileWriteExecutionRunnerFactory(composition.Files));
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new InputExecutionRunnerFactory(channel));
-        services.AddSingleton<IExecutionRunnerFactory>(
-            new ApprovalExecutionRunnerFactory(channel));
     }
 }

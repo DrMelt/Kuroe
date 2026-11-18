@@ -3,13 +3,17 @@ using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Tool;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Llm;
 
 /// <summary>Llm 节点的描述契约：字段表与取值到类型实例的转换在此，能力路径与系统指令块的规则在此报出，
 /// 未知字段与形状由构造层报出。</summary>
-internal sealed class LlmNodeTypeDescription(IToolContractCatalog? contracts = null) : INodeTypeDescription
+internal sealed class LlmNodeTypeDescription(
+    IExecutionRunnerFactory runnerFactory,
+    IToolContractCatalog? contracts = null) : INodeTypeDescription
 {
+    private readonly IExecutionRunnerFactory _runnerFactory = runnerFactory;
     private const string PromptName = "Prompt";
     private const string ToolsName = "Tools";
     private const string SystemPromptName = "SystemPrompt";
@@ -56,7 +60,7 @@ internal sealed class LlmNodeTypeDescription(IToolContractCatalog? contracts = n
             Tools = [.. tools.Select(tool => new ToolPath(tool))],
             SystemPrompt = systemPrompt,
             ToolPorts = values.MappingMaps(ToolPortsName),
-        }, _contracts);
+        }, _runnerFactory, _contracts);
     }
 
 }

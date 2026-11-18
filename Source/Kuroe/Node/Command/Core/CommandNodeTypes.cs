@@ -13,9 +13,6 @@ public static class CommandNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Command");
 
-    /// <summary>执行运行器键，运行器按它选择。</summary>
-    public static ExecutionRunnerKey RunnerKey { get; } = CommandExecutionRunnerFactory.Key;
-
     /// <summary>未声明 TimeoutSeconds 时的等待上限秒数。</summary>
     public const int DefaultTimeoutSeconds = 120;
 
@@ -35,6 +32,8 @@ public static class CommandNodeTypes
     };
 
     /// <summary>按类型专属声明建出类型实例。</summary>
-    public static INodeType Create(CommandExecutionParameters parameters) =>
-        new CommandNodeType(parameters);
+    public static INodeType Create(
+        CommandExecutionParameters parameters,
+        IExecutionRunnerFactory runnerFactory) =>
+        new CommandNodeType(parameters, runnerFactory);
 }

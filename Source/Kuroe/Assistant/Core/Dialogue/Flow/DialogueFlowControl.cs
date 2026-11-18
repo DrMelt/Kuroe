@@ -1,11 +1,11 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Input.Shared;
-using Kuroe.Node.Llm;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
@@ -15,11 +15,13 @@ internal sealed class DialogueFlowControl(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
     IInputChannel inputs,
+    IExecutionRunnerFactory runnerFactory,
     DialogueFlowState state) : IFlowControl
 {
     private bool _awaiting = true;
     private string? _pendingInput;
     private IExecution? _live;
+    private readonly IExecutionRunnerFactory _runnerFactory = runnerFactory;
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <inheritdoc/>
@@ -150,7 +152,7 @@ internal sealed class DialogueFlowControl(
     private void ContinueWithInput()
     {
         IExecution? execution;
-        ExecutionTarget target;
+        ExecutionInvocation invocation;
         lock (task.Gate)
         {
             if (_pendingInput is not { } input
@@ -164,9 +166,9 @@ internal sealed class DialogueFlowControl(
             _pendingInput = null;
             execution = gateway.Open(task, Request(input));
             IExecution? previous = task.Executions.Count > 0 ? task.Executions[^1] : null;
-            target = new ExecutionTarget(
+            invocation = new ExecutionInvocation(
                 new ExecutionTargetId(DialogueFlow.ReplyLabel),
-                LlmNodeTypes.RunnerKey,
+                _runnerFactory,
                 state.Parameters.ToExecutionParameters(
                     state.Model,
                     previous?.RestoreData,
@@ -176,7 +178,7 @@ internal sealed class DialogueFlowControl(
             _live = execution;
         }
 
-        _ = RunAsync(execution, target);
+        _ = RunAsync(execution, invocation);
     }
 
     private ExecutionRequest Request(string text) =>
@@ -191,11 +193,11 @@ internal sealed class DialogueFlowControl(
             },
             []);
 
-    private async Task RunAsync(IExecution execution, ExecutionTarget target)
+    private async Task RunAsync(IExecution execution, ExecutionInvocation invocation)
     {
         await gateway.RunAsync(
             execution,
-            target).ConfigureAwait(false);
+            invocation).ConfigureAwait(false);
 
         lock (task.Gate)
         {

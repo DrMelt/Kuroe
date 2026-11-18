@@ -9,8 +9,10 @@ using Kuroe.Execution.Shared.Runtime;
 namespace Kuroe.Node.Command;
 
 /// <summary>命令节点类型：按命令变量展开执行目录与参数并执行一次命令，把合并输出按内容产出发布到文本端口。</summary>
-public sealed class CommandNodeType(CommandExecutionParameters? parameters)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerKeyProvider
+public sealed class CommandNodeType(
+    CommandExecutionParameters? parameters,
+    IExecutionRunnerFactory runnerFactory)
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public CommandExecutionParameters? Parameters { get; } = parameters;
@@ -18,8 +20,8 @@ public sealed class CommandNodeType(CommandExecutionParameters? parameters)
     /// <summary>类型名。</summary>
     public NodeKind Kind => CommandNodeTypes.Name;
 
-    /// <summary>本节点使用的执行运行器键。</summary>
-    public ExecutionRunnerKey RunnerKey => CommandNodeTypes.RunnerKey;
+    /// <summary>本节点使用的执行运行器工厂。</summary>
+    public IExecutionRunnerFactory RunnerFactory { get; } = runnerFactory;
 
     /// <summary>命令节点类型的静态形状。</summary>
     public NodeTypeShape Shape => CommandNodeTypes.Shape;

@@ -5,6 +5,7 @@ using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Maf.Control;
@@ -50,7 +51,7 @@ internal sealed class MafStepExecutor(
             request.Texts,
             request.OutputPorts,
             model);
-        ErrorOr<ExecutionTarget> target = step.TargetFactory.Create(step.Id, model, context);
+        ErrorOr<ExecutionInvocation> target = step.TargetFactory.Create(step.Id, model, context);
         if (target.IsError)
         {
             throw new InvalidOperationException(target.FirstError.Description);

@@ -1,24 +1,24 @@
 using ErrorOr;
 using Kuroe.Files.Shared;
 using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.File;
 
 /// <summary>文件读取节点的一次执行：按路径变量解析路径并读取文件，内容作为产出。</summary>
 internal sealed class FileReadExecutionRunner(
     FileExecutionParameters parameters,
-    IWorkspaceFiles files)
-    : FileExecutionRunner(parameters, files)
+    IWorkspaceFiles files,
+    IExecutionRequestEntry requests)
+    : FileExecutionRunner(parameters, files, requests)
 {
     /// <inheritdoc/>
     public override Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (ResolveTarget(request, out string fullPath) is { } failure)
+        if (ResolveTarget(out string fullPath) is { } failure)
         {
             return Task.FromResult(Failure(failure));
         }

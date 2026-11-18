@@ -1,8 +1,7 @@
 using Kuroe.Runner.Llm;
 using Kuroe.Tool;
-using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Tools;
 
@@ -13,11 +12,10 @@ internal sealed class KuroeToolFactory(
 {
     /// <inheritdoc/>
     public IReadOnlyList<ITool> Create(
-        ExecutionId execution,
-        ExecutionRequest request,
+        IExecutionRequestEntry requests,
         LlmExecutionParameters parameters)
     {
-        IReadOnlyList<ToolPath> paths = ExecutionToolPaths.For(parameters.Tools, request.OutputPorts);
+        IReadOnlyList<ToolPath> paths = ExecutionToolPaths.For(parameters.Tools, requests.Request.OutputPorts);
         List<(ToolPath Prefix, IReadOnlyDictionary<string, string> Ports)> mappings =
         [
             .. parameters.ToolPorts
@@ -38,10 +36,10 @@ internal sealed class KuroeToolFactory(
                     pair => new ExecutionPortName(pair.Value)));
 
         ToolContext context = new(
-            new ExecutionPortAccess(request),
+            new ExecutionPortAccess(requests.Request),
             portsByTool,
             workspaceDirectory,
-            execution,
+            requests,
             parameters.Attempt,
             parameters.MaxAttempts,
             paths);

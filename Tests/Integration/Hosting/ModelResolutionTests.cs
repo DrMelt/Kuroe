@@ -91,7 +91,7 @@ public sealed class ModelResolutionTests
         new ExecutableNode
         {
             Path = NodePath.Of("干活"),
-            Type = LlmNodeTypes.Create(null),
+            Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners),
             Spec = new ExecutableSpec(),
             Inputs = declare ? [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, mode: PortMode.Constant)] : [],
             InputBindings = bind

@@ -21,10 +21,10 @@ public sealed class DocFlowExamplesTests
     {
         NodeTypeDescriptionRegistry files = new();
         ContainerNodeTypeDescriptions.RegisterInto(files);
-        LlmNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Contracts);
-        InputNodeTypeDescriptions.RegisterInto(files);
-        ApprovalNodeTypeDescriptions.RegisterInto(files);
-        FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath());
+        LlmNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Runners, TestTypeFiles.Contracts);
+        InputNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Runners);
+        ApprovalNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Runners);
+        FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath(), TestTypeFiles.Runners, TestTypeFiles.Runners);
 
         IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
         return compiler.Compile(document, []);
