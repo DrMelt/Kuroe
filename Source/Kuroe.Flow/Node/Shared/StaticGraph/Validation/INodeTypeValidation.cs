@@ -1,6 +1,6 @@
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>节点类型的校验契约：形状落地后仍要成立的不变量，逐条经 fail 报出。</summary>
 public interface INodeTypeValidation

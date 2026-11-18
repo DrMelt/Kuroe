@@ -1,6 +1,6 @@
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>节点结构规则：容器与执行节点的结构互斥。</summary>
 public static partial class NodeSpecRules

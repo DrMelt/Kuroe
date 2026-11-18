@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Compilation.Validation;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;

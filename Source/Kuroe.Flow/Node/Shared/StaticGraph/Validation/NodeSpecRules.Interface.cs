@@ -2,7 +2,7 @@ using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>节点接口的静态规则：输入与输出端口名在同一节点内唯一，端口类型落在类型形状的值域，模式落在类型注册支持范围，
 /// 输出按 Value、Ref 与运行期常量判定来源。流程校验与节点库校验共用这一份，报错出口由调用方给出。</summary>

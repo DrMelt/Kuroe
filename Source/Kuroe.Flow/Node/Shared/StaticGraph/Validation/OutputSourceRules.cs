@@ -1,6 +1,6 @@
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>输出与来源端口的绑定规则：常量性与类型必须一致，触发由输出自身声明，来源没有触发值时按触发处理。</summary>
 public static class OutputSourceRules

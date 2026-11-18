@@ -1,11 +1,11 @@
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
+namespace Kuroe.Flow.Node.Shared.Tests.Validation;
 
 /// <summary>节点输入绑定规则：绑定目标是已声明的静态输入端口，静态输入有绑定或默认值。</summary>
 public sealed class NodeSpecRulesBindingsTests

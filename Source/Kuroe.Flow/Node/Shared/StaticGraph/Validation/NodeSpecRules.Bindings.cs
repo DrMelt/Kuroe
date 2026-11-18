@@ -2,7 +2,7 @@ using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>输入绑定规则：绑定目标必须是已声明的静态输入端口。动态输入一律经 From，容器只有一组 From。
 /// 覆盖要求按节点形态判定：执行节点静态输入要有绑定或默认值，容器静态输入要有绑定。</summary>

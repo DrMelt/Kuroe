@@ -1,11 +1,11 @@
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
+namespace Kuroe.Flow.Node.Shared.Tests.Validation;
 
 /// <summary>From 接线规则：动态输入由 From 覆盖，容器只有一组。</summary>
 public sealed class NodeSpecRulesFromTests

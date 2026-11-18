@@ -1,9 +1,9 @@
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Xunit;
 
-namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
+namespace Kuroe.Flow.Node.Shared.Tests.Validation;
 
 /// <summary>节点标识规则：路径分隔符与定义标签。</summary>
 public sealed class NodeSpecRulesIdentityTests

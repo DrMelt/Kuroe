@@ -1,11 +1,11 @@
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Flow.Compilation.Shared.Tests.Support;
+using Kuroe.Flow.Node.Shared.Tests.Support;
 using Xunit;
 
-namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
+namespace Kuroe.Flow.Node.Shared.Tests.Validation;
 
 /// <summary>节点结构规则：容器与执行节点的结构互斥。</summary>
 public sealed class NodeSpecRulesStructureTests

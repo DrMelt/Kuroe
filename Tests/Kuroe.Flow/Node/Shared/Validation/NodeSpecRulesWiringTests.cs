@@ -1,11 +1,11 @@
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
+namespace Kuroe.Flow.Node.Shared.Tests.Validation;
 
 /// <summary>节点接线规则：各作用域允许声明的 From 与输入绑定字段。</summary>
 public sealed class NodeSpecRulesWiringTests

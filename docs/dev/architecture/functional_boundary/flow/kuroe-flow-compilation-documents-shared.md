@@ -11,7 +11,7 @@
 
 ## 边界外
 
-- 不含编译实现与校验规则：在 Kuroe.Flow.Compilation 与 Kuroe.Flow.Compilation.Shared。
+- 不含编译实现与校验规则：在 Kuroe.Flow.Compilation 与 Kuroe.Flow.Node.Shared。
 - 不含文件格式：在 Kuroe.Flow.Json。
 - 不含图运行期与流程控制。
 

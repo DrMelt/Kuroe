@@ -1,12 +1,12 @@
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Flow.Compilation.Shared.Tests.Support;
+using Kuroe.Flow.Node.Shared.Tests.Support;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
+namespace Kuroe.Flow.Node.Shared.Tests.Validation;
 
 /// <summary>节点接口规则：端口类型落在类型值域，静态端口不能声明为动态输入，默认值只用于派发执行的 Text 输入。</summary>
 public sealed class NodeSpecRulesInterfaceTests

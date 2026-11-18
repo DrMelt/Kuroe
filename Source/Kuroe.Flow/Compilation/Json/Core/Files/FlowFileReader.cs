@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Compilation.Documents.Shared;
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 

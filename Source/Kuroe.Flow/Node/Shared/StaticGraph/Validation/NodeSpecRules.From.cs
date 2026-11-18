@@ -2,7 +2,7 @@ using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>From 接线规则：动态输入经 From 连接，静态输入经 Bindings 绑定。容器只有一组 From，
 /// 成员通过 @端口 读取的传入来源因此唯一。触发条件只用于触发端口。</summary>

@@ -37,10 +37,10 @@ graph TD
 
     subgraph DFlow["flow：图流程模型、编译、控制与装配"]
         FlowShared["Flow.Shared<br>节点名 / 类型名 / 节点路径"]
-        FlowNodeShared["Flow.Node.Shared<br>图结构 / 运行期节点 / 图执行输入"]
+        FlowNodeShared["Flow.Node.Shared<br>图结构 / 运行期节点 / 节点规则"]
         FlowGraphRecordsShared["Flow.Graph.Records.Shared<br>图流程记录与种类"]
         FlowCompilationDocumentsShared["Flow.Compilation.Documents.Shared<br>流程描述 / 参数段"]
-        FlowCompilationShared["Flow.Compilation.Shared<br>编译契约 / 类型描述 / 节点规则"]
+        FlowCompilationShared["Flow.Compilation.Shared<br>编译契约 / 类型描述 / 参数读侧"]
         FlowCompilation["Flow.Compilation<br>流程描述编译与图编译"]
         FlowJsonShared["Flow.Json.Shared<br>流程文件格式端口"]
         FlowJson["Flow.Json<br>流程文件 JSON 读写"]

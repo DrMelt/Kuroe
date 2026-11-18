@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>报出一条带作用域的校验错误。</summary>
 /// <param name="error">已带节点位置的错误。</param>

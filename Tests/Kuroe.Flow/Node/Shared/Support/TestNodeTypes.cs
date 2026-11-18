@@ -1,9 +1,9 @@
-using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Compilation.Shared.Tests.Support;
+namespace Kuroe.Flow.Node.Shared.Tests.Support;
 
 /// <summary>测试用的节点类型：给定类型名与静态形状，校验契约不做额外检查。</summary>
 public sealed class TestNodeType(NodeKind kind, NodeTypeShape shape) : INodeType, INodeTypeValidation

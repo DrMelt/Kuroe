@@ -1,6 +1,6 @@
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>节点不变量的统一入口：标识、结构、接线、输入绑定与 From 覆盖按固定顺序判定。
 /// 静态来源解析与图级规则由调用方补充。</summary>

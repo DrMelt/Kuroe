@@ -1,6 +1,6 @@
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>节点标识规则：名称、标签与路径分隔符。</summary>
 public static partial class NodeSpecRules

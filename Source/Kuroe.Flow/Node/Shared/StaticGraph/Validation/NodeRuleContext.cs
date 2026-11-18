@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Compilation.Shared.Validation;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 
 /// <summary>节点规则的作用域：库定义、流程定义与引用实例。文案随作用域变化，判断只写一次。</summary>
 public enum NodeRuleContext

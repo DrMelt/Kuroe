@@ -13,7 +13,7 @@
 
 - 不含格式端口：读写接口与导入类别在 Kuroe.Flow.Json.Shared。
 - 不含描述模型：在 Kuroe.Flow.Compilation.Documents.Shared。
-- 不含校验与编译：在 Kuroe.Flow.Compilation.Shared 与 Kuroe.Flow.Compilation。
+- 不含校验与编译：在 Kuroe.Flow.Node.Shared 与 Kuroe.Flow.Compilation。
 - 不含流程控制与持久化。
 
 ## 依赖
