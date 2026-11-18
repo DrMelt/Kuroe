@@ -6,7 +6,7 @@ namespace Kuroe.Tool.KuroeInfo.Tests;
 /// <summary>目录查询工具：空目录提示、提供商与模型的清单和当前选择。</summary>
 public sealed class CatalogKuroeInfoToolTests
 {
-    [Fact]
+    [Fact(DisplayName = "空目录打印注册提示")]
     public void Empty_catalog_prints_the_registration_hints()
     {
         CatalogKuroeInfoTool tool = new(new FakeCatalog(new CatalogSummary([], [], null)));
@@ -18,7 +18,7 @@ public sealed class CatalogKuroeInfoToolTests
         Assert.Contains("当前模型：未选择", output, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录列出提供方模型与当前选择")]
     public void Catalog_lists_providers_models_and_the_current_selection()
     {
         CatalogKuroeInfoTool tool = new(new FakeCatalog(new CatalogSummary(

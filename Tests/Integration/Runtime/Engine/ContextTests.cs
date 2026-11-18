@@ -12,7 +12,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>输入取值只由上游装配：每个执行看到的内容与出处都可追溯。</summary>
 public sealed class ContextTests
 {
-    [Fact]
+    [Fact(DisplayName = "首步只从开始端口取得目标")]
     public void First_step_gets_goal_from_start_port_and_nothing_else()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -26,7 +26,7 @@ public sealed class ContextTests
         Assert.Equal(ModelName.Create("fake").Value, Assert.IsType<KuroeNodeDeclaration>(plan.Input.Declaration).Model);
     }
 
-    [Fact]
+    [Fact(DisplayName = "实施上下文携带计划产出及出处")]
     public void Implement_context_carries_the_plan_output_and_its_origin()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -40,7 +40,7 @@ public sealed class ContextTests
         Assert.Equal(plan.Id, Assert.IsType<ExecutionSource>(value.Value.Origin).FromExecution);
     }
 
-    [Fact]
+    [Fact(DisplayName = "开始常量端口向下游提供内容而不是目标")]
     public void Start_constant_port_feeds_downstream_instead_of_goal()
     {
         using TestEnvironment environment = TestEnvironment.Create(StartConstantFlow);
@@ -53,7 +53,7 @@ public sealed class ContextTests
         Assert.Equal(new PortName("背景"), Assert.IsType<StartSource>(seed.Value.Origin).Port);
     }
 
-    [Fact]
+    [Fact(DisplayName = "多个开始端口按声明顺序提供给下游")]
     public void Multiple_start_ports_feed_downstream_in_the_declared_order()
     {
         using TestEnvironment environment = TestEnvironment.Create(MultiStartFlow);
@@ -69,8 +69,7 @@ public sealed class ContextTests
         Assert.Equal(new PortName("风格"), Assert.IsType<StartSource>(execution.Input.Inputs[1].Origin).Port);
     }
 
-    /// <summary>Signal 开始端口不承载内容，任务启动时自动放行，不需要提交输入。</summary>
-    [Fact]
+    [Fact(DisplayName = "Signal 开始端口不承载内容，任务启动时自动放行，不需要提交输入")]
     public void Signal_start_port_releases_without_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(SignalStartFlow);
@@ -83,8 +82,7 @@ public sealed class ContextTests
         Assert.Null(done.Inputs.Text(new PortName("启动")));
     }
 
-    /// <summary>Signal 开始端口不接受提交输入。</summary>
-    [Fact]
+    [Fact(DisplayName = "Signal 开始端口不接受提交输入")]
     public void Signal_start_port_rejects_submitted_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(SignalStartFlow);
@@ -99,11 +97,10 @@ public sealed class ContextTests
             error => error.Description.Contains("开始端口 启动 不承载内容，不接受提交输入。"));
     }
 
-    /// <summary>提交按开始端口校验：缺少输入、重复输入与覆盖固定值都被拒绝。</summary>
     [Theory]
-    [InlineData("missing")]
-    [InlineData("duplicate")]
-    [InlineData("fixed")]
+    [InlineData("missing", Label = "缺少输入")]
+    [InlineData("duplicate", Label = "重复输入")]
+    [InlineData("fixed", Label = "覆盖固定值")]
     public void Submit_validates_start_inputs(string kind)
     {
         (string flow, StartInputs inputs, string expected) = kind switch
@@ -135,8 +132,7 @@ public sealed class ContextTests
             error => error.Description.Contains(expected));
     }
 
-    /// <summary>省略带默认值的开始端口时，任务输入与执行输入使用默认值。</summary>
-    [Fact]
+    [Fact(DisplayName = "省略带默认值的开始端口时，任务输入与执行输入使用默认值")]
     public void Omitted_start_port_falls_back_to_default()
     {
         using TestEnvironment environment = TestEnvironment.Create(StartDefaultFlow);
@@ -149,8 +145,7 @@ public sealed class ContextTests
         Assert.Equal(["补齐 README", "main"], execution.Input.Inputs.Select(value => value.Text));
     }
 
-    /// <summary>提交值优先于开始端口默认值。</summary>
-    [Fact]
+    [Fact(DisplayName = "提交值优先于开始端口默认值")]
     public void Submitted_start_port_wins_over_default()
     {
         using TestEnvironment environment = TestEnvironment.Create(StartDefaultFlow);
@@ -166,8 +161,7 @@ public sealed class ContextTests
         Assert.Equal(["补齐 README", "feature/x"], execution.Input.Inputs.Select(value => value.Text));
     }
 
-    /// <summary>带默认值的端口提交空白值仍被拒绝。</summary>
-    [Fact]
+    [Fact(DisplayName = "带默认值的端口提交空白值仍被拒绝")]
     public void Blank_submitted_default_port_is_rejected()
     {
         using TestEnvironment environment = TestEnvironment.Create(StartDefaultFlow);
@@ -182,8 +176,7 @@ public sealed class ContextTests
             error => error.Description.Contains("开始端口 分支 的输入不能为空。"));
     }
 
-    /// <summary>组内省略带默认值的输入端口时，执行输入追加声明值。</summary>
-    [Fact]
+    [Fact(DisplayName = "组内省略带默认值的输入端口时，执行输入追加声明值")]
     public void Omitted_input_port_falls_back_to_declared_default()
     {
         using TestEnvironment environment = TestEnvironment.Create(DefaultInputFlow);
@@ -198,8 +191,7 @@ public sealed class ContextTests
         Assert.Equal(new PortName("格式"), fallback.Port);
     }
 
-    /// <summary>显式连接优先，默认值不进入执行输入。</summary>
-    [Fact]
+    [Fact(DisplayName = "显式连接优先，默认值不进入执行输入")]
     public void Connected_input_wins_over_default()
     {
         using TestEnvironment environment = TestEnvironment.Create(ConnectedDefaultInputFlow);
@@ -211,8 +203,7 @@ public sealed class ContextTests
         Assert.DoesNotContain(execution.Input.Inputs, value => value.Origin is DefaultSource);
     }
 
-    /// <summary>多组时只取生效组的连接，默认值补齐该组未连接的端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "多组时只取生效组的连接，默认值补齐该组未连接的端口")]
     public async Task Effective_group_limits_inputs_to_its_own_connections()
     {
         using TestEnvironment environment = TestEnvironment.Create(ActiveGroupDefaultFlow);

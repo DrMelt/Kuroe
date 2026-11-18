@@ -12,7 +12,7 @@ namespace Kuroe.Tool.Contract.Tests;
 /// <summary>上报无法完成的载体：回执带上原因与本轮尚缺的端口。</summary>
 public sealed class CannotCompleteToolTests
 {
-    [Fact]
+    [Fact(DisplayName = "报告渲染原因与剩余端口")]
     public void Report_renders_the_reason_and_the_remaining_ports()
     {
         FakeEntry submitter = new()
@@ -30,7 +30,7 @@ public sealed class CannotCompleteToolTests
         Assert.Contains("端口「结论」", result.Value, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "报告错误返回给模型")]
     public void Report_error_is_returned_to_the_model()
     {
         FakeEntry submitter = new()

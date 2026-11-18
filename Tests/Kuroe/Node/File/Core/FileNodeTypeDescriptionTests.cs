@@ -14,7 +14,7 @@ public sealed class FileNodeTypeDescriptionTests
 
     private static readonly string Root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "kuroe-file-description-tests"));
 
-    [Fact]
+    [Fact(DisplayName = "读取描述声明种类形状与字段")]
     public void Read_description_declares_the_kind_shape_and_fields()
     {
         FileReadNodeTypeDescription description = new(Root, RunnerFactory);
@@ -30,7 +30,7 @@ public sealed class FileNodeTypeDescriptionTests
             description.Fields);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入描述声明种类形状与字段")]
     public void Write_description_declares_the_kind_shape_and_fields()
     {
         FileWriteNodeTypeDescription description = new(Root, RunnerFactory);
@@ -46,7 +46,7 @@ public sealed class FileNodeTypeDescriptionTests
             description.Fields);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取保留路径与工作区根")]
     public void Read_keeps_the_path_and_the_workspace_root()
     {
         List<string> failures = [];
@@ -60,7 +60,7 @@ public sealed class FileNodeTypeDescriptionTests
         Assert.Equal(FileReadNodeTypes.DefaultMaxChars, parameters.MaxChars);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入保留路径与工作区根")]
     public void Write_keeps_the_path_and_the_workspace_root()
     {
         List<string> failures = [];
@@ -74,7 +74,7 @@ public sealed class FileNodeTypeDescriptionTests
         Assert.Equal(FileWriteNodeTypes.DefaultMaxChars, parameters.MaxChars);
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少路径被报告")]
     public void Missing_path_is_reported()
     {
         List<string> failures = [];
@@ -83,7 +83,7 @@ public sealed class FileNodeTypeDescriptionTests
         Assert.Equal(["文件读取节点必须声明 Path。"], failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取与写入都读取最大字符数")]
     public void MaxChars_is_read_for_read_and_write()
     {
         List<string> failures = [];
@@ -98,7 +98,7 @@ public sealed class FileNodeTypeDescriptionTests
         Assert.Equal(1200, write.MaxChars);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取与写入都读取变量")]
     public void Variables_are_read_for_read_and_write()
     {
         Dictionary<string, string> variables = new() { ["root"] = "任务路径" };
@@ -116,7 +116,7 @@ public sealed class FileNodeTypeDescriptionTests
         Assert.Equal(variables, write.Variables);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件节点负数最大字符数被报告")]
     public void Negative_MaxChars_is_reported()
     {
         List<string> failures = [];
@@ -125,7 +125,7 @@ public sealed class FileNodeTypeDescriptionTests
         Assert.Equal(["MaxChars 不能是负数。"], failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "注册加入两种文件节点")]
     public void Registration_adds_both_file_kinds()
     {
         RecordingRegistry registry = new();

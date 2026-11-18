@@ -10,7 +10,7 @@ namespace Kuroe.Flow.Shared.Tests.StaticGraph.Ports;
 /// <summary>端口表与端口引用：按名查找、展示文本与执行节点的端口判定。</summary>
 public sealed class PortDeclarationTests
 {
-    [Fact]
+    [Fact(DisplayName = "端口表按名查找声明")]
     public void Port_table_finds_declarations_by_name()
     {
         IReadOnlyList<Port> outputs = [new Port(new PortName("结论"), PortTypes.Text), new Port(new PortName("上下文"), PortTypes.Context)];
@@ -22,14 +22,14 @@ public sealed class PortDeclarationTests
         Assert.Null(inputs.Find(new PortName("检查")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口把名称渲染为文本")]
     public void Port_renders_its_name_as_text()
     {
         Assert.Equal("结论", new Port(new PortName("结论"), PortTypes.Text).ToString());
         Assert.Equal("目标", new InputPort(new PortName("目标")).ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口引用显示绑定与命名形式")]
     public void Port_ref_displays_bound_and_named_forms()
     {
         PortRef bound = PortRef.Bound(new PortName("目标"));
@@ -41,7 +41,7 @@ public sealed class PortDeclarationTests
         Assert.Equal(new NodeLabel("分析"), named.Source);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行节点报告声明的端口类别")]
     public void Executable_reports_its_declared_port_kinds()
     {
         ExecutableNode executable = Executable([new Port(new PortName("结论"), PortTypes.Text)]);
@@ -52,7 +52,7 @@ public sealed class PortDeclarationTests
         Assert.Equal(100, ExecutableNode.DefaultMaxExecutions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行节点保留声明的输入默认值")]
     public void Executable_keeps_declared_input_defaults()
     {
         InputPort input = new(new PortName("背景"), PortTypes.Text, null, "固定背景");
@@ -61,7 +61,7 @@ public sealed class PortDeclarationTests
         Assert.Equal("固定背景", Assert.Single(executable.Inputs).Default);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有待提交端口的执行节点没有模型输出")]
     public void Executable_without_ports_to_submit_has_no_model_output()
     {
         ExecutableNode executable = Executable([new Port(new PortName("上下文"), PortTypes.Context)]);
@@ -69,7 +69,7 @@ public sealed class PortDeclarationTests
         Assert.Empty(executable.RequiredPorts);
     }
 
-    [Fact]
+    [Fact(DisplayName = "信号端口提交时不带内容")]
     public void Signal_port_is_submitted_without_content()
     {
         ExecutableNode executable = Executable([new Port(new PortName("完成"), PortTypes.Signal)]);
@@ -77,7 +77,7 @@ public sealed class PortDeclarationTests
         Assert.Equal([new PortName("完成")], executable.RequiredPorts.Select(port => port.Name));
     }
 
-    [Fact]
+    [Fact(DisplayName = "开始端口暴露输出")]
     public void Start_ports_expose_outputs()
     {
         IReadOnlyList<Port> ports = [new Port(new PortName("目标"), PortTypes.Text)];

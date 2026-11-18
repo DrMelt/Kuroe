@@ -19,7 +19,7 @@ public sealed class ApprovalExecutionRunnerTests
     private static readonly NodePath Path = NodePath.Of("整体", "审阅");
     private static readonly FlowStepPath Step = NodeStepPaths.From(Path);
 
-    [Fact]
+    [Fact(DisplayName = "执行声明审批并返回空输出")]
     public async Task Execution_declares_approval_and_returns_an_empty_output()
     {
         StubInputChannel channel = new();
@@ -43,7 +43,7 @@ public sealed class ApprovalExecutionRunnerTests
         Assert.Empty(channel.Declined);
     }
 
-    [Fact]
+    [Fact(DisplayName = "审批执行取消拒绝等待")]
     public async Task Cancellation_declines_the_wait()
     {
         StubInputChannel channel = new();

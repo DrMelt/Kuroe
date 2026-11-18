@@ -13,7 +13,7 @@ namespace Kuroe.Integration.Tests.Hosting;
 /// <summary>流程文件的加载与导入：真实工作目录、同名覆盖与相对路径解析。</summary>
 public sealed class FlowImportTests
 {
-    [Fact]
+    [Fact(DisplayName = "加载并导入自定义流程定义")]
     public void Flow_loads_and_imports_a_custom_definition()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleFunnelFlow);
@@ -38,8 +38,7 @@ public sealed class FlowImportTests
         }
     }
 
-    /// <summary>输入节点挂点的环：回复回边两侧都声明 Signal，载入后类型保持，写回文件仍写 Signal。</summary>
-    [Fact]
+    [Fact(DisplayName = "输入节点挂点的环：回复回边两侧都声明 Signal，载入后类型保持，写回文件仍写 Signal")]
     public void Loop_with_input_node_loads()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -58,8 +57,7 @@ public sealed class FlowImportTests
         Assert.Contains("\"Type\": \"Signal\"", text);
     }
 
-    /// <summary>流程名两侧空白在加载时去掉，按去空白后的名字可查到。</summary>
-    [Fact]
+    [Fact(DisplayName = "流程名两侧空白在加载时去掉，按去空白后的名字可查到")]
     public void Flow_name_with_surrounding_spaces_is_trimmed_on_load()
     {
         using TestEnvironment environment = TestEnvironment.Create(SurroundingSpacesFlowName);
@@ -69,7 +67,7 @@ public sealed class FlowImportTests
         Assert.True(environment.Flows.Find(new FlowName("默认")).IsSuccess);
     }
 
-    [Fact]
+    [Fact(DisplayName = "导入按工作目录解析相对路径")]
     public void Import_resolves_a_relative_path_against_the_work_directory()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -81,7 +79,7 @@ public sealed class FlowImportTests
         Assert.True(Path.IsPathRooted(imported.Source), $"导入来源应是绝对路径，收到 {imported.Source}。");
     }
 
-    [Fact]
+    [Fact(DisplayName = "导入报告新增流程")]
     public void Import_reports_new_flow()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -92,7 +90,7 @@ public sealed class FlowImportTests
         Assert.Equal(["新增流程 额外"], imported.Notes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "导入报告覆盖流程")]
     public void Import_reports_overwritten_flow()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -103,7 +101,7 @@ public sealed class FlowImportTests
         Assert.Equal(["覆盖流程 默认"], imported.Notes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "导入拒绝同时含节点与流程的文件")]
     public void Import_rejects_a_file_with_both_sections()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -116,7 +114,7 @@ public sealed class FlowImportTests
             error => error.Description.Contains("只能包含 Nodes 或 Flows 之一", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "导入拒绝重复的流程名")]
     public void Import_rejects_duplicated_flow_names()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -128,7 +126,7 @@ public sealed class FlowImportTests
         Assert.Contains(imported.ErrorsOrEmptyList, error => error.Description.Contains("流程名重复"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "导入保存后保持库与引用形状")]
     public void Import_keeps_library_and_reference_shape_on_save()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -147,12 +145,13 @@ public sealed class FlowImportTests
         Assert.Contains("\"Nodes\"", nodesText);
 
         string flowsText = File.ReadAllText(paths.FlowsFile);
-        Assert.Contains("\"Flows\"", flowsText);
-        Assert.Contains("\"Use\"", flowsText);
-        Assert.Contains("\"Bindings\"", flowsText);
-        Assert.Contains("\"Inputs\"", flowsText);
-        Assert.DoesNotContain("\"Models\"", flowsText);
-        Assert.DoesNotContain("\"ModelSlots\"", flowsText);
+        Assert.Multiple(
+            () => Assert.Contains("\"Flows\"", flowsText),
+            () => Assert.Contains("\"Use\"", flowsText),
+            () => Assert.Contains("\"Bindings\"", flowsText),
+            () => Assert.Contains("\"Inputs\"", flowsText),
+            () => Assert.DoesNotContain("\"Models\"", flowsText),
+            () => Assert.DoesNotContain("\"ModelSlots\"", flowsText));
 
         using JsonDocument savedNodes = JsonDocument.Parse(nodesText);
         Assert.False(savedNodes.RootElement.TryGetProperty("Flows", out _));
@@ -171,7 +170,7 @@ public sealed class FlowImportTests
         Assert.Equal("@MODEL_NAME", reference.GetProperty("Bindings").GetProperty("MODEL_NAME").GetString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "导入拒绝引用文件外库节点的流程")]
     public void Import_rejects_flow_referencing_library_node_outside_the_file()
     {
         using TestEnvironment environment = TestEnvironment.Create(LibraryNodes);

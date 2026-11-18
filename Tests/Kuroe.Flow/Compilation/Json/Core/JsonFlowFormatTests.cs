@@ -10,7 +10,7 @@ public sealed class JsonFlowFormatTests
 {
     private static readonly JsonFlowFormat Format = new();
 
-    [Fact]
+    [Fact(DisplayName = "读取映射流程根与引用")]
     public void Read_maps_flow_root_and_reference()
     {
         IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(Flow));
@@ -25,7 +25,7 @@ public sealed class JsonFlowFormatTests
         Assert.Equal("@MODEL_NAME", reference.Bindings["MODEL_NAME"]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入保留参数与静态模型")]
     public void Write_keeps_parameters_and_static_model()
     {
         IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(Flow));
@@ -40,7 +40,7 @@ public sealed class JsonFlowFormatTests
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "触发端口类型往返")]
     public void Trigger_port_types_round_trip()
     {
         const string flow = """
@@ -61,7 +61,7 @@ public sealed class JsonFlowFormatTests
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入角色与显式触发往返")]
     public void Input_role_and_explicit_trigger_round_trip()
     {
         const string flow = """
@@ -87,21 +87,23 @@ public sealed class JsonFlowFormatTests
         NodeDefinitionDocument source = Assert.IsType<NodeDefinitionDocument>(Assert.Single(root.Nodes));
         InputPortDocument configured = Assert.Single(source.Inputs, port => port.Name == "配置");
         InputPortDocument signal = Assert.Single(source.Inputs, port => port.Name == "信号");
-        Assert.Equal(InputRole.Configuration, configured.Role);
-        Assert.Equal(PortMode.Constant, configured.Mode);
-        Assert.Equal(PortMode.Plain, signal.Mode);
-        Assert.Equal(PortMode.Trigger, source.Outputs[0].Mode);
-        Assert.Null(source.Outputs[1].Mode);
+        Assert.Multiple(
+            () => Assert.Equal(InputRole.Configuration, configured.Role),
+            () => Assert.Equal(PortMode.Constant, configured.Mode),
+            () => Assert.Equal(PortMode.Plain, signal.Mode),
+            () => Assert.Equal(PortMode.Trigger, source.Outputs[0].Mode),
+            () => Assert.Null(source.Outputs[1].Mode));
 
         string text = Ok(Format.Write(flows));
-        Assert.Contains("\"Role\": \"Configuration\"", text);
-        Assert.Contains("\"Mode\": \"Constant\"", text);
-        Assert.Contains("\"Mode\": \"Plain\"", text);
-        Assert.Contains("\"Mode\": \"Trigger\"", text);
+        Assert.Multiple(
+            () => Assert.Contains("\"Role\": \"Configuration\"", text),
+            () => Assert.Contains("\"Mode\": \"Constant\"", text),
+            () => Assert.Contains("\"Mode\": \"Plain\"", text),
+            () => Assert.Contains("\"Mode\": \"Trigger\"", text));
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "输出条目在所有节点共用值与引用形状")]
     public void Output_entries_share_value_and_ref_shape_on_all_nodes()
     {
         const string flow = """
@@ -128,7 +130,7 @@ public sealed class JsonFlowFormatTests
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝节点字段")]
     public void Read_rejects_the_nodes_field()
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document =
@@ -139,7 +141,7 @@ public sealed class JsonFlowFormatTests
             error => error.Description.Contains("节点库写在 nodes.json", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝旧的常量字段")]
     public void Read_rejects_the_old_constant_field()
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
@@ -153,7 +155,7 @@ public sealed class JsonFlowFormatTests
             error => error.Description.Contains("输出端口不认识键 Constant"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝带名称但没有标签的引用")]
     public void Read_rejects_a_reference_with_name_and_without_label()
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
@@ -165,7 +167,7 @@ public sealed class JsonFlowFormatTests
             error => error.Description.Contains("被使用的节点写 Label 区分，不写 Name。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "来源条件往返")]
     public void From_condition_round_trips()
     {
         const string flow = """
@@ -192,9 +194,9 @@ public sealed class JsonFlowFormatTests
     }
 
     [Theory]
-    [InlineData("Sometimes")]
-    [InlineData("1")]
-    [InlineData("2")]
+    [InlineData("Sometimes", Label = "非已知条件词")]
+    [InlineData("1", Label = "数字条件一")]
+    [InlineData("2", Label = "数字条件二")]
     public void Read_rejects_an_unknown_from_condition(string condition)
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read($$"""
@@ -208,7 +210,7 @@ public sealed class JsonFlowFormatTests
             error => error.Description.Contains("Condition 应为 Positive 或 Negative", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝绑定条件对象")]
     public void Read_rejects_a_bindings_condition_object()
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
@@ -222,7 +224,7 @@ public sealed class JsonFlowFormatTests
             error => error.Description.Contains("输入绑定的值只写引用文本", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝没有引用的来源")]
     public void Read_rejects_a_from_source_without_ref()
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
@@ -236,7 +238,7 @@ public sealed class JsonFlowFormatTests
             error => error.Description.Contains("来源对象必须写 Ref 键", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝未知来源键")]
     public void Read_rejects_an_unknown_from_source_key()
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
@@ -250,7 +252,7 @@ public sealed class JsonFlowFormatTests
             error => error.Description.Contains("不认识键 Other", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝非文本来源条件")]
     public void Read_rejects_a_non_text_from_condition()
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""

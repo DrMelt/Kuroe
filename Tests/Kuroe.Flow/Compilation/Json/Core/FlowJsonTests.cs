@@ -8,8 +8,7 @@ namespace Kuroe.Flow.Json.Tests;
 /// <summary>流程文件的 JSON 绑定：读侧的宽容与缺键默认、枚举与原始形状，写侧的排版与转义。</summary>
 public sealed class FlowJsonTests
 {
-    /// <summary>读侧忽略键名大小写、跳过注释、允许尾随逗号。</summary>
-    [Fact]
+    [Fact(DisplayName = "读侧忽略键名大小写、跳过注释、允许尾随逗号")]
     public void Read_tolerates_case_comments_and_trailing_commas()
     {
         const string json = """
@@ -33,8 +32,7 @@ public sealed class FlowJsonTests
         Assert.Equal(JsonValueKind.Object, Assert.Single(flow.Ports).ValueKind);
     }
 
-    /// <summary>缺键的属性取 null。</summary>
-    [Fact]
+    [Fact(DisplayName = "缺键的属性取 null")]
     public void Missing_keys_fall_back_to_declared_defaults()
     {
         const string json = """{ "Flows": [ { "Name": "默认" } ] }""";
@@ -47,8 +45,7 @@ public sealed class FlowJsonTests
         Assert.Null(flow.Ports);
     }
 
-    /// <summary>流程文件里不认宿主输入绑定，写 HostStartInputs 即不是合法流程文件。</summary>
-    [Fact]
+    [Fact(DisplayName = "流程文件里不认宿主输入绑定，写 HostStartInputs 即不是合法流程文件")]
     public void Host_start_inputs_are_not_part_of_the_flow_file()
     {
         const string json = """
@@ -65,8 +62,7 @@ public sealed class FlowJsonTests
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto));
     }
 
-    /// <summary>节点类型名按文件里写的原样保留，大小写不敏感的比较在装配层。</summary>
-    [Fact]
+    [Fact(DisplayName = "节点类型名按文件里写的原样保留，大小写不敏感的比较在装配层")]
     public void Node_kind_is_kept_as_written()
     {
         const string json = """{ "Nodes": [ { "Name": "整体", "Kind": "container" } ] }""";
@@ -78,8 +74,7 @@ public sealed class FlowJsonTests
         Assert.Null(node.Use);
     }
 
-    /// <summary>节点输入绑定按字符串映射读入，端口条目保留原始对象形状。</summary>
-    [Fact]
+    [Fact(DisplayName = "节点输入绑定按字符串映射读入，端口条目保留原始对象形状")]
     public void Input_bindings_are_read_as_a_string_map()
     {
         const string json = """
@@ -104,8 +99,7 @@ public sealed class FlowJsonTests
         Assert.Equal(JsonValueKind.Object, Assert.Single(outputs).ValueKind);
     }
 
-    /// <summary>端口条目的端口类型写成枚举名字。</summary>
-    [Fact]
+    [Fact(DisplayName = "端口条目的端口类型写成枚举名字")]
     public void Port_entry_writes_its_type_by_name()
     {
         PortEntryDto entry = new() { Name = "目标", Type = PortTypes.Text.Name };
@@ -115,8 +109,7 @@ public sealed class FlowJsonTests
         Assert.Contains("\"Type\": \"Text\"", text);
     }
 
-    /// <summary>端口条目未写的可选字段不写出。</summary>
-    [Fact]
+    [Fact(DisplayName = "端口条目未写的可选字段不写出")]
     public void Port_entry_omits_unwritten_optional_fields()
     {
         PortEntryDto entry = new() { Name = "结论", Ref = "分析@结论" };
@@ -130,8 +123,7 @@ public sealed class FlowJsonTests
         Assert.DoesNotContain("\"Default\"", text);
     }
 
-    /// <summary>端口条目写了 Default 时按原样写出。</summary>
-    [Fact]
+    [Fact(DisplayName = "端口条目写了 Default 时按原样写出")]
     public void Port_entry_writes_default_when_set()
     {
         PortEntryDto entry = new() { Name = "分支", Default = "main" };
@@ -141,8 +133,7 @@ public sealed class FlowJsonTests
         Assert.Contains("\"Default\": \"main\"", text);
     }
 
-    /// <summary>写侧缩进输出，非 ASCII 字符不转义，节点类型写成枚举名字。</summary>
-    [Fact]
+    [Fact(DisplayName = "写侧缩进输出，非 ASCII 字符不转义，节点类型写成枚举名字")]
     public void Write_keeps_indentation_and_readable_text()
     {
         FlowFileDto file = new()

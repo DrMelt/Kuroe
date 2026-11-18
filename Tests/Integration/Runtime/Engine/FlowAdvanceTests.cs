@@ -11,7 +11,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>图驱动推进：放行、汇拢、重新执行、未收口与取消。测试流程即计划后实施。</summary>
 public sealed class FlowAdvanceTests
 {
-    [Fact]
+    [Fact(DisplayName = "空流程库按名提交被拒绝")]
     public void Empty_flow_library_rejects_submit_by_name()
     {
         using TestEnvironment environment = TestEnvironment.Create(flowsJson: "{}");
@@ -24,7 +24,7 @@ public sealed class FlowAdvanceTests
             error => error.Description.Contains("没有名为 默认 的流程"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "计划与实施节点完成整条任务")]
     public void Plan_implement_completes_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -38,7 +38,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(2, done.ProgressSteps);
     }
 
-    [Fact]
+    [Fact(DisplayName = "长开始输入完整到达执行")]
     public void Long_start_input_reaches_execution_untruncated()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -53,7 +53,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(goal, target.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "长上游输出完整到达下游")]
     public void Long_upstream_output_reaches_downstream_untruncated()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -71,7 +71,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(plan, value.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "计划上的审批停到批准")]
     public void Approval_on_plan_parks_until_approved()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);
@@ -92,7 +92,7 @@ public sealed class FlowAdvanceTests
         Assert.Single(done.View.Steps[2].Executions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "计划步骤未提交时任务阻塞")]
     public void Plan_step_without_submission_blocks_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -107,7 +107,7 @@ public sealed class FlowAdvanceTests
         Assert.Contains(plan.Failures, failure => failure.Contains("未收口"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "计划未收口后重跑重新执行计划")]
     public void Plan_uncollected_then_rerun_reexecutes_plan()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -126,7 +126,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(2, done.View.Steps[0].Executions.Count);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行失败后重跑重新执行节点")]
     public void Execution_failure_then_rerun_reexecutes_the_node()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -143,7 +143,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(2, done.View.Steps[1].Executions.Count);
     }
 
-    [Fact]
+    [Fact(DisplayName = "阻塞后取消任务收口")]
     public void Cancel_after_block_settles_the_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -161,7 +161,7 @@ public sealed class FlowAdvanceTests
         Assert.Single(environment.Registry.ClearSettled());
     }
 
-    [Fact]
+    [Fact(DisplayName = "取消任务停止全部执行")]
     public void Cancel_task_stops_every_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -176,7 +176,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(0, canceled.LiveExecutions);
         Assert.DoesNotContain(canceled.View.Steps, step => step.Block is not null);
     }
-    [Fact]
+    [Fact(DisplayName = "暂停中断运行执行恢复后等待重跑")]
     public void Pause_interrupts_running_execution_and_resume_waits_for_rerun()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -205,7 +205,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(TaskState.Done, environment.Wait(id, snapshot => snapshot.State == TaskState.Done).State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "等待时暂停拒绝输入直到恢复")]
     public async Task Pause_while_waiting_rejects_input_until_resume()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);
@@ -228,7 +228,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(TaskState.Done, (await environment.WaitAsync(id, snapshot => snapshot.State == TaskState.Done)).State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "已完成任务不能暂停或终止")]
     public void Done_task_cannot_pause_or_terminate()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -246,7 +246,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(FlowErrorCodes.TaskDoneCannotTerminate, terminated.FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "活跃任务不能恢复")]
     public void Active_task_cannot_resume()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -262,7 +262,7 @@ public sealed class FlowAdvanceTests
         environment.Tasks.StopTask(id).ThrowIfError();
     }
 
-    [Fact]
+    [Fact(DisplayName = "关闭保留控制状态并中断执行")]
     public async Task Shutdown_keeps_control_state_and_interrupts_executions()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -280,7 +280,7 @@ public sealed class FlowAdvanceTests
 
 
 
-    [Fact]
+    [Fact(DisplayName = "批准一个审批后另一个保持等待")]
     public void Approve_one_approval_keeps_the_other_waiting()
     {
         using TestEnvironment environment = TestEnvironment.Create(ParallelApprovalFlow);

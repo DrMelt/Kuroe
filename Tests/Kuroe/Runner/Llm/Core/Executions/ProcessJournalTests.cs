@@ -6,7 +6,7 @@ namespace Kuroe.Runner.Llm.Tests.Executions;
 /// <summary>执行过程记录的具体格式：内容合并、条目保留与过程播发。</summary>
 public sealed class ProcessJournalTests
 {
-    [Fact]
+    [Fact(DisplayName = "回复内容增量合并并播发每个增量")]
     public void Reply_content_deltas_merge_and_broadcast_each_delta()
     {
         List<ProcessContent> contents = [];
@@ -28,7 +28,7 @@ public sealed class ProcessJournalTests
         Assert.Equal("甲乙", entry.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文本片段在上限处切分")]
     public void Text_segment_splits_at_the_limit()
     {
         ProcessJournal journal = new();
@@ -42,7 +42,7 @@ public sealed class ProcessJournalTests
         Assert.Equal("尾", entries[1].Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "推理内容与回复内容分别合并")]
     public void Reasoning_content_merges_separately_from_reply_content()
     {
         List<ProcessContent> contents = [];
@@ -67,7 +67,7 @@ public sealed class ProcessJournalTests
         Assert.Equal(["想下去", "答复", "再想"], journal.Entries.Select(entry => entry.Text));
     }
 
-    [Fact]
+    [Fact(DisplayName = "工具调用被记录并播发但没有进度")]
     public void Tool_call_is_recorded_and_broadcast_without_progress()
     {
         List<JournalEntry> entries = [];
@@ -87,7 +87,7 @@ public sealed class ProcessJournalTests
         Assert.Empty(progress);
     }
 
-    [Fact]
+    [Fact(DisplayName = "进度只在变化时播发")]
     public void Progress_is_broadcast_only_when_it_changes()
     {
         List<string> progress = [];
@@ -102,7 +102,7 @@ public sealed class ProcessJournalTests
         Assert.Equal(["调用工具 GetLocalTime", string.Empty], progress);
     }
 
-    [Fact]
+    [Fact(DisplayName = "回复与推理内容报告进度")]
     public void Reply_and_reasoning_content_report_progress()
     {
         List<string> progress = [];
@@ -117,7 +117,7 @@ public sealed class ProcessJournalTests
         Assert.Equal(["输出", "思考", "输出"], progress);
     }
 
-    [Fact]
+    [Fact(DisplayName = "失败工具调用记录为警告")]
     public void Failed_tool_call_is_recorded_as_warning()
     {
         ProcessJournal journal = new();
@@ -130,7 +130,7 @@ public sealed class ProcessJournalTests
         Assert.Equal("file/ReadFile {}\n不存在", entry.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "提示与丢弃条目只记录不播发")]
     public void Prompt_and_discard_entries_are_recorded_only()
     {
         List<ProcessContent> contents = [];
@@ -157,7 +157,7 @@ public sealed class ProcessJournalTests
         Assert.Empty(progress);
     }
 
-    [Fact]
+    [Fact(DisplayName = "提示清空进度")]
     public void Prompt_clears_progress()
     {
         List<string> progress = [];
@@ -170,7 +170,7 @@ public sealed class ProcessJournalTests
         Assert.Equal(["输出", string.Empty], progress);
     }
 
-    [Fact]
+    [Fact(DisplayName = "空内容增量被忽略")]
     public void Empty_content_delta_is_ignored()
     {
         int broadcasts = 0;
@@ -183,7 +183,7 @@ public sealed class ProcessJournalTests
         Assert.Equal(0, broadcasts);
     }
 
-    [Fact]
+    [Fact(DisplayName = "进程记录条目无数量上限保留")]
     public void Entries_are_retained_without_a_count_limit()
     {
         ProcessJournal journal = new();

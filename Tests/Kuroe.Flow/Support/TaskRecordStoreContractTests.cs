@@ -14,7 +14,7 @@ public abstract class TaskRecordStoreContractTests
 
     protected abstract void InjectReadFailure(ITaskRecordStore store, TaskStoreFailure failure);
 
-    [Fact]
+    [Fact(DisplayName = "读取空存储不返回记录")]
     public void Read_empty_store_returns_no_records()
     {
         TaskStoreReadResult result = CreateStore().ReadAll();
@@ -23,7 +23,7 @@ public abstract class TaskRecordStoreContractTests
         Assert.Empty(result.Failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入后读取记录往返")]
     public void Write_then_read_round_trips_record()
     {
         ITaskRecordStore store = CreateStore();
@@ -45,7 +45,7 @@ public abstract class TaskRecordStoreContractTests
         Assert.Equal(state.Pending.Steps, loadedState.Pending.Steps);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入同一任务替换记录")]
     public void Write_same_task_replaces_record()
     {
         ITaskRecordStore store = CreateStore();
@@ -62,7 +62,7 @@ public abstract class TaskRecordStoreContractTests
         Assert.Equal("新标题", loaded.Identity.Title);
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除移除记录")]
     public void Delete_removes_record()
     {
         ITaskRecordStore store = CreateStore();
@@ -74,7 +74,7 @@ public abstract class TaskRecordStoreContractTests
         Assert.Empty(store.ReadAll().Records);
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除未知任务幂等")]
     public void Delete_unknown_task_is_idempotent()
     {
         ITaskRecordStore store = CreateStore();
@@ -84,7 +84,7 @@ public abstract class TaskRecordStoreContractTests
         Assert.Empty(store.ReadAll().Records);
     }
 
-    [Fact]
+    [Fact(DisplayName = "全部读取按任务顺序返回记录")]
     public void Read_all_returns_records_in_task_order()
     {
         ITaskRecordStore store = CreateStore();
@@ -99,7 +99,7 @@ public abstract class TaskRecordStoreContractTests
             result.Records.Select(record => record.Identity.Id));
     }
 
-    [Fact]
+    [Fact(DisplayName = "全部读取报告失败但不丢弃成功项")]
     public void Read_all_reports_failure_without_dropping_successes()
     {
         ITaskRecordStore store = CreateStore();

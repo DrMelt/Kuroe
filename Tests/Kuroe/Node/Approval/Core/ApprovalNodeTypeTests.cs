@@ -17,14 +17,14 @@ public sealed class ApprovalNodeTypeTests
 
     private static readonly ApprovalNodeType NodeType = new(null, RunnerFactory);
 
-    [Fact]
+    [Fact(DisplayName = "审批节点名称是文件书写的种类")]
     public void Name_is_the_kind_written_in_files()
     {
         Assert.Equal("Approval", ApprovalNodeTypes.Name.Value);
         Assert.Equal(ApprovalNodeTypes.Name, NodeType.Kind);
     }
 
-    [Fact]
+    [Fact(DisplayName = "审批类型创建把声明保留在实例上")]
     public void Create_keeps_the_declaration_on_the_instance()
     {
         INodeType type = ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" }, RunnerFactory);
@@ -33,7 +33,7 @@ public sealed class ApprovalNodeTypeTests
         Assert.Equal("确认计划", Assert.IsType<ApprovalNodeType>(type).Parameters?.Question);
     }
 
-    [Fact]
+    [Fact(DisplayName = "形状推导端口并派发执行")]
     public void Shape_derives_its_ports_and_dispatches_execution()
     {
         NodeTypeShape shape = NodeType.Shape;
@@ -47,15 +47,15 @@ public sealed class ApprovalNodeTypeTests
         Assert.Equal([PortTypes.Text, PortTypes.Context, PortTypes.Signal], shape.OutputTypes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "含内容端口的节点通过")]
     public void Node_with_content_port_passes() =>
         Assert.Empty(Failures(Node([new InputPort(new PortName("计划"), PortTypes.Text)])));
 
-    [Fact]
+    [Fact(DisplayName = "没有输入端口的节点被拒绝")]
     public void Node_without_input_port_is_rejected() =>
         Assert.Equal(["流程 测试 的节点 把关：审批节点必须声明输入端口，对外端口取自身输入端口。"], Failures(Node()));
 
-    [Fact]
+    [Fact(DisplayName = "第二个上下文输入端口被拒绝")]
     public void Second_context_input_port_is_rejected() =>
         Assert.Equal(
             ["流程 测试 的节点 把关：审批节点至多声明一个 Context 输入端口。"],
@@ -65,7 +65,7 @@ public sealed class ApprovalNodeTypeTests
                 new InputPort(new PortName("乙"), PortTypes.Context),
             ])));
 
-    [Fact]
+    [Fact(DisplayName = "执行配置被拒绝")]
     public void Execution_config_is_rejected()
     {
         NodeSpec node = Node([new InputPort(new PortName("计划"), PortTypes.Text)]) with

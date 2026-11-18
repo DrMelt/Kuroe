@@ -11,7 +11,7 @@ public sealed class GraphExecutionInputTests
 {
     private static readonly PortName Content = new("正文");
 
-    [Fact]
+    [Fact(DisplayName = "默认执行次数与输入")]
     public void Defaults_execution_count_and_inputs()
     {
         GraphExecutionInput input = Input(new Dictionary<PortName, string>());
@@ -20,7 +20,7 @@ public sealed class GraphExecutionInputTests
         Assert.Empty(input.Inputs);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文本读取装配后的输入表")]
     public void Text_reads_the_assembled_table()
     {
         GraphExecutionInput input = Input(new Dictionary<PortName, string> { [Content] = "内容" });
@@ -28,7 +28,7 @@ public sealed class GraphExecutionInputTests
         Assert.Equal("内容", input.Text(Content));
     }
 
-    [Fact]
+    [Fact(DisplayName = "未声明端口没有文本")]
     public void Undeclared_port_has_no_text()
     {
         GraphExecutionInput input = Input(new Dictionary<PortName, string>());
@@ -36,7 +36,7 @@ public sealed class GraphExecutionInputTests
         Assert.Null(input.Text(new PortName("未装配")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "原始输入不从文本表泄漏")]
     public void Raw_inputs_do_not_leak_through_the_text_table()
     {
         GraphExecutionInput input = Input(

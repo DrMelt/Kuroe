@@ -15,7 +15,7 @@ public sealed class NodeLibraryExpanderTests
     private static readonly NodeName Delivery = new("交付组");
     private static readonly NodeLabel Instance = new("交付");
 
-    [Fact]
+    [Fact(DisplayName = "被引用的容器成员在引用处内联")]
     public void Referenced_container_members_are_inlined_at_the_reference()
     {
         FlowDefinition flow = Flow(Instance, Delivery);
@@ -33,7 +33,7 @@ public sealed class NodeLibraryExpanderTests
         Assert.Equal(TestNodeTypes.ExecutableKind, Assert.Single(container.Nodes).Kind);
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知引用被拒绝")]
     public void Unknown_reference_is_rejected()
     {
         FlowDefinition flow = Flow(new NodeLabel("缺失"), new NodeName("不存在"));

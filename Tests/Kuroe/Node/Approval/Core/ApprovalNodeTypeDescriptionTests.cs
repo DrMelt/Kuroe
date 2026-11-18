@@ -13,19 +13,19 @@ public sealed class ApprovalNodeTypeDescriptionTests
 
     private static readonly ApprovalNodeTypeDescription File = new(RunnerFactory);
 
-    [Fact]
+    [Fact(DisplayName = "种类是审批节点类型")]
     public void Kind_is_the_approval_node_type() =>
         Assert.Equal(ApprovalNodeTypes.Name, File.Kind);
 
-    [Fact]
+    [Fact(DisplayName = "形状是审批类型形状")]
     public void Shape_is_the_approval_type_shape() =>
         Assert.Equal(ApprovalNodeTypes.Shape, File.Shape);
 
-    [Fact]
+    [Fact(DisplayName = "审批类型字段声明问题文本")]
     public void Fields_declare_the_question_text() =>
         Assert.Equal([new ParameterField("Question", ParameterValueKind.Text)], File.Fields);
 
-    [Fact]
+    [Fact(DisplayName = "审批类型读取从值构建")]
     public void Read_builds_the_type_from_the_values()
     {
         ApprovalParameters parameters = Declared(File.Read(new Reader("确认计划"), _ => { }));
@@ -33,7 +33,7 @@ public sealed class ApprovalNodeTypeDescriptionTests
         Assert.Equal("确认计划", parameters.Question);
     }
 
-    [Fact]
+    [Fact(DisplayName = "审批类型没有值时读取采用安全默认值")]
     public void Read_without_values_takes_the_safe_defaults()
     {
         ApprovalParameters parameters = Declared(File.Read(new Reader(), _ => { }));

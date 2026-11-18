@@ -6,7 +6,7 @@ namespace Kuroe.Cli.Tests;
 /// <summary>命令树的解析规则。</summary>
 public sealed class CliCommandLineTests
 {
-    [Fact]
+    [Fact(DisplayName = "已知命令解析成功")]
     public void Known_commands_parse()
     {
         Assert.Empty(Build().Parse(["flow", "show", "默认"]).Errors);
@@ -15,21 +15,21 @@ public sealed class CliCommandLineTests
         Assert.Empty(Build().Parse(["config", "set", "Runtime:LogLevel", "Debug"]).Errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "提供方凭据参数可选")]
     public void Provider_credential_argument_is_optional()
     {
         Assert.Empty(Build().Parse(["provider", "add", "p", "https://example.invalid/v1"]).Errors);
         Assert.Empty(Build().Parse(["provider", "key", "p"]).Errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "模型添加接受可选的提供方模型名")]
     public void Model_add_accepts_an_optional_provider_model_name()
     {
         Assert.Empty(Build().Parse(["model", "add", "alias", "p"]).Errors);
         Assert.Empty(Build().Parse(["model", "add", "alias", "p", "upstream"]).Errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "重复输入选项解析")]
     public void Repeated_input_options_parse()
     {
         ParseResult result = Build().Parse(
@@ -38,24 +38,24 @@ public sealed class CliCommandLineTests
         Assert.Empty(result.Errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少流程选项是解析错误")]
     public void Missing_flow_option_is_a_parse_error()
     {
         Assert.NotEmpty(Build().Parse(["run", "目标"]).Errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "助手命令不可用")]
     public void Assistant_command_is_not_available()
     {
         Assert.NotEmpty(Build().Parse(["ask", "你好"]).Errors);
     }
 
     [Theory]
-    [InlineData("--answer")]
-    [InlineData("--answer=背景")]
-    [InlineData("-a")]
-    [InlineData("--approve")]
-    [InlineData("-y")]
+    [InlineData("--answer", Label = "回答长选项")]
+    [InlineData("--answer=背景", Label = "带值回答长选项")]
+    [InlineData("-a", Label = "回答短选项")]
+    [InlineData("--approve", Label = "批准长选项")]
+    [InlineData("-y", Label = "批准短选项")]
     public void Waiting_node_options_report_the_cli_rule(string token)
     {
         List<string> args = ["run", "--flow", "默认", token];
@@ -71,8 +71,8 @@ public sealed class CliCommandLineTests
     }
 
     [Theory]
-    [InlineData("--answer")]
-    [InlineData("--approve")]
+    [InlineData("--answer", Label = "回答长选项")]
+    [InlineData("--approve", Label = "批准长选项")]
     public void Waiting_node_option_without_value_is_rejected(string token)
     {
         ParseResult result = Build().Parse(["run", "--flow", "默认", token]);
@@ -81,10 +81,10 @@ public sealed class CliCommandLineTests
     }
 
     [Theory]
-    [InlineData("--answer")]
-    [InlineData("-a")]
-    [InlineData("--approve")]
-    [InlineData("-y")]
+    [InlineData("--answer", Label = "回答长选项")]
+    [InlineData("-a", Label = "回答短选项")]
+    [InlineData("--approve", Label = "批准长选项")]
+    [InlineData("-y", Label = "批准短选项")]
     public void Option_shaped_values_are_input_text(string token)
     {
         ParseResult result = Build().Parse(["run", "--flow", "默认", "--input", $"目标={token}"]);
@@ -92,7 +92,7 @@ public sealed class CliCommandLineTests
         Assert.Empty(result.Errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "工作目录选项递归生效")]
     public void Work_directory_option_is_recursive()
     {
         RootCommand root = Build();

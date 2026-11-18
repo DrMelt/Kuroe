@@ -10,7 +10,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>节点树与行组合的渲染。</summary>
 public sealed class NodeTreeTests
 {
-    [Fact]
+    [Fact(DisplayName = "视图行跳过空片段并分隔事实")]
     public void View_line_skips_empty_parts_and_separates_facts()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -24,7 +24,7 @@ public sealed class NodeTreeTests
         Assert.Contains("节点 · 已完成", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "节点树渲染层级与详情")]
     public void Node_tree_renders_hierarchy_and_details()
     {
         using ConsoleSession cli = new();
@@ -46,7 +46,7 @@ public sealed class NodeTreeTests
         Assert.Contains("详情", cli.Output.Output);
         Assert.Contains("分配执行", cli.Output.Output);
         Assert.EndsWith("\n", cli.Output.Output);
-        Assert.True(container >= 0);
+        Assert.True(container >= 0, cli.Output.Output);
         Assert.True(nested > container, cli.Output.Output);
     }
 }

@@ -8,7 +8,7 @@ public sealed class ProcessJournalStoreTests
 {
     private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
-    [Fact]
+    [Fact(DisplayName = "默认存储保留全部条目")]
     public void Default_store_keeps_all_entries()
     {
         ProcessJournalStore store = new();

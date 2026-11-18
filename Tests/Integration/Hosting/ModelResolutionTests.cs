@@ -14,7 +14,7 @@ namespace Kuroe.Integration.Tests.Hosting;
 /// <summary>执行节点到可用模型的解析：静态端口绑定、模型名解析与目录可达性各分支的判定。</summary>
 public sealed class ModelResolutionTests
 {
-    [Fact]
+    [Fact(DisplayName = "节点未声明静态模型时被拒绝")]
     public void Node_without_static_model_is_rejected()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -25,18 +25,18 @@ public sealed class ModelResolutionTests
         Assert.Equal("节点 干活 没有静态端口 MODEL_NAME，无法确定使用的模型。", resolved.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "常量模型解析到已注册模型")]
     public void Constant_model_resolves_a_registered_model()
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
         ErrorOr<INodeDeclaration> resolved = Resolve(environment, Graph(value: "fake"), Host());
 
-        Assert.False(resolved.IsError);
+        Assert.False(resolved.IsError, resolved.ErrorsText());
         Assert.Equal("fake", Declaration(resolved).Model.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "未注册的常量模型被拒绝")]
     public void Constant_model_of_an_unregistered_model_is_rejected()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -47,18 +47,18 @@ public sealed class ModelResolutionTests
         Assert.Equal("Catalog.ModelNotFound", resolved.FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "注入模型解析任务开始输入值")]
     public void Injected_model_resolves_the_task_start_value()
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
         ErrorOr<INodeDeclaration> resolved = Resolve(environment, Graph(value: null), Host(model: "fake"));
 
-        Assert.False(resolved.IsError);
+        Assert.False(resolved.IsError, resolved.ErrorsText());
         Assert.Equal("fake", Declaration(resolved).Model.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "注入模型缺少任务值时被拒绝")]
     public void Injected_model_without_a_task_value_is_rejected()
     {
         using TestEnvironment environment = TestEnvironment.Create();

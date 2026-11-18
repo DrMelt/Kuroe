@@ -6,7 +6,7 @@ namespace Kuroe.Integration.Tests.Process;
 /// <summary>进程执行的边界：启动失败、输出与退出码。</summary>
 public sealed class ProcessRunnerTests
 {
-    [Fact]
+    [Fact(DisplayName = "缺少程序时报告启动失败")]
     public void Missing_program_reports_a_start_failure()
     {
         ProcessRunner runner = new();
@@ -15,7 +15,7 @@ public sealed class ProcessRunnerTests
             () => runner.Run("kuroe-missing-program", [], Path.GetTempPath(), TimeSpan.FromSeconds(5)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "返回进程输出与退出码")]
     public void Output_and_exit_code_are_returned()
     {
         ProcessRunner runner = new();

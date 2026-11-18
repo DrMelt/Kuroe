@@ -13,7 +13,7 @@ namespace Kuroe.Flow.Control.Graph.Tests.Runtime;
 /// <summary>执行节点声明解析：没有模型端口的节点不进入模型解析器。</summary>
 public sealed class ExecutionNodeDeclarationResolverTests
 {
-    [Fact]
+    [Fact(DisplayName = "无模型节点返回空声明")]
     public void Unmodeled_node_returns_an_empty_declaration()
     {
         ExecutableNode node = new()

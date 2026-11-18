@@ -7,7 +7,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>门控推进：阻塞、重新执行与 From 汇合。</summary>
 public sealed class GateAdvanceTests
 {
-    [Fact]
+    [Fact(DisplayName = "组保持门控直到来源发布新版本")]
     public void Group_stays_gated_until_source_releases_new_version()
     {
         using TestEnvironment environment = TestEnvironment.Create(FreshGateFlow);
@@ -41,8 +41,7 @@ public sealed class GateAdvanceTests
         Assert.Single(done.View.Steps[2].Executions);
     }
 
-    /// <summary>汇合的 From 来源甲依赖乙，乙先齐备时 From 未齐备不得启动；乙、甲都齐备后才启动一次。</summary>
-    [Fact]
+    [Fact(DisplayName = "汇合的 From 来源甲依赖乙，乙先齐备时 From 未齐备不得启动；乙、甲都齐备后才启动一次")]
     public void Group_must_be_ready_before_start()
     {
         using TestEnvironment environment = TestEnvironment.Create(FromGateFlow);
@@ -60,7 +59,7 @@ public sealed class GateAdvanceTests
         Assert.Single(done.View.Steps[2].Executions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器来源按修订等待与恢复")]
     public async Task Container_source_waits_and_resumes_with_revision()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerGateFlow);

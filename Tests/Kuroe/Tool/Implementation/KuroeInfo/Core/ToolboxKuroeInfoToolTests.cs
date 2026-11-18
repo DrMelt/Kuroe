@@ -5,7 +5,7 @@ namespace Kuroe.Tool.KuroeInfo.Tests;
 /// <summary>工具面查询工具：放行前缀与未配置命令工具的提示。</summary>
 public sealed class ToolboxKuroeInfoToolTests
 {
-    [Fact]
+    [Fact(DisplayName = "描述列出对话模式与空命令工具提示")]
     public void Describe_lists_the_dialogue_modes_and_the_empty_command_tools_hint()
     {
         ToolboxKuroeInfoTool tool = new(

@@ -23,7 +23,7 @@ public sealed class MafFlowControlTests
 {
     private static readonly string[] ForkedSteps = ["起点", "左", "右"];
 
-    [Fact]
+    [Fact(DisplayName = "控制运行每个步骤并完成任务")]
     public async Task Control_runs_every_step_and_completes_the_task()
     {
         Harness harness = new();
@@ -36,7 +36,7 @@ public sealed class MafFlowControlTests
         Assert.Equal(["第一步", "第二步"], harness.Work.Executions.Select(execution => execution.Request.Step.Value));
     }
 
-    [Fact]
+    [Fact(DisplayName = "控制为存档留下检查点")]
     public async Task Control_leaves_a_checkpoint_for_the_archive()
     {
         Harness harness = new();
@@ -52,7 +52,7 @@ public sealed class MafFlowControlTests
         Assert.Empty(state.PendingSteps);
     }
 
-    [Fact]
+    [Fact(DisplayName = "视图列出定义步骤与开始端口")]
     public void View_lists_definition_steps_and_start_ports()
     {
         Harness harness = new();
@@ -64,7 +64,7 @@ public sealed class MafFlowControlTests
         Assert.Equal(["目标", "MODEL_NAME"], snapshot.View.StartPorts.Select(port => port.Name));
     }
 
-    [Fact]
+    [Fact(DisplayName = "步骤中断暂停任务恢复后继续")]
     public async Task Interrupted_step_pauses_the_task_and_resume_continues()
     {
         int created = 0;
@@ -89,7 +89,7 @@ public sealed class MafFlowControlTests
         Assert.Contains(harness.Work.Executions, candidate => candidate.State == ExecutionState.Succeeded);
     }
 
-    [Fact]
+    [Fact(DisplayName = "关闭等待循环停止")]
     public async Task Shutdown_waits_for_the_loop_to_stop()
     {
         FakeRunnerFactory runners = new(() => new FakeRunner { Block = true });
@@ -105,7 +105,7 @@ public sealed class MafFlowControlTests
             execution => Assert.Equal(ExecutionState.Interrupted, execution.State));
     }
 
-    [Fact]
+    [Fact(DisplayName = "重跑从入口重启失败流程")]
     public async Task Rerun_restarts_a_failed_flow_from_the_entry()
     {
         int created = 0;
@@ -126,7 +126,7 @@ public sealed class MafFlowControlTests
         Assert.Contains(harness.Work.Executions, execution => execution.State == ExecutionState.Succeeded);
     }
 
-    [Fact]
+    [Fact(DisplayName = "视图把失败步骤标记为阻塞")]
     public async Task View_marks_a_failed_step_as_blocked()
     {
         FakeRunnerFactory runners = new(() => new FakeRunner
@@ -143,7 +143,7 @@ public sealed class MafFlowControlTests
         Assert.Equal("失败", step.Block);
     }
 
-    [Fact]
+    [Fact(DisplayName = "恢复重建状态执行与检查点")]
     public async Task Restore_rebuilds_state_executions_and_checkpoint()
     {
         Harness harness = new();
@@ -164,7 +164,7 @@ public sealed class MafFlowControlTests
         Assert.False(string.IsNullOrEmpty(state.CheckpointId));
     }
 
-    [Fact]
+    [Fact(DisplayName = "模板暴露开始端口与步骤")]
     public void Templates_expose_start_ports_and_steps()
     {
         MafFlowTemplates templates = new(new MafFlowCatalog([TestFlow.Definition()]));
@@ -175,7 +175,7 @@ public sealed class MafFlowControlTests
         Assert.Equal(["第一步", "第二步"], template.Steps.Select(step => step.Label));
     }
 
-    [Fact]
+    [Fact(DisplayName = "控制运行分叉步骤")]
     public async Task Control_runs_forked_steps()
     {
         Harness harness = new(definition: TestFlow.Fork());
@@ -189,7 +189,7 @@ public sealed class MafFlowControlTests
         Assert.All(harness.Work.Executions, execution => Assert.Equal(ExecutionState.Succeeded, execution.State));
     }
 
-    [Fact]
+    [Fact(DisplayName = "终止保留未完成步骤")]
     public async Task Terminate_keeps_unfinished_steps()
     {
         FakeRunnerFactory runners = new(() => new FakeRunner { Block = true });
@@ -208,7 +208,7 @@ public sealed class MafFlowControlTests
             entry => entry.Text.Contains("可恢复阻塞", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "暂停保持任务暂停并从入口恢复")]
     public async Task Pause_keeps_the_task_paused_and_resumes_from_entry()
     {
         int created = 0;

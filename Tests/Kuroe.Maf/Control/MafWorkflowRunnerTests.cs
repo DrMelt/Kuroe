@@ -7,7 +7,7 @@ namespace Kuroe.Maf.Control.Tests;
 /// <summary>运行器：按定义构建 workflow，运行步骤并交出运行事件。</summary>
 public sealed class MafWorkflowRunnerTests
 {
-    [Fact]
+    [Fact(DisplayName = "运行器运行定义并报告步骤事件")]
     public async Task Runner_runs_the_definition_and_reports_step_events()
     {
         MafFlowDefinition definition = Definition();

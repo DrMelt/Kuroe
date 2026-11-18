@@ -8,7 +8,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>独立节点在并发额度内并行。</summary>
 public sealed class ConcurrencyTests
 {
-    [Fact]
+    [Fact(DisplayName = "独立节点在并发额度内并行")]
     public async Task Independent_nodes_run_in_parallel_within_the_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(ParallelFlow);
@@ -26,7 +26,7 @@ public sealed class ConcurrencyTests
         Assert.Equal(TaskState.Done, (await environment.SettleAsync(id)).State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "多个任务在读取时并发运行")]
     public void Several_tasks_run_concurrently_while_being_read()
     {
         using TestEnvironment environment = TestEnvironment.Create();

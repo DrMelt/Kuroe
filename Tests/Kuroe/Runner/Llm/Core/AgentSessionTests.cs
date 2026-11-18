@@ -17,7 +17,7 @@ namespace Kuroe.Runner.Llm.Tests;
 /// <summary>MAF 会话的捕获与恢复、用量与过程记录、未知工具继续与历史规范化。</summary>
 public sealed class AgentSessionTests
 {
-    [Fact]
+    [Fact(DisplayName = "会话捕获与恢复往返历史")]
     public async Task Session_capture_and_restore_round_trip_the_history()
     {
         FakeClient client = new(_ => Reply("回答"));
@@ -37,7 +37,7 @@ public sealed class AgentSessionTests
         Assert.True(AgentSessionCodec.CanContinue(restored));
     }
 
-    [Fact]
+    [Fact(DisplayName = "带种子的会话把轮次输入追加到恢复历史")]
     public async Task A_seeded_session_appends_the_round_input_to_the_restored_history()
     {
         FakeClient client = new(_ => Reply("回答"));
@@ -83,7 +83,7 @@ public sealed class AgentSessionTests
         Assert.Equal(["开始", "追问"], client.Requests[^1].Select(message => message.Text));
     }
 
-    [Fact]
+    [Fact(DisplayName = "已消费请求记录用量与内容")]
     public async Task A_consumed_request_records_usage_and_content()
     {
         ProcessJournal journal = new();
@@ -101,7 +101,7 @@ public sealed class AgentSessionTests
         Assert.Equal(["问题", "先想", "再答"], journal.Entries.Select(entry => entry.Text));
     }
 
-    [Fact]
+    [Fact(DisplayName = "空回复丢弃该轮")]
     public async Task An_empty_reply_discards_the_round()
     {
         ProcessJournal journal = new();
@@ -115,7 +115,7 @@ public sealed class AgentSessionTests
         Assert.Contains(journal.Entries, entry => entry.Label == "丢弃");
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知工具不停止该轮")]
     public async Task An_unknown_tool_does_not_stop_the_round()
     {
         FakeClient client = new(
@@ -133,7 +133,7 @@ public sealed class AgentSessionTests
         Assert.True(AgentSessionCodec.CanContinue(messages));
     }
 
-    [Fact]
+    [Fact(DisplayName = "失败工具返回错误结果并继续")]
     public async Task A_failing_tool_returns_an_error_result_and_continues()
     {
         ProcessJournal journal = new();
@@ -153,7 +153,7 @@ public sealed class AgentSessionTests
             result => result.Result is string { Length: > 0 });
     }
 
-    [Fact]
+    [Fact(DisplayName = "待处理的工具调用不能继续")]
     public void A_pending_tool_call_cannot_continue()
     {
         List<ChatMessage> messages =
@@ -166,7 +166,7 @@ public sealed class AgentSessionTests
         Assert.False(AgentSessionCodec.CanContinue(messages));
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知内容不阻止继续")]
     public void Unknown_content_does_not_block_continuation()
     {
         List<ChatMessage> messages =
@@ -179,7 +179,7 @@ public sealed class AgentSessionTests
         Assert.True(AgentSessionCodec.CanContinue(messages));
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知负载格式被拒绝")]
     public void An_unknown_payload_format_is_rejected()
     {
         ExecutionRestoreState payload = new("llm.session.v2", "{}");
@@ -187,7 +187,7 @@ public sealed class AgentSessionTests
         Assert.Throws<FormatException>(() => AgentSessionCodec.Decode(payload));
     }
 
-    [Fact]
+    [Fact(DisplayName = "失败请求把输入保留在恢复数据中")]
     public async Task A_failed_request_keeps_the_input_in_the_restore_data()
     {
         FakeClient client = new(_ => throw new InvalidOperationException("请求失败"));
@@ -203,7 +203,7 @@ public sealed class AgentSessionTests
         Assert.Equal("问题", messages[^1].Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "空指令以空消息发送")]
     public async Task An_empty_instruction_is_sent_as_an_empty_message()
     {
         FakeClient client = new(_ => Reply("回答"));
@@ -217,7 +217,7 @@ public sealed class AgentSessionTests
         Assert.Equal(string.Empty, messages[1].Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "用量累加请求上下文跟随最近报告")]
     public async Task Usage_sums_requests_and_context_follows_the_latest_report()
     {
         FakeClient client = new(
@@ -237,7 +237,7 @@ public sealed class AgentSessionTests
         Assert.Equal(10, usage.ContextTokens);
     }
 
-    [Fact]
+    [Fact(DisplayName = "恢复的会话合并部分回复")]
     public async Task A_restored_session_merges_the_partial_reply()
     {
         FakeClient client = new(_ => Reply("半句"), _ => Reply("续写"));
@@ -259,7 +259,7 @@ public sealed class AgentSessionTests
         Assert.Equal("半句续写", messages[^1].Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "会话可由新智能体恢复")]
     public async Task Session_can_be_restored_by_a_new_agent()
     {
         FakeClient client = new(_ => Reply("回答"));
@@ -280,7 +280,7 @@ public sealed class AgentSessionTests
         Assert.Equal("开始", Assert.Single(provider.GetMessages(restored)).Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话读取返回已持久化的用户与助手文本")]
     public async Task Conversation_reader_returns_persisted_user_and_assistant_text()
     {
         FakeClient client = new(_ => Reply("回答"));
@@ -307,7 +307,7 @@ public sealed class AgentSessionTests
                     .Select(part => part.Text)))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话读取保留推理与工具部分")]
     public async Task Conversation_reader_keeps_reasoning_and_tool_parts()
     {
         FakeClient client = new(_ => UsageReply("先想", "再答"));
@@ -329,7 +329,7 @@ public sealed class AgentSessionTests
             part => part.Kind == ExecutionContentKind.Text && part.Text == "再答");
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话读取拒绝未知格式")]
     public async Task Conversation_reader_rejects_an_unknown_format()
     {
         ErrorOr<ExecutionConversation> conversation = await new ExecutionConversationReader()

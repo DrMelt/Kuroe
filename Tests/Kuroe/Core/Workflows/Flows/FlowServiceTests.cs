@@ -21,7 +21,7 @@ public sealed class FlowServiceTests
 {
     private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
 
-    [Fact]
+    [Fact(DisplayName = "宽容加载保留可编译流程并报告不可用")]
     public void Tolerant_load_keeps_compilable_flows_and_reports_unavailable()
     {
         WithLibrary((store, compiler) =>
@@ -36,7 +36,7 @@ public sealed class FlowServiceTests
         });
     }
 
-    [Fact]
+    [Fact(DisplayName = "严格加载对不可用流程返回错误")]
     public void Strict_load_returns_errors_for_unavailable_flow()
     {
         WithLibrary((store, compiler) =>

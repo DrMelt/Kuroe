@@ -6,7 +6,7 @@ namespace Kuroe.Tool.FileAccess.Shared.Tests;
 /// <summary>文本替换条件：缺参数、空 pattern、区分大小写时的相同文本与换行归一。</summary>
 public sealed class TextReplacementTests
 {
-    [Fact]
+    [Fact(DisplayName = "创建拒绝缺少替换文本")]
     public void Create_rejects_missing_replacement()
     {
         ErrorOr<TextReplacement> result = TextReplacement.Create(Query("old"), null);
@@ -15,7 +15,7 @@ public sealed class TextReplacementTests
         Assert.Contains("replacement", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建拒绝相同文本")]
     public void Create_rejects_identical_text()
     {
         ErrorOr<TextReplacement> result = TextReplacement.Create(Query("old"), "old");
@@ -24,7 +24,7 @@ public sealed class TextReplacementTests
         Assert.Contains("相同", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建拒绝归一化后相同的文本")]
     public void Create_rejects_identical_text_after_newline_normalization()
     {
         ErrorOr<TextReplacement> result = TextReplacement.Create(Query("a\r\nb"), "a\nb");
@@ -32,7 +32,7 @@ public sealed class TextReplacementTests
         Assert.True(result.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建接受空替换")]
     public void Create_accepts_empty_replacement()
     {
         TextReplacement replacement = Success(TextReplacement.Create(Query("old"), string.Empty));
@@ -40,7 +40,7 @@ public sealed class TextReplacementTests
         Assert.Equal(string.Empty, replacement.Replacement);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建归一化模式与替换文本的换行")]
     public void Create_normalizes_pattern_and_replacement_newlines()
     {
         TextReplacement replacement = Success(TextReplacement.Create(Query("a\r\nb\rc"), "x\r\ny\nz"));
@@ -49,7 +49,7 @@ public sealed class TextReplacementTests
         Assert.Equal("x\ny\nz", replacement.Replacement);
     }
 
-    [Fact]
+    [Fact(DisplayName = "正则匹配相同文本时创建仍接受")]
     public void Create_accepts_identical_text_for_a_regex()
     {
         TextReplacement replacement = Success(TextReplacement.Create(Query("a+", regex: true), "a+"));
@@ -57,7 +57,7 @@ public sealed class TextReplacementTests
         Assert.Equal("a+", replacement.Replacement);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建接受空白模式")]
     public void Create_accepts_a_whitespace_pattern()
     {
         TextReplacement literal = Success(TextReplacement.Create(Query(" "), "x"));
@@ -67,7 +67,7 @@ public sealed class TextReplacementTests
         Assert.Equal(" ", regex.Pattern.Source);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建接受模板中的未知分组引用")]
     public void Create_accepts_an_unknown_group_reference_in_the_template()
     {
         TextReplacement replacement =

@@ -45,7 +45,7 @@ public sealed class NodeLibraryDocumentTests
     private static void AssertFails(string json, string expected) =>
         Assert.Contains(Compile(json).ErrorsOrEmptyList, error => error.Description.Contains(expected));
 
-    [Fact]
+    [Fact(DisplayName = "流程引用库叶子与容器并带端口绑定")]
     public void Flow_references_library_leaf_and_container_with_port_binding()
     {
         FlowDefinition flow = Find(LibraryFlow, new FlowName("默认"));
@@ -67,7 +67,7 @@ public sealed class NodeLibraryDocumentTests
         Assert.Equal("制定计划@计划", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器模型槽按流程绑定不同模型")]
     public void Container_model_slot_bound_to_distinct_models_per_flow()
     {
         CompiledFlow first = FindCompiled(PerFlowModelBinding, new FlowName("甲"));
@@ -83,24 +83,21 @@ public sealed class NodeLibraryDocumentTests
     private static string? StaticText(CompiledFlow flow, ExecutableNode node, PortName port) =>
         new StaticPortValues(flow.Graph, PortTexts.Empty).For(node).Text(port);
 
-    [Fact]
+    [Fact(DisplayName = "未知引用报告缺失定义")]
     public void Unknown_reference_reports_the_missing_definition() =>
         AssertFails(UnknownReferenceWithoutStatic, "不在节点库");
 
-    /// <summary>库容器内成员的上游接线条目必须落在子树或声明端口内，环外成员不可见。</summary>
-    [Fact]
+    [Fact(DisplayName = "库容器内成员的上游接线条目必须落在子树或声明端口内，环外成员不可见")]
     public void Member_from_outside_container_scope_is_rejected() =>
         AssertFails(MemberFromOutOfScope, "From 引用的节点 外来 不在容器 交付 的作用域里");
 
-    /// <summary>库执行定义的次数上限非正，未经引用也在库校验阶段拒绝。</summary>
-    [Fact]
+    [Fact(DisplayName = "库执行定义的次数上限非正，未经引用也在库校验阶段拒绝")]
     public void Library_executable_with_non_positive_max_executions_is_rejected() =>
         Assert.Equal(
             ["节点库定义 干活库：MaxExecutions 必须是正整数。"],
             LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Label = new NodeLabel("干活库"), Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners), Spec = new ExecutableSpec { MaxExecutions = 0 } }));
 
-    /// <summary>库容器定义的非正发布次数上限，未经引用也在库校验阶段拒绝。</summary>
-    [Fact]
+    [Fact(DisplayName = "库容器定义的非正发布次数上限，未经引用也在库校验阶段拒绝")]
     public void Library_container_with_non_positive_max_executions_is_rejected() =>
         Assert.Equal(
             ["节点库定义 干活组：MaxExecutions 必须是正整数。"],
@@ -113,15 +110,13 @@ public sealed class NodeLibraryDocumentTests
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
             }));
 
-    /// <summary>库容器定义必须声明子节点，缺子节点在库校验阶段拒绝。</summary>
-    [Fact]
+    [Fact(DisplayName = "库容器定义必须声明子节点，缺子节点在库校验阶段拒绝")]
     public void Library_container_without_children_is_rejected() =>
         Assert.Equal(
             ["节点库定义 空组：容器节点必须声明子节点。"],
             LibraryErrors(new NodeSpec { Name = new NodeName("空组"), Label = new NodeLabel("空组"), Type = ContainerNodeTypes.Type }));
 
-    /// <summary>库执行定义不能声明子节点，子节点只属于容器。</summary>
-    [Fact]
+    [Fact(DisplayName = "库执行定义不能声明子节点，子节点只属于容器")]
     public void Library_executable_with_children_is_rejected() =>
         Assert.Equal(
             ["节点库定义 干活库：执行节点与输入节点不能声明子节点，子节点只属于容器。"],
@@ -134,8 +129,7 @@ public sealed class NodeLibraryDocumentTests
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners), Spec = new ExecutableSpec() }],
             }));
 
-    /// <summary>库容器定义的输出必须有来源。</summary>
-    [Fact]
+    [Fact(DisplayName = "库容器定义的输出必须有来源")]
     public void Library_container_with_execution_fields_is_rejected() =>
         Assert.Equal(
             [
@@ -150,8 +144,7 @@ public sealed class NodeLibraryDocumentTests
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
             }));
 
-    /// <summary>流程名与库作用域名相同时错误仍按流程作用域给出。</summary>
-    [Fact]
+    [Fact(DisplayName = "流程名与库作用域名相同时错误仍按流程作用域给出")]
     public void Flow_named_like_library_scope_keeps_flow_errors()
     {
         ErrorOr<CompiledDocument> compiled = Compile(FlowNamedLikeLibraryScope);
@@ -161,8 +154,7 @@ public sealed class NodeLibraryDocumentTests
             error => Assert.StartsWith("流程 节点库", error.Description));
     }
 
-    /// <summary>文件定义的节点与内置节点同名时覆盖内置定义。</summary>
-    [Fact]
+    [Fact(DisplayName = "文件定义的节点与内置节点同名时覆盖内置定义")]
     public void File_node_overrides_builtin_definition()
     {
         FlowDefinition flow = Find(OverridingBuiltinFlow, new FlowName("默认"));
@@ -172,7 +164,7 @@ public sealed class NodeLibraryDocumentTests
         Assert.Equal("文件覆写的指令", Assert.IsType<LlmNodeType>(implement.Type).Parameters?.Prompt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口绑定值解析外层成员名")]
     public void Port_binding_value_resolves_outer_member_name()
     {
         FlowDefinition flow = Find(MemberNameBindingFlow, new FlowName("默认"));
@@ -187,7 +179,7 @@ public sealed class NodeLibraryDocumentTests
         Assert.Equal("目标条目@结论", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口绑定值穿透外层作用域")]
     public void Port_binding_value_passes_through_outer_scope()
     {
         FlowDefinition flow = Find(OuterPortBindingFlow, new FlowName("透传"));
@@ -201,8 +193,7 @@ public sealed class NodeLibraryDocumentTests
         Assert.Equal("制定计划@计划", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
 
-    /// <summary>绑定值带端口选取时端口随绑定展开保留，不退回整份引用。</summary>
-    [Fact]
+    [Fact(DisplayName = "绑定值带端口选取时端口随绑定展开保留，不退回整份引用")]
     public void Port_binding_value_keeps_port_selection()
     {
         FlowDefinition flow = Find(PortSelectionBindingFlow, new FlowName("默认"));
@@ -216,7 +207,7 @@ public sealed class NodeLibraryDocumentTests
         Assert.Equal("来源@结论", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
 
-    [Fact]
+    [Fact(DisplayName = "引用执行节点继承库定义并注入来源")]
     public void Reference_executable_inherits_library_definition_and_injects_from()
     {
         FlowDefinition flow = Find(ReferenceInheritFlow, new FlowName("默认"));
@@ -227,46 +218,46 @@ public sealed class NodeLibraryDocumentTests
     }
 
     [Theory]
-    [InlineData(LibraryDuplicateName, "节点名重复")]
-    [InlineData(LibraryReferenceAtRoot, "节点库定义不能是引用")]
-    [InlineData(LibraryLeafFrom, "执行节点库定义的接线由引用处提供")]
-    [InlineData(UnknownLibraryReference, "不在节点库")]
-    [InlineData(UnboundPort, "没有绑定来源")]
-    [InlineData(ReferenceWithBody, "引用成员不能同时声明子节点")]
-    [InlineData(ReferenceWithParameters, "引用节点的类型参数由被引用的库定义决定")]
-    [InlineData(ContainerWithQuestion, "字段 Question 不属于 Container 节点")]
-    [InlineData(UnknownPortBinding, "不是已声明的输入端口")]
-    [InlineData(PortNotDeclared, "没有在容器")]
-    [InlineData(ReferenceContainerFrom, "没有绑定来源")]
+    [InlineData(LibraryDuplicateName, "节点名重复", Label = "节点名重复")]
+    [InlineData(LibraryReferenceAtRoot, "节点库定义不能是引用", Label = "节点库定义不能是引用")]
+    [InlineData(LibraryLeafFrom, "执行节点库定义的接线由引用处提供", Label = "执行节点库定义的接线由引用处提供")]
+    [InlineData(UnknownLibraryReference, "不在节点库", Label = "不在节点库")]
+    [InlineData(UnboundPort, "没有绑定来源", Label = "没有绑定来源")]
+    [InlineData(ReferenceWithBody, "引用成员不能同时声明子节点", Label = "引用成员不能同时声明子节点")]
+    [InlineData(ReferenceWithParameters, "引用节点的类型参数由被引用的库定义决定", Label = "引用节点的类型参数由被引用的库定义决定")]
+    [InlineData(ContainerWithQuestion, "字段 Question 不属于 Container 节点", Label = "字段 Question 不属于 Container 节点")]
+    [InlineData(UnknownPortBinding, "不是已声明的输入端口", Label = "不是已声明的输入端口")]
+    [InlineData(PortNotDeclared, "没有在容器", Label = "没有在容器")]
+    [InlineData(ReferenceContainerFrom, "没有绑定来源", Label = "没有绑定来源")]
 
-    [InlineData(LibraryLeafIn, "执行节点库定义的端口由引用处绑定")]
-    [InlineData(ContainerWithFrom, "库容器定义不接线")]
-    [InlineData(ReferenceWithInputs, "引用节点不能声明输入端口")]
-    [InlineData(LeafWithInputs, "必须至少给出一组 From")]
+    [InlineData(LibraryLeafIn, "执行节点库定义的端口由引用处绑定", Label = "执行节点库定义的端口由引用处绑定")]
+    [InlineData(ContainerWithFrom, "库容器定义不接线", Label = "库容器定义不接线")]
+    [InlineData(ReferenceWithInputs, "引用节点不能声明输入端口", Label = "引用节点不能声明输入端口")]
+    [InlineData(LeafWithInputs, "必须至少给出一组 From", Label = "必须至少给出一组 From")]
 
-    [InlineData(GroupReferenceWithFrom, "From 连接的目标输入端口")]
-    [InlineData(MemberFromOutOfScope, "From 引用的节点")]
-    [InlineData(MemberUsesStart, "没有在容器 交付 上声明")]
-    [InlineData(MemberGroupOutsideScope, "From 引用的节点")]
-    [InlineData(MemberGroupUndeclaredPort, "没有在容器")]
+    [InlineData(GroupReferenceWithFrom, "From 连接的目标输入端口", Label = "From 连接的目标输入端口")]
+    [InlineData(MemberFromOutOfScope, "From 引用的节点", Label = "From 引用的节点")]
+    [InlineData(MemberUsesStart, "没有在容器 交付 上声明", Label = "没有在容器 交付 上声明")]
+    [InlineData(MemberGroupOutsideScope, "From 引用的节点", Label = "From 引用的节点")]
+    [InlineData(MemberGroupUndeclaredPort, "没有在容器", Label = "没有在容器")]
 
-    [InlineData(LibraryPortOnInput, "最多声明一个输出端口")]
-    [InlineData(LibraryQuestionOnText, "字段 Question 不属于 Llm 节点")]
-    [InlineData(LibraryContainerWithOutputs, "输出端口 结论 必须写 Value 或 Ref")]
-    [InlineData(MemberReferenceWithOutputs, "引用节点不能声明输出端口")]
-    [InlineData(LibraryContainerOutMissingMember, "不在容器 交付 的子树里")]
-    [InlineData(LibraryContainerOutBadPort, "没有输出端口 不存在")]
-    [InlineData(LibraryContainerOutSubContainer, "没有输出端口 结论")]
-    [InlineData(LibraryContainerOutInputContext, "类型必须与来源")]
-    [InlineData(LeafWithOut, "缺少 @")]
-    [InlineData(ReferenceWithOut, "引用节点不能声明输出端口")]
-    [InlineData(AssemblyContainerOut, "没有输出端口")]
-    [InlineData(LibraryNameWithAt, "节点名不能含 @")]
-    [InlineData(MemberNameWithAt, "成员标签 甲@乙 不能含 @")]
-    [InlineData(LibraryInputPortWithAt, "端口名不能为空或含 @")]
+    [InlineData(LibraryPortOnInput, "最多声明一个输出端口", Label = "最多声明一个输出端口")]
+    [InlineData(LibraryQuestionOnText, "字段 Question 不属于 Llm 节点", Label = "字段 Question 不属于 Llm 节点")]
+    [InlineData(LibraryContainerWithOutputs, "输出端口 结论 必须写 Value 或 Ref", Label = "输出端口 结论 必须写 Value 或 Ref")]
+    [InlineData(MemberReferenceWithOutputs, "引用节点不能声明输出端口", Label = "引用节点不能声明输出端口")]
+    [InlineData(LibraryContainerOutMissingMember, "不在容器 交付 的子树里", Label = "不在容器 交付 的子树里")]
+    [InlineData(LibraryContainerOutBadPort, "没有输出端口 不存在", Label = "没有输出端口 不存在")]
+    [InlineData(LibraryContainerOutSubContainer, "没有输出端口 结论", Label = "没有输出端口 结论")]
+    [InlineData(LibraryContainerOutInputContext, "类型必须与来源", Label = "类型必须与来源")]
+    [InlineData(LeafWithOut, "缺少 @", Label = "缺少 @")]
+    [InlineData(ReferenceWithOut, "引用节点不能声明输出端口", Label = "引用节点不能声明输出端口")]
+    [InlineData(AssemblyContainerOut, "没有输出端口", Label = "没有输出端口")]
+    [InlineData(LibraryNameWithAt, "节点名不能含 @", Label = "节点名不能含 @")]
+    [InlineData(MemberNameWithAt, "成员标签 甲@乙 不能含 @", Label = "成员标签 甲@乙 不能含 @")]
+    [InlineData(LibraryInputPortWithAt, "端口名不能为空或含 @", Label = "端口名不能为空或含 @")]
 
-    [InlineData(LibraryContainerWithInputDefault, "容器输入端口 计划 不支持默认值")]
-    [InlineData(LibraryContainerWithDuplicateInputs, "输入端口 计划 重复")]
+    [InlineData(LibraryContainerWithInputDefault, "容器输入端口 计划 不支持默认值", Label = "容器输入端口 计划 不支持默认值")]
+    [InlineData(LibraryContainerWithDuplicateInputs, "输入端口 计划 重复", Label = "输入端口 计划 重复")]
     public void Invalid_library_fails_loading(string flowsJson, string expected) =>
         AssertFails(flowsJson, expected);
 

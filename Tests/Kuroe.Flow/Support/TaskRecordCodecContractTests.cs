@@ -12,7 +12,7 @@ public abstract class TaskRecordCodecContractTests
 {
     protected abstract ITaskRecordCodec CreateCodec();
 
-    [Fact]
+    [Fact(DisplayName = "编解码契约往返保留任务存档")]
     public void Round_trip_preserves_task_record()
     {
         ITaskRecordCodec codec = CreateCodec();
@@ -34,7 +34,7 @@ public abstract class TaskRecordCodecContractTests
         Assert.Equal(state.Pending.Steps, loadedState.Pending.Steps);
     }
 
-    [Fact]
+    [Fact(DisplayName = "往返保留全部节点记录种类")]
     public void Round_trip_preserves_all_node_record_kinds()
     {
         ITaskRecordCodec codec = CreateCodec();
@@ -47,7 +47,7 @@ public abstract class TaskRecordCodecContractTests
         Assert.Single(nodes.OfType<ContainerNodeRecord>());
     }
 
-    [Fact]
+    [Fact(DisplayName = "往返保留可空字段")]
     public void Round_trip_preserves_nullable_fields()
     {
         ITaskRecordCodec codec = CreateCodec();
@@ -65,7 +65,7 @@ public abstract class TaskRecordCodecContractTests
             Assert.IsType<ExecutableNodeRecord>(loadedNodes[1]).Block);
     }
 
-    [Fact]
+    [Fact(DisplayName = "往返保留执行输入来源")]
     public void Round_trip_preserves_execution_input_sources()
     {
         ITaskRecordCodec codec = CreateCodec();
@@ -78,7 +78,7 @@ public abstract class TaskRecordCodecContractTests
             [.. loaded.Executions[0].Inputs.Select(value => value.Source)]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "往返保留端口历史触发与内容")]
     public void Round_trip_preserves_port_history_triggers_and_content()
     {
         ITaskRecordCodec codec = CreateCodec();
@@ -95,7 +95,7 @@ public abstract class TaskRecordCodecContractTests
         Assert.Equal(2, Assert.IsType<ExecutableNodeRecord>(State(loaded).Nodes[0]).Common.ActivePublicationRevision);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入结果确定")]
     public void Write_is_deterministic()
     {
         ITaskRecordCodec codec = CreateCodec();

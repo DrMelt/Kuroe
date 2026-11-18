@@ -6,7 +6,7 @@ namespace Kuroe.Tool.Json.Tests;
 /// <summary>工具文件的注册与统一装载：注册序、同名覆盖、跨文件去重与错误收集。</summary>
 public sealed class ToolFilesTests
 {
-    [Fact]
+    [Fact(DisplayName = "注册表保持注册顺序")]
     public void Registry_keeps_registration_order()
     {
         ToolFileRegistry files = new();
@@ -16,7 +16,7 @@ public sealed class ToolFilesTests
         Assert.Equal(["a.json", "b.json"], files.Files.Select(file => file.FileName));
     }
 
-    [Fact]
+    [Fact(DisplayName = "注册表就地替换同名文件")]
     public void Registry_replaces_the_same_file_name_in_place()
     {
         ToolFileRegistry files = new();
@@ -30,7 +30,7 @@ public sealed class ToolFilesTests
         Assert.Same(second, files.Files[0]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有注册文件时加载返回空")]
     public void Load_returns_empty_when_nothing_is_registered()
     {
         ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = ToolFiles.Load(new ToolFileRegistry(), "config", "work");
@@ -39,7 +39,7 @@ public sealed class ToolFilesTests
         Assert.Empty(loaded.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "加载按注册顺序合并文件")]
     public void Load_merges_registered_files_in_registration_order()
     {
         ToolFileRegistry files = new();
@@ -54,7 +54,7 @@ public sealed class ToolFilesTests
             loaded.Value.Select(tool => tool.Definition.Path));
     }
 
-    [Fact]
+    [Fact(DisplayName = "加载报告跨文件的重复路径")]
     public void Load_reports_duplicate_paths_across_files()
     {
         ToolFileRegistry files = new();
@@ -68,7 +68,7 @@ public sealed class ToolFilesTests
             error => error.Description.Contains("重复", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "加载收集每个文件的错误")]
     public void Load_collects_errors_from_every_file()
     {
         ToolFileRegistry files = new();

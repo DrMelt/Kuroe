@@ -14,7 +14,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>宿主侧的状态与时间呈现文本。</summary>
 public sealed class ViewLabelsTests
 {
-    [Fact]
+    [Fact(DisplayName = "状态标签覆盖全部主体状态")]
     public void State_labels_cover_every_body_state()
     {
         Assert.Equal("执行中", ViewLabels.Of(TaskState.Running));
@@ -24,7 +24,7 @@ public sealed class ViewLabelsTests
         Assert.Equal("已终止", ViewLabels.Of(TaskState.Terminated));
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入端口标签显示默认值")]
     public void Input_port_label_shows_its_default()
     {
         InputPort port = new(new PortName("背景"), PortTypes.Text, "可选背景", "固定背景");
@@ -32,7 +32,7 @@ public sealed class ViewLabelsTests
         Assert.Equal("背景：可选背景，默认 固定背景", port.Label());
     }
 
-    [Fact]
+    [Fact(DisplayName = "节点状态标签覆盖作用域")]
     public void Node_state_labels_cover_the_scope()
     {
         Assert.Equal("执行中", ViewLabels.Of(FlowItemState.Running));
@@ -40,14 +40,14 @@ public sealed class ViewLabelsTests
         Assert.Equal("已完成", ViewLabels.Of(FlowItemState.Done));
     }
 
-    [Fact]
+    [Fact(DisplayName = "耗时文本在分钟处切换单位")]
     public void Elapsed_lines_switch_on_the_minute_mark()
     {
         Assert.Equal("59秒", ViewLabels.Elapsed(TimeSpan.FromSeconds(59)));
         Assert.Equal("1分30秒", ViewLabels.Elapsed(TimeSpan.FromMinutes(1) + TimeSpan.FromSeconds(30)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "上下文显示最近请求未知时回退")]
     public void Context_shows_the_latest_request_and_falls_back_when_unknown()
     {
         ExecutionUsage usage = new(2, 0, new TokenUsage(150, 30, 180, null, null)) { ContextTokens = 90 };
@@ -56,7 +56,7 @@ public sealed class ViewLabelsTests
         Assert.Equal("未提供", ViewLabels.Context(ExecutionUsage.None));
     }
 
-    [Fact]
+    [Fact(DisplayName = "用量条目显示占比与分组子集")]
     public void Token_entries_show_shares_and_group_subsets()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(100, 20, 120, 80, 5));
@@ -69,7 +69,7 @@ public sealed class ViewLabelsTests
         Assert.Equal(("合计", "120"), entries[2]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行状态有进度时追加进度")]
     public void Execution_state_appends_progress_when_present()
     {
         Assert.Equal("执行中", ViewLabels.State(Execution("")));
@@ -78,7 +78,7 @@ public sealed class ViewLabelsTests
         Assert.Equal("已完成", ViewLabels.State(Execution("调用工具 GetTime") with { State = ExecutionState.Succeeded }));
     }
 
-    [Fact]
+    [Fact(DisplayName = "状态样式取自宿主样式")]
     public void Style_of_state_picks_the_host_style()
     {
         Assert.Equal(Styles.Success, ViewLabels.StyleOf(TaskState.Done));
@@ -88,7 +88,7 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Hint, ViewLabels.StyleOf(TaskState.Terminated));
     }
 
-    [Fact]
+    [Fact(DisplayName = "节点状态样式取自宿主样式")]
     public void Style_of_node_state_picks_the_host_style()
     {
         Assert.Equal(Styles.Success, ViewLabels.StyleOf(FlowItemState.Done));
@@ -97,7 +97,7 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Hint, ViewLabels.StyleOf(FlowItemState.Pending));
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行状态样式取自宿主样式")]
     public void Style_of_execution_state_picks_the_host_style()
     {
         Assert.Equal(Styles.Success, ViewLabels.StyleOf(ExecutionState.Succeeded));
@@ -106,7 +106,7 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Warning, ViewLabels.StyleOf(ExecutionState.Interrupted));
     }
 
-    [Fact]
+    [Fact(DisplayName = "过程记录级别样式取自宿主样式")]
     public void Style_of_journal_level_picks_the_host_style()
     {
         Assert.Equal(Style.Plain, ViewLabels.StyleOf(JournalLevel.Information));
@@ -114,21 +114,21 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Error, ViewLabels.StyleOf(JournalLevel.Error));
     }
 
-    [Fact]
+    [Fact(DisplayName = "单行化压平换行并截断")]
     public void One_line_flattens_newlines_and_truncates()
     {
         Assert.Equal("甲 乙", ViewLabels.OneLine("甲\n乙", 10));
         Assert.Equal("甲乙丙…", ViewLabels.OneLine("甲乙丙丁", 3));
     }
 
-    [Fact]
+    [Fact(DisplayName = "截断返回裁剪文本且不加标记")]
     public void Truncate_reports_the_clipped_text_without_a_marker()
     {
         Assert.Equal(("甲 乙", false), ViewLabels.Truncate("甲\n乙", 10));
         Assert.Equal(("甲乙丙", true), ViewLabels.Truncate("甲乙丙丁", 3));
     }
 
-    [Fact]
+    [Fact(DisplayName = "开始端口标签包含固定值")]
     public void Start_port_label_includes_its_fixed_value()
     {
         Port port = new(new PortName("风格"), PortTypes.Text, value: "技术文档风格");

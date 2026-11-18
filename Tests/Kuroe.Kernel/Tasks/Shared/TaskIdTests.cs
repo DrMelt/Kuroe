@@ -5,7 +5,7 @@ namespace Kuroe.Tasks.Shared.Tests;
 /// <summary>任务键的生成、显示与引用匹配。</summary>
 public sealed class TaskIdTests
 {
-    [Fact]
+    [Fact(DisplayName = "新键生成唯一的完整键")]
     public void New_produces_unique_full_keys()
     {
         TaskId[] ids = [.. Enumerable.Range(0, 1000).Select(_ => TaskId.New())];
@@ -14,7 +14,7 @@ public sealed class TaskIdTests
         Assert.Equal(ids.Length, ids.Distinct().Count());
     }
 
-    [Fact]
+    [Fact(DisplayName = "短键是最后八个字符")]
     public void Short_is_the_last_eight_characters()
     {
         TaskId id = new("0123456789abcdef0123456789abcdef");
@@ -23,7 +23,7 @@ public sealed class TaskIdTests
         Assert.Equal("任务 89abcdef", id.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "解析只接受完整十六进制键")]
     public void TryParse_accepts_only_a_full_hex_key()
     {
         Assert.True(TaskId.TryParse("0123456789abcdef0123456789abcdef", out TaskId parsed));
@@ -34,7 +34,7 @@ public sealed class TaskIdTests
         Assert.False(TaskId.TryParse(null, out _));
     }
 
-    [Fact]
+    [Fact(DisplayName = "短键匹配比较尾部且忽略大小写")]
     public void MatchesShort_compares_the_tail_ignoring_case()
     {
         TaskId id = new("0123456789abcdef0123456789ABCDEF");
@@ -45,7 +45,7 @@ public sealed class TaskIdTests
         Assert.False(id.MatchesShort(string.Empty));
     }
 
-    [Fact]
+    [Fact(DisplayName = "固定键使用全宽十六进制值")]
     public void Fixed_keys_use_a_full_width_hexadecimal_value()
     {
         TaskId id = new(3);

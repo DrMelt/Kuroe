@@ -14,7 +14,7 @@ public abstract class TaskPersistenceAcceptanceTests
 
     protected abstract Task<ITaskPersistenceSession> CreateSessionAsync(string root);
 
-    [Fact]
+    [Fact(DisplayName = "提交后暂停并释放重载恢复暂停任务")]
     public async Task Submit_pause_dispose_reload_restores_paused_task()
     {
         string root = CreateRoot();
@@ -40,7 +40,7 @@ public abstract class TaskPersistenceAcceptanceTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "重启加载未完成任务为暂停")]
     public async Task Restart_loads_unfinished_task_paused()
     {
         string root = CreateRoot();
@@ -68,7 +68,7 @@ public abstract class TaskPersistenceAcceptanceTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "恢复已加载的等待任务接受回答")]
     public async Task Resume_loaded_waiting_task_accepts_answer()
     {
         string root = CreateRoot();
@@ -99,7 +99,7 @@ public abstract class TaskPersistenceAcceptanceTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "恢复已加载的阻塞任务允许重跑")]
     public async Task Resume_loaded_blocked_task_allows_rerun()
     {
         string root = CreateRoot();
@@ -128,7 +128,7 @@ public abstract class TaskPersistenceAcceptanceTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "并发会话报告任务被另一会话持有")]
     public async Task Concurrent_sessions_report_the_task_held_by_the_other()
     {
         string root = CreateRoot();
@@ -150,7 +150,7 @@ public abstract class TaskPersistenceAcceptanceTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "加载的任务保留执行历史")]
     public async Task Loaded_task_preserves_execution_history()
     {
         string root = CreateRoot();

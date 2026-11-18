@@ -9,10 +9,9 @@ namespace Kuroe.Integration.Tests.Runtime.Nodes;
 /// <summary>触发端口：交回触发值，启动组按值决定是否启动；不承载触发的端口不能给出不触发值。</summary>
 public sealed class TriggerPortTests
 {
-    /// <summary>TextTrigger 交回触发位：false 消耗组不启动，true 文本进入下游并启动。</summary>
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [InlineData(false, Label = "触发为假")]
+    [InlineData(true, Label = "触发为真")]
     public void Text_trigger_value_decides_whether_downstream_starts(bool trigger)
     {
         using TestEnvironment environment = TestEnvironment.Create(TextTriggerFlow);
@@ -43,10 +42,9 @@ public sealed class TriggerPortTests
             && entry.Text.Contains("来源@结论", StringComparison.Ordinal));
     }
 
-    /// <summary>翻转门控：来源触发值为 false 时下游启动，true 时抑制并消耗组。</summary>
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [InlineData(false, Label = "触发为假")]
+    [InlineData(true, Label = "触发为真")]
     public void Flipped_trigger_binding_admits_only_a_false_source_value(bool trigger)
     {
         using TestEnvironment environment = TestEnvironment.Create(FlippedTriggerFlow);
@@ -74,10 +72,9 @@ public sealed class TriggerPortTests
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "继续");
     }
 
-    /// <summary>检查结论分别门控返工与提交：false 启动返工，true 启动提交。</summary>
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [InlineData(false, Label = "触发为假")]
+    [InlineData(true, Label = "触发为真")]
     public void Verdict_gates_rework_and_commit_on_opposite_values(bool passed)
     {
         using TestEnvironment environment = TestEnvironment.Create(VerdictGateFlow);
@@ -102,8 +99,7 @@ public sealed class TriggerPortTests
         Assert.Empty(environment.GraphExecutions(snapshot, "暂存"));
     }
 
-    /// <summary>SignalTrigger 为 false 时下游组被消耗但不启动，信号端口不承载内容。</summary>
-    [Fact]
+    [Fact(DisplayName = "SignalTrigger 为 false 时下游组被消耗但不启动，信号端口不承载内容")]
     public void SignalTrigger_false_consumes_group_without_starting_downstream()
     {
         using TestEnvironment environment = TestEnvironment.Create(SignalTriggerFlow);
@@ -118,8 +114,7 @@ public sealed class TriggerPortTests
         Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
     }
 
-    /// <summary>同一来源的另一个端口不受影响：停用的端口只消费自己的组。</summary>
-    [Fact]
+    [Fact(DisplayName = "同一来源的另一个端口不受影响：停用的端口只消费自己的组")]
     public void Silent_port_does_not_block_another_port_of_the_same_source()
     {
         using TestEnvironment environment = TestEnvironment.Create(TwoPortFlow);
@@ -138,8 +133,7 @@ public sealed class TriggerPortTests
         Assert.Empty(environment.GraphExecutions(snapshot, "停下游"));
     }
 
-    /// <summary>普通 Text 端口不接受触发值，交回被拒后节点停在阻塞。</summary>
-    [Fact]
+    [Fact(DisplayName = "普通 Text 端口不接受触发值，交回被拒后节点停在阻塞")]
     public void Plain_port_rejects_a_trigger_value()
     {
         using TestEnvironment environment = TestEnvironment.Create(PlainTextFlow);
@@ -155,8 +149,7 @@ public sealed class TriggerPortTests
             text.Contains("普通端口只接受文本", StringComparison.Ordinal));
     }
 
-    /// <summary>容器输出端口转发成员端口的触发值，false 时下游组被消耗。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器输出端口转发成员端口的触发值，false 时下游组被消耗")]
     public void Container_forwards_member_trigger_value()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerTriggerFlow);
@@ -174,8 +167,7 @@ public sealed class TriggerPortTests
             && entry.Text.Contains("箱@结论", StringComparison.Ordinal));
     }
 
-    /// <summary>审批节点收到 false 时不进入待批准，下游不启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "审批节点收到 false 时不进入待批准，下游不启动")]
     public void Approval_does_not_wait_when_the_source_does_not_trigger()
     {
         using TestEnvironment environment = TestEnvironment.Create(ApprovalTriggerFlow);
@@ -191,8 +183,7 @@ public sealed class TriggerPortTests
         Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
     }
 
-    /// <summary>抑制发生时另一分支仍在执行，任务保持进行；该分支完成后任务收口。</summary>
-    [Fact]
+    [Fact(DisplayName = "抑制发生时另一分支仍在执行，任务保持进行；该分支完成后任务收口")]
     public async Task Suppressed_branch_settles_after_the_other_branch_completes()
     {
         using TestEnvironment environment = TestEnvironment.Create(ParallelTriggerFlow);
@@ -216,8 +207,7 @@ public sealed class TriggerPortTests
         Assert.Empty(environment.GraphExecutions(done, "快下游"));
     }
 
-    /// <summary>普通 Text 端口配置触发后可以交回 false，下游组被消耗但不启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "普通 Text 端口配置触发后可以交回 false，下游组被消耗但不启动")]
     public void Text_port_with_trigger_configuration_can_silence_downstream()
     {
         using TestEnvironment environment = TestEnvironment.Create(TextConfiguredTriggerFlow);
@@ -232,8 +222,7 @@ public sealed class TriggerPortTests
         Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
     }
 
-    /// <summary>容器输出不承载触发时忽略成员的 false，下游照常启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器输出不承载触发时忽略成员的 false，下游照常启动")]
     public void Container_output_without_trigger_configuration_ignores_member_false()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerPlainOutputFlow);
@@ -248,8 +237,7 @@ public sealed class TriggerPortTests
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内停用");
     }
 
-    /// <summary>容器输出配置触发时转发成员的 false，下游组被消耗但不启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器输出配置触发时转发成员的 false，下游组被消耗但不启动")]
     public void Container_output_with_trigger_configuration_forwards_member_false()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerTriggeredOutputFlow);
@@ -264,10 +252,9 @@ public sealed class TriggerPortTests
         Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
     }
 
-    /// <summary>容器触发输入为 false 时容器不发布，下游不启动；为 true 时容器发布并按自身输出配置转发成员触发值。</summary>
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [InlineData(false, Label = "触发为假")]
+    [InlineData(true, Label = "触发为真")]
     public void Container_input_trigger_gates_container_publication(bool trigger)
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerInputTriggerFlow);
@@ -296,10 +283,9 @@ public sealed class TriggerPortTests
             && entry.Text.Contains("来源@结论", StringComparison.Ordinal));
     }
 
-    /// <summary>容器触发输入翻转门控：来源触发值为 false 时容器发布，true 时抑制发布。</summary>
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [InlineData(false, Label = "触发为假")]
+    [InlineData(true, Label = "触发为真")]
     public void Flipped_container_input_trigger_admits_only_a_false_source_value(bool trigger)
     {
         using TestEnvironment environment = TestEnvironment.Create(FlippedContainerInputFlow);
@@ -330,8 +316,7 @@ public sealed class TriggerPortTests
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内内容");
     }
 
-    /// <summary>Signal 门控只门控容器发布，成员第二次发布仍驱动容器发布并放下游。</summary>
-    [Fact]
+    [Fact(DisplayName = "Signal 门控只门控容器发布，成员第二次发布仍驱动容器发布并放下游")]
     public async Task Signal_gate_does_not_mask_member_second_publish()
     {
         using TestEnvironment environment = TestEnvironment.Create(SignalGateContainerFlow);

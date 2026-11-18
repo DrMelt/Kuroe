@@ -20,7 +20,7 @@ public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDi
     protected override void InjectReadFailure(ITaskRecordStore store, TaskStoreFailure failure) =>
         Assert.IsType<InjectableStore>(store).Inject(failure);
 
-    [Fact]
+    [Fact(DisplayName = "读取报告格式错误的文件")]
     public void Read_reports_malformed_file()
     {
         Directory.CreateDirectory(_root);
@@ -35,7 +35,7 @@ public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDi
         Assert.Equal(FlowErrorCodes.RecordFormat, Assert.Single(failure.Errors).Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取报告不支持的版本")]
     public void Read_reports_unsupported_version()
     {
         Directory.CreateDirectory(_root);
@@ -50,7 +50,7 @@ public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDi
         Assert.Equal(FlowErrorCodes.RecordVersion, Assert.Single(failure.Errors).Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取忽略其他扩展名的文件")]
     public void Read_ignores_files_with_other_extensions()
     {
         Directory.CreateDirectory(_root);

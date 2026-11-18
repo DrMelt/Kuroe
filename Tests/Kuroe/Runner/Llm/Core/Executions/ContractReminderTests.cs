@@ -16,7 +16,7 @@ public sealed class ContractReminderTests
     private static readonly ExecutionPortName Conclusion = new("结论");
     private static readonly ExecutionPortName Completion = new("完成");
 
-    [Fact]
+    [Fact(DisplayName = "缺少端口值提醒端口与契约工具")]
     public void Missing_port_values_remind_the_port_and_the_contract_tool()
     {
         ContractReminder reminder = new(new FakeEntry(Status([Conclusion])));
@@ -27,7 +27,7 @@ public sealed class ContractReminderTests
         Assert.Contains(ContractTools.Port, text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "已收口输出不给出提醒")]
     public void Collected_outputs_give_no_reminder()
     {
         ContractReminder reminder = new(new FakeEntry(Status([])));
@@ -35,7 +35,7 @@ public sealed class ContractReminderTests
         Assert.Null(reminder.Text());
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少信号端口同样提醒")]
     public void Missing_signal_port_reminds_the_same_way()
     {
         ContractReminder reminder = new(new FakeEntry(Status([Completion])));
@@ -45,7 +45,7 @@ public sealed class ContractReminderTests
         Assert.Contains("「完成」", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "无法完成报告不给出提醒")]
     public void Cannot_complete_report_gives_no_reminder()
     {
         ContractReminder reminder = new(new FakeEntry(Status([Conclusion], "缺少输入资料")));

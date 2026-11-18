@@ -9,7 +9,7 @@ namespace Kuroe.Maf.Control.Tests;
 /// <summary>MAF 流程的装配入口：流程实现与存档编解码一并注册。</summary>
 public sealed class MafRegistrationTests
 {
-    [Fact]
+    [Fact(DisplayName = "注册暴露一个提供方与一个编解码器")]
     public void Registration_exposes_one_provider_and_one_codec()
     {
         ServiceCollection services = new();

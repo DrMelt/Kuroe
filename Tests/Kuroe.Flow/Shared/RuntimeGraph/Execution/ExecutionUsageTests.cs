@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 /// <summary>模型请求用量值对象：计数、缺失与合并规则。</summary>
 public sealed class ExecutionUsageTests
 {
-    [Fact]
+    [Fact(DisplayName = "没有用量的请求计为缺失")]
     public void A_request_without_usage_is_counted_as_missing()
     {
         ExecutionUsage usage = ExecutionUsage.None.BeginRequest().CompleteRequest(null);
@@ -17,7 +17,7 @@ public sealed class ExecutionUsageTests
         Assert.False(usage.Tokens.Known);
     }
 
-    [Fact]
+    [Fact(DisplayName = "请求累加用量与次数")]
     public void Requests_add_usage_and_counts()
     {
         ExecutionUsage usage = ExecutionUsage.None
@@ -35,7 +35,7 @@ public sealed class ExecutionUsageTests
         Assert.Equal(6, usage.Tokens.Reasoning);
     }
 
-    [Fact]
+    [Fact(DisplayName = "上下文跟随最近请求不做累加")]
     public void Context_follows_the_latest_request_without_being_summed()
     {
         ExecutionUsage usage = ExecutionUsage.None
@@ -48,7 +48,7 @@ public sealed class ExecutionUsageTests
         Assert.Equal(50, usage.ContextTokens);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有用量的请求清空上下文")]
     public void A_request_without_usage_clears_the_context()
     {
         ExecutionUsage usage = ExecutionUsage.None
@@ -61,7 +61,7 @@ public sealed class ExecutionUsageTests
         Assert.Null(usage.ContextTokens);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有输入的请求使上下文为空")]
     public void A_request_without_input_leaves_the_context_empty()
     {
         ExecutionUsage usage = ExecutionUsage.None
@@ -71,7 +71,7 @@ public sealed class ExecutionUsageTests
         Assert.Null(usage.ContextTokens);
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知用量不按零处理")]
     public void Unknown_usage_is_not_treated_as_zero()
     {
         TokenUsage usage = new TokenUsage(100, null, null, null, null)
@@ -83,7 +83,7 @@ public sealed class ExecutionUsageTests
         Assert.Null(usage.CachedInput);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入或输出缺失时保留提供方总量")]
     public void Provider_total_is_kept_when_input_or_output_is_missing()
     {
         TokenUsage usage = new TokenUsage(null, null, 70, null, null)
@@ -92,7 +92,7 @@ public sealed class ExecutionUsageTests
         Assert.Equal(100, usage.Total);
     }
 
-    [Fact]
+    [Fact(DisplayName = "只有子集计数不算用量")]
     public void Subset_counts_alone_are_not_usage()
     {
         TokenUsage usage = new(null, null, null, 80, 5);
@@ -100,7 +100,7 @@ public sealed class ExecutionUsageTests
         Assert.False(usage.Known);
     }
 
-    [Fact]
+    [Fact(DisplayName = "两侧总量都保留")]
     public void Totals_from_both_sides_are_kept()
     {
         TokenUsage usage = new TokenUsage(100, 20, null, null, null)
@@ -111,7 +111,7 @@ public sealed class ExecutionUsageTests
         Assert.Equal(170, usage.Total);
     }
 
-    [Fact]
+    [Fact(DisplayName = "只有子集计数的请求计为缺失")]
     public void A_request_with_only_subset_counts_is_counted_as_missing()
     {
         ExecutionUsage usage = ExecutionUsage.None

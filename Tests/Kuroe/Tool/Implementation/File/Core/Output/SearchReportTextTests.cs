@@ -11,7 +11,7 @@ public sealed class SearchReportTextTests
 {
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "kuroe-tests", "root");
 
-    [Fact]
+    [Fact(DisplayName = "搜索报告文本报告没有可搜索文件")]
     public void ToString_reports_no_searchable_files()
     {
         TextSearchResult result = new([], ScannedFiles: 0, Occurrences: 0);
@@ -21,7 +21,7 @@ public sealed class SearchReportTextTests
         Assert.Equal("在 路径基准根 中没有可搜索的文件。", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索报告文本报告没有匹配文本")]
     public void ToString_reports_no_matching_text()
     {
         TextSearchResult result = new([], ScannedFiles: 3, Occurrences: 0);
@@ -31,7 +31,7 @@ public sealed class SearchReportTextTests
         Assert.Equal("在 路径基准根 中搜索 needle 没有匹配，已扫描 3 个文件。", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索报告文本在计数标题下渲染匹配")]
     public void ToString_renders_matches_under_a_count_header()
     {
         TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 2, "needle", 6, 0, 0)];
@@ -44,7 +44,7 @@ public sealed class SearchReportTextTests
             text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索报告标记截断")]
     public void ToString_marks_truncation()
     {
         string longText = new('a', TextOutputLimit.Characters + 1000);

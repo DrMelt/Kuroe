@@ -13,7 +13,7 @@ namespace Kuroe.Cli.Tests.Persistence;
 /// <summary>run 写存档并占用租约，退出时收口存档并释放租约。</summary>
 public sealed class RunArchiveTests
 {
-    [Fact]
+    [Fact(DisplayName = "完成的运行写入存档并在关闭时释放租约")]
     public async Task Done_run_writes_the_archive_and_releases_the_lease_on_shutdown()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -26,8 +26,8 @@ public sealed class RunArchiveTests
         string records = KuroePaths.At(environment.Root).RecordsDirectory;
         string recordFile = Path.Combine(records, $"{id.Value}.json");
         string lockFile = Path.Combine(records, $"{id.Value}.lock");
-        Assert.True(File.Exists(recordFile));
-        Assert.True(File.Exists(lockFile));
+        Assert.True(File.Exists(recordFile), $"{recordFile} 不存在。");
+        Assert.True(File.Exists(lockFile), $"{lockFile} 不存在。");
 
         using FileTaskLeaseStore probe = new(records);
         Assert.True(probe.TryAcquire(id).IsError);
@@ -40,7 +40,7 @@ public sealed class RunArchiveTests
         Assert.True(record.Completed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "阻塞的运行存档未完成任务")]
     public async Task Blocked_run_archives_the_unfinished_task()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Blocked);

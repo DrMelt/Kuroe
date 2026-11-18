@@ -7,7 +7,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>带框选择的键盘移动与结果。</summary>
 public sealed class MenuPromptTests
 {
-    [Fact]
+    [Fact(DisplayName = "菜单提示绘制边框并返回选中项")]
     public void Menu_prompt_draws_a_frame_and_returns_the_selected_choice()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -23,7 +23,7 @@ public sealed class MenuPromptTests
         Assert.Contains("乙", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "菜单提示用方向键移动")]
     public void Menu_prompt_moves_with_arrow_keys()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -35,7 +35,7 @@ public sealed class MenuPromptTests
         Assert.Equal("乙", picked);
     }
 
-    [Fact]
+    [Fact(DisplayName = "菜单提示在返回键返回取消项")]
     public void Menu_prompt_returns_the_cancel_choice_on_escape()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

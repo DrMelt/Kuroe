@@ -13,7 +13,7 @@ public sealed class NodeSpecRulesInterfaceTests
 {
     private static readonly PortName Input = new("输入");
 
-    [Fact]
+    [Fact(DisplayName = "形状之外的输入端口类型被拒绝")]
     public void Input_port_type_outside_the_shape_is_rejected()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -25,7 +25,7 @@ public sealed class NodeSpecRulesInterfaceTests
         Assert.Equal(["输入端口 背景 的类型只能是 Text。"], Errors(node, Shape(input: [PortTypes.Text])));
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知形状跳过端口类型域检查")]
     public void Unknown_shape_skips_port_type_domain()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -37,7 +37,7 @@ public sealed class NodeSpecRulesInterfaceTests
         Assert.Empty(Errors(node, shape: null));
     }
 
-    [Fact]
+    [Fact(DisplayName = "上下文输入上的默认值被拒绝")]
     public void Default_value_is_rejected_on_context_input()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -51,7 +51,7 @@ public sealed class NodeSpecRulesInterfaceTests
             Errors(node, Shape()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器静态输入不能声明默认值")]
     public void Container_static_input_cannot_declare_a_default()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
@@ -70,7 +70,7 @@ public sealed class NodeSpecRulesInterfaceTests
             Errors(node, node.Type?.Shape));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器输入可以声明触发")]
     public void Container_input_can_declare_trigger()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
@@ -87,7 +87,7 @@ public sealed class NodeSpecRulesInterfaceTests
         Assert.Empty(Errors(node, node.Type?.Shape));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器常量输出可以引用其静态输入")]
     public void Container_constant_output_can_reference_its_static_input()
     {
         NodeSpec node = ContainerWithOutput(PortMode.Constant, Input);
@@ -95,7 +95,7 @@ public sealed class NodeSpecRulesInterfaceTests
         Assert.Empty(Errors(node, node.Type?.Shape));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器动态输出不能引用其静态输入")]
     public void Container_dynamic_output_cannot_reference_its_static_input()
     {
         NodeSpec node = ContainerWithOutput(PortMode.Plain, Input);
@@ -105,7 +105,7 @@ public sealed class NodeSpecRulesInterfaceTests
             Errors(node, node.Type?.Shape));
     }
 
-    [Fact]
+    [Fact(DisplayName = "带值的动态输出被拒绝")]
     public void Dynamic_output_with_value_is_rejected()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -132,7 +132,7 @@ public sealed class NodeSpecRulesInterfaceTests
             Nodes = [NodeSpec.Define(new NodeName("成员"))],
         };
 
-    [Fact]
+    [Fact(DisplayName = "静态输入接受非文本类型")]
     public void Static_input_accepts_non_text_types()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -151,7 +151,7 @@ public sealed class NodeSpecRulesInterfaceTests
         Assert.Empty(Errors(node, node.Type?.Shape));
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口模式必须被其类型支持")]
     public void Port_mode_must_be_supported_by_its_type()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -171,7 +171,7 @@ public sealed class NodeSpecRulesInterfaceTests
             Errors(node, node.Type?.Shape));
     }
 
-    [Fact]
+    [Fact(DisplayName = "给定输出类型不需要声明的类型范围")]
     public void Given_output_types_do_not_need_a_declared_type_range()
     {
         NodeTypeShape shape = new()
@@ -189,7 +189,7 @@ public sealed class NodeSpecRulesInterfaceTests
         Assert.Empty(Errors(node, shape));
     }
 
-    [Fact]
+    [Fact(DisplayName = "给定输出端口必须匹配类型端口")]
     public void Given_output_ports_must_match_the_type_ports()
     {
         NodeTypeShape shape = new()
@@ -207,7 +207,7 @@ public sealed class NodeSpecRulesInterfaceTests
         Assert.Equal(["输出端口必须与类型给出的端口一致。"], Errors(node, shape));
     }
 
-    [Fact]
+    [Fact(DisplayName = "含 at 符号的给定输出端口名被拒绝")]
     public void Given_output_port_name_with_at_is_rejected()
     {
         NodeTypeShape shape = new()

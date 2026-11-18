@@ -10,7 +10,7 @@ public sealed class TaskSnapshotTests
 {
     private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
-    [Fact]
+    [Fact(DisplayName = "任务前沿来自最远的已完成叶子")]
     public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
         Assert.Equal(2, Snap([
@@ -19,14 +19,14 @@ public sealed class TaskSnapshotTests
         Assert.Equal(2, Snap([]).TotalSteps);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有完成叶子的任务前沿为零")]
     public void Task_without_done_leaves_has_zero_frontier()
     {
         Assert.Equal(0, Snap([State("制定计划", FlowItemState.Running)]).ProgressSteps);
         Assert.Equal(2, Snap([]).TotalSteps);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行序号按编译顺序")]
     public void Executable_ordinal_follows_the_compiled_order()
     {
         TaskSnapshot snapshot = Snap([]);

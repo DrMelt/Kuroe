@@ -6,7 +6,7 @@ namespace Kuroe.Tool.Tests;
 /// <summary>工具函数的路径参数校验：调用体执行前完成解析、边界与准入判断。</summary>
 public sealed class ToolFunctionTests
 {
-    [Fact]
+    [Fact(DisplayName = "范围之外的路径在调用前被拒绝")]
     public void Path_outside_scope_is_rejected_before_invoking()
     {
         string root = Root();
@@ -26,7 +26,7 @@ public sealed class ToolFunctionTests
         Assert.False(called);
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少必填路径被拒绝")]
     public void Missing_required_path_is_rejected()
     {
         string root = Root();
@@ -39,7 +39,7 @@ public sealed class ToolFunctionTests
         Assert.Equal("缺少参数 path。", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "空路径被拒绝")]
     public void Empty_path_is_rejected()
     {
         string root = Root();
@@ -52,7 +52,7 @@ public sealed class ToolFunctionTests
         Assert.Equal("路径参数 path 不能为空。", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "路径魔法在调用前被拒绝")]
     public void Pathspec_magic_is_rejected_before_invoking()
     {
         string root = Root();
@@ -72,7 +72,7 @@ public sealed class ToolFunctionTests
         Assert.False(called);
     }
 
-    [Fact]
+    [Fact(DisplayName = "可选路径缺失仍调用主体")]
     public void Optional_path_absent_invokes_body()
     {
         string root = Root();
@@ -97,7 +97,7 @@ public sealed class ToolFunctionTests
 
     private static readonly string[] stringArray = ["src/a", ".."];
 
-    [Fact]
+    [Fact(DisplayName = "路径列表项超出范围拒绝整个调用")]
     public void Path_list_item_outside_scope_rejects_whole_call()
     {
         string root = Root();
@@ -120,7 +120,7 @@ public sealed class ToolFunctionTests
         Assert.False(called);
     }
 
-    [Fact]
+    [Fact(DisplayName = "互斥组多于一个参数在调用前被拒绝")]
     public void Exclusive_group_rejects_more_than_one_parameter_before_invoking()
     {
         string root = Root();
@@ -158,7 +158,7 @@ public sealed class ToolFunctionTests
             Groups: [new ToolParameterGroup([project.Name, solution.Name])]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "绑定拒绝没有范围的路径参数")]
     public void Bind_rejects_path_parameter_without_scope()
     {
         ToolDefinition definition = Definition(RequiredPath());
@@ -166,7 +166,7 @@ public sealed class ToolFunctionTests
         Assert.Throws<InvalidOperationException>(() => definition.Bind(_ => "已写入"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "绑定拒绝同一参数同时是布尔与路径")]
     public void Bind_rejects_flag_and_path_on_same_parameter()
     {
         string root = Root();
@@ -179,7 +179,7 @@ public sealed class ToolFunctionTests
             () => definition.Bind(_ => "结果", new ToolPathScope(root, root, "工作目录")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "绑定拒绝非路径参数上的路径访问")]
     public void Bind_rejects_path_access_on_non_path_parameter()
     {
         string root = Root();
@@ -192,7 +192,7 @@ public sealed class ToolFunctionTests
             () => definition.Bind(_ => "结果", new ToolPathScope(root, root, "工作目录")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "绑定拒绝路径参数的前导短横线")]
     public void Bind_rejects_leading_dash_on_path_parameter()
     {
         string root = Root();

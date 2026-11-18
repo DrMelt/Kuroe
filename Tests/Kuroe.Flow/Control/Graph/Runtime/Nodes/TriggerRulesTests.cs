@@ -11,33 +11,33 @@ public sealed class TriggerRulesTests
 {
     private static readonly PortName Conclusion = new("结论");
 
-    [Fact]
+    [Fact(DisplayName = "静默端口总是发布")]
     public void Silent_port_always_fires()
     {
         Assert.True(TriggerRules.Output(Text(), new PortValue("内容", false)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "触发端口使用提交值")]
     public void Trigger_port_uses_the_submitted_value()
     {
         Assert.True(TriggerRules.Output(TriggerText(), new PortValue("内容", true)));
         Assert.False(TriggerRules.Output(TriggerText(), new PortValue("内容", false)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "触发端口没有值也发布")]
     public void Trigger_port_fires_without_a_value()
     {
         Assert.True(TriggerRules.Output(TriggerText(), null));
         Assert.True(TriggerRules.Output(TriggerText(), new PortValue("内容")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "信号端口默认按普通处理")]
     public void Signal_port_is_plain_by_default()
     {
         Assert.True(TriggerRules.Output(new Port(Conclusion, PortTypes.Signal), new PortValue(null, false)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "触发信号端口使用提交值")]
     public void Trigger_signal_port_uses_the_submitted_value()
     {
         Port signal = new(Conclusion, PortTypes.Signal, mode: PortMode.Trigger);
@@ -46,20 +46,20 @@ public sealed class TriggerRulesTests
         Assert.True(TriggerRules.Output(signal, new PortValue(null, true)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "普通容器输出忽略成员值")]
     public void Plain_container_output_ignores_the_member_value()
     {
         Assert.True(TriggerRules.Container(Text(), true, false));
     }
 
-    [Fact]
+    [Fact(DisplayName = "触发容器输出转发成员值")]
     public void Triggered_container_output_forwards_the_member_value()
     {
         Assert.False(TriggerRules.Container(TriggerText(), true, false));
         Assert.True(TriggerRules.Container(TriggerText(), true, true));
     }
 
-    [Fact]
+    [Fact(DisplayName = "未释放的容器输出照常发布")]
     public void Unreleased_container_output_fires()
     {
         Assert.True(TriggerRules.Container(TriggerText(), false, false));

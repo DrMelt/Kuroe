@@ -7,7 +7,7 @@ namespace Kuroe.Tool.FileAccess.Tests.Output;
 /// <summary>读取输出：行号、终止符、截断、范围标记与文件尾提示。</summary>
 public sealed class ReadRangeTextTests
 {
-    [Fact]
+    [Fact(DisplayName = "读取范围文本给出行号并标记文件末尾")]
     public void ToString_numbers_lines_and_marks_the_file_end()
     {
         SourceLine[] lines =
@@ -24,7 +24,7 @@ public sealed class ReadRangeTextTests
         Assert.Equal("（已到文件结尾，实际返回第 2 到 5 行）\n<<<KUROE_TEXT_BEGIN>>>2 |二\n3 |三\n4 |四\n5 |<<<KUROE_TEXT_END>>>", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本可以省略行号")]
     public void ToString_can_omit_line_numbers()
     {
         SourceLine[] lines =
@@ -41,7 +41,7 @@ public sealed class ReadRangeTextTests
         Assert.Equal("（已到文件结尾，实际返回第 1 到 4 行）\n<<<KUROE_TEXT_BEGIN>>>一\r\n二\r三\n四<<<KUROE_TEXT_END>>>", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本按最后一行对齐行号")]
     public void ToString_aligns_line_numbers_to_the_last_line()
     {
         SourceLine[] lines =
@@ -59,7 +59,7 @@ public sealed class ReadRangeTextTests
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>> 8 |L8\n 9 |L9\n10 |L10\n11 |L11\n12 |L12\n<<<KUROE_TEXT_END>>>", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本保留最后一行的终止符")]
     public void ToString_keeps_the_terminator_of_the_last_line()
     {
         SourceLine[] lines = [new(1, "一", NewLineStyle.CrLf), new(2, "二", NewLineStyle.CrLf)];
@@ -70,7 +70,7 @@ public sealed class ReadRangeTextTests
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一\r\n2 |二\r\n<<<KUROE_TEXT_END>>>", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本把末尾标记放在回车终止符之后")]
     public void ToString_places_the_end_marker_after_a_cr_terminator()
     {
         SourceLine[] lines = [new(1, "一", NewLineStyle.Cr), new(2, "二", NewLineStyle.Cr)];
@@ -81,7 +81,7 @@ public sealed class ReadRangeTextTests
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一\r2 |二\r<<<KUROE_TEXT_END>>>", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本在内容之前标记截断")]
     public void ToString_marks_truncation_before_the_content()
     {
         SourceLine[] lines = [new(1, new string('a', 9000), null)];
@@ -99,7 +99,7 @@ public sealed class ReadRangeTextTests
         Assert.StartsWith("1 |", content, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本按给定上限标记截断")]
     public void ToString_marks_truncation_with_the_given_limit()
     {
         SourceLine[] lines = [new(1, "abcdef", null)];
@@ -110,7 +110,7 @@ public sealed class ReadRangeTextTests
         Assert.Equal("（内容超过 3 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>1 |<<<KUROE_TEXT_END>>>", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本报告截断而不是文件末尾")]
     public void ToString_reports_truncation_instead_of_the_file_end()
     {
         SourceLine[] lines = [new(1, new string('a', TextOutputLimit.Characters + 1000), null)];
@@ -125,7 +125,7 @@ public sealed class ReadRangeTextTests
         Assert.DoesNotContain("已到文件结尾", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本报告空文件")]
     public void ToString_reports_an_empty_file()
     {
         SourceLineReadResult read = new([], ToBeyondEnd: true);
@@ -135,7 +135,7 @@ public sealed class ReadRangeTextTests
         Assert.Equal("（已到文件结尾，文件没有内容）", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围文本在文件未结束时省略末尾提示")]
     public void ToString_omits_the_end_notice_within_the_file()
     {
         SourceLine[] lines = [new(1, "一", null)];

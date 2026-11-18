@@ -7,7 +7,7 @@ namespace Kuroe.Runner.Llm.Tests.Tools;
 /// <summary>工具面的白名单：按路径给出函数，父路径覆盖子树，模型侧名字不含路径分隔符。</summary>
 public sealed class ToolCollectionTests
 {
-    [Fact]
+    [Fact(DisplayName = "工具面按白名单过滤")]
     public void Tool_face_filters_to_whitelist()
     {
         ToolCollection tools = new(
@@ -27,7 +27,7 @@ public sealed class ToolCollectionTests
             built.Select(tool => tool.Name));
     }
 
-    [Fact]
+    [Fact(DisplayName = "白名单父路径授予全部后代")]
     public void Whitelist_parent_path_grants_all_descendants()
     {
         ToolCollection tools = new(
@@ -45,7 +45,7 @@ public sealed class ToolCollectionTests
             built.Select(tool => tool.Name));
     }
 
-    [Fact]
+    [Fact(DisplayName = "白名单完整路径只授予该函数")]
     public void Whitelist_full_path_grants_only_that_function()
     {
         ToolCollection tools = new(
@@ -60,8 +60,7 @@ public sealed class ToolCollectionTests
         Assert.Equal(["KuroeInfo_GetTask"], built.Select(tool => tool.Name));
     }
 
-    /// <summary>模型接口只接受字母、数字、下划线与连字符，路径含层级时交给模型的名字必须已扁平化。</summary>
-    [Fact]
+    [Fact(DisplayName = "模型接口只接受字母、数字、下划线与连字符，路径含层级时交给模型的名字必须已扁平化")]
     public void Model_facing_names_fit_the_model_interface_character_set()
     {
         ToolCollection tools = new(
@@ -81,7 +80,7 @@ public sealed class ToolCollectionTests
         Assert.All(built, tool => Assert.Matches("^[a-zA-Z0-9_-]+$", tool.Name));
     }
 
-    [Fact]
+    [Fact(DisplayName = "定义按声明顺序保留完整路径")]
     public void Definitions_keep_full_paths_in_declaration_order()
     {
         ToolCollection tools = new(
@@ -93,7 +92,7 @@ public sealed class ToolCollectionTests
             tools.Definitions.Select(definition => definition.Path.Value));
     }
 
-    [Fact]
+    [Fact(DisplayName = "相似前缀的白名单不匹配组")]
     public void Whitelist_with_similar_prefix_does_not_match_group()
     {
         ToolCollection tools = new(
@@ -108,7 +107,7 @@ public sealed class ToolCollectionTests
         Assert.Empty(built);
     }
 
-    [Fact]
+    [Fact(DisplayName = "工具调用只在运行时报告进度")]
     public async Task Tool_invocation_reports_progress_only_while_running()
     {
         ProcessJournal journal = new();
@@ -122,7 +121,7 @@ public sealed class ToolCollectionTests
         Assert.Equal(["调用工具 GetLocalTime", string.Empty], progress);
     }
 
-    [Fact]
+    [Fact(DisplayName = "失败工具调用在文本之后渲染状态并记录原始结果")]
     public async Task Failed_tool_call_renders_status_after_its_text_and_records_raw_outcome()
     {
         ProcessJournal journal = new();

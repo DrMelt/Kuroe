@@ -11,7 +11,7 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
 
     public SystemWorkspaceFilesTests() => SystemWorkspaceFiles.Instance.CreateDirectory(_root);
 
-    [Fact]
+    [Fact(DisplayName = "写入文本使用编码前导")]
     public void Write_text_uses_the_encoding_preamble()
     {
         string path = Path.Combine(_root, "utf16.txt");
@@ -23,7 +23,7 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
         Assert.Equal("内容", Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2));
     }
 
-    [Fact]
+    [Fact(DisplayName = "带 UTF-8 BOM 的写入保留 BOM")]
     public void Write_text_with_utf8_bom_keeps_the_bom()
     {
         string path = Path.Combine(_root, "bom.txt");
@@ -34,7 +34,7 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
         Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, bytes[..3]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "条目区分文件与目录")]
     public void Entries_split_files_and_directories()
     {
         string file = Path.Combine(_root, "a.txt");
@@ -49,7 +49,7 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
         Assert.True(SystemWorkspaceFiles.Instance.DirectoryExists(directory));
     }
 
-    [Fact]
+    [Fact(DisplayName = "检查报告大小与最后写入时间")]
     public void Inspect_reports_size_and_last_write()
     {
         string path = Path.Combine(_root, "a.txt");
@@ -63,7 +63,7 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
         Assert.Equal(lastWrite, facts.LastWrite);
     }
 
-    [Fact]
+    [Fact(DisplayName = "移动与删除改变目录树")]
     public void Move_and_delete_change_the_tree()
     {
         string source = Path.Combine(_root, "a.txt");
@@ -82,7 +82,7 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
         Assert.False(SystemWorkspaceFiles.Instance.DirectoryExists(_root));
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录不是重解析点")]
     public void Directory_is_not_a_reparse_point()
     {
         SystemWorkspaceFiles.Instance.CreateDirectory(_root);

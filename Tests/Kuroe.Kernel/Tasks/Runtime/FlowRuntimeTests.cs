@@ -13,7 +13,7 @@ namespace Kuroe.Tasks.Runtime.Tests;
 /// <summary>流程运行期按控制实例生命周期维护活跃索引，不按工作循环退出移除控制实例。</summary>
 public sealed class FlowRuntimeTests
 {
-    [Fact]
+    [Fact(DisplayName = "完成待处理期间控制保持活跃")]
     public void Control_stays_active_while_completion_is_pending()
     {
         TestControl control = new();
@@ -41,7 +41,7 @@ public sealed class FlowRuntimeTests
         Assert.Equal(1, runtime.Rerun(task));
     }
 
-    [Fact]
+    [Fact(DisplayName = "完成把控制移出活跃索引")]
     public async Task Completion_removes_the_control_from_the_active_index()
     {
         TestControl control = new();
@@ -66,7 +66,7 @@ public sealed class FlowRuntimeTests
         Assert.Equal(0, control.Pauses);
     }
 
-    [Fact]
+    [Fact(DisplayName = "关闭中断控制并等待完成")]
     public async Task Shutdown_interrupts_controls_and_waits_for_completion()
     {
         TestControl control = new();
@@ -85,7 +85,7 @@ public sealed class FlowRuntimeTests
         Assert.True(control.Completion.IsCompleted);
     }
 
-    [Fact]
+    [Fact(DisplayName = "不同任务的控制相互独立")]
     public async Task Controls_for_different_tasks_are_independent()
     {
         TestControl firstControl = new();
@@ -134,7 +134,7 @@ public sealed class FlowRuntimeTests
         Assert.Equal(1, secondControl.Pauses);
     }
 
-    [Fact]
+    [Fact(DisplayName = "启动在开始前附加控制")]
     public void Start_attaches_the_control_before_starting_it()
     {
         TestControl control = new();
@@ -151,7 +151,7 @@ public sealed class FlowRuntimeTests
         Assert.Same(control, task.Control);
     }
 
-    [Fact]
+    [Fact(DisplayName = "启动期间快照读取已附加的控制")]
     public void Snapshot_during_start_reads_the_attached_control()
     {
         TestControl control = new();

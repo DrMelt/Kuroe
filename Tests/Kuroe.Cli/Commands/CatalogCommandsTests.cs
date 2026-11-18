@@ -8,7 +8,7 @@ namespace Kuroe.Cli.Tests.Commands;
 /// <summary>目录、提供商与模型命令。</summary>
 public sealed class CatalogCommandsTests
 {
-    [Fact]
+    [Fact(DisplayName = "导出后导入报告合并结果")]
     public async Task Export_then_import_reports_merges()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -19,7 +19,7 @@ public sealed class CatalogCommandsTests
         int exported = command.Export("exported.json");
 
         Assert.Equal(ExitCodes.Success, exported);
-        Assert.True(File.Exists(Path.Combine(environment.Root, "exported.json")));
+        Assert.True(File.Exists(Path.Combine(environment.Root, "exported.json")), $"{Path.Combine(environment.Root, "exported.json")} 不存在。");
         Assert.Contains("已导出到", output.ToString());
 
         int imported = command.Import("exported.json");
@@ -29,7 +29,7 @@ public sealed class CatalogCommandsTests
         Assert.Contains("未导入", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "提供方与模型的完整生命周期")]
     public async Task Provider_and_model_lifecycle()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -57,7 +57,7 @@ public sealed class CatalogCommandsTests
         Assert.NotEmpty(output.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "同一提供方模型名可注册到两个提供方")]
     public async Task The_same_provider_model_name_can_register_under_two_providers()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -75,7 +75,7 @@ public sealed class CatalogCommandsTests
         Assert.DoesNotContain("错误：", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除使用中的提供方被拒绝")]
     public async Task Removing_a_provider_in_use_is_rejected()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -87,7 +87,7 @@ public sealed class CatalogCommandsTests
         Assert.Contains("错误：", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "提供方凭据回退到环境变量")]
     public async Task Provider_credential_falls_back_to_environment()
     {
         string? previous = Environment.GetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable);
@@ -107,7 +107,7 @@ public sealed class CatalogCommandsTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少提供方凭据被拒绝")]
     public async Task Missing_provider_credential_is_rejected()
     {
         string? previous = Environment.GetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable);

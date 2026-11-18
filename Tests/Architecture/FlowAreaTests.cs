@@ -7,14 +7,14 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>流程区域边界：共享层是纯模型，节点与图各自持有实现，流程区域与代码流程互不引用。</summary>
 public sealed class FlowAreaTests
 {
-    [Fact]
+    [Fact(DisplayName = "流程共享层只含纯模型")]
     public void Flow_shared_project_is_a_pure_model()
     {
         string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string project = Path.Combine(shared, "Kuroe.Flow.Shared.csproj");
 
         Assert.Empty(ProjectReferences(project));
-        Assert.False(File.Exists(Path.Combine(shared, "GlobalUsings.cs")));
+        Assert.False(File.Exists(Path.Combine(shared, "GlobalUsings.cs")), $"{Path.Combine(shared, "GlobalUsings.cs")} 不应存在。");
 
         foreach (string file in SourceFiles(shared))
         {
@@ -25,7 +25,7 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程宿主不引用执行核")]
     public void Flow_hosting_does_not_reference_execution_core()
     {
         string project = Path.Combine(
@@ -41,7 +41,7 @@ public sealed class FlowAreaTests
             reference => IsUnder(reference, execution));
     }
 
-    [Fact]
+    [Fact(DisplayName = "节点项目不引用流程实现")]
     public void Node_projects_do_not_reference_flow_implementation()
     {
         string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
@@ -60,7 +60,7 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "节点项目引用节点共享层")]
     public void Node_projects_reference_node_shared()
     {
         string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
@@ -78,7 +78,7 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "节点共享层只引用契约层")]
     public void Node_shared_project_references_only_contract_layers()
     {
         string project = Path.Combine(
@@ -94,7 +94,7 @@ public sealed class FlowAreaTests
         ReferencesStayUnder(project, "Kuroe.Flow.Node.Shared", "契约层", tasks, execution, shared);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程共享层只引用中性共享层")]
     public void Flow_shared_project_references_only_neutral_shared()
     {
         string project = Path.Combine(
@@ -108,14 +108,14 @@ public sealed class FlowAreaTests
         ReferencesStayUnder(project, "Kuroe.Flow.Shared", "中性共享", tasks, execution);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程区域不含任务与表现项目")]
     public void Flow_area_stays_free_of_task_and_presentation_projects()
     {
-        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks")));
-        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation")));
+        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks")), $"{Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks")} 不应存在。");
+        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation")), $"{Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation")} 不应存在。");
     }
 
-    [Fact]
+    [Fact(DisplayName = "图状态保存执行上下文而不是对象")]
     public void Graph_state_stores_execution_contexts_not_objects()
     {
         string file = Path.Combine(
@@ -133,28 +133,28 @@ public sealed class FlowAreaTests
         Assert.Contains("Dictionary<ExecutionId, GraphExecutionContext>", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程实现按端口类别拆分文件")]
     public void Flow_implementations_split_ports_by_class()
     {
         string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph", "Runtime", "Engine");
         string dialogue = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow");
 
-        Assert.False(File.Exists(Path.Combine(graph, "GraphFlowFramework.cs")));
-        Assert.False(File.Exists(Path.Combine(dialogue, "DialogueFlowFramework.cs")));
-        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowIdentity.cs")));
-        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowSubmission.cs")));
-        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowStateBinder.cs")));
-        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowControlFactory.cs")));
-        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowPresentation.cs")));
-        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowRecordSource.cs")));
-        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowIdentity.cs")));
-        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowSubmission.cs")));
-        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowControlFactory.cs")));
-        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowPresentation.cs")));
-        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowRecordSource.cs")));
+        Assert.False(File.Exists(Path.Combine(graph, "GraphFlowFramework.cs")), $"{Path.Combine(graph, "GraphFlowFramework.cs")} 不应存在。");
+        Assert.False(File.Exists(Path.Combine(dialogue, "DialogueFlowFramework.cs")), $"{Path.Combine(dialogue, "DialogueFlowFramework.cs")} 不应存在。");
+        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowIdentity.cs")), $"{Path.Combine(graph, "GraphFlowIdentity.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowSubmission.cs")), $"{Path.Combine(graph, "GraphFlowSubmission.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowStateBinder.cs")), $"{Path.Combine(graph, "GraphFlowStateBinder.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowControlFactory.cs")), $"{Path.Combine(graph, "GraphFlowControlFactory.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowPresentation.cs")), $"{Path.Combine(graph, "GraphFlowPresentation.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(graph, "GraphFlowRecordSource.cs")), $"{Path.Combine(graph, "GraphFlowRecordSource.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowIdentity.cs")), $"{Path.Combine(dialogue, "DialogueFlowIdentity.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowSubmission.cs")), $"{Path.Combine(dialogue, "DialogueFlowSubmission.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowControlFactory.cs")), $"{Path.Combine(dialogue, "DialogueFlowControlFactory.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowPresentation.cs")), $"{Path.Combine(dialogue, "DialogueFlowPresentation.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(dialogue, "DialogueFlowRecordSource.cs")), $"{Path.Combine(dialogue, "DialogueFlowRecordSource.cs")} 不存在。");
     }
 
-    [Fact]
+    [Fact(DisplayName = "图执行接口命名为 IGraphExecution")]
     public void Graph_execution_interface_is_named_IGraphExecution()
     {
         string execution = Path.Combine(
@@ -165,15 +165,15 @@ public sealed class FlowAreaTests
             "RuntimeGraph",
             "Execution");
 
-        Assert.True(File.Exists(Path.Combine(execution, "IGraphExecution.cs")));
-        Assert.False(File.Exists(Path.Combine(execution, "IExecution.cs")));
+        Assert.True(File.Exists(Path.Combine(execution, "IGraphExecution.cs")), $"{Path.Combine(execution, "IGraphExecution.cs")} 不存在。");
+        Assert.False(File.Exists(Path.Combine(execution, "IExecution.cs")), $"{Path.Combine(execution, "IExecution.cs")} 不应存在。");
         Assert.Contains(
             "interface IGraphExecution",
             File.ReadAllText(Path.Combine(execution, "IGraphExecution.cs")),
             StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "图源码不重复定义执行身份与状态")]
     public void Graph_sources_do_not_redefine_execution_identity_or_state()
     {
         string execution = Path.Combine(
@@ -221,7 +221,7 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "控制图只引用契约与图层")]
     public void Control_graph_references_only_contract_and_graph_layers()
     {
         string project = Path.Combine(
@@ -255,7 +255,7 @@ public sealed class FlowAreaTests
             taskRecords);
     }
 
-    [Fact]
+    [Fact(DisplayName = "图控制不驱动执行状态机")]
     public void Graph_control_does_not_drive_the_execution_state_machine()
     {
         string directory = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph");
@@ -278,7 +278,7 @@ public sealed class FlowAreaTests
         SourcesExclude(directory, "执行状态机写入口", forbidden);
     }
 
-    [Fact]
+    [Fact(DisplayName = "图控制不引用输入模块")]
     public void Graph_control_does_not_reference_input()
     {
         string project = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph", "Kuroe.Flow.Control.Graph.csproj");
@@ -287,7 +287,7 @@ public sealed class FlowAreaTests
         Assert.DoesNotContain(ProjectReferences(project), reference => IsUnder(reference, input));
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程区域不含代码流程")]
     public void Flow_area_stays_free_of_code_flow()
     {
         string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
@@ -307,7 +307,7 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "代码流程区域不含图与节点实现")]
     public void Code_flow_area_stays_free_of_graph_and_node()
     {
         string code = Path.Combine(SourceRoot, "Kuroe.CodeFlow");

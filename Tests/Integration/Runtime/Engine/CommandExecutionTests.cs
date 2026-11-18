@@ -8,7 +8,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>命令节点按执行派发运行：执行期间快照不被占用，暂停与终止能中断在途进程。</summary>
 public sealed class CommandExecutionTests
 {
-    [Fact]
+    [Fact(DisplayName = "命令执行期间快照保持可用暂停可中断")]
     public async Task Command_execution_keeps_snapshot_responsive_and_pause_interrupts_it()
     {
         BlockingProcessRunner process = new();
@@ -27,7 +27,7 @@ public sealed class CommandExecutionTests
         Assert.Equal(TaskState.Paused, paused.State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "停止任务中断命令进程")]
     public async Task Stop_task_interrupts_the_command()
     {
         BlockingProcessRunner process = new();

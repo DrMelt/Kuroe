@@ -24,7 +24,7 @@ public sealed class CodeFlowExecutionTests
     private static readonly ExecutionPortName Input = new("输入");
     private static readonly ExecutionPortName Conclusion = new("结论");
 
-    [Fact]
+    [Fact(DisplayName = "代码流程提交输出端口并读取其契约")]
     public async Task A_code_flow_submits_output_ports_and_reads_its_contract()
     {
         Harness harness = Harness.Create();
@@ -45,7 +45,7 @@ public sealed class CodeFlowExecutionTests
         Assert.Contains(step.Outputs, port => port.Name == Conclusion.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少运行器把执行标记为失败")]
     public async Task A_missing_runner_marks_the_execution_failed()
     {
         Harness harness = Harness.Create();
@@ -57,7 +57,7 @@ public sealed class CodeFlowExecutionTests
         Assert.Equal(ExecutionState.Failed, execution.State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "代码流程报告无法完成并保留原因")]
     public async Task A_code_flow_reports_cannot_complete_and_keeps_the_reason()
     {
         Harness harness = Harness.Create();
@@ -70,7 +70,7 @@ public sealed class CodeFlowExecutionTests
         Assert.Equal([Conclusion], status.OutstandingOutputs);
     }
 
-    [Fact]
+    [Fact(DisplayName = "代码流程捕获并恢复自己的记录")]
     public void A_code_flow_captures_and_restores_its_own_records()
     {
         Harness harness = Harness.Create();

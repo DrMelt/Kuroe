@@ -10,7 +10,7 @@ namespace Kuroe.Flow.Shared.Tests.StaticGraph.Graph;
 /// <summary>输入侧方案与端口绑定：启动组、执行上限与绑定的形状。</summary>
 public sealed class NodeInputPlanTests
 {
-    [Fact]
+    [Fact(DisplayName = "方案默认使用共享执行上限")]
     public void Plan_defaults_to_the_shared_execution_limit()
     {
         NodeInputPlan plan = new();
@@ -19,7 +19,7 @@ public sealed class NodeInputPlanTests
         Assert.Empty(plan.Groups);
     }
 
-    [Fact]
+    [Fact(DisplayName = "组只在绑定声明信号时由信号驱动")]
     public void Group_is_driven_by_signals_only_when_a_binding_signals()
     {
         InputBinding value = new(NodePath.Of("乙"), BindingSource.ForNode(NodePath.Of("甲"), new PortName("结论")), new PortName("目标"), PortTypes.Text);
@@ -34,7 +34,7 @@ public sealed class NodeInputPlanTests
         Assert.Equal([signal], driven.Signals);
     }
 
-    [Fact]
+    [Fact(DisplayName = "绑定携带来源端口目标输入与组")]
     public void Binding_carries_source_port_target_input_and_group()
     {
         InputBinding binding = new(
@@ -52,7 +52,7 @@ public sealed class NodeInputPlanTests
         Assert.Equal(3, binding.Group);
     }
 
-    [Fact]
+    [Fact(DisplayName = "方案绑定携带目标输入")]
     public void Plan_binding_carries_the_target_input()
     {
         InputBinding binding = new(
@@ -66,7 +66,7 @@ public sealed class NodeInputPlanTests
         Assert.Equal(new PortName("目标"), planned.TargetInput);
     }
 
-    [Fact]
+    [Fact(DisplayName = "只有静态输入时无需动态来源即可开始")]
     public void Only_static_inputs_make_a_plan_start_without_dynamic_source()
     {
         NodeInputPlan plan = NodeInputPlan.Of(
@@ -79,7 +79,7 @@ public sealed class NodeInputPlanTests
         Assert.Empty(plan.Groups);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有输入时静态就绪")]
     public void No_inputs_are_static_ready()
     {
         NodeInputPlan plan = NodeInputPlan.Of(new ExecutableSpec(), [], [], []);
@@ -88,7 +88,7 @@ public sealed class NodeInputPlanTests
         Assert.Empty(plan.Groups);
     }
 
-    [Fact]
+    [Fact(DisplayName = "动态输入缺少来源时不开始")]
     public void Dynamic_inputs_do_not_start_without_a_source()
     {
         NodeInputPlan plan = NodeInputPlan.Of(
@@ -100,7 +100,7 @@ public sealed class NodeInputPlanTests
         Assert.False(plan.StaticOnly);
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器方案把内容来源与门控分开")]
     public void Container_plan_separates_content_sources_from_gates()
     {
         NodePath containerPath = NodePath.Of("整体");
@@ -130,7 +130,7 @@ public sealed class NodeInputPlanTests
             Assert.Single(plan.Groups).Bindings.Select(binding => binding.Role));
     }
 
-    [Fact]
+    [Fact(DisplayName = "外部方案没有驱动组")]
     public void External_plan_has_no_driving_groups()
     {
         NodeInputPlan plan = NodeInputPlan.External();

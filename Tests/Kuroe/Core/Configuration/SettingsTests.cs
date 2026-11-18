@@ -21,8 +21,7 @@ public sealed class SettingsTests : IDisposable
         Directory.CreateDirectory(paths.ConfigDirectory);
         _settings = SettingsProvider.Create(paths).ThrowIfError();
     }
-    /// <summary>列出的节与项来自声明表，路径与设置项同源。</summary>
-    [Fact]
+    [Fact(DisplayName = "列出的节与项来自声明表，路径与设置项同源")]
     public void Listing_comes_from_the_declared_items()
     {
         IReadOnlyList<SettingSection> sections = _settings.Sections;
@@ -35,8 +34,7 @@ public sealed class SettingsTests : IDisposable
             Assert.All(section.Entries, entry => Assert.Equal(section.Name, entry.Path.Split(':')[0])));
     }
 
-    /// <summary>声明表、设置节的属性与用户层的形状三者一一对应，任一处漏写时失败。</summary>
-    [Fact]
+    [Fact(DisplayName = "声明表、设置节的属性与用户层的形状三者一一对应，任一处漏写时失败")]
     public void Declarations_the_section_and_the_file_shape_agree()
     {
         Assembly library = typeof(SettingsProvider).Assembly;
@@ -52,8 +50,7 @@ public sealed class SettingsTests : IDisposable
         }
     }
 
-    /// <summary>用户层里缺的项取声明的默认值，不被写成空值。</summary>
-    [Fact]
+    [Fact(DisplayName = "用户层里缺的项取声明的默认值，不被写成空值")]
     public void Absent_items_keep_their_declared_defaults()
     {
         IReadOnlyList<SettingEntry> runtime = Entries(_settings.Sections, "Runtime");
@@ -82,8 +79,7 @@ public sealed class SettingsTests : IDisposable
             .Order();
     }
 
-    /// <summary>路径解析只认已定义的设置项，大小写不敏感。</summary>
-    [Fact]
+    [Fact(DisplayName = "路径解析只认已定义的设置项，大小写不敏感")]
     public void Path_resolution_keeps_defined_items_and_rejects_the_rest()
     {
         Assert.Equal("Runtime:LogLevel", SettingsProvider.ResolvePath("runtime:loglevel").ThrowIfError());
@@ -92,7 +88,7 @@ public sealed class SettingsTests : IDisposable
         Assert.Contains("不是已定义的设置项", SettingsProvider.ResolvePath("Runtime:Nope").FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "语言变更影响新建对话会话")]
     public void Language_change_affects_new_dialogue_sessions()
     {
         SettingsEffect language = _settings.Set("Assistant:Language", "English").ThrowIfError();
@@ -102,7 +98,7 @@ public sealed class SettingsTests : IDisposable
         Assert.False(language.InvalidatesHistory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "网络变更需要重启")]
     public void Network_change_requires_restart()
     {
         SettingsEffect proxy = _settings.Set("Network:Proxy", "http://127.0.0.1:7890").ThrowIfError();
@@ -112,7 +108,7 @@ public sealed class SettingsTests : IDisposable
         Assert.False(proxy.AffectsNewDialogueSessions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建提供方应用配置的代理")]
     public void Provider_creation_applies_the_configured_proxy()
     {
         File.WriteAllText(_settings.UserSettingsFile, """{"Network":{"Proxy":"http://127.0.0.1:7890"}}""");
@@ -131,7 +127,7 @@ public sealed class SettingsTests : IDisposable
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入配置不添加版本")]
     public void Writing_settings_does_not_add_a_version()
     {
         _settings.Set("Runtime:LogLevel", "Warning").ThrowIfError();

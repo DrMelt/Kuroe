@@ -6,7 +6,7 @@ namespace Kuroe.Tool.Command.Shared.Tests;
 /// <summary>命令定义的模板一致性规则。</summary>
 public sealed class CommandToolValidationTests
 {
-    [Fact]
+    [Fact(DisplayName = "模板原因接受一致的定义")]
     public void Template_reasons_accept_a_consistent_definition()
     {
         CommandToolDefinition definition = new(
@@ -28,7 +28,7 @@ public sealed class CommandToolValidationTests
         Assert.Empty(CommandToolValidation.TemplateReasons(definition));
     }
 
-    [Fact]
+    [Fact(DisplayName = "模板原因接受多个列表占位符")]
     public void Template_reasons_accept_multiple_list_placeholders()
     {
         CommandToolDefinition definition = new(
@@ -43,7 +43,7 @@ public sealed class CommandToolValidationTests
         Assert.Empty(CommandToolValidation.TemplateReasons(definition));
     }
 
-    [Fact]
+    [Fact(DisplayName = "模板原因拒绝未关联的布尔参数")]
     public void Template_reasons_reject_unlinked_flag()
     {
         CommandToolDefinition definition = new(
@@ -57,7 +57,7 @@ public sealed class CommandToolValidationTests
             reason => reason.Contains("没有被任何模板项关联", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "模板原因拒绝同名变量与参数")]
     public void Template_reasons_reject_variable_and_parameter_with_same_name()
     {
         CommandToolDefinition definition = new(
@@ -72,7 +72,7 @@ public sealed class CommandToolValidationTests
             reason => reason.Contains("与参数同名", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "校验对不一致定义抛出错误")]
     public void Ensure_valid_throws_for_an_inconsistent_definition()
     {
         CommandToolDefinition definition = new(
@@ -87,7 +87,7 @@ public sealed class CommandToolValidationTests
         Assert.Contains("参数 files 已声明但没有出现在模板里", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "模板原因接受带变量前缀的项")]
     public void Template_reasons_accept_variable_prefixed_item()
     {
         CommandToolDefinition definition = new(
@@ -100,7 +100,7 @@ public sealed class CommandToolValidationTests
         Assert.Empty(CommandToolValidation.TemplateReasons(definition));
     }
 
-    [Fact]
+    [Fact(DisplayName = "模板原因允许未被模板使用的根变量")]
     public void Template_reasons_allow_root_variable_without_template_use()
     {
         CommandToolDefinition definition = new(

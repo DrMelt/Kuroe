@@ -12,7 +12,7 @@ public sealed class FileReplacerTests
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
     private readonly InMemoryWorkspaceFiles _files = new();
 
-    [Fact]
+    [Fact(DisplayName = "替换改变每个匹配的文件")]
     public void Replace_changes_every_matching_file()
     {
         string first = Path.Combine(_root, "a.txt");
@@ -29,7 +29,7 @@ public sealed class FileReplacerTests
         Assert.Equal([1, 2], result.Files.Single(file => Path.GetFileName(file.File) == "a.txt").Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换按扩展名过滤")]
     public void Replace_filters_by_extension()
     {
         string code = Path.Combine(_root, "a.cs");
@@ -44,7 +44,7 @@ public sealed class FileReplacerTests
         Assert.Equal("needle", _files.ReadText(text));
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换跳过二进制文件")]
     public void Replace_skips_binary_files()
     {
         string text = Path.Combine(_root, "a.txt");
@@ -58,7 +58,7 @@ public sealed class FileReplacerTests
         Assert.Equal("x", _files.ReadText(text));
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件替换试运行不写入")]
     public void Replace_dry_run_does_not_write()
     {
         string file = Path.Combine(_root, "a.txt");
@@ -70,7 +70,7 @@ public sealed class FileReplacerTests
         Assert.Equal("needle", _files.ReadText(file));
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换报告没有匹配且不触碰文件")]
     public void Replace_reports_no_match_without_touching_files()
     {
         string file = Path.Combine(_root, "a.txt");
@@ -83,7 +83,7 @@ public sealed class FileReplacerTests
         Assert.Equal("other", _files.ReadText(file));
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换拒绝越出工作目录的路径")]
     public void Replace_rejects_path_escaping_working_directory()
     {
         ErrorOr<TextReplaceResult> result = new FileReplacer(Scope())
@@ -93,7 +93,7 @@ public sealed class FileReplacerTests
         Assert.Contains("不在工作目录内", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换跳过禁止目录")]
     public void Replace_skips_denied_directories()
     {
         string file = Path.Combine(_root, ".kuroe", "catalog.json");
@@ -105,7 +105,7 @@ public sealed class FileReplacerTests
         Assert.Equal("needle", _files.ReadText(file));
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换保留编码与换行")]
     public void Replace_preserves_encoding_and_newline()
     {
         string file = Path.Combine(_root, "utf16.txt");
@@ -119,7 +119,7 @@ public sealed class FileReplacerTests
         Assert.Equal("x\r\ny\r\nb", Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2));
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换遵循编码覆盖")]
     public void Replace_honors_encoding_override()
     {
         string file = Path.Combine(_root, "a.txt");
@@ -134,7 +134,7 @@ public sealed class FileReplacerTests
         Assert.Equal("x", Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2));
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换不递归处理替换文本")]
     public void Replace_does_not_recurse_replacement_text()
     {
         string file = Path.Combine(_root, "a.txt");

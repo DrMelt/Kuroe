@@ -8,8 +8,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>执行次数按执行节点累计，以启动的执行记录为准。</summary>
 public sealed class ExecutionCountTests
 {
-    /// <summary>失败后重新执行一次，节点执行次数按启动的执行累计。</summary>
-    [Fact]
+    [Fact(DisplayName = "失败后重新执行一次，节点执行次数按启动的执行累计")]
     public void Rerun_increments_the_node_execution_count()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);
@@ -25,8 +24,7 @@ public sealed class ExecutionCountTests
         Assert.Equal(2, Executions(task, "干活"));
     }
 
-    /// <summary>上游阻塞时下游不启动，统计保持 0。</summary>
-    [Fact]
+    [Fact(DisplayName = "上游阻塞时下游不启动，统计保持 0")]
     public void Blocked_upstream_leaves_downstream_on_zero()
     {
         using TestEnvironment environment = TestEnvironment.Create(ChainFlow);

@@ -6,7 +6,7 @@ namespace Kuroe.Tasks.Records.Shared.Tests;
 /// <summary>任务信封只保存任务身份、过程记录、流程记录与执行记录。</summary>
 public sealed class TaskRecordTests
 {
-    [Fact]
+    [Fact(DisplayName = "信封保留流程记录与执行")]
     public void Envelope_keeps_flow_records_and_executions()
     {
         TaskId id = new(7);

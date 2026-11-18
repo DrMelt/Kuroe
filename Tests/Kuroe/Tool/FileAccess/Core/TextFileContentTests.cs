@@ -12,7 +12,7 @@ public sealed class TextFileContentTests
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
     private readonly InMemoryWorkspaceFiles _files = new();
 
-    [Fact]
+    [Fact(DisplayName = "读取与写入保留 UTF-8 BOM")]
     public void Read_and_write_preserve_utf8_bom()
     {
         string file = Path.Combine(_root, "bom.txt");
@@ -30,7 +30,7 @@ public sealed class TextFileContentTests
         Assert.Equal("我好", new UTF8Encoding(false).GetString(bytes, 3, bytes.Length - 3));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取与写入保留 UTF-16 BOM")]
     public void Read_and_write_preserve_utf16_bom()
     {
         string file = Path.Combine(_root, "utf16.txt");
@@ -46,7 +46,7 @@ public sealed class TextFileContentTests
         Assert.Equal("外容", Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取与写入保留 UTF-16BE BOM")]
     public void Read_and_write_preserve_utf16be_bom()
     {
         string file = Path.Combine(_root, "utf16be.txt");
@@ -62,7 +62,7 @@ public sealed class TextFileContentTests
         Assert.Equal("外容", Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取与写入保留 UTF-32 BOM")]
     public void Read_and_write_preserve_utf32_bom()
     {
         string file = Path.Combine(_root, "utf32.txt");
@@ -78,7 +78,7 @@ public sealed class TextFileContentTests
         Assert.Equal("外容", Encoding.UTF32.GetString(bytes, 4, bytes.Length - 4));
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换跨 CRLF 匹配多行文本")]
     public void Replace_matches_multiline_text_across_crlf()
     {
         string file = Path.Combine(_root, "crlf.txt");
@@ -91,7 +91,7 @@ public sealed class TextFileContentTests
         Assert.Equal("ONE\r\nTWO\r\nthree", change.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换保留未触及的混合换行")]
     public void Replace_preserves_untouched_mixed_newlines()
     {
         string file = Path.Combine(_root, "mixed.txt");
@@ -104,7 +104,7 @@ public sealed class TextFileContentTests
         Assert.Equal("a\r\nB\nc\r\n", change.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换把替换文本的换行转为文件风格")]
     public void Replace_converts_replacement_newlines_to_file_style()
     {
         string file = Path.Combine(_root, "style.txt");
@@ -116,7 +116,7 @@ public sealed class TextFileContentTests
         Assert.Equal("x\r\ny\r\nb", change.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "CR 文件中的替换换行转为回车")]
     public void Replace_converts_replacement_newlines_to_cr_for_cr_files()
     {
         string file = Path.Combine(_root, "cr.txt");
@@ -129,7 +129,7 @@ public sealed class TextFileContentTests
         Assert.Equal("x\ry\rb", change.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有换行的文件使用 LF")]
     public void Replace_uses_lf_for_files_without_newlines()
     {
         string file = Path.Combine(_root, "flat.txt");
@@ -142,7 +142,7 @@ public sealed class TextFileContentTests
         Assert.Equal("x\ny", change.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换返回不重叠的替换")]
     public void Replace_returns_non_overlapping_replacements()
     {
         string file = Path.Combine(_root, "overlap.txt");
@@ -155,7 +155,7 @@ public sealed class TextFileContentTests
         Assert.Equal("bb", change.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换区分大小写并遵循内联大小写选项")]
     public void Replace_is_case_sensitive_and_honors_inline_regex_case()
     {
         string file = Path.Combine(_root, "case.txt");
@@ -167,7 +167,7 @@ public sealed class TextFileContentTests
         Assert.Equal(1, content.Replace(Replacement("(?i)needle", "x", regex: true)).Replacements);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换返回匹配起始行")]
     public void Replace_returns_match_start_lines()
     {
         string file = Path.Combine(_root, "lines.txt");
@@ -179,7 +179,7 @@ public sealed class TextFileContentTests
         Assert.Equal([1, 3], change.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "同一行多个匹配时替换只保留一行")]
     public void Replace_keeps_one_line_for_multiple_matches_on_the_same_line()
     {
         string file = Path.Combine(_root, "same-line.txt");
@@ -192,7 +192,7 @@ public sealed class TextFileContentTests
         Assert.Equal([1], change.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文本替换展开正则分组引用")]
     public void Replace_expands_regex_group_references()
     {
         string file = Path.Combine(_root, "regex.txt");
@@ -206,7 +206,7 @@ public sealed class TextFileContentTests
         Assert.Equal([1], change.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换转换展开匹配文本中的换行")]
     public void Replace_converts_newlines_in_expanded_match_text()
     {
         string file = Path.Combine(_root, "crlf-regex.txt");
@@ -220,7 +220,7 @@ public sealed class TextFileContentTests
         Assert.Equal([1], change.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换在零宽正则匹配处插入")]
     public void Replace_inserts_on_a_zero_width_regex_match()
     {
         string file = Path.Combine(_root, "anchor.txt");
@@ -234,7 +234,7 @@ public sealed class TextFileContentTests
         Assert.Equal([1], change.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换在末尾换行的两个美元位置插入")]
     public void Replace_inserts_at_both_dollar_positions_of_a_trailing_newline()
     {
         string file = Path.Combine(_root, "trailing.txt");
@@ -248,7 +248,7 @@ public sealed class TextFileContentTests
         Assert.Equal([1, 2], change.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换返回不重叠的正则替换")]
     public void Replace_returns_non_overlapping_regex_replacements()
     {
         string file = Path.Combine(_root, "overlap-regex.txt");
@@ -261,7 +261,7 @@ public sealed class TextFileContentTests
         Assert.Equal(2, change.Replacements);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝二进制文件")]
     public void Read_rejects_binary_file()
     {
         string file = Path.Combine(_root, "binary.bin");
@@ -273,7 +273,7 @@ public sealed class TextFileContentTests
         Assert.Contains("二进制", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝非法 UTF-8")]
     public void Read_rejects_invalid_utf8()
     {
         string file = Path.Combine(_root, "invalid.txt");
@@ -285,7 +285,7 @@ public sealed class TextFileContentTests
         Assert.Contains("读取失败", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文本文件读取拒绝缺失文件")]
     public void Read_rejects_missing_file()
     {
         ErrorOr<TextFileContent> result = TextFileContent.Read(_files, Path.Combine(_root, "missing.txt"));

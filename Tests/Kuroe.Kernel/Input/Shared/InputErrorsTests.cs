@@ -7,7 +7,7 @@ namespace Kuroe.Input.Shared.Tests;
 /// <summary>输入交付错误带任务与步骤信息。</summary>
 public sealed class InputErrorsTests
 {
-    [Fact]
+    [Fact(DisplayName = "未知步骤错误标明任务与步骤")]
     public void Unknown_step_error_names_task_and_step()
     {
         Error error = InputErrors.StepNotAwaiting(

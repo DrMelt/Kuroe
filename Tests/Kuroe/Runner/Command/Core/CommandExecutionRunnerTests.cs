@@ -14,7 +14,7 @@ public sealed class CommandExecutionRunnerTests
 {
     private static readonly string Root = Path.GetTempPath();
 
-    [Fact]
+    [Fact(DisplayName = "执行返回去空白输出")]
     public async Task Execute_returns_the_trimmed_output()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns($"甲{Environment.NewLine}乙{Environment.NewLine}");
@@ -28,7 +28,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal($"甲{Environment.NewLine}乙", result.Value.Content);
     }
 
-    [Fact]
+    [Fact(DisplayName = "非零退出码默认视为成功")]
     public async Task Non_zero_exit_code_succeeds_by_default()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("错误", exitCode: 2);
@@ -41,7 +41,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal("错误", result.Value.Content);
     }
 
-    [Fact]
+    [Fact(DisplayName = "声明时非零退出码视为失败")]
     public async Task Non_zero_exit_code_fails_when_declared()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("错误", exitCode: 2);
@@ -55,7 +55,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Contains("错误", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "空输出以空内容成功")]
     public async Task Empty_output_succeeds_with_empty_content()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns(string.Empty, exitCode: 1);
@@ -68,7 +68,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(string.Empty, result.Value.Content);
     }
 
-    [Fact]
+    [Fact(DisplayName = "超时视为失败")]
     public async Task Timeout_fails()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("部分输出", timedOut: true);
@@ -81,7 +81,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal("命令在 5 秒内未结束，已终止。", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "启动失败视为失败")]
     public async Task Start_failure_fails()
     {
         FakeProcessRunner process = new FakeProcessRunner().Throws("无法启动 dotnet。");
@@ -94,7 +94,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal("无法启动 dotnet。", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行传递程序实参目录与超时")]
     public async Task Execute_passes_program_arguments_directory_and_timeout()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -109,7 +109,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(TimeSpan.FromSeconds(5), process.Timeout);
     }
 
-    [Fact]
+    [Fact(DisplayName = "实参展开变量但不校验路径")]
     public async Task Arguments_expand_variables_without_path_validation()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -135,7 +135,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(Root, process.WorkingDirectory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "未映射的实参占位符在启动前失败")]
     public async Task Unmapped_argument_placeholder_fails_without_starting()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -149,7 +149,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(0, process.Calls);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行把根变量作为默认目录")]
     public async Task Execute_uses_the_root_variable_as_the_default_directory()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -164,7 +164,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行从根变量解析声明目录")]
     public async Task Execute_resolves_the_declared_directory_from_the_root_variable()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -176,7 +176,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "工作区之外的目录失败")]
     public async Task Directory_outside_the_workspace_fails()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -190,7 +190,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(0, process.Calls);
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开目录前解析相对根")]
     public async Task Relative_root_is_resolved_before_expanding_the_directory()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -202,7 +202,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "相对根是目录模板的基准")]
     public async Task Relative_root_is_the_base_of_the_directory_template()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -214,7 +214,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(Path.Combine(Root, "sub", "src"), process.WorkingDirectory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录变量相对根解析")]
     public async Task Directory_variables_are_relative_to_the_root()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -235,7 +235,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(Path.Combine(Root, "task", "src"), process.WorkingDirectory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "命令执行变量根在工作区之外失败")]
     public async Task Variable_root_outside_the_workspace_fails()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -252,7 +252,7 @@ public sealed class CommandExecutionRunnerTests
         Assert.Equal(0, process.Calls);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输出按声明上限截断")]
     public async Task Output_is_truncated_at_the_declared_limit()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("abcdef");

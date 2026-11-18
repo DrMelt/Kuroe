@@ -12,56 +12,56 @@ namespace Kuroe.Flow.Compilation.Tests.Validation;
 /// <summary>流程静态校验规则：直接构造模型，一条规则一个测试，断言完整错误说明集合。</summary>
 public sealed class FlowRulesTests
 {
-    [Fact]
+    [Fact(DisplayName = "没有名称的节点被拒绝")]
     public void Node_without_name_is_rejected() =>
         Assert.Equal(
             [NodeError("(未命名)", "节点名不能为空。")],
             Errors(Flow(Container("整体", Plan(string.Empty)))));
 
-    [Fact]
+    [Fact(DisplayName = "含 at 符号的节点名被拒绝")]
     public void Node_name_with_at_is_rejected() =>
         Assert.Equal(
             [NodeError("甲@乙", "节点名不能含 @，@ 是端口引用的分隔符。")],
             Errors(Flow(Container("整体", Text("甲@乙")))));
 
-    [Fact]
+    [Fact(DisplayName = "含 at 符号的节点标签被拒绝")]
     public void Node_with_at_label_is_rejected() =>
         Assert.Equal(
             [NodeError("甲@乙", "节点标签不能含 @，@ 是端口引用的分隔符。")],
             Errors(Flow(Container("整体", Reference("甲@乙", "干活")))));
 
-    [Fact]
+    [Fact(DisplayName = "重复节点标签被拒绝")]
     public void Duplicate_node_label_is_rejected() =>
         Assert.Equal(
             [NodeError("制定计划", "同一容器内的节点标签重复。")],
             Errors(Flow(
                 Container("整体", Plan("制定计划"), Text("制定计划")))));
 
-    [Fact]
+    [Fact(DisplayName = "执行节点执行上限为零被拒绝")]
     public void Executable_max_executions_zero_is_rejected() =>
         Assert.Equal(
             [NodeError("干活", "MaxExecutions 必须是正整数。")],
             Errors(Flow(Container("整体", Exec("干活", new ExecutableSpec { MaxExecutions = 0 })))));
 
-    [Fact]
+    [Fact(DisplayName = "执行节点执行上限为负被拒绝")]
     public void Executable_max_executions_negative_is_rejected() =>
         Assert.Equal(
             [NodeError("干活", "MaxExecutions 必须是正整数。")],
             Errors(Flow(Container("整体", Exec("干活", new ExecutableSpec { MaxExecutions = -1 })))));
 
-    [Fact]
+    [Fact(DisplayName = "容器执行上限为零被拒绝")]
     public void Container_max_executions_zero_is_rejected() =>
         Assert.Equal(
             [NodeError("整体", "MaxExecutions 必须是正整数。")],
             Errors(Flow(Container("整体", Text("干活")) with { MaxExecutions = 0 })));
 
-    [Fact]
+    [Fact(DisplayName = "容器执行上限为负被拒绝")]
     public void Container_max_executions_negative_is_rejected() =>
         Assert.Equal(
             [NodeError("整体", "MaxExecutions 必须是正整数。")],
             Errors(Flow(Container("整体", Text("干活")) with { MaxExecutions = -2 })));
 
-    [Fact]
+    [Fact(DisplayName = "容器来源接线动态输入")]
     public void Container_from_wires_dynamic_inputs() =>
         Assert.Empty(
             Errors(Flow(
@@ -71,26 +71,26 @@ public sealed class FlowRulesTests
                     From = [StartRef()],
                 })));
 
-    [Fact]
+    [Fact(DisplayName = "容器来源目标必须声明")]
     public void Container_from_target_must_be_declared() =>
         Assert.Equal(
             [NodeError("容器", "From 连接的目标输入端口 结论 没有在节点上声明。")],
             Errors(Flow(
                 Container("容器", Plan("规划")) with { From = [Ref("规划", "结论")] })));
 
-    [Fact]
+    [Fact(DisplayName = "没有输出端口的开始节点被接受")]
     public void Start_without_output_port_is_accepted() =>
         Assert.Empty(Errors(new FlowDefinition(new FlowName("默认"), null,
             [], Exec("干活", new ExecutableSpec()) with { From = [] })));
 
-    [Fact]
+    [Fact(DisplayName = "含非数据端口的开始节点被拒绝")]
     public void Start_with_non_data_port_is_rejected() =>
         Assert.Equal(
             ["流程 默认：开始端口 目标 的动态类型只能是 Text 或 Signal，常量端口可以使用任意类型。"],
             Errors(new FlowDefinition(new FlowName("默认"), null,
                 [ContextPort("目标")], Container("整体", Exec("干活", new ExecutableSpec()) with { From = [] }))));
 
-    [Fact]
+    [Fact(DisplayName = "来源目标推断为文本内容输入")]
     public void From_target_is_inferred_as_a_text_content_input()
     {
         NodeSpec node = Exec("干活", new ExecutableSpec());
@@ -98,49 +98,47 @@ public sealed class FlowRulesTests
         Assert.NotNull(node.FindInput(PN("目标")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "含常量端口的开始节点被接受")]
     public void Start_with_constant_port_is_accepted() =>
         Assert.Empty(Errors(StartFlow([StartOutput, P("背景") with { Value = "固定背景" }])));
 
-    [Fact]
+    [Fact(DisplayName = "没有输入端口的开始节点被接受")]
     public void Start_without_an_input_port_is_accepted() =>
         Assert.Empty(Errors(StartFlow([P("目标") with { Value = "固定" }])));
 
-    [Fact]
+    [Fact(DisplayName = "含两个目标端口的开始节点被接受")]
     public void Start_with_two_goal_ports_is_accepted() =>
         Assert.Empty(Errors(StartFlow([StartOutput, P("另一目标")])));
 
-    [Fact]
+    [Fact(DisplayName = "空白值的开始端口被拒绝")]
     public void Start_with_blank_value_is_rejected() =>
         Assert.Equal(
             ["流程 默认：开始端口 背景 的 Value 不能为空。"],
             Errors(StartFlow([StartOutput, P("背景") with { Value = " " }])));
 
-    [Fact]
+    [Fact(DisplayName = "重复的开始端口被拒绝")]
     public void Start_with_duplicate_port_is_rejected() =>
         Assert.Equal(
             ["流程 默认：开始端口 背景 重复。"],
             Errors(StartFlow([StartOutput, P("背景") with { Value = "甲" }, P("背景") with { Value = "乙" }])));
 
-    /// <summary>开始端口名可以取宿主输入名，流程编译不把命名当作绑定。</summary>
-    [Fact]
+    [Fact(DisplayName = "开始端口名可以取宿主输入名，流程编译不把命名当作绑定")]
     public void Start_port_can_use_a_host_input_name() =>
         Assert.Empty(Errors(StartFlow([StartOutput, P("WORKSPACE_PATH")])));
 
-    /// <summary>带默认值的开始端口是流程结构的一部分，流程编译不判断它是否由宿主给值。</summary>
-    [Fact]
+    [Fact(DisplayName = "带默认值的开始端口是流程结构的一部分，流程编译不判断它是否由宿主给值")]
     public void Start_port_with_default_is_accepted() =>
         Assert.Empty(Errors(StartFlow([StartOutput, P("分支") with { Default = "main" }])));
 
-    [Fact]
+    [Fact(DisplayName = "名为开始的节点被接受")]
     public void Node_named_start_is_accepted() =>
         Assert.Empty(Errors(Flow(Container("整体", Text("Start")))));
 
-    [Fact]
+    [Fact(DisplayName = "标签为开始的节点被接受")]
     public void Node_with_start_label_is_accepted() =>
         Assert.Empty(Errors(Flow(Container("整体", Reference("Start", "干活")))));
 
-    [Fact]
+    [Fact(DisplayName = "无法从开始到达的节点被拒绝")]
     public void Node_unreachable_from_start_is_rejected() =>
         Assert.Equal(
             [
@@ -160,20 +158,20 @@ public sealed class FlowRulesTests
                         Inputs = [new InputPort(PN("目标"), PortTypes.Text, defaultValue: "默认")],
                     }))));
 
-    [Fact]
+    [Fact(DisplayName = "两个上下文端口被拒绝")]
     public void Two_context_ports_are_rejected() =>
         Assert.Equal(
             [NodeError("分析", "Context 输出端口至多声明一个。")],
             Errors(Flow(
                 Container("整体", Text("分析") with { Outputs = [ContextPort("甲"), ContextPort("乙")] }))));
 
-    [Fact]
+    [Fact(DisplayName = "重复输出端口被拒绝")]
     public void Duplicate_output_port_is_rejected() =>
         Assert.Equal(
             [NodeError("分析", "输出端口 结论 重复。")],
             Errors(Flow(Container("整体", Text("分析") with { Outputs = [P("结论"), P("结论")] }))));
 
-    [Fact]
+    [Fact(DisplayName = "流程规则节点输出默认值被拒绝")]
     public void Node_output_default_is_rejected() =>
         Assert.Equal(
             [NodeError("干活", "输出端口 结论 不能写 Default，Default 只用于开始端口。")],
@@ -183,7 +181,7 @@ public sealed class FlowRulesTests
                     Outputs = [P("结论") with { Default = "x" }],
                 }))));
 
-    [Fact]
+    [Fact(DisplayName = "引用缺失节点被拒绝")]
     public void Reference_to_missing_node_is_rejected() =>
         Assert.Equal(
             [MemberError("容器/内部", "From 引用的节点 不存在 不在流程里。")],
@@ -192,13 +190,13 @@ public sealed class FlowRulesTests
                     Plan("制定计划"),
                     Container("容器", Text("内部") with { From = [Ref("不存在", "结论")] })))));
 
-    [Fact]
+    [Fact(DisplayName = "信号来自缺失节点被拒绝")]
     public void Signal_from_missing_node_is_rejected() =>
         Assert.Equal(
             [NodeError("触发", "From 引用的节点 不存在 不在流程里。")],
             Errors(Flow(Text("触发") with { From = [Signal("不存在", "结论")] })));
 
-    [Fact]
+    [Fact(DisplayName = "引用缺失端口被拒绝")]
     public void Reference_to_missing_port_is_rejected() =>
         Assert.Equal(
             [MemberError("实施", "节点 整体/分析 没有输出端口 不存在。")],
@@ -207,7 +205,7 @@ public sealed class FlowRulesTests
                     Text("分析") with { Outputs = [P("结论")] },
                     Text("实施") with { From = [Ref("分析", "不存在")] }))));
 
-    [Fact]
+    [Fact(DisplayName = "文本输出接上下文输入被拒绝")]
     public void Context_input_from_text_output_is_rejected() =>
         Assert.Equal(
             [MemberError("实施", "Context 输入来源 整体/箱子@结论 必须产出 Context 端口，实际来源端口 结论 是 Text。")],
@@ -219,7 +217,7 @@ public sealed class FlowRulesTests
                     },
                     Text("实施") with { Inputs = [In("结论", PortTypes.Context)], From = [Context("箱子", "结论")] }))));
 
-    [Fact]
+    [Fact(DisplayName = "绑定端口接上下文输入被拒绝")]
     public void Context_input_from_bound_port_is_rejected() =>
         Assert.Equal(
             [
@@ -227,7 +225,7 @@ public sealed class FlowRulesTests
             ],
             Errors(Flow(Container("整体", Text("实施") with { Inputs = [In("输入", PortTypes.Context)], From = [BoundContext("输入")] }))));
 
-    [Fact]
+    [Fact(DisplayName = "重复来源链接被拒绝")]
     public void Duplicate_from_link_is_rejected() =>
         Assert.Equal(
             [NodeError("接收", "From 组内的目标输入端口 结论 出现多次。")],
@@ -236,8 +234,7 @@ public sealed class FlowRulesTests
                     Text("来源") with { Outputs = [P("结论")] },
                     Text("接收") with { From = [Twice("结论", "来源", "结论")] }))));
 
-    /// <summary>组间来源端口不重复：同一来源端口出现在多个组里即接线重复。</summary>
-    [Fact]
+    [Fact(DisplayName = "组间来源端口不重复：同一来源端口出现在多个组里即接线重复")]
     public void Source_port_repeated_across_groups_is_rejected() =>
         Assert.Equal(
             [MemberError("汇合", "From 的来源端口 整体/甲@结论 出现在多个组里。")],
@@ -250,8 +247,7 @@ public sealed class FlowRulesTests
                         From = [Group(("甲", "结论")), Group(("甲", "结论"), ("乙", "结论"))],
                     }))));
 
-    /// <summary>来源端口只按组划分归属：同一组内给不同输入名复用同一来源端口仍是合法接线。</summary>
-    [Fact]
+    [Fact(DisplayName = "来源端口只按组划分归属：同一组内给不同输入名复用同一来源端口仍是合法接线")]
     public void Source_port_reused_within_one_group_is_accepted() =>
         Assert.Empty(Errors(Flow(
             Container("整体",
@@ -268,7 +264,7 @@ public sealed class FlowRulesTests
                     ],
                 }))));
 
-    [Fact]
+    [Fact(DisplayName = "信号驱动被接受")]
     public void Signal_driver_is_accepted() =>
         Assert.Empty(Errors(Flow(
             Container("整体",
@@ -285,7 +281,7 @@ public sealed class FlowRulesTests
                     ],
                 }))));
 
-    [Fact]
+    [Fact(DisplayName = "非触发目标上的来源条件被拒绝")]
     public void From_condition_on_a_non_trigger_target_is_rejected() =>
         Assert.Equal(
             [NodeError("接收", "From 连接的目标输入端口 结论 的触发条件只用于触发端口。")],
@@ -306,7 +302,7 @@ public sealed class FlowRulesTests
                         ],
                     }))));
 
-    [Fact]
+    [Fact(DisplayName = "非触发来源上的来源条件被拒绝")]
     public void From_condition_on_a_non_trigger_source_is_rejected() =>
         Assert.Equal(
             [MemberError("接收", "触发条件要求来源 整体/来源@结论 是触发端口。")],
@@ -327,7 +323,7 @@ public sealed class FlowRulesTests
                         ],
                     }))));
 
-    [Fact]
+    [Fact(DisplayName = "触发来源上的来源条件被接受")]
     public void From_condition_on_a_trigger_source_is_accepted() =>
         Assert.Empty(
             Errors(Flow(
@@ -350,7 +346,7 @@ public sealed class FlowRulesTests
                         ],
                     }))));
 
-    [Fact]
+    [Fact(DisplayName = "容器输出触发不要求成员端口触发")]
     public void Container_output_trigger_does_not_require_the_member_port_to_trigger() =>
         Assert.Empty(
             Errors(Flow(
@@ -366,7 +362,7 @@ public sealed class FlowRulesTests
                     ],
                 })));
 
-    [Fact]
+    [Fact(DisplayName = "容器输出绑定缺少端口的子容器被拒绝")]
     public void Container_out_bound_to_sub_container_without_the_port_is_rejected() =>
         Assert.Equal(
             [NodeError("整体/交付", "输出端口 结果 的来源节点 整体/交付/撰写组 没有输出端口 结论。")],
@@ -377,7 +373,7 @@ public sealed class FlowRulesTests
                         Outputs = [P("结果") with { Ref = PortRef.Named(new NodeLabel("撰写组"), PN("结论")) }],
                     }))));
 
-    [Fact]
+    [Fact(DisplayName = "没有来源的引用环被拒绝")]
     public void Reference_cycle_without_source_is_rejected() =>
         Assert.Equal(
             [
@@ -390,7 +386,7 @@ public sealed class FlowRulesTests
                     Text("甲") with { Outputs = [P("结论")], From = [Ref("乙", "结论")] },
                     Text("乙") with { Outputs = [P("结论")], From = [Ref("甲", "结论")] }))));
 
-    [Fact]
+    [Fact(DisplayName = "执行节点引用自身容器被拒绝")]
     public void Executable_referencing_its_own_container_is_rejected() =>
         Assert.Equal(
             [
@@ -405,7 +401,7 @@ public sealed class FlowRulesTests
                         Outputs = [P("结论") with { Ref = PortRef.Named(new NodeLabel("撰写"), PN("结论")) }],
                     }))));
 
-    [Fact]
+    [Fact(DisplayName = "执行节点带同级引用自身容器被拒绝")]
     public void Executable_referencing_its_own_container_with_sibling_is_rejected() =>
         Assert.Equal(
             [
@@ -421,7 +417,7 @@ public sealed class FlowRulesTests
                         Outputs = [P("结论") with { Ref = PortRef.Named(new NodeLabel("撰写"), PN("结论")) }],
                     }))));
 
-    [Fact]
+    [Fact(DisplayName = "跨作用域的容器环被拒绝")]
     public void Container_cycle_across_scopes_is_rejected() =>
         Assert.Equal(
             [
@@ -440,8 +436,7 @@ public sealed class FlowRulesTests
                         Outputs = [P("结论") with { Ref = PortRef.Named(new NodeLabel("乙"), PN("结论")) }],
                     }))));
 
-    /// <summary>每套绑定方案都必须覆盖不带默认值的输入端口：两套方案任一齐备即启动，规则接受这种写法。</summary>
-    [Fact]
+    [Fact(DisplayName = "每套绑定方案都必须覆盖不带默认值的输入端口：两套方案任一齐备即启动，规则接受这种写法")]
     public void Alternative_groups_are_accepted() =>
         Assert.Empty(Errors(Flow(
             Container("整体",
@@ -464,8 +459,7 @@ public sealed class FlowRulesTests
                     ],
                 }))));
 
-    /// <summary>带默认值的输入端口可以不出现在 From 组里。</summary>
-    [Fact]
+    [Fact(DisplayName = "带默认值的输入端口可以不出现在 From 组里")]
     public void Group_may_omit_input_with_default() =>
         Assert.Empty(Errors(Flow(
             Container("整体",
@@ -476,8 +470,7 @@ public sealed class FlowRulesTests
                     From = [Ref("准备", "结论")],
                 }))));
 
-    /// <summary>没有默认值的输入端口仍必须由每个组覆盖。</summary>
-    [Fact]
+    [Fact(DisplayName = "没有默认值的输入端口仍必须由每个组覆盖")]
     public void Group_still_covers_input_without_default() =>
         Assert.Equal(
             [NodeError("实施", "From 组没有覆盖输入端口 依据。")],
@@ -490,8 +483,7 @@ public sealed class FlowRulesTests
                         From = [Ref("准备", "结论")],
                     }))));
 
-    /// <summary>控制输入不承载内容，可以不出现在 From 组里。</summary>
-    [Fact]
+    [Fact(DisplayName = "控制输入不承载内容，可以不出现在 From 组里")]
     public void Group_may_omit_control_input() =>
         Assert.Empty(Errors(Flow(
             Container("整体",
@@ -502,8 +494,7 @@ public sealed class FlowRulesTests
                     From = [Ref("准备", "结论")],
                 }))));
 
-    /// <summary>默认值只用于 Text 输入端口，Context 输入端口不能声明。</summary>
-    [Fact]
+    [Fact(DisplayName = "默认值只用于 Text 输入端口，Context 输入端口不能声明")]
     public void Default_on_context_input_is_rejected() =>
         Assert.Equal(
             [NodeError("实施", "输入端口 结论 的默认值只用于派发执行的节点的 Text 输入端口。")],
@@ -516,8 +507,7 @@ public sealed class FlowRulesTests
                         From = [Context("准备", "结论")],
                     }))));
 
-    /// <summary>默认值只用于 Text 输入端口，Signal 输入端口不能声明。</summary>
-    [Fact]
+    [Fact(DisplayName = "默认值只用于 Text 输入端口，Signal 输入端口不能声明")]
     public void Default_on_signal_input_is_rejected() =>
         Assert.Equal(
             [NodeError("实施", "输入端口 结论 的默认值只用于派发执行的节点的 Text 输入端口。")],
@@ -530,8 +520,7 @@ public sealed class FlowRulesTests
                         From = [Signal("准备", "结论")],
                     }))));
 
-    /// <summary>默认值不能是空白文本。</summary>
-    [Fact]
+    [Fact(DisplayName = "默认值不能是空白文本")]
     public void Blank_input_default_is_rejected() =>
         Assert.Equal(
             [NodeError("实施", "输入端口 背景 的默认值不能为空。")],
@@ -544,8 +533,7 @@ public sealed class FlowRulesTests
                         From = [Ref("准备", "结论")],
                     }))));
 
-    /// <summary>容器输入端口是绑定接口，不声明默认值。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器输入端口是绑定接口，不声明默认值")]
     public void Container_input_default_is_rejected() =>
         Assert.Equal(
             [NodeError("整体", "容器输入端口 计划 不支持默认值。")],
@@ -556,8 +544,7 @@ public sealed class FlowRulesTests
                     From = [new FromGroup([new FromLink(PN("计划"), PortRef.Start(StartPort))])],
                 })));
 
-    /// <summary>输入端口名在同一节点内唯一，与输出端口同一份规则。</summary>
-    [Fact]
+    [Fact(DisplayName = "输入端口名在同一节点内唯一，与输出端口同一份规则")]
     public void Duplicate_input_port_is_rejected() =>
         Assert.Equal(
             [NodeError("接收", "输入端口 结论 重复。")],

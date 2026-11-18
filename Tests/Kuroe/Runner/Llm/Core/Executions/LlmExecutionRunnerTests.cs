@@ -6,7 +6,7 @@ namespace Kuroe.Runner.Llm.Tests.Executions;
 /// <summary>LlmExecutionRunner 的补发循环：产出契约缺项时在同一会话里补发，补满上限即止，失败不再补发。</summary>
 public sealed class LlmExecutionRunnerTests
 {
-    [Fact]
+    [Fact(DisplayName = "没有缺失时只询问一次")]
     public async Task Missing_nothing_asks_once()
     {
         List<string> asked = [];
@@ -20,7 +20,7 @@ public sealed class LlmExecutionRunnerTests
         Assert.False(outcome.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少输出时询问到上限")]
     public async Task Missing_output_asks_until_the_limit()
     {
         List<string> asked = [];
@@ -34,7 +34,7 @@ public sealed class LlmExecutionRunnerTests
         Assert.False(outcome.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输出填满后停止询问")]
     public async Task Filled_output_stops_asking()
     {
         List<string> asked = [];
@@ -49,7 +49,7 @@ public sealed class LlmExecutionRunnerTests
         Assert.False(outcome.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "失败回复不再提醒")]
     public async Task Failed_reply_is_not_reminded()
     {
         List<string> asked = [];

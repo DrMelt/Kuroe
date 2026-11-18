@@ -10,7 +10,7 @@ namespace Kuroe.Tests.Catalogs;
 /// <summary>目录工具视图：提供商与模型取自同一份快照，凭据只报是否已设置。</summary>
 public sealed class ToolCatalogViewTests
 {
-    [Fact]
+    [Fact(DisplayName = "读取报告提供方模型与选择且不含凭据")]
     public void Read_reports_providers_models_and_selection_without_credentials()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();

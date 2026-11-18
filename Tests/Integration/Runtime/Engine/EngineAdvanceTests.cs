@@ -9,7 +9,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// 活跃屏障使来源新版本通知丢失后，执行收口必须补一次评估把节点放行。</summary>
 public sealed class EngineAdvanceTests
 {
-    [Fact]
+    [Fact(DisplayName = "无关慢执行运行时下游照常启动")]
     public async Task Downstream_starts_while_unrelated_slow_execution_is_running()
     {
         using TestEnvironment environment = TestEnvironment.Create(SlowParallelFlow);
@@ -36,7 +36,7 @@ public sealed class EngineAdvanceTests
 
     /// <summary>多组各自独立的汇合：前一个来源先发布拉起汇合执行，后一个来源在执行在跑时发布，
     /// 其通知因活跃屏障丢失时，汇合执行收口后必须补评估重新启动，否则任务停在运行态。</summary>
-    [Fact]
+    [Fact(DisplayName = "来源交错发布时各组继续推进")]
     public async Task Groups_advance_past_interleaved_source_release()
     {
         using TestEnvironment environment = TestEnvironment.Create(IndependentGroupsFlow);

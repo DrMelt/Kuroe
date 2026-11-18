@@ -7,7 +7,7 @@ namespace Kuroe.Integration.Tests.Runtime.Nodes;
 /// <summary>命令执行节点：按版本执行命令，输出与完成信号进入下游，启动失败阻塞并记录原因。</summary>
 public sealed class CommandNodeTests
 {
-    [Fact]
+    [Fact(DisplayName = "命令输出与完成标记进入下游文件")]
     public void Command_output_and_completion_enter_the_downstream_files()
     {
         using TestEnvironment environment = TestEnvironment.Create(CommandFlow);
@@ -21,7 +21,7 @@ public sealed class CommandNodeTests
         Assert.Matches(@"^\d+\.\d+\.\d+", File.ReadAllText(Path.Combine(environment.Root, "out", "completed.txt")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少程序时任务阻塞并记录原因")]
     public void Missing_program_blocks_the_task_and_records_the_reason()
     {
         using TestEnvironment environment = TestEnvironment.Create(MissingProgramFlow);
@@ -31,7 +31,7 @@ public sealed class CommandNodeTests
 
         Assert.Contains(blocked.Journal,
             entry => entry.Level == JournalLevel.Error && entry.Text.Contains("无法启动"));
-        Assert.False(File.Exists(Path.Combine(environment.Root, "out", "completed.txt")));
+        Assert.False(File.Exists(Path.Combine(environment.Root, "out", "completed.txt")), $"{Path.Combine(environment.Root, "out", "completed.txt")} 不应存在。");
     }
 
     /// <summary>命令节点执行 dotnet --version，输出经文件写入节点落到文件。</summary>

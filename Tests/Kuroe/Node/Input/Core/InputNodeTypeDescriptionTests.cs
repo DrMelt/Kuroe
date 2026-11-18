@@ -13,19 +13,19 @@ public sealed class InputNodeTypeDescriptionTests
 
     private static readonly InputNodeTypeDescription File = new(RunnerFactory);
 
-    [Fact]
+    [Fact(DisplayName = "种类是输入节点类型")]
     public void Kind_is_the_input_node_type() =>
         Assert.Equal(InputNodeTypes.Name, File.Kind);
 
-    [Fact]
+    [Fact(DisplayName = "形状是输入类型形状")]
     public void Shape_is_the_input_type_shape() =>
         Assert.Equal(InputNodeTypes.Shape, File.Shape);
 
-    [Fact]
+    [Fact(DisplayName = "输入类型字段声明问题文本")]
     public void Fields_declare_the_question_text() =>
         Assert.Equal([new ParameterField("Question", ParameterValueKind.Text)], File.Fields);
 
-    [Fact]
+    [Fact(DisplayName = "输入类型读取从值构建")]
     public void Read_builds_the_type_from_the_values()
     {
         InputParameters parameters = Declared(File.Read(new Reader("要做什么"), _ => { }));
@@ -33,7 +33,7 @@ public sealed class InputNodeTypeDescriptionTests
         Assert.Equal("要做什么", parameters.Question);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入类型没有值时读取采用安全默认值")]
     public void Read_without_values_takes_the_safe_defaults()
     {
         InputParameters parameters = Declared(File.Read(new Reader(), _ => { }));

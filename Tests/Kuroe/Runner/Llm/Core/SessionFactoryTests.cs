@@ -16,7 +16,7 @@ namespace Kuroe.Runner.Llm.Tests;
 /// <summary>会话装配：模型缺失与接入错误在建立会话前给出，工具调用包住历史持久化。</summary>
 public sealed class SessionFactoryTests
 {
-    [Fact]
+    [Fact(DisplayName = "为执行创建时报告缺少模型")]
     public async Task For_execution_reports_a_missing_model()
     {
         using SessionFactory factory = new(new Access(), new ToolFactory(), new ToolJson());
@@ -33,7 +33,7 @@ public sealed class SessionFactoryTests
         Assert.Equal("Runtime.Model", created.FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "为执行创建时报告访问错误")]
     public async Task For_execution_reports_the_access_error()
     {
         using SessionFactory factory = new(new Access(), new ToolFactory(), new ToolJson());
@@ -50,7 +50,7 @@ public sealed class SessionFactoryTests
         Assert.Equal("Model.Missing", created.FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "函数调用包装保存历史的客户端")]
     public void Function_invocation_wraps_the_history_persisting_client()
     {
         InMemoryChatHistoryProvider provider = new(new InMemoryChatHistoryProviderOptions());

@@ -14,7 +14,7 @@ public sealed class RuntimeStartSourceTests
     private static readonly PortName Signal = new("启动");
     private static readonly PortName Model = new("模型");
 
-    [Fact]
+    [Fact(DisplayName = "来源以单个修订发布")]
     public void Source_is_released_with_a_single_revision()
     {
         RuntimeStartSource source = Source();
@@ -24,7 +24,7 @@ public sealed class RuntimeStartSourceTests
         Assert.True(source.Triggers(Signal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "动态内容端口携带开始文本")]
     public void Dynamic_content_port_carries_the_start_text()
     {
         RuntimeStartSource source = Source();
@@ -35,7 +35,7 @@ public sealed class RuntimeStartSourceTests
         Assert.Equal(Goal, Assert.IsType<StartSource>(value.Origin).Port);
     }
 
-    [Fact]
+    [Fact(DisplayName = "信号与常量端口不携带内容")]
     public void Signal_and_constant_ports_carry_no_content()
     {
         RuntimeStartSource source = Source();

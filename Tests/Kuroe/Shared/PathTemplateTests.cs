@@ -5,13 +5,13 @@ namespace Kuroe.Shared.Tests;
 /// <summary>路径模板与路径变量规则的纯函数行为。</summary>
 public sealed class PathTemplateTests
 {
-    [Fact]
+    [Fact(DisplayName = "占位符保持顺序并去重")]
     public void Placeholders_keep_order_and_remove_duplicates()
     {
         Assert.Equal(["root", "name"], PathTemplate.Placeholders("{root}/a/{name}/{root}"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开替换已知变量并保留未知变量")]
     public void Expand_replaces_known_variables_and_keeps_unknown_ones()
     {
         string expanded = PathTemplate.Expand("{root}/{missing}/file", new Dictionary<string, string>
@@ -22,7 +22,7 @@ public sealed class PathTemplateTests
         Assert.Equal("C:/workspace/{missing}/file", expanded);
     }
 
-    [Fact]
+    [Fact(DisplayName = "非法名称原因拒绝空白与花括号")]
     public void Invalid_name_reason_rejects_blank_and_braces()
     {
         Assert.Equal("路径变量名不能为空。", PathTemplate.InvalidNameReason(" ", "路径"));
@@ -31,7 +31,7 @@ public sealed class PathTemplateTests
         Assert.Null(PathTemplate.InvalidNameReason("root", "路径"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "路径变量报告缺失未使用与非文本端口")]
     public void Path_variables_report_missing_unused_and_non_text_ports()
     {
         IReadOnlyList<string> errors = PathVariables.Validate(
@@ -53,7 +53,7 @@ public sealed class PathTemplateTests
         Assert.Contains(errors, error => error.Contains("路径变量 extra 没有被 Path 引用", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "映射完整时路径变量通过")]
     public void Path_variables_pass_when_the_mapping_is_complete()
     {
         IReadOnlyList<string> errors = PathVariables.Validate(
@@ -64,7 +64,7 @@ public sealed class PathTemplateTests
         Assert.Empty(errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开解析模板并拒绝未映射或越界路径")]
     public void Expand_resolves_a_template_and_rejects_unmapped_or_escaping_paths()
     {
         string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "kuroe-expand"));

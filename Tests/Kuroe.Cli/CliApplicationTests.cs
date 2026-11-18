@@ -8,7 +8,7 @@ namespace Kuroe.Cli.Tests;
 /// <summary>命令执行边界：工作目录解析、会话装配与命令树调用。</summary>
 public sealed class CliApplicationTests
 {
-    [Fact]
+    [Fact(DisplayName = "无效工作目录在会话前失败")]
     public async Task Invalid_work_directory_fails_before_session()
     {
         StringWriter output = new();
@@ -25,7 +25,7 @@ public sealed class CliApplicationTests
         Assert.Contains("WorkDirectory.Invalid", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "会话创建异常报告内部错误码")]
     public async Task Session_creation_exception_reports_the_internal_code()
     {
         StringWriter output = new();
@@ -42,7 +42,7 @@ public sealed class CliApplicationTests
         Assert.Contains("boom", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程清单经命令树运行")]
     public async Task Flow_list_runs_through_the_command_tree()
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-cli-tests", Guid.NewGuid().ToString("N"));

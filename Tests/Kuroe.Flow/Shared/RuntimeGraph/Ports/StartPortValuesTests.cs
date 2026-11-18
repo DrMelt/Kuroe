@@ -12,7 +12,7 @@ public sealed class StartPortValuesTests
     private static readonly PortName Signal = new("启动");
     private static readonly PortName Model = new("模型");
 
-    [Fact]
+    [Fact(DisplayName = "信号开始端口不出现在视图")]
     public void Signal_start_port_stays_out_of_the_view()
     {
         StartPortValues values = new(
@@ -24,7 +24,7 @@ public sealed class StartPortValuesTests
         Assert.Null(values.Text(Signal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "固定值优先于宿主与提交文本")]
     public void Fixed_value_wins_over_host_and_submitted_text()
     {
         PortName port = new("分支");
@@ -36,7 +36,7 @@ public sealed class StartPortValuesTests
         Assert.Equal("固定", values.Text(port));
     }
 
-    [Fact]
+    [Fact(DisplayName = "宿主文本优先于提交文本")]
     public void Host_text_wins_over_submitted_text()
     {
         StartPortValues values = new(
@@ -47,7 +47,7 @@ public sealed class StartPortValuesTests
         Assert.Equal("宿主", values.Text(Model));
     }
 
-    [Fact]
+    [Fact(DisplayName = "常量内容端口采用提交文本")]
     public void Constant_content_port_takes_submitted_text()
     {
         PortName context = new("背景");

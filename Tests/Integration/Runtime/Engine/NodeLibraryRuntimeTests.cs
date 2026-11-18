@@ -12,7 +12,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>节点库引用在运行时展开为独立实例。</summary>
 public sealed class NodeLibraryRuntimeTests
 {
-    [Fact]
+    [Fact(DisplayName = "同一库容器实例化两次时成员互不混淆")]
     public void Same_library_container_instantiated_twice_keeps_members_distinct()
     {
         using TestEnvironment environment = TestEnvironment.Create(DualInstanceFlow);
@@ -22,8 +22,7 @@ public sealed class NodeLibraryRuntimeTests
         Assert.Equal(TaskState.Done, done.State);
     }
 
-    /// <summary>文件定义自定义节点时，流程仍可引用宿主提供的内置容器；落盘只写文件来源的节点定义。</summary>
-    [Fact]
+    [Fact(DisplayName = "文件定义自定义节点时，流程仍可引用宿主提供的内置容器；落盘只写文件来源的节点定义")]
     public void Builtin_definition_stays_usable_and_unwritten_when_file_defines_its_own()
     {
         using TestEnvironment environment = TestEnvironment.Create(BuiltinReferenceFlow);

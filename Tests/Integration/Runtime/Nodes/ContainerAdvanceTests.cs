@@ -9,7 +9,7 @@ namespace Kuroe.Integration.Tests.Runtime.Nodes;
 /// <summary>容器作为节点实体的推进：审批节点停在待批准、容器汇合后才放下游。</summary>
 public sealed class ContainerAdvanceTests
 {
-    [Fact]
+    [Fact(DisplayName = "审批节点停到批准")]
     public void Approval_node_parks_until_approved()
     {
         using TestEnvironment environment = TestEnvironment.Create(ApprovalGateFlow);
@@ -35,7 +35,7 @@ public sealed class ContainerAdvanceTests
         Assert.All(done.View.Groups, group => Assert.Equal(FlowItemState.Done, group.State));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器成员全部完成后汇合释放下游")]
     public void Container_join_releases_downstream_after_all_members()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerJoinFlow);
@@ -59,7 +59,7 @@ public sealed class ContainerAdvanceTests
             value.Origin is ContainerPortSource source && source.Port.Value == "排版结论");
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器内审批停到批准")]
     public void Approval_inside_container_parks_until_approved()
     {
         using TestEnvironment environment = TestEnvironment.Create(NestedApprovalFlow);
@@ -84,7 +84,7 @@ public sealed class ContainerAdvanceTests
         Assert.All(done.View.Groups, group => Assert.Equal(FlowItemState.Done, group.State));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器审批未批准时下游保持停靠")]
     public void Approval_of_container_parks_downstream_until_approved()
     {
         using TestEnvironment environment = TestEnvironment.Create(ApprovalOfContainerFlow);
@@ -106,7 +106,7 @@ public sealed class ContainerAdvanceTests
         Assert.All(done.View.Groups, group => Assert.Equal(FlowItemState.Done, group.State));
     }
 
-    [Fact]
+    [Fact(DisplayName = "嵌套容器在失败重跑后重新广播")]
     public void Nested_container_rebroadcasts_after_failed_rerun()
     {
         using TestEnvironment environment = TestEnvironment.Create(NestedContainerRerunFlow);

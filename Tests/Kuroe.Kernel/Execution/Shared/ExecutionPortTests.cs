@@ -9,7 +9,7 @@ namespace Kuroe.Execution.Shared.Tests;
 /// <summary>执行端口的构造、请求装配、契约与产出默认行为。</summary>
 public sealed class ExecutionPortTests
 {
-    [Fact]
+    [Fact(DisplayName = "创建时去掉端口名两侧空白")]
     public void Create_trims_port_name()
     {
         ExecutionPortName name = ExecutionPortName.Create("  input  ").Value;
@@ -17,14 +17,14 @@ public sealed class ExecutionPortTests
         Assert.Equal("input", name.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建拒绝空白或 at 符号")]
     public void Create_rejects_blank_or_at_sign()
     {
         Assert.True(ExecutionPortName.Create("   ").IsError);
         Assert.True(ExecutionPortName.Create("input@host").IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "请求保留执行端口与值")]
     public void Request_keeps_execution_ports_and_values()
     {
         ExecutionPortName input = new("input");
@@ -45,14 +45,14 @@ public sealed class ExecutionPortTests
         Assert.True(Assert.Single(request.OutputPorts).CarriesTrigger);
     }
 
-    [Fact]
+    [Fact(DisplayName = "空契约没有输出")]
     public void Contract_empty_has_no_outputs()
     {
         Assert.Null(ExecutionContract.Empty.Outputs);
         Assert.Null(ExecutionContract.Empty.CannotCompleteReason);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输出值默认触发")]
     public void Output_value_fires_by_default()
     {
         ExecutionOutputValue value = new(new ExecutionPortName("output"), "done");
@@ -60,7 +60,7 @@ public sealed class ExecutionPortTests
         Assert.True(value.Fires);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输出可以不带端口携带内容")]
     public void Output_can_carry_content_without_ports()
     {
         ExecutionOutput output = ExecutionOutput.FromContent("done");

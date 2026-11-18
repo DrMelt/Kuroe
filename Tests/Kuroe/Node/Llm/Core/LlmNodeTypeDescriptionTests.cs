@@ -17,15 +17,15 @@ public sealed class LlmNodeTypeDescriptionTests
 
     private static readonly LlmNodeTypeDescription File = new(RunnerFactory);
 
-    [Fact]
+    [Fact(DisplayName = "种类是 LLM 节点类型")]
     public void Kind_is_the_llm_node_type() =>
         Assert.Equal(LlmNodeTypes.Name, File.Kind);
 
-    [Fact]
+    [Fact(DisplayName = "形状是 LLM 类型形状")]
     public void Shape_is_the_llm_type_shape() =>
         Assert.Equal(LlmNodeTypes.Shape, File.Shape);
 
-    [Fact]
+    [Fact(DisplayName = "字段声明参数段")]
     public void Fields_declare_the_parameter_segment() =>
         Assert.Equal(
             [
@@ -36,7 +36,7 @@ public sealed class LlmNodeTypeDescriptionTests
             ],
             File.Fields);
 
-    [Fact]
+    [Fact(DisplayName = "LLM 类型读取从值构建")]
     public void Read_builds_the_type_from_the_values()
     {
         LlmParameters parameters = Declared(File.Read(
@@ -48,7 +48,7 @@ public sealed class LlmNodeTypeDescriptionTests
         Assert.Equal(["恒定块"], parameters.SystemPrompt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "LLM 类型没有值时读取采用安全默认值")]
     public void Read_without_values_takes_the_safe_defaults()
     {
         LlmParameters parameters = Declared(File.Read(new Reader(), _ => { }));
@@ -58,7 +58,7 @@ public sealed class LlmNodeTypeDescriptionTests
         Assert.Empty(parameters.SystemPrompt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取报告非法的能力路径")]
     public void Read_reports_an_illegal_capability_path()
     {
         List<string> errors = [];
@@ -67,7 +67,7 @@ public sealed class LlmNodeTypeDescriptionTests
         Assert.Equal(["路径 file/写入 文件 的段 写入 文件 只能写字母、数字、下划线与连字符。"], errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取报告空白的系统块")]
     public void Read_reports_a_blank_system_block()
     {
         List<string> errors = [];

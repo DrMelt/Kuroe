@@ -8,7 +8,7 @@ namespace Kuroe.Integration.Tests.Runtime.Nodes;
 /// <summary>库容器输出端口：装配层下游按 容器@端口 消费容器内成员的命名段。</summary>
 public sealed class ContainerOutputsTests
 {
-    [Fact]
+    [Fact(DisplayName = "容器输出端口消费绑定的成员命名段")]
     public void Container_out_port_consumes_bound_member_named_segment()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContainerOutputsFlow);

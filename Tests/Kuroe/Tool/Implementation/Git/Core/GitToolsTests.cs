@@ -23,7 +23,7 @@ public sealed class GitToolsTests
     /// <summary>路径魔法形式的实参。</summary>
     private static readonly string[] MagicPaths = [":(exclude)docs"];
 
-    [Fact]
+    [Fact(DisplayName = "定义覆盖读取写入与分支三组")]
     public void Definitions_cover_read_write_and_branch_groups()
     {
         Assert.Equal(
@@ -49,7 +49,7 @@ public sealed class GitToolsTests
             GitTools.Definitions.Select(definition => definition.Definition.Path.Value));
     }
 
-    [Fact]
+    [Fact(DisplayName = "git 模板声明预期的命令行")]
     public void Templates_declare_the_expected_command_lines()
     {
         Assert.Equal(
@@ -261,14 +261,14 @@ public sealed class GitToolsTests
             Template("git/branch/Rebase"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "git 读取在无参数时展开为固定命令行")]
     public void Read_without_arguments_expands_to_fixed_command_lines()
     {
         Assert.Equal(["git", "status", "--short", "--branch"], Argv("git/read/Status", Given()));
         Assert.Equal(["git", "branch", "--all", "--verbose", "--list"], Argv("git/read/Branches", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "状态携带未跟踪与路径")]
     public void Status_carries_untracked_and_paths()
     {
         Assert.Equal(
@@ -276,7 +276,7 @@ public sealed class GitToolsTests
             Argv("git/read/Status", Given(("untracked", "all"), ("paths", OnePath))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "差异携带过滤修订与排除路径")]
     public void Diff_carries_filters_revision_and_excluded_paths()
     {
         Assert.Equal(["git", "diff", "--"], Argv("git/read/Diff", Given()));
@@ -299,7 +299,7 @@ public sealed class GitToolsTests
             Argv("git/read/Diff", Given(("paths", OnePath), ("excludePaths", TwoExcludes))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "差异拒绝名称模式与状态模式同时使用")]
     public void Diff_rejects_name_only_and_name_status_together()
     {
         CommandTool tool = new(Definition("git/read/Diff"), Path.GetTempPath());
@@ -311,7 +311,7 @@ public sealed class GitToolsTests
         Assert.Contains("只能给出一个", result.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "日志携带过滤修订与排除路径")]
     public void Log_carries_filters_revision_and_excluded_paths()
     {
         Assert.Equal(
@@ -340,7 +340,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 count。", Rejected("git/read/Log", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "查看携带修订统计与路径")]
     public void Show_carries_revision_stat_and_paths()
     {
         Assert.Equal(["git", "show", "HEAD"], Argv("git/read/Show", Given(("revision", "HEAD"))));
@@ -350,7 +350,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 revision。", Rejected("git/read/Show", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "分支携带模式")]
     public void Branches_carries_pattern()
     {
         Assert.Equal(
@@ -358,7 +358,7 @@ public sealed class GitToolsTests
             Argv("git/read/Branches", Given(("pattern", "main*"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "预览函数固定标志并携带路径")]
     public void Preview_functions_fix_the_flag_and_carry_paths()
     {
         Assert.All(
@@ -404,7 +404,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 paths。", Rejected("git/read/PreviewRemove", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "添加与恢复携带必填路径与排除路径")]
     public void Add_and_restore_carry_required_paths_and_excluded_paths()
     {
         Assert.Equal(["git", "add", "--", "a.txt"], Argv("git/write/Add", Given(("paths", OnePath))));
@@ -423,7 +423,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 paths。", Rejected("git/write/Restore", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "提交携带消息可选路径与排除路径")]
     public void Commit_carries_message_optional_paths_and_excluded_paths()
     {
         // excludePaths 只在给出 paths 时生效，单独给出时排除项不进入命令
@@ -445,7 +445,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 message。", Rejected("git/write/Commit", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "移除携带缓存路径与排除路径")]
     public void Remove_carries_cached_paths_and_excluded_paths()
     {
         Assert.Equal(["git", "rm", "-r", "--", "a.txt"], Argv("git/write/Remove", Given(("paths", OnePath))));
@@ -458,7 +458,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 paths。", Rejected("git/write/Remove", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "清理携带试运行强制与路径")]
     public void Clean_carries_dry_run_force_and_paths()
     {
         Assert.Equal(["git", "clean", "-d", "--", "a.txt"], Argv("git/write/Clean", Given(("paths", OnePath))));
@@ -471,7 +471,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 paths。", Rejected("git/write/Clean", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "应用补丁携带检查统计反向与补丁")]
     public void Apply_carries_check_stat_reverse_and_patch()
     {
         Assert.Equal(["git", "apply", "fix.patch"], Argv("git/write/Apply", Given(("patch", "fix.patch"))));
@@ -484,7 +484,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 patch。", Rejected("git/write/Apply", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "合并携带修订快进标志与模式")]
     public void Merge_carries_revision_fast_forward_flags_and_modes()
     {
         Assert.Equal(
@@ -504,7 +504,7 @@ public sealed class GitToolsTests
             Argv("git/branch/Merge", Given(("continue", true))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "变基携带上游自动暂存与模式")]
     public void Rebase_carries_upstream_autostash_and_modes()
     {
         Assert.Equal(
@@ -524,7 +524,7 @@ public sealed class GitToolsTests
             Argv("git/branch/Rebase", Given(("skip", true))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "合并与变基拒绝冲突的模式参数")]
     public void Merge_and_rebase_reject_conflicting_mode_arguments()
     {
         CommandTool merge = new(Definition("git/branch/Merge"), Path.GetTempPath());
@@ -561,7 +561,7 @@ public sealed class GitToolsTests
         Assert.Contains("只能给出一个", autostashWithSkip.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "裸值拒绝前导短横线")]
     public void Bare_values_reject_leading_dash()
     {
         Assert.Equal(
@@ -584,7 +584,7 @@ public sealed class GitToolsTests
             Rejected("git/branch/Rebase", Given(("upstream", "--force"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "声明允许前导短横线的参数接受该值")]
     public void Parameters_declaring_leading_dash_accept_it()
     {
         Assert.Equal(
@@ -600,7 +600,7 @@ public sealed class GitToolsTests
         Assert.False(Parameter(Definition("git/branch/Switch"), "branch").AllowLeadingDash);
     }
 
-    [Fact]
+    [Fact(DisplayName = "路径魔法在展开前被拒绝")]
     public void Path_magic_is_rejected_before_expanding()
     {
         CommandTool tool = new(Definition("git/read/Diff"), Path.GetTempPath());
@@ -612,7 +612,7 @@ public sealed class GitToolsTests
         Assert.Equal("路径参数 paths 不能以 : 开头。", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "切换携带分支与可选创建")]
     public void Switch_carries_branch_and_optional_create()
     {
         Assert.Equal(["git", "switch", "topic"], Argv("git/branch/Switch", Given(("branch", "topic"))));
@@ -621,7 +621,7 @@ public sealed class GitToolsTests
         Assert.Equal("缺少参数 branch。", Rejected("git/branch/Switch", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "git 参数声明开关列表与必填值")]
     public void Parameters_declare_switches_lists_and_required_values()
     {
         CommandToolDefinition diff = Definition("git/read/Diff");
@@ -726,7 +726,7 @@ public sealed class GitToolsTests
         Assert.False(Parameter(rebase, "upstream").Required);
     }
 
-    [Fact]
+    [Fact(DisplayName = "路径值声明为路径参数")]
     public void Path_values_are_declared_as_path_parameters()
     {
         Assert.All(
@@ -764,7 +764,7 @@ public sealed class GitToolsTests
         Assert.False(Parameter(Definition("git/write/Commit"), "message").Path);
     }
 
-    [Fact]
+    [Fact(DisplayName = "git 工具携带全部定义")]
     public void Tools_carry_every_definition()
     {
         IReadOnlyList<ITool> tools =

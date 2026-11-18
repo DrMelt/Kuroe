@@ -10,7 +10,7 @@ namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
 /// <summary>节点结构规则：容器与执行节点的结构互斥。</summary>
 public sealed class NodeSpecRulesStructureTests
 {
-    [Fact]
+    [Fact(DisplayName = "容器形状要求子节点")]
     public void Container_shape_requires_children()
     {
         NodeSpec node = Container();
@@ -18,7 +18,7 @@ public sealed class NodeSpecRulesStructureTests
         Assert.Equal(["容器节点必须声明子节点。"], Errors(node, NodeRuleContext.FlowDefinition));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器不能声明执行配置")]
     public void Container_cannot_declare_execution_config()
     {
         NodeSpec node = Container() with
@@ -30,7 +30,7 @@ public sealed class NodeSpecRulesStructureTests
         Assert.Equal(["容器不能同时声明执行配置。"], Errors(node, NodeRuleContext.FlowDefinition));
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行节点不能声明子节点")]
     public void Execution_node_cannot_declare_children()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -44,7 +44,7 @@ public sealed class NodeSpecRulesStructureTests
             Errors(node, NodeRuleContext.FlowDefinition));
     }
 
-    [Fact]
+    [Fact(DisplayName = "库执行节点要求执行配置")]
     public void Library_execution_node_requires_execution_config()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -55,7 +55,7 @@ public sealed class NodeSpecRulesStructureTests
         Assert.Equal(["节点必须声明执行配置。"], Errors(node, NodeRuleContext.LibraryDefinition));
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程执行节点可以不写配置")]
     public void Flow_execution_node_without_config_is_allowed()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with

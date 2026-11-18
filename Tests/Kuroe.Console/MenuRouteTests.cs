@@ -13,7 +13,7 @@ namespace Kuroe.Console.Tests;
 /// <summary>目录、流程、设置与工具菜单的动作与回显。</summary>
 public sealed class MenuRouteTests
 {
-    [Fact]
+    [Fact(DisplayName = "添加提供方报告已保存且目录保留")]
     public void Provider_add_reports_saved_and_catalog_keeps_it()
     {
         using ConsoleSession cli = new();
@@ -25,7 +25,7 @@ public sealed class MenuRouteTests
             provider => provider.ProviderName.Value == "备用");
     }
 
-    [Fact]
+    [Fact(DisplayName = "添加提供方保留两侧空格")]
     public void Provider_add_keeps_surrounding_spaces()
     {
         using ConsoleSession cli = new();
@@ -37,7 +37,7 @@ public sealed class MenuRouteTests
             provider => provider.ProviderName.Value == "备用 ");
     }
 
-    [Fact]
+    [Fact(DisplayName = "菜单添加提供方显示全部字段与已填状态")]
     public void Provider_add_from_the_menu_shows_every_field_and_the_filled_state()
     {
         using ConsoleSession cli = new();
@@ -66,7 +66,7 @@ public sealed class MenuRouteTests
             provider => provider.ProviderName.Value == "backup");
     }
 
-    [Fact]
+    [Fact(DisplayName = "菜单提供方密钥替换凭据")]
     public void Provider_key_replaces_the_credentials()
     {
         using ConsoleSession cli = new();
@@ -78,7 +78,7 @@ public sealed class MenuRouteTests
         Assert.Equal("新凭据", cli.Environment.Catalog.Snapshot().Providers.Single().ApiKey.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除未被引用的提供方")]
     public void Provider_remove_deletes_an_unreferenced_provider()
     {
         using ConsoleSession cli = new();
@@ -92,7 +92,7 @@ public sealed class MenuRouteTests
             entry => entry.ProviderName.Value == "备用");
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除被引用的提供方被拒绝")]
     public void Provider_remove_of_a_referenced_provider_is_rejected()
     {
         using ConsoleSession cli = new();
@@ -105,7 +105,7 @@ public sealed class MenuRouteTests
             entry => entry.ProviderName.Value == "test");
     }
 
-    [Fact]
+    [Fact(DisplayName = "提供方清单渲染目录")]
     public void Provider_list_renders_the_catalog()
     {
         using ConsoleSession cli = new();
@@ -117,7 +117,7 @@ public sealed class MenuRouteTests
         Assert.Contains("当前", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有提供方时清单显示设置提示")]
     public void Provider_list_without_providers_shows_the_setup_hint()
     {
         using ConsoleSession cli = new(seedCatalog: false);
@@ -127,7 +127,7 @@ public sealed class MenuRouteTests
         Assert.Contains("目录为空", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "添加与选择模型经由目录")]
     public void Model_add_and_select_go_through_the_catalog()
     {
         using ConsoleSession cli = new();
@@ -140,7 +140,7 @@ public sealed class MenuRouteTests
         Assert.Equal("m2", cli.Environment.Models.Current?.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "菜单添加模型显示提供方上下文")]
     public void Model_add_from_the_menu_shows_the_provider_context()
     {
         using ConsoleSession cli = new();
@@ -168,7 +168,7 @@ public sealed class MenuRouteTests
             model => model.ModelName.Value == "m2");
     }
 
-    [Fact]
+    [Fact(DisplayName = "菜单添加模型收集提供方模型名")]
     public void Model_add_from_the_menu_collects_the_provider_model_name()
     {
         using ConsoleSession cli = new();
@@ -195,7 +195,7 @@ public sealed class MenuRouteTests
             model => model.ModelName.Value == "m2" && model.ProviderModelName.Value == "upstream");
     }
 
-    [Fact]
+    [Fact(DisplayName = "选择未注册模型指向菜单")]
     public void Model_select_of_an_unregistered_model_points_to_the_menu()
     {
         using ConsoleSession cli = new();
@@ -206,7 +206,7 @@ public sealed class MenuRouteTests
         Assert.Contains("「模型与提供商」", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "取消选择清除当前模型")]
     public void Model_unselect_clears_the_selection()
     {
         using ConsoleSession cli = new();
@@ -217,7 +217,7 @@ public sealed class MenuRouteTests
         Assert.Null(cli.Environment.Models.Current);
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除当前模型清除选择")]
     public void Model_remove_of_the_current_model_clears_the_selection()
     {
         using ConsoleSession cli = new();
@@ -228,7 +228,7 @@ public sealed class MenuRouteTests
         Assert.Null(cli.Environment.Models.Current);
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录导出写入掩码文件")]
     public void Catalog_export_writes_a_masked_file()
     {
         using ConsoleSession cli = new();
@@ -236,13 +236,13 @@ public sealed class MenuRouteTests
 
         cli.Catalogs.Export(target);
 
-        Assert.True(File.Exists(target));
+        Assert.True(File.Exists(target), $"{target} 不存在。");
         Assert.Contains("凭据已替换为占位符", cli.Output.Output);
         Assert.DoesNotContain("key", File.ReadAllText(target));
         Assert.Contains("***", File.ReadAllText(target));
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录导入合并掩码目录")]
     public void Catalog_import_merges_the_masked_catalog()
     {
         using ConsoleSession cli = new();
@@ -256,7 +256,7 @@ public sealed class MenuRouteTests
         Assert.Equal("test", Assert.Single(fresh.Environment.Catalog.Snapshot().Providers).ProviderName.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录菜单显示当前模型并在返回键退出")]
     public void Catalog_menu_shows_the_current_model_and_returns_on_escape()
     {
         using ConsoleSession cli = new();
@@ -269,7 +269,7 @@ public sealed class MenuRouteTests
         Assert.Contains("添加提供商", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程菜单列出流程并在返回键退出")]
     public void Flow_menu_lists_flows_and_returns_on_escape()
     {
         using ConsoleSession cli = new();
@@ -286,7 +286,7 @@ public sealed class MenuRouteTests
             output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程详情渲染节点树")]
     public void Flow_detail_renders_the_node_tree()
     {
         using ConsoleSession cli = new();
@@ -301,7 +301,7 @@ public sealed class MenuRouteTests
         Assert.Contains("└", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程详情页刷新后回到流程菜单")]
     public void Flow_detail_page_refreshes_and_returns_to_the_flow_menu()
     {
         using ConsoleSession cli = new();
@@ -324,7 +324,7 @@ public sealed class MenuRouteTests
         Assert.True(page >= 0 && back > page && list > back, output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录页面保持到返回")]
     public void Catalog_page_stays_until_back()
     {
         using ConsoleSession cli = new();
@@ -338,7 +338,7 @@ public sealed class MenuRouteTests
         Assert.Contains("← 返回上一级", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程导入报告新增流程并列出")]
     public void Flow_import_reports_new_flows_and_lists_them()
     {
         using ConsoleSession cli = new();
@@ -355,7 +355,7 @@ public sealed class MenuRouteTests
         Assert.Contains("备用", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "菜单流程导入读取文件路径")]
     public void Flow_import_from_the_menu_reads_the_file_path()
     {
         using ConsoleSession cli = new();
@@ -376,7 +376,7 @@ public sealed class MenuRouteTests
         Assert.Contains("导入 1 条流程。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "工具视图列出全部注册工具")]
     public void Tool_view_lists_every_registered_tool()
     {
         using ConsoleSession cli = new();
@@ -392,7 +392,7 @@ public sealed class MenuRouteTests
         Assert.Contains("├", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "工具视图渲染配置的命令工具")]
     public void Tool_view_renders_a_configured_command_tool()
     {
         using ConsoleSession cli = new();
@@ -407,7 +407,7 @@ public sealed class MenuRouteTests
         Assert.Contains("path*", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "工具视图按路径段分组")]
     public void Tool_view_groups_tools_by_path_segments()
     {
         using ConsoleSession cli = new();
@@ -440,7 +440,7 @@ public sealed class MenuRouteTests
         Assert.True(ops >= 0 && read > ops && run > read && stop > run && flat > stop, output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "设置写入并回显生效结果")]
     public void Settings_set_writes_and_echoes_the_effect()
     {
         using ConsoleSession cli = new();
@@ -451,7 +451,7 @@ public sealed class MenuRouteTests
         Assert.Equal("Debug", cli.Environment.Settings.TryGetUserValue("Runtime:LogLevel"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "设置语言提示新会话生效")]
     public void Settings_set_language_points_to_a_new_session()
     {
         using ConsoleSession cli = new();
@@ -461,7 +461,7 @@ public sealed class MenuRouteTests
         Assert.Contains("内置助手语言已变更，已有会话保持原语言，新建会话使用新语言。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "设置未知路径被拒绝")]
     public void Settings_set_with_an_unknown_path_is_rejected()
     {
         using ConsoleSession cli = new();
@@ -471,7 +471,7 @@ public sealed class MenuRouteTests
         Assert.Contains("未生效。", cli.ErrorsOut.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "取消设置报告用户层没有该路径")]
     public void Settings_unset_reports_a_path_absent_from_the_user_layer()
     {
         using ConsoleSession cli = new();
@@ -481,7 +481,7 @@ public sealed class MenuRouteTests
         Assert.Contains("Runtime:LogLevel 未在用户层设置。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "取消设置清除用户层值")]
     public void Settings_unset_clears_a_user_layer_value()
     {
         using ConsoleSession cli = new();
@@ -492,7 +492,7 @@ public sealed class MenuRouteTests
         Assert.Null(cli.Environment.Settings.TryGetUserValue("Runtime:LogLevel"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "取消设置未知路径被拒绝")]
     public void Settings_unset_with_an_unknown_path_is_rejected()
     {
         using ConsoleSession cli = new();
@@ -502,7 +502,7 @@ public sealed class MenuRouteTests
         Assert.Contains("未生效。", cli.ErrorsOut.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "设置清单标记用户层的条目")]
     public void Settings_config_marks_entries_from_the_user_layer()
     {
         using ConsoleSession cli = new();
@@ -516,7 +516,7 @@ public sealed class MenuRouteTests
         Assert.Contains("用户层已设置", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "设置菜单列出条目并在返回键退出")]
     public void Settings_menu_lists_entries_and_returns_on_escape()
     {
         using ConsoleSession cli = new();
@@ -532,7 +532,7 @@ public sealed class MenuRouteTests
             output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "设置菜单为选中条目写入新值")]
     public void Settings_menu_writes_a_new_value_for_the_selected_entry()
     {
         using ConsoleSession cli = new();

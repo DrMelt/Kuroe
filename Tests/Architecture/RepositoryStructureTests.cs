@@ -7,7 +7,7 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>仓库与测试工程结构：InternalsVisibleTo 指向、共享测试工程引用、编译集成测试归属、图命名空间禁用项与禁用词汇的全局残留。</summary>
 public sealed class RepositoryStructureTests
 {
-    [Fact]
+    [Fact(DisplayName = "InternalsVisibleTo 只指向对应测试程序集")]
     public void InternalsVisibleTo_only_targets_the_matching_test_assembly()
     {
         foreach (string project in ProjectFiles(SourceRoot))
@@ -21,7 +21,7 @@ public sealed class RepositoryStructureTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "共享测试项目只引用共享源码与工具内核")]
     public void Shared_test_projects_reference_only_shared_source_and_tool_kernel()
     {
         IReadOnlyList<string> projects = [.. ProjectFiles(TestsRoot).Where(IsSharedTestProject)];
@@ -41,7 +41,7 @@ public sealed class RepositoryStructureTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "编译集成测试不引用宿主")]
     public void Compilation_integration_tests_stay_out_of_the_host()
     {
         IReadOnlyList<string> projects = [.. ProjectFiles(TestsRoot).Where(IsCompilationIntegrationTestProject)];
@@ -59,7 +59,7 @@ public sealed class RepositoryStructureTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "图命名空间随所属项目")]
     public void Graph_namespaces_follow_their_owning_projects()
     {
         string[] forbidden =
@@ -75,7 +75,7 @@ public sealed class RepositoryStructureTests
         SourcesExclude(SourceRoot, "图命名空间禁用项", forbidden);
     }
 
-    [Fact]
+    [Fact(DisplayName = "仓库不出现执行种类旧词汇")]
     public void Execution_kind_appears_nowhere()
     {
         string[] roots =

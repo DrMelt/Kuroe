@@ -13,7 +13,7 @@ public sealed class NodeSpecRulesBindingsTests
     private static readonly PortName Input = new("输入");
     private static readonly PortName Output = new("输出");
 
-    [Fact]
+    [Fact(DisplayName = "执行节点绑定目标必须是静态输入")]
     public void Executable_binding_target_must_be_a_static_input()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -31,7 +31,7 @@ public sealed class NodeSpecRulesBindingsTests
             Errors(fail => node.CheckBindings(fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态输入要求绑定或默认值")]
     public void Static_input_requires_a_binding_or_default()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -45,7 +45,7 @@ public sealed class NodeSpecRulesBindingsTests
             Errors(fail => node.CheckBindingCoverage(node.EffectiveInputs, container: false, fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态输入接受默认值")]
     public void Static_input_accepts_a_default()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -57,7 +57,7 @@ public sealed class NodeSpecRulesBindingsTests
         Assert.Empty(Errors(fail => node.CheckBindingCoverage(node.EffectiveInputs, container: false, fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器静态输入要求绑定")]
     public void Container_static_input_requires_binding()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with

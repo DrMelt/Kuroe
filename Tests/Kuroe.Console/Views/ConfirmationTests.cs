@@ -7,7 +7,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>需要再确认的动作：默认项、确认项与取消。</summary>
 public sealed class ConfirmationTests
 {
-    [Fact]
+    [Fact(DisplayName = "确认默认保持当前状态")]
     public void Confirmation_keeps_the_current_state_by_default()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -18,7 +18,7 @@ public sealed class ConfirmationTests
         Assert.False(confirmed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "确认只对确认选项返回 true")]
     public void Confirmation_returns_true_only_for_the_confirm_choice()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -30,7 +30,7 @@ public sealed class ConfirmationTests
         Assert.True(confirmed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "确认在返回键保持当前状态")]
     public void Confirmation_keeps_the_current_state_on_escape()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

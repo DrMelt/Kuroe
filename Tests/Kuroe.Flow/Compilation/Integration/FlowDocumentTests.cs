@@ -19,44 +19,43 @@ public sealed class FlowDocumentTests
     private static IFlowDescriptionCompiler Compiler =>
         new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander());
 
-    [Fact]
+    [Fact(DisplayName = "没有根节点的流程被拒绝")]
     public void Flow_without_root_node_is_rejected() =>
         Assert.Equal(["流程 默认：流程缺少根节点。"], Errors(NoNodes));
 
-    [Fact]
+    [Fact(DisplayName = "审批节点非法输入端口被拒绝")]
     public void Approval_node_with_invalid_input_port_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 审阅：端口名不能为空或含 @。"], Errors(ApprovalInputPortWithoutName));
 
-    [Fact]
+    [Fact(DisplayName = "开始端口默认值被接受")]
     public void Start_default_is_accepted() => Assert.Empty(Errors(StartDefaultFlow));
 
-    [Fact]
+    [Fact(DisplayName = "开始端口值与默认值互斥")]
     public void Start_value_and_default_are_mutually_exclusive() =>
         Assert.Contains(Errors(StartValueAndDefaultFlow),
             error => error.Contains("开始端口 分支 不能同时写 Value 与 Default。"));
 
-    [Fact]
+    [Fact(DisplayName = "非文本开始端口的默认值被拒绝")]
     public void Default_on_non_text_start_port_is_rejected() =>
         Assert.Contains(Errors(NonTextDefaultStartFlow),
             error => error.Contains("开始端口 启动 的 Default 只用于承载内容的端口。"));
 
-    [Fact]
+    [Fact(DisplayName = "非文本常量开始端口要求值")]
     public void Non_text_constant_start_port_requires_value() =>
         Assert.Contains(Errors(NonTextConstantStartFlow),
             error => error.Contains("不承载内容的常量开始端口 触发 必须写 Value。"));
 
-    /// <summary>流程文件不认宿主输入绑定，写着 HostStartInputs 的文件在读取时即被拒绝。</summary>
-    [Fact]
+    [Fact(DisplayName = "流程文件不认宿主输入绑定，写着 HostStartInputs 的文件在读取时即被拒绝")]
     public void Host_start_inputs_are_rejected_by_the_flow_file() =>
         Assert.Contains(Errors(StartDefaultWithHostInputFlow),
             error => error.Contains("HostStartInputs"));
 
-    [Fact]
+    [Fact(DisplayName = "流程文档节点输出默认值被拒绝")]
     public void Node_output_default_is_rejected() =>
         Assert.Contains(Errors(NodeOutputDefaultFlow),
             error => error.Contains("输出端口不认识键 Default"));
 
-    [Fact]
+    [Fact(DisplayName = "开始端口默认值经写读往返保留")]
     public void Start_default_survives_a_write_read_round_trip()
     {
         string written = FlowDocumentSource.WriteFlows(
@@ -66,8 +65,7 @@ public sealed class FlowDocumentTests
         Assert.Empty(Compiler.Compile(FlowDocumentSource.Read(written).ThrowIfError(), []).ErrorsOrEmptyList);
     }
 
-    /// <summary>审批节点派生的输出端口只转发内容，不声明触发模式。</summary>
-    [Fact]
+    [Fact(DisplayName = "审批节点派生的输出端口只转发内容，不声明触发模式")]
     public void Approval_output_port_is_plain()
     {
         ErrorOr<CompiledDocument> compiled = Compiler.Compile(FlowDocumentSource.Read("""
@@ -80,8 +78,7 @@ public sealed class FlowDocumentTests
             compiled.Value.Flows.Single().Graph.ExecutableNodes.Single().Outputs.Single().Mode);
     }
 
-    /// <summary>审批输出不携带触发值，翻转条件绑定审批输出在编译期被拒绝。</summary>
-    [Fact]
+    [Fact(DisplayName = "审批输出不携带触发值，翻转条件绑定审批输出在编译期被拒绝")]
     public void Negative_condition_on_approval_output_is_rejected() =>
         Assert.Equal(
             ["流程 默认 的节点 整体/接收：触发条件要求来源 整体/审阅@结论 是触发端口。"],
@@ -92,8 +89,7 @@ public sealed class FlowDocumentTests
                 ] } } ] }
                 """));
 
-    /// <summary>类型给出的输出端口由节点类型提供，流程不声明。</summary>
-    [Fact]
+    [Fact(DisplayName = "类型给出的输出端口由节点类型提供，流程不声明")]
     public void Given_output_ports_come_from_the_node_type()
     {
         ErrorOr<CompiledDocument> compiled = CompileWith(new GivenOutputDescription(), GivenOutputFlow);
@@ -105,14 +101,12 @@ public sealed class FlowDocumentTests
         Assert.Equal([PortTypes.Text, PortTypes.Signal], outputs.Select(port => port.Type));
     }
 
-    /// <summary>类型给出的输出端口不允许流程重新声明。</summary>
-    [Fact]
+    [Fact(DisplayName = "类型给出的输出端口不允许流程重新声明")]
     public void Given_output_ports_cannot_be_declared_in_the_document() =>
         Assert.Contains(CompileWith(new GivenOutputDescription(), GivenOutputWithDeclaredPortsFlow).ErrorsOrEmptyList,
             error => error.Description.EndsWith("Given节点不声明输出端口，对外端口由类型给出。"));
 
-    /// <summary>节点库定义的输出端口由类型给出，引用处继承这些端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "节点库定义的输出端口由类型给出，引用处继承这些端口")]
     public void Given_output_ports_reach_a_library_reference()
     {
         ErrorOr<CompiledDocument> compiled = CompileWith(new GivenOutputDescription(), GivenOutputLibraryFlow);
@@ -124,104 +118,104 @@ public sealed class FlowDocumentTests
         Assert.Equal([new PortName("Output"), new PortName("Completed")], outputs.Select(port => port.Name));
     }
 
-    [Fact]
+    [Fact(DisplayName = "非法执行上限的容器被拒绝")]
     public void Container_with_invalid_max_executions_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 整体：MaxExecutions 必须是正整数。"], Errors(ContainerWithZeroMaxExecutions));
 
-    [Fact]
+    [Fact(DisplayName = "参数对象之外的类型字段被拒绝")]
     public void Type_field_outside_the_parameters_object_is_rejected() =>
         Assert.Equal(
             ["流程 默认 的节点 制定计划：字段 Mode 不是节点结构字段，类型专属字段写在 Parameters 对象里。"],
             Errors(BadNodeMode));
 
-    [Fact]
+    [Fact(DisplayName = "容器类型拒绝参数")]
     public void Container_parameters_are_rejected_by_the_container_type() =>
         Assert.Equal(["流程 默认 的节点 容器：字段 Question 不属于 Container 节点。"], Errors(ContainerParameters));
 
-    [Fact]
+    [Fact(DisplayName = "LLM 节点的问题字段被拒绝")]
     public void Llm_question_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 规划：字段 Question 不属于 Llm 节点。"], Errors(QuestionOnLlm));
 
-    [Fact]
+    [Fact(DisplayName = "种类之外的字段被拒绝")]
     public void Field_outside_the_kind_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 规划：字段 备注 不属于 Llm 节点。"], Errors(FieldOutsideKind));
 
-    [Fact]
+    [Fact(DisplayName = "参数名区分大小写")]
     public void Parameter_name_is_case_sensitive() =>
         Assert.Equal(["流程 默认 的节点 规划：字段 PROMPT 不属于 Llm 节点。"], Errors(CaseSensitiveParameterName));
 
-    [Fact]
+    [Fact(DisplayName = "参数必须是对象")]
     public void Parameters_must_be_an_object() =>
         Assert.Equal(["流程 默认 的节点 规划：Parameters 必须是对象，键是节点类型声明的字段名。"], Errors(ParametersNotObject));
 
-    [Fact]
+    [Fact(DisplayName = "工具参数必须是文本数组")]
     public void Tools_parameter_must_be_a_text_array() =>
         Assert.Equal(["流程 默认 的节点 规划：字段 Tools 必须是文本数组。"], Errors(ToolsNotArray));
 
-    [Fact]
+    [Fact(DisplayName = "输入节点的问题参数必须是文本")]
     public void Input_question_parameter_must_be_text() =>
         Assert.Equal(["流程 默认 的节点 收集：字段 Question 必须是文本。"], Errors(InputQuestionNotText));
 
-    [Fact]
+    [Fact(DisplayName = "LLM 系统提示块不能为空白")]
     public void Llm_system_prompt_block_must_not_be_blank() =>
         Assert.Equal(["流程 默认 的节点 规划：系统指令块不能为空。"], Errors(BlankSystemPromptBlock));
 
-    [Fact]
+    [Fact(DisplayName = "没有种类的节点被拒绝")]
     public void Node_without_kind_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 实施：节点必须声明 Kind，可用类型名：Container、Llm、Input、Approval。"], Errors(NodeWithoutKind));
 
-    [Fact]
+    [Fact(DisplayName = "未注册种类的节点被拒绝")]
     public void Node_with_unregistered_kind_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 实施：节点类型名 Bogus 未注册，可用类型名：Container、Llm、Input、Approval。"], Errors(NodeWithUnknownKind));
 
-    [Fact]
+    [Fact(DisplayName = "带种类的引用节点被拒绝")]
     public void Reference_node_with_kind_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 实施：引用节点的类型由被引用的库定义决定，不写 Kind。"], Errors(ReferenceNodeWithKind));
 
-    [Fact]
+    [Fact(DisplayName = "没有子节点的容器被拒绝")]
     public void Container_without_children_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 整体：容器节点必须声明子节点。"], Errors(ContainerWithoutChildren));
 
-    [Fact]
+    [Fact(DisplayName = "带子节点的执行节点被拒绝")]
     public void Executable_with_children_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 整体：Llm 节点不能声明子节点，子节点只属于容器。"], Errors(ExecutableWithChildren));
 
-    [Fact]
+    [Fact(DisplayName = "含非数据端口的输入节点被拒绝")]
     public void Input_node_with_non_data_port_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 收集：输出端口 背景 的类型只能是 Text。"], Errors(InputWithContextPort));
 
-    [Fact]
+    [Fact(DisplayName = "执行节点动态绑定被拒绝")]
     public void Execution_dynamic_binding_is_rejected() =>
         Assert.Equal(
             ["流程 默认 的节点 实施：绑定目标 计划 不是静态输入端口，动态输入一律经 From 绑定。"],
             Errors(ExecutionWithDynamicBinding));
 
-    [Fact]
+    [Fact(DisplayName = "输入节点动态绑定被拒绝")]
     public void Input_dynamic_binding_is_rejected() =>
         Assert.Equal(
             ["流程 默认 的节点 收集：绑定目标 计划 不是静态输入端口，动态输入一律经 From 绑定。"],
             Errors(InputWithDynamicBinding));
 
-    [Fact]
+    [Fact(DisplayName = "带输出的引用节点被拒绝")]
     public void Reference_node_with_outputs_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 分析：引用节点不能声明输出端口。"], Errors(ReferenceWithOutputs));
 
-    [Fact]
+    [Fact(DisplayName = "域外输入类型被拒绝")]
     public void Input_type_out_of_domain_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 实施：输入端口的 Type 应为已注册的端口类型名。"], Errors(InputTypeOutOfDomain));
 
-    [Fact]
+    [Fact(DisplayName = "域外输出类型被拒绝")]
     public void Output_type_out_of_domain_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 准备：输出端口的 Type 应为已注册的端口类型名。"], Errors(OutputTypeOutOfDomain));
 
-    [Fact]
+    [Fact(DisplayName = "引用容器缺少端口被拒绝")]
     public void Referenced_container_port_missing_is_rejected() =>
         Assert.Equal(
         [
             "流程 默认 的节点 整体/复盘：节点 整体/交付 没有输出端口 不存在。",
         ], Errors(ContainerOutPortMissing));
 
-    [Fact]
+    [Fact(DisplayName = "跨容器成员引用被拒绝")]
     public void Cross_container_member_reference_is_rejected() =>
         Assert.Equal(
             [
@@ -230,12 +224,12 @@ public sealed class FlowDocumentTests
             ],
             Errors(ContainerOutCrossContainer));
 
-    [Fact]
+    [Fact(DisplayName = "引用容器来源必须指向输入")]
     public void Reference_container_from_must_target_an_input() =>
         Assert.Equal(["流程 默认 的节点 组实例：From 连接的目标输入端口 做 没有在节点上声明。"],
             Errors(ReferenceContainerFrom));
 
-    [Fact]
+    [Fact(DisplayName = "结构字段经写读往返保留")]
     public void Structural_fields_survive_a_write_read_round_trip()
     {
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-map-{Guid.NewGuid():N}");
@@ -263,8 +257,7 @@ public sealed class FlowDocumentTests
         }
     }
 
-    /// <summary>类型参数段的字段随写出回到文件：能力白名单与等待型节点的提问。</summary>
-    [Fact]
+    [Fact(DisplayName = "类型参数段的字段随写出回到文件：能力白名单与等待型节点的提问")]
     public void Parameters_survive_a_write_read_round_trip()
     {
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-params-{Guid.NewGuid():N}");
@@ -287,38 +280,33 @@ public sealed class FlowDocumentTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "动态节点输出上的值被拒绝")]
     public void Value_on_dynamic_node_output_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 干活：动态输出端口 结论 不能写 Value。"], Errors(NodeOutputWithValue));
 
-    [Fact]
+    [Fact(DisplayName = "节点输入上的值被拒绝")]
     public void Value_on_node_input_is_rejected() =>
         Assert.Equal(
             ["流程 默认 的节点 干活：输入端口不认识键 Value，条目写 Name、Type、Mode、Description、Default 与 Role。"],
             Errors(NodeInputWithValue));
 
-    /// <summary>定义条目写了标签，节点名与标签的写位置互斥。</summary>
-    [Fact]
+    [Fact(DisplayName = "定义条目写了标签，节点名与标签的写位置互斥")]
     public void Definition_entry_writing_label_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 实施：定义条目写节点名 Name，Label 只属于被使用的节点。"], Errors(DefinitionWithLabel));
 
-    /// <summary>被使用的节点写了节点名，实例用标签区分。</summary>
-    [Fact]
+    [Fact(DisplayName = "被使用的节点写了节点名，实例用标签区分")]
     public void Reference_entry_writing_name_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 副本：被使用的节点写 Label 区分，不写 Name。"], Errors(ReferenceWithName));
 
-    /// <summary>库定义的节点名可以取 Start，开始端口不再占用节点名。</summary>
-    [Fact]
+    [Fact(DisplayName = "库定义的节点名可以取 Start，开始端口不再占用节点名")]
     public void Library_definition_named_like_start_is_accepted() =>
         Assert.Empty(Errors(DefinitionNamedStart));
 
-    /// <summary>同一容器内两次引用同一个定义给相同标签，标签的唯一性被破坏。</summary>
-    [Fact]
+    [Fact(DisplayName = "同一容器内两次引用同一个定义给相同标签，标签的唯一性被破坏")]
     public void Same_label_twice_in_one_container_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 副本：同一容器内的节点标签重复。"], Errors(SameLabelTwice));
 
-    /// <summary>被使用的节点必须写标签，缺标签时节点在图里没有标识段。</summary>
-    [Fact]
+    [Fact(DisplayName = "被使用的节点必须写标签，缺标签时节点在图里没有标识段")]
     public void Reference_entry_without_label_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 执行：被使用的节点必须写 Label，它是节点在图里的标识段。"], Errors(LabelLessReferenceFlow));
 
@@ -557,7 +545,7 @@ public sealed class FlowDocumentTests
         }
         """;
 
-    [Fact]
+    [Fact(DisplayName = "未知工具的工具端口映射被拒绝")]
     public void Tool_port_mapping_for_an_unknown_tool_is_rejected()
     {
         string[] errors = [.. Errors("""
@@ -582,7 +570,7 @@ public sealed class FlowDocumentTests
         Assert.Contains(errors, error => error.Contains("工具路径 missing 没有匹配任何已注册工具", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "白名单工具缺少映射被拒绝")]
     public void Whitelisted_tool_without_a_mapping_is_rejected()
     {
         string[] errors = [.. Errors("""
@@ -607,8 +595,7 @@ public sealed class FlowDocumentTests
         Assert.Contains(errors, error => error.Contains("缺少路径变量 root 的映射", StringComparison.Ordinal));
     }
 
-    /// <summary>容器成员的 @端口 沿容器传入端口取用，根容器传入端口可以接流程开始端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "成员节点引用外层作用域的端口")]
     public void Container_member_can_reference_the_outer_scope_port() =>
         Assert.Empty(Errors("""
                 {
@@ -631,8 +618,7 @@ public sealed class FlowDocumentTests
                 }
                 """));
 
-    /// <summary>容器成员不能引用容器外的节点，跨边界传值经容器的 Bindings 与 @端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器成员不能引用容器外的节点，跨边界传值经容器的 Bindings 与 @端口")]
     public void Container_member_cannot_reference_a_node_outside_the_container() =>
         Assert.Equal(
             ["流程 默认 的节点 实施：From 引用的节点 准备 不在容器 内层 的作用域里。"],
@@ -666,8 +652,7 @@ public sealed class FlowDocumentTests
                 }
                 """));
 
-    /// <summary>容器成员的 @端口 沿容器传入端口取用，根容器传入端口可以接流程开始端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "成员节点的输入引用外层作用域的端口")]
     public void Container_member_in_references_the_outer_scope_port() =>
         Assert.Empty(Errors("""
                 {
@@ -699,8 +684,7 @@ public sealed class FlowDocumentTests
                 }
                 """));
 
-    /// <summary>内联容器声明传入端口并由 Bindings 绑定，嵌套容器经 @端口 透传外层传入值。</summary>
-    [Fact]
+    [Fact(DisplayName = "内联容器声明传入端口并由 Bindings 绑定，嵌套容器经 @端口 透传外层传入值")]
     public void Nested_inline_container_passes_outer_port_through() =>
         Assert.Empty(Errors("""
             {
@@ -733,8 +717,7 @@ public sealed class FlowDocumentTests
             }
             """));
 
-    /// <summary>容器 In 的键必须是容器声明的传入端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器 In 的键必须是容器声明的传入端口")]
     public void Container_in_with_an_undeclared_port_is_rejected() =>
         Assert.Equal(
             ["流程 默认 的节点 整体：绑定目标 风格 不是已声明的输入端口。"],
@@ -759,8 +742,7 @@ public sealed class FlowDocumentTests
                 }
                 """));
 
-    /// <summary>容器输入端口名在同一节点内唯一。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器输入端口名在同一节点内唯一")]
     public void Container_duplicate_input_port_is_rejected() =>
         Assert.Equal(
             ["流程 默认 的节点 整体：输入端口 目标 重复。"],
@@ -785,8 +767,7 @@ public sealed class FlowDocumentTests
                 }
                 """));
 
-    /// <summary>容器声明的传入端口全部要给出绑定，未使用的端口也不例外。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器声明的传入端口全部要给出绑定，未使用的端口也不例外")]
     public void Container_input_without_binding_is_rejected() =>
         Assert.Equal(
             [
@@ -812,8 +793,7 @@ public sealed class FlowDocumentTests
                 }
                 """));
 
-    /// <summary>根容器的传入端口只能引用流程开始端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "根容器的传入端口只能引用流程开始端口")]
     public void Root_container_in_cannot_reference_a_non_start_node() =>
         Assert.Equal(
             ["流程 默认 的节点 整体：From 引用的节点 自造 不在流程里。"],
@@ -838,8 +818,7 @@ public sealed class FlowDocumentTests
                 }
                 """));
 
-    /// <summary>根容器没有更外层作用域，未声明的开始端口不能取用。</summary>
-    [Fact]
+    [Fact(DisplayName = "根容器没有更外层作用域，未声明的开始端口不能取用")]
     public void Root_container_in_cannot_reference_an_outer_port() =>
         Assert.Equal(
             ["流程 默认 的节点 计划：端口 @计划 没有绑定来源。"],

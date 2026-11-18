@@ -17,7 +17,7 @@ public sealed class FlowProviderSourceTests
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
     private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(new Kuroe.Execution.ExecutionDispatcher());
-    [Fact]
+    [Fact(DisplayName = "身份按实现查找提供方")]
     public void Identity_finds_provider_by_implementation()
     {
         FlowProvider first = Provider("first");
@@ -30,7 +30,7 @@ public sealed class FlowProviderSourceTests
         Assert.Same(second, found.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知实现返回错误")]
     public void Unknown_implementation_returns_an_error()
     {
         FlowProviderSource source = new([Provider("first")]);
@@ -40,7 +40,7 @@ public sealed class FlowProviderSourceTests
         Assert.True(found.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "同一身份的多个提供方被拒绝")]
     public void Several_providers_for_the_same_identity_are_rejected()
     {
         FlowProviderSource source = new([Provider("same"), Provider("same")]);
@@ -50,7 +50,7 @@ public sealed class FlowProviderSourceTests
         Assert.True(found.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "名称解析到拥有它的提供方")]
     public void Name_resolves_the_provider_that_owns_it()
     {
         FlowProvider first = Provider("first");
@@ -62,7 +62,7 @@ public sealed class FlowProviderSourceTests
         Assert.Same(second, found.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "恢复使用身份选中的提供方")]
     public void Restore_uses_the_provider_selected_by_the_identity()
     {
         FlowProvider first = Provider("first");

@@ -9,7 +9,7 @@ namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 /// <summary>内容出处：可读文本与回跳执行。</summary>
 public sealed class ContextSourceTests
 {
-    [Fact]
+    [Fact(DisplayName = "执行来源指回其执行")]
     public void ExecutionSource_points_back_to_its_execution()
     {
         ExecutionId execution = new(7);
@@ -20,7 +20,7 @@ public sealed class ContextSourceTests
         Assert.Equal(new PortName("结论"), source.Port);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入与开始来源标明出处")]
     public void Input_and_start_sources_name_their_origin()
     {
         InputSource input = new(NodePath.Of("取舍"), new PortName("回答"));
@@ -32,7 +32,7 @@ public sealed class ContextSourceTests
         Assert.Null(start.FromExecution);
     }
 
-    [Fact]
+    [Fact(DisplayName = "上下文值保留出处与文本")]
     public void Context_value_keeps_origin_and_text()
     {
         ContextValue value = new(new StartSource(new PortName("目标")), "做出一个示例");
@@ -41,7 +41,7 @@ public sealed class ContextSourceTests
         Assert.Equal("流程起点端口「目标」", value.Origin.Label);
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器端口来源标明容器")]
     public void Container_port_source_names_its_container()
     {
         ContainerPortSource container = new(NodePath.Of("文档组"), new PortName("结论"));
@@ -50,7 +50,7 @@ public sealed class ContextSourceTests
         Assert.Null(container.FromExecution);
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态来源标明值出处")]
     public void Static_sources_name_the_value_origin()
     {
         DefaultSource fallback = new(NodePath.Of("实施"), new PortName("格式"));

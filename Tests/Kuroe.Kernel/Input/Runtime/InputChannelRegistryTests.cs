@@ -11,7 +11,7 @@ public sealed class InputChannelRegistryTests
     private static readonly TaskId Task = new(1);
     private static readonly FlowStepPath Step = FlowStepPath.Of("整体", "收话");
 
-    [Fact]
+    [Fact(DisplayName = "接受使步骤待处理")]
     public void Accept_makes_the_step_pending()
     {
         InputChannelRegistry channel = new();
@@ -24,7 +24,7 @@ public sealed class InputChannelRegistryTests
         Assert.Equal("要做什么", pending.Question);
     }
 
-    [Fact]
+    [Fact(DisplayName = "接受替换同一步骤的注册")]
     public void Accept_replaces_the_registration_for_the_same_step()
     {
         InputChannelRegistry channel = new();
@@ -41,7 +41,7 @@ public sealed class InputChannelRegistryTests
         Assert.Equal("新", received);
     }
 
-    [Fact]
+    [Fact(DisplayName = "交付调用接收方并移除步骤")]
     public void Deliver_invokes_the_receiver_and_removes_the_step()
     {
         InputChannelRegistry channel = new();
@@ -54,7 +54,7 @@ public sealed class InputChannelRegistryTests
         Assert.Empty(channel.Pending(Task));
     }
 
-    [Fact]
+    [Fact(DisplayName = "交付未知步骤返回错误")]
     public void Deliver_unknown_step_returns_an_error()
     {
         InputChannelRegistry channel = new();
@@ -64,7 +64,7 @@ public sealed class InputChannelRegistryTests
         Assert.Equal(InputErrors.NotAwaiting, error.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "拒绝移除步骤")]
     public void Decline_removes_the_step()
     {
         InputChannelRegistry channel = new();
@@ -75,7 +75,7 @@ public sealed class InputChannelRegistryTests
         Assert.Empty(channel.Pending(Task));
     }
 
-    [Fact]
+    [Fact(DisplayName = "移除清除任务的全部步骤")]
     public void Remove_clears_all_steps_of_the_task()
     {
         InputChannelRegistry channel = new();
@@ -87,7 +87,7 @@ public sealed class InputChannelRegistryTests
         Assert.Empty(channel.Pending(Task));
     }
 
-    [Fact]
+    [Fact(DisplayName = "各任务相互隔离")]
     public void Tasks_are_isolated()
     {
         InputChannelRegistry channel = new();

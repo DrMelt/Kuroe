@@ -13,7 +13,7 @@ public sealed class ToolFaceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
-    [Fact]
+    [Fact(DisplayName = "文件工具加入工具面")]
     public void File_tools_join_the_tool_face()
     {
         using ServiceProvider provider = Services();
@@ -28,7 +28,7 @@ public sealed class ToolFaceTests : IDisposable
         Assert.Contains(new ToolName("GetFileInfo"), tools.Names);
     }
 
-    [Fact]
+    [Fact(DisplayName = "源码工具加入工具面")]
     public void Source_tools_join_the_tool_face()
     {
         using ServiceProvider provider = Services();
@@ -39,7 +39,7 @@ public sealed class ToolFaceTests : IDisposable
         Assert.Contains(new ToolName("ReadSourceFile"), tools.Names);
     }
 
-    [Fact]
+    [Fact(DisplayName = "信息工具加入工具面")]
     public void Information_tools_join_the_tool_face()
     {
         using ServiceProvider provider = Services();
@@ -61,10 +61,10 @@ public sealed class ToolFaceTests : IDisposable
         services.AddLogging();
 
         ErrorOr<KuroeComposition> composition = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
-        Assert.False(composition.IsError);
+        Assert.False(composition.IsError, composition.ErrorsText());
 
         ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(_root, "source"));
-        Assert.False(assistant.IsError);
+        Assert.False(assistant.IsError, assistant.ErrorsText());
 
         return services.BuildServiceProvider();
     }

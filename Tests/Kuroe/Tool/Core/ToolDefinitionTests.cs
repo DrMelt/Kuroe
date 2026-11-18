@@ -5,7 +5,7 @@ namespace Kuroe.Tool.Tests;
 /// <summary>工具声明：定义承载路径、说明、参数与调用体，路径的末段是函数名。</summary>
 public sealed class ToolDefinitionTests
 {
-    [Fact]
+    [Fact(DisplayName = "工具定义暴露其声明")]
     public void ToolDefinition_exposes_its_declaration()
     {
         ToolDefinition definition = new(new ToolPath("GetTime"), "取时间", []);
@@ -18,7 +18,7 @@ public sealed class ToolDefinitionTests
         Assert.Equal("现在", function.Invoke(new ToolArguments(new Dictionary<string, object?>())).Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "参数组声明互斥选项")]
     public void Parameter_groups_declare_the_exclusive_choices()
     {
         ToolParameter project = new(new ToolName("project"), "项目", Path: true);
@@ -35,7 +35,7 @@ public sealed class ToolDefinitionTests
         Assert.Null(group.InvalidReason(definition.Parameters));
     }
 
-    [Fact]
+    [Fact(DisplayName = "绑定拒绝含重复或未声明参数的组")]
     public void Bind_rejects_groups_with_duplicates_or_undeclared_parameters()
     {
         ToolParameter project = new(new ToolName("project"), "项目");
@@ -60,7 +60,7 @@ public sealed class ToolDefinitionTests
             StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "工具定义路径就是声明的身份")]
     public void ToolDefinition_path_is_the_declared_identity()
     {
         ToolDefinition grouped = new(new ToolPath("file/ReadFile"), "读文件", []);

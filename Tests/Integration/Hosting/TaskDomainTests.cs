@@ -9,7 +9,7 @@ namespace Kuroe.Integration.Tests.Hosting;
 /// <summary>任务域隔离：内置对话任务不进入用户任务域，任务号与执行索引各自按域与全局的边界工作。</summary>
 public sealed class TaskDomainTests
 {
-    [Fact]
+    [Fact(DisplayName = "对话轮次不创建用户任务")]
     public async Task A_dialogue_round_does_not_create_a_user_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -17,13 +17,13 @@ public sealed class TaskDomainTests
 
         ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
-        Assert.False(reply.IsError);
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Empty(environment.TaskReader.Snapshots());
         Assert.Empty(environment.TaskReader.LiveExecutions());
         Assert.Single(environment.Runner.StartedCode);
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话之后的第一个用户任务仍为一号")]
     public async Task The_first_user_task_keeps_number_one_after_dialogue()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -32,14 +32,14 @@ public sealed class TaskDomainTests
         ErrorOr<Success> reply = await environment.SayAsync("你好", null);
         TaskId id = environment.Submit("修复登录超时");
 
-        Assert.False(reply.IsError);
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Equal(new TaskId(1), id);
         string tasks = Path.Combine(environment.Root, ".kuroe_tasks");
         string created = Assert.Single(Directory.GetDirectories(tasks), path => Path.GetFileName(path) != ".records");
         Assert.Equal(id.Value, Path.GetFileName(created));
     }
 
-    [Fact]
+    [Fact(DisplayName = "用户任务域查不到对话任务及其执行")]
     public async Task The_user_task_domain_cannot_find_the_dialogue_task_or_its_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -48,13 +48,13 @@ public sealed class TaskDomainTests
         ErrorOr<Success> reply = await environment.SayAsync("你好", null);
         IExecution round = Assert.Single(environment.Runner.StartedCode);
 
-        Assert.False(reply.IsError);
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.True(environment.TaskReader.Find(new TaskId(round.Request.Owner.Value)).IsError);
         Assert.True(environment.TaskReader.FindExecution(round.Id).IsError);
         Assert.False(environment.Executions.FindOwned(round.Id).IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "清理已收口用户任务不影响对话任务")]
     public async Task Clearing_settled_user_tasks_does_not_touch_the_dialogue_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -64,13 +64,13 @@ public sealed class TaskDomainTests
         IReadOnlyList<TaskId> cleared = environment.Registry.ClearSettled();
         ErrorOr<Success> second = await environment.SayAsync("第二问", null);
 
-        Assert.False(first.IsError);
-        Assert.False(second.IsError);
+        Assert.False(first.IsError, first.ErrorsText());
+        Assert.False(second.IsError, second.ErrorsText());
         Assert.Empty(cleared);
         Assert.Equal(2, environment.Runner.StartedCode.Count);
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话执行与任务共用全局执行编号")]
     public async Task Dialogue_executions_share_the_global_execution_number_sequence()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -81,7 +81,7 @@ public sealed class TaskDomainTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = await environment.SettleAsync(id);
 
-        Assert.False(reply.IsError);
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Equal(1, dialogue.Id.Value);
         IReadOnlyList<Execution.Shared.State.ExecutionSnapshot> executions = [.. done.Executions];
         Assert.NotEmpty(executions);
@@ -91,7 +91,7 @@ public sealed class TaskDomainTests
                 new ExecutionId(execution.Id.Value)).ThrowIfError().Owner.Id));
     }
 
-    [Fact]
+    [Fact(DisplayName = "用户任务与对话任务各自推进")]
     public async Task A_user_task_and_the_dialogue_task_advance_independently()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -102,8 +102,8 @@ public sealed class TaskDomainTests
         TaskSnapshot done = await environment.SettleAsync(id);
         ErrorOr<Success> second = await environment.SayAsync("再问", null);
 
-        Assert.False(first.IsError);
-        Assert.False(second.IsError);
+        Assert.False(first.IsError, first.ErrorsText());
+        Assert.False(second.IsError, second.ErrorsText());
         Assert.Equal(new TaskId(1), id);
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, environment.Runner.StartedCode.Count(execution => execution.Request.Step.Value == "回话"));

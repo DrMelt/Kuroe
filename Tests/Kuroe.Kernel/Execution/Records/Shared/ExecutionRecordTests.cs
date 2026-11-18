@@ -11,7 +11,7 @@ namespace Kuroe.Execution.Records.Shared.Tests;
 /// <summary>中性执行记录的形状与取值。</summary>
 public sealed class ExecutionRecordTests
 {
-    [Fact]
+    [Fact(DisplayName = "记录保留中性执行端口与来源")]
     public void Record_keeps_neutral_execution_ports_and_sources()
     {
         ExecutionPortName port = new("结论");
@@ -45,7 +45,7 @@ public sealed class ExecutionRecordTests
         Assert.Equal(10, record.Usage.Tokens.Input);
     }
 
-    [Fact]
+    [Fact(DisplayName = "记录省略缺失的恢复与契约")]
     public void Record_omits_absent_restore_and_contract()
     {
         ExecutionRecord record = new(
@@ -66,7 +66,7 @@ public sealed class ExecutionRecordTests
         Assert.Null(record.StartedAt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "捕获优先使用来源标识")]
     public void Capture_prefers_the_source_key()
     {
         ExecutionSnapshot snapshot = Snapshot(new ExecutionInputValue(
@@ -80,7 +80,7 @@ public sealed class ExecutionRecordTests
         Assert.Equal("execution:1:节点:端口", Assert.Single(record.Inputs).Source);
     }
 
-    [Fact]
+    [Fact(DisplayName = "捕获回退到展示来源")]
     public void Capture_falls_back_to_the_display_source()
     {
         ExecutionSnapshot snapshot = Snapshot(new ExecutionInputValue(

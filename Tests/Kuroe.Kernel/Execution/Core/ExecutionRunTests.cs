@@ -15,7 +15,7 @@ namespace Kuroe.Execution.Tests;
 /// <summary>执行包裹：建立运行器、附加过程记录与用量来源、收口与异常映射。</summary>
 public sealed class ExecutionRunTests
 {
-    [Fact]
+    [Fact(DisplayName = "运行附加运行器来源并收口成功")]
     public async Task Run_attaches_runner_sources_and_settles_success()
     {
         TestRunner runner = new()
@@ -41,7 +41,7 @@ public sealed class ExecutionRunTests
         Assert.Equal(runner.RestoreData, snapshot.RestoreData);
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行把运行器错误记录为失败")]
     public async Task Run_records_a_runner_error_as_failure()
     {
         TestRunner runner = new()
@@ -59,7 +59,7 @@ public sealed class ExecutionRunTests
         Assert.Contains("失败。", snapshot.Failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行把意外异常映射为失败")]
     public async Task Run_maps_an_unexpected_exception_to_failure()
     {
         TestRunner runner = new()
@@ -76,7 +76,7 @@ public sealed class ExecutionRunTests
         Assert.Contains("执行失败：坏了", snapshot.Failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行把取消映射为已中断")]
     public async Task Run_maps_cancellation_to_interrupted()
     {
         TestRunner runner = new()

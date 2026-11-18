@@ -22,8 +22,7 @@ public sealed class StaticPortTests
     private static readonly PortName Result = new("结论");
     private static readonly PortName Model = TestExecutableNodeType.StaticPort;
 
-    /// <summary>容器常量输出转发成员常量输出，下游节点运行期解析出开始端口的值。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器常量输出转发成员常量输出，下游节点运行期解析出开始端口的值")]
     public void Container_static_output_forwards_member_static_output()
     {
         NodeSpec library = DeliveryDefinition();
@@ -47,8 +46,7 @@ public sealed class StaticPortTests
         Assert.Equal("fake", StaticText(compiled.Value, check, Model));
     }
 
-    /// <summary>静态端口视图只含静态输入，动态输入不进入视图。</summary>
-    [Fact]
+    [Fact(DisplayName = "静态端口视图只含静态输入，动态输入不进入视图")]
     public void Static_view_contains_only_static_inputs()
     {
         NodeSpec library = DeliveryDefinition();
@@ -70,8 +68,7 @@ public sealed class StaticPortTests
         Assert.Null(view.Text(Goal));
     }
 
-    /// <summary>From 连接静态输入端口报出专用错误。</summary>
-    [Fact]
+    [Fact(DisplayName = "From 连接静态输入端口报出专用错误")]
     public void From_cannot_connect_a_static_input()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -104,8 +101,7 @@ public sealed class StaticPortTests
         Assert.Contains(Errors(flow), error => error.Contains($"From 不能连接静态输入端口 {Model}"));
     }
 
-    /// <summary>静态来源指向执行节点的动态输出时报错。</summary>
-    [Fact]
+    [Fact(DisplayName = "静态来源指向执行节点的动态输出时报错")]
     public void Static_source_cannot_be_an_execution_output()
     {
         NodeSpec source = NodeSpec.Define(new NodeName("来源")) with
@@ -145,8 +141,7 @@ public sealed class StaticPortTests
         Assert.Contains(Errors(flow), error => error.Contains("输出端口 结论 不是常量端口"));
     }
 
-    /// <summary>常量开始端口没有 Value 时保留为开始端口的来源绑定，值在任务启动后由注入的开始端口文本给出。</summary>
-    [Fact]
+    [Fact(DisplayName = "常量开始端口没有 Value 时保留为开始端口的来源绑定，值在任务启动后由注入的开始端口文本给出")]
     public void Static_start_port_without_value_keeps_the_start_binding()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -196,8 +191,7 @@ public sealed class StaticPortTests
             new PortTexts(new Dictionary<PortName, string> { [Model] = "另一个值" })));
     }
 
-    /// <summary>常量开始端口不能进入 From，只能作为 Bindings 绑定的来源。</summary>
-    [Fact]
+    [Fact(DisplayName = "常量开始端口不能进入 From，只能作为 Bindings 绑定的来源")]
     public void Constant_start_port_cannot_feed_from()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -213,8 +207,7 @@ public sealed class StaticPortTests
         Assert.Contains(Errors(flow), error => error.Contains($"常量输出端口 @{Model} 不进入 From"));
     }
 
-    /// <summary>开始端口只写 Value 不写 Mode 时仍不是静态端口，静态绑定读取时报错。</summary>
-    [Fact]
+    [Fact(DisplayName = "开始端口只写 Value 不写 Mode 时仍不是静态端口，静态绑定读取时报错")]
     public void Value_alone_does_not_make_a_static_start_port()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -252,8 +245,7 @@ public sealed class StaticPortTests
             error => error.Contains($"开始端口 {Model} 不是常量端口"));
     }
 
-    /// <summary>静态绑定形成环时编译报错。</summary>
-    [Fact]
+    [Fact(DisplayName = "静态绑定形成环时编译报错")]
     public void Static_binding_cycle_is_rejected()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -297,8 +289,7 @@ public sealed class StaticPortTests
         Assert.Contains(Errors(flow), error => error.Contains($"端口 {Model} 的来源形成环"));
     }
 
-    /// <summary>容器常量输出绑定执行节点的动态输出时报错。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器常量输出绑定执行节点的动态输出时报错")]
     public void Container_static_output_must_bind_a_static_output()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -333,8 +324,7 @@ public sealed class StaticPortTests
         Assert.Contains("常量性必须与来源", string.Join("；", Errors(flow)));
     }
 
-    /// <summary>容器类型声明的静态输入必须由引用处绑定。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器类型声明的静态输入必须由引用处绑定")]
     public void Container_static_input_requires_an_in_binding()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -367,8 +357,7 @@ public sealed class StaticPortTests
             error => error.Description.Contains($"静态输入端口 {Model} 没有绑定来源"));
     }
 
-    /// <summary>执行节点静态输入的默认值在读取端口时解析。</summary>
-    [Fact]
+    [Fact(DisplayName = "执行节点静态输入的默认值在读取端口时解析")]
     public void Static_input_default_resolves_at_access()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -395,8 +384,7 @@ public sealed class StaticPortTests
         Assert.Equal("执行者", StaticText(compiled.Value, check, TestExecutableNodeType.StaticPort));
     }
 
-    /// <summary>运行期常量输出要求节点没有动态输入，带 From 的执行节点声明常量输出时报错。</summary>
-    [Fact]
+    [Fact(DisplayName = "运行期常量输出要求节点没有动态输入，带 From 的执行节点声明常量输出时报错")]
     public void Runtime_constant_output_requires_a_static_only_node()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -425,8 +413,7 @@ public sealed class StaticPortTests
             error => error.Contains("Emission 为 Once 的节点不能声明动态输入或 From"));
     }
 
-    /// <summary>两个节点互相绑定对方的运行期常量时报出常量依赖环。</summary>
-    [Fact]
+    [Fact(DisplayName = "两个节点互相绑定对方的运行期常量时报出常量依赖环")]
     public void Runtime_constant_dependency_cycle_is_rejected()
     {
         PortName source = new("来源");
@@ -452,8 +439,7 @@ public sealed class StaticPortTests
 
         Assert.Contains(Errors(flow), error => error.Contains("常量依赖形成环"));
     }
-    /// <summary>Once 节点可以声明多个运行期常量输出，一次执行全部交回。</summary>
-    [Fact]
+    [Fact(DisplayName = "Once 节点可以声明多个运行期常量输出，一次执行全部交回")]
     public void Runtime_constant_node_can_declare_multiple_outputs()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -483,8 +469,7 @@ public sealed class StaticPortTests
         Assert.Equal(2, check.RequiredPorts.Count);
     }
 
-    /// <summary>逐次发布的节点不能声明没有来源的常量输出。</summary>
-    [Fact]
+    [Fact(DisplayName = "逐次发布的节点不能声明没有来源的常量输出")]
     public void Repeated_node_cannot_produce_a_runtime_constant()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -506,8 +491,7 @@ public sealed class StaticPortTests
         Assert.Contains(Errors(flow), error => error.Contains("运行期常量输出需要节点声明 Emission 为 Once"));
     }
 
-    /// <summary>运行期常量节点没有输入时仍按静态就绪启动，执行上限保持配置值。</summary>
-    [Fact]
+    [Fact(DisplayName = "运行期常量节点没有输入时仍按静态就绪启动，执行上限保持配置值")]
     public void Runtime_constant_node_can_have_no_inputs()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -623,8 +607,7 @@ public sealed class StaticPortTests
             ],
         });
 
-    /// <summary>容器绑定的参与方式由目标端口模式推导：常量端口静态、触发端口门控、其余端口只作值通道。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器绑定的参与方式由目标端口模式推导：常量端口静态、触发端口门控、其余端口只作值通道")]
     public void Container_binding_role_follows_the_target_port_mode()
     {
         PortName gate = new("放行");
@@ -701,8 +684,7 @@ public sealed class StaticPortTests
         Assert.Equal(BindingRole.Alias, container.InputBindings[Goal].Role);
     }
 
-    /// <summary>容器触发绑定的来源端口必须是触发端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器触发绑定的来源端口必须是触发端口")]
     public void Container_binding_condition_requires_a_trigger_source()
     {
         PortName gate = new("放行");

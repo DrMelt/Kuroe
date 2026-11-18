@@ -11,7 +11,7 @@ namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 /// <summary>执行快照的派生属性：已耗时。</summary>
 public sealed class GraphExecutionSnapshotTests
 {
-    [Fact]
+    [Fact(DisplayName = "有完成时间时用其计算耗时")]
     public void Elapsed_uses_finished_when_present()
     {
         DateTimeOffset created = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
@@ -21,7 +21,7 @@ public sealed class GraphExecutionSnapshotTests
         Assert.Equal(TimeSpan.FromMinutes(2), Execution(ExecutionState.Succeeded, created, started, finished).Elapsed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行中耗时回退到当前时间")]
     public void Elapsed_falls_back_to_now_while_live()
     {
         DateTimeOffset created = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);

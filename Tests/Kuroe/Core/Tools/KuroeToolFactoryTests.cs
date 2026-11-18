@@ -15,7 +15,7 @@ namespace Kuroe.Tests.Tools;
 /// <summary>执行级工具工厂：按最长工具路径绑定变量，同一工具源的不同工具得到不同映射。</summary>
 public sealed class KuroeToolFactoryTests
 {
-    [Fact]
+    [Fact(DisplayName = "最长前缀把每个工具绑定到自己的映射")]
     public void Longest_prefix_binds_each_tool_to_its_own_mapping()
     {
         CapturingToolSource source = new(
@@ -49,7 +49,7 @@ public sealed class KuroeToolFactoryTests
         Assert.Equal("项目值", child.Binding.Variable("project"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态端口只读取静态值")]
     public void A_static_port_reads_only_the_static_value()
     {
         CapturingToolSource source = new(new ToolDefinition(new ToolPath("group/tool"), "父", [], [PathVariables.RootName]));
@@ -62,7 +62,7 @@ public sealed class KuroeToolFactoryTests
         Assert.Equal("任务值", tool.Binding.Variable(PathVariables.RootName));
     }
 
-    [Fact]
+    [Fact(DisplayName = "动态端口只读取输入值")]
     public void A_dynamic_port_reads_only_the_input_value()
     {
         CapturingToolSource source = new(new ToolDefinition(new ToolPath("group/tool"), "父", [], [PathVariables.RootName]));
@@ -104,7 +104,7 @@ public sealed class KuroeToolFactoryTests
             texts,
             []);
 
-    [Fact]
+    [Fact(DisplayName = "来源只在可用工具面创建工具")]
     public void A_source_creates_only_tools_in_the_available_face()
     {
         ToolDefinition one = new(new ToolPath("group/one"), "一", []);

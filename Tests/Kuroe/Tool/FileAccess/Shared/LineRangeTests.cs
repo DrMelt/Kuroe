@@ -6,7 +6,7 @@ namespace Kuroe.Tool.FileAccess.Shared.Tests;
 /// <summary>行号范围的解析：缺省取给定量，非法数字与倒置范围拒绝。</summary>
 public sealed class LineRangeTests
 {
-    [Fact]
+    [Fact(DisplayName = "缺少结束行时保持开放")]
     public void Missing_to_leaves_the_end_open()
     {
         LineRange range = Ok(LineRange.Parse(Given(), 1, null));
@@ -14,7 +14,7 @@ public sealed class LineRangeTests
         Assert.Equal(new LineRange(1, null), range);
     }
 
-    [Fact]
+    [Fact(DisplayName = "行范围显式值覆盖默认值")]
     public void Explicit_values_override_the_defaults()
     {
         LineRange range = Ok(LineRange.Parse(Given(("from", "3"), ("to", "9")), 1, 200));
@@ -23,10 +23,10 @@ public sealed class LineRangeTests
     }
 
     [Theory]
-    [InlineData("from", "x", "要写成数字")]
-    [InlineData("from", "0", "起始行号")]
-    [InlineData("to", "x", "要写成数字")]
-    [InlineData("to", "0", "结束行号")]
+    [InlineData("from", "x", "要写成数字", Label = "起始行非数字")]
+    [InlineData("from", "0", "起始行号", Label = "起始行为零")]
+    [InlineData("to", "x", "要写成数字", Label = "结束行非数字")]
+    [InlineData("to", "0", "结束行号", Label = "结束行为零")]
     public void Invalid_number_is_rejected(string name, string value, string expected)
     {
         ErrorOr<LineRange> range = LineRange.Parse(Given((name, value)), 1, 200);
@@ -35,7 +35,7 @@ public sealed class LineRangeTests
         Assert.Contains(expected, range.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "反向范围被拒绝")]
     public void Reversed_range_is_rejected()
     {
         ErrorOr<LineRange> range = LineRange.Parse(Given(("from", "9"), ("to", "3")), 1, 200);

@@ -8,7 +8,7 @@ namespace Kuroe.Tool.Dotnet.Tests;
 /// <summary>内置 dotnet 工具面：十三条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
 public sealed class DotnetToolsTests
 {
-    [Fact]
+    [Fact(DisplayName = "定义覆盖读取与写入两组")]
     public void Definitions_cover_read_and_write_groups()
     {
         Assert.Equal(
@@ -30,7 +30,7 @@ public sealed class DotnetToolsTests
             DotnetTools.Definitions.Select(definition => definition.Definition.Path.Value));
     }
 
-    [Fact]
+    [Fact(DisplayName = "dotnet 模板声明预期的命令行")]
     public void Templates_declare_the_expected_command_lines()
     {
         Assert.Equal(
@@ -144,13 +144,13 @@ public sealed class DotnetToolsTests
             Template("dotnet/write/AddPackage"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "每个函数把返回文本限制在八千字符")]
     public void Every_function_caps_returned_text_at_8000_characters()
     {
         Assert.All(DotnetTools.Definitions, definition => Assert.Equal(8000, definition.OutputLimit));
     }
 
-    [Fact]
+    [Fact(DisplayName = "dotnet 读取在无参数时展开为固定命令行")]
     public void Read_without_arguments_expands_to_fixed_command_lines()
     {
         Assert.Equal(["dotnet", "--info"], Argv("dotnet/read/Info", Given()));
@@ -158,7 +158,7 @@ public sealed class DotnetToolsTests
         Assert.Equal(["dotnet", "nuget", "list", "source"], Argv("dotnet/read/NugetSources", Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "列出包携带项目与过期选项")]
     public void List_packages_carries_project_and_outdated()
     {
         Assert.Equal(["dotnet", "list", "package"], Argv("dotnet/read/ListPackages", Given()));
@@ -174,7 +174,7 @@ public sealed class DotnetToolsTests
             Argv("dotnet/read/ListPackages", Given(("project", "src/App"), ("outdated", false))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "构建携带项目与配置")]
     public void Build_carries_project_and_configuration()
     {
         Assert.Equal(["dotnet", "build", "--verbosity", "quiet", "--nologo"], Argv("dotnet/write/Build", Given()));
@@ -189,7 +189,7 @@ public sealed class DotnetToolsTests
             Argv("dotnet/write/Build", Given(("configuration", "Release"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "测试携带项目与过滤条件")]
     public void Test_carries_project_and_filter()
     {
         Assert.Equal(["dotnet", "test", "--verbosity", "quiet"], Argv("dotnet/write/Test", Given()));
@@ -198,7 +198,7 @@ public sealed class DotnetToolsTests
             Argv("dotnet/write/Test", Given(("project", "Tests/Kuroe.Tests"), ("filter", "FullyQualifiedName~Kuroe"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "MTP 测试携带项目或解决方案并报告 TRX")]
     public void TestMtp_carries_project_or_solution_and_reports_trx()
     {
         Assert.Equal(
@@ -212,7 +212,7 @@ public sealed class DotnetToolsTests
             Argv("dotnet/write/TestMtp", Given(("solution", "Kuroe.slnx"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "MTP 测试拒绝项目与解决方案同时使用")]
     public void TestMtp_rejects_project_and_solution_together()
     {
         ToolDefinition definition = Definition("dotnet/write/TestMtp").Definition;
@@ -228,14 +228,14 @@ public sealed class DotnetToolsTests
             Assert.Single(definition.ParameterGroups).Parameters);
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行携带项目")]
     public void Run_carries_project()
     {
         Assert.Equal(["dotnet", "run"], Argv("dotnet/write/Run", Given()));
         Assert.Equal(["dotnet", "run", "Source/Kuroe.Console"], Argv("dotnet/write/Run", Given(("project", "Source/Kuroe.Console"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "还原格式化与发布携带各自实参")]
     public void Restore_format_and_publish_carry_their_arguments()
     {
         Assert.Equal(["dotnet", "restore", "--nologo"], Argv("dotnet/write/Restore", Given()));
@@ -256,7 +256,7 @@ public sealed class DotnetToolsTests
             Argv("dotnet/write/Publish", Given(("project", "Source/Kuroe.Console"), ("configuration", "Release"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "验证格式化只检查不修改")]
     public void Verify_format_checks_without_changes()
     {
         Assert.Equal(
@@ -273,7 +273,7 @@ public sealed class DotnetToolsTests
             Argv("dotnet/read/VerifyFormat", Given(("project", "Source/Kuroe"), ("severity", "error"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "添加包携带包名与可选版本")]
     public void Add_package_carries_package_and_optional_version()
     {
         Assert.Equal(
@@ -285,7 +285,7 @@ public sealed class DotnetToolsTests
         Assert.Equal("缺少参数 package。", Rejected("dotnet/write/AddPackage", Given(("project", "Source/Kuroe.Console"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "以短横线开头的值被拒绝")]
     public void Values_starting_with_dash_are_rejected()
     {
         Assert.Equal(
@@ -305,7 +305,7 @@ public sealed class DotnetToolsTests
             parameter => Assert.False(parameter.AllowLeadingDash));
     }
 
-    [Fact]
+    [Fact(DisplayName = "dotnet 参数声明开关列表与必填值")]
     public void Parameters_declare_switches_lists_and_required_values()
     {
         CommandToolDefinition listPackages = Definition("dotnet/read/ListPackages");
@@ -328,7 +328,7 @@ public sealed class DotnetToolsTests
         Assert.False(Parameter(addPackage, "version").Required);
     }
 
-    [Fact]
+    [Fact(DisplayName = "项目声明为路径参数")]
     public void Project_is_declared_as_a_path_parameter()
     {
         Assert.All(
@@ -355,7 +355,7 @@ public sealed class DotnetToolsTests
         Assert.False(Parameter(Definition("dotnet/read/VerifyFormat"), "severity").Required);
     }
 
-    [Fact]
+    [Fact(DisplayName = "dotnet 工具携带全部定义")]
     public void Tools_carry_every_definition()
     {
         IReadOnlyList<ITool> tools =

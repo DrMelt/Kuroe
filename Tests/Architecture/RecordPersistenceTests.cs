@@ -7,7 +7,7 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>记录与持久化边界：记录种类的常量与编解码器随实现存放，任务持久化不出现流程模型。</summary>
 public sealed class RecordPersistenceTests
 {
-    [Fact]
+    [Fact(DisplayName = "图记录项目不含运行期与宿主")]
     public void Graph_records_project_stays_free_of_runtime_and_host()
     {
         string project = Path.Combine(
@@ -34,7 +34,7 @@ public sealed class RecordPersistenceTests
             nodes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "持久化项目只引用共享边界")]
     public void Persistence_projects_reference_only_shared_boundaries()
     {
         string persistence = Path.Combine(KernelRoot, "Tasks", "Persistence");
@@ -61,7 +61,7 @@ public sealed class RecordPersistenceTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务持久化项目不含流程模型")]
     public void Task_persistence_projects_stay_free_of_flow_models()
     {
         string persistence = Path.Combine(KernelRoot, "Tasks", "Persistence");
@@ -110,19 +110,19 @@ public sealed class RecordPersistenceTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程记录编解码器位于集中序列化之外")]
     public void Flow_record_codecs_live_outside_central_serialization()
     {
         string persistence = Path.Combine(KernelRoot, "Tasks", "Persistence", "Serialization");
         string graphCodec = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence", "Serialization", "Graph", "Core");
         string code = Path.Combine(SourceRoot, "Kuroe.CodeFlow", "Persistence", "Core");
 
-        Assert.True(File.Exists(Path.Combine(graphCodec, "GraphFlowRecordCodec.cs")));
-        Assert.True(File.Exists(Path.Combine(code, "CodeFlowRecordCodec.cs")));
-        Assert.False(File.Exists(Path.Combine(persistence, "Shared", "FlowRecordCodec.cs")));
+        Assert.True(File.Exists(Path.Combine(graphCodec, "GraphFlowRecordCodec.cs")), $"{Path.Combine(graphCodec, "GraphFlowRecordCodec.cs")} 不存在。");
+        Assert.True(File.Exists(Path.Combine(code, "CodeFlowRecordCodec.cs")), $"{Path.Combine(code, "CodeFlowRecordCodec.cs")} 不存在。");
+        Assert.False(File.Exists(Path.Combine(persistence, "Shared", "FlowRecordCodec.cs")), $"{Path.Combine(persistence, "Shared", "FlowRecordCodec.cs")} 不应存在。");
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程记录种类常量随实现存放")]
     public void Flow_record_kind_constants_live_with_implementations()
     {
         string graph = Path.Combine(
@@ -140,12 +140,12 @@ public sealed class RecordPersistenceTests
             "CodeFlowKind.cs");
         string taskRecord = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "TaskRecord.cs");
 
-        Assert.True(File.Exists(graph));
-        Assert.True(File.Exists(code));
+        Assert.True(File.Exists(graph), $"{graph} 不存在。");
+        Assert.True(File.Exists(code), $"{code} 不存在。");
         Assert.DoesNotContain("FlowRecordKinds", File.ReadAllText(taskRecord), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "Maf 记录种类随其实现存放")]
     public void Maf_record_kind_lives_with_its_implementation()
     {
         string kind = Path.Combine(
@@ -156,17 +156,17 @@ public sealed class RecordPersistenceTests
             "MafFlowKind.cs");
         string taskRecord = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "TaskRecord.cs");
 
-        Assert.True(File.Exists(kind));
+        Assert.True(File.Exists(kind), $"{kind} 不存在。");
         Assert.DoesNotContain("MafFlowKind", File.ReadAllText(taskRecord), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程记录编解码端口位于 Kernel")]
     public void Flow_record_codec_port_lives_in_kernel()
     {
         string port = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "FlowRecordCodec.cs");
         string serialization = Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Persistence", "Serialization", "Shared");
 
-        Assert.True(File.Exists(port));
+        Assert.True(File.Exists(port), $"{port} 不存在。");
         Assert.Contains("interface IFlowRecordCodec", File.ReadAllText(port), StringComparison.Ordinal);
         Assert.DoesNotContain(
             "interface IFlowRecordCodec",

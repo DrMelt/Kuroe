@@ -14,7 +14,7 @@ public sealed class CommandNodeTypeDescriptionTests
 
     private static readonly string Root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "kuroe-command-description-tests"));
 
-    [Fact]
+    [Fact(DisplayName = "描述声明种类形状与字段")]
     public void Description_declares_the_kind_shape_and_fields()
     {
         CommandNodeTypeDescription description = new(Root, RunnerFactory);
@@ -34,7 +34,7 @@ public sealed class CommandNodeTypeDescriptionTests
             description.Fields);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取保留程序实参目录与上限")]
     public void Read_keeps_program_arguments_directory_and_limits()
     {
         List<string> failures = [];
@@ -56,7 +56,7 @@ public sealed class CommandNodeTypeDescriptionTests
         Assert.True(parameters.FailOnNonZeroExitCode);
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少程序被报告")]
     public void Missing_program_is_reported()
     {
         List<string> failures = [];
@@ -65,7 +65,7 @@ public sealed class CommandNodeTypeDescriptionTests
         Assert.Equal(["命令执行节点必须声明 Program。"], failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "非正超时被报告")]
     public void Non_positive_timeout_is_reported()
     {
         List<string> failures = [];
@@ -75,7 +75,7 @@ public sealed class CommandNodeTypeDescriptionTests
         Assert.Equal(["TimeoutSeconds 必须是正整数。"], failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "命令节点负数最大字符数被报告")]
     public void Negative_max_chars_is_reported()
     {
         List<string> failures = [];
@@ -85,7 +85,7 @@ public sealed class CommandNodeTypeDescriptionTests
         Assert.Equal(["MaxChars 不能是负数。"], failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "默认值使用工作区根与声明上限")]
     public void Defaults_use_the_workspace_root_and_declared_limits()
     {
         List<string> failures = [];
@@ -103,7 +103,7 @@ public sealed class CommandNodeTypeDescriptionTests
         Assert.False(parameters.FailOnNonZeroExitCode);
     }
 
-    [Fact]
+    [Fact(DisplayName = "注册加入命令节点种类")]
     public void Registration_adds_the_command_kind()
     {
         RecordingRegistry registry = new();

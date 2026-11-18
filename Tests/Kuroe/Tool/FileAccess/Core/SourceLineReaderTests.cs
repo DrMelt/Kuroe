@@ -7,7 +7,7 @@ namespace Kuroe.Tool.FileAccess.Tests;
 /// <summary>按行读取：终止符识别、行号范围、文件尾与字符预算。</summary>
 public sealed class SourceLineReaderTests
 {
-    [Fact]
+    [Fact(DisplayName = "读取带终止符的 LF 行")]
     public void Reads_lf_lines_with_terminators()
     {
         SourceLineReadResult result = Read("一\n二\n", 1, 10);
@@ -22,7 +22,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(expected, result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "结束行缺失时读取到末尾")]
     public void Reads_to_the_end_when_to_is_missing()
     {
         SourceLineReadResult result = Read("一\n二\n", 1, null);
@@ -37,7 +37,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(expected, result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取带终止符的 CRLF 行")]
     public void Reads_crlf_lines_with_terminators()
     {
         SourceLineReadResult result = Read("一\r\n二\r\n", 1, 10);
@@ -51,7 +51,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(expected, result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取带终止符的 CR 行")]
     public void Reads_cr_lines_with_terminators()
     {
         SourceLineReadResult result = Read("一\r二\r", 1, 10);
@@ -65,7 +65,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(expected, result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "混合文件中保留每行的终止符")]
     public void Keeps_the_terminator_of_each_line_in_a_mixed_file()
     {
         SourceLineReadResult result = Read("一\r\n二\r三\n四", 1, 10);
@@ -80,7 +80,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(expected, result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "保留空行")]
     public void Keeps_empty_lines()
     {
         SourceLineReadResult result = Read("一\r\n\r\n二\n", 1, 10);
@@ -95,7 +95,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(expected, result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有终止符的最后一行不带换行")]
     public void Last_line_without_a_terminator_has_no_new_line()
     {
         SourceLineReadResult result = Read("一\n二", 1, 10);
@@ -104,7 +104,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(expected, result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "末尾终止符增加一个空行")]
     public void Trailing_terminator_adds_an_empty_line()
     {
         SourceLineReadResult result = Read("一\n", 1, 10);
@@ -114,7 +114,7 @@ public sealed class SourceLineReaderTests
         Assert.True(result.ToBeyondEnd);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取请求的行范围")]
     public void Reads_the_requested_range()
     {
         SourceLineReadResult result = Read("一\r\n二\r\n三\r\n", 2, 3);
@@ -124,7 +124,7 @@ public sealed class SourceLineReaderTests
         Assert.False(result.ToBeyondEnd);
     }
 
-    [Fact]
+    [Fact(DisplayName = "起始行超出末尾时报告")]
     public void Reports_a_start_line_beyond_the_end()
     {
         SourceLineReadResult result = Read("一\r\n", 3, 3);
@@ -133,7 +133,7 @@ public sealed class SourceLineReaderTests
         Assert.Empty(result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "起始行落在末尾空行时返回该行")]
     public void A_start_line_at_the_trailing_empty_line_returns_it()
     {
         SourceLineReadResult result = Read("一\n", 2, 2);
@@ -143,7 +143,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(new SourceLine(2, string.Empty, null), line);
     }
 
-    [Fact]
+    [Fact(DisplayName = "起始行在未终止的最后一行之后视为超出末尾")]
     public void A_start_line_after_an_unterminated_last_line_is_beyond_the_end()
     {
         SourceLineReadResult result = Read("一", 2, 50);
@@ -152,7 +152,7 @@ public sealed class SourceLineReaderTests
         Assert.Empty(result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "报告文件末尾")]
     public void Reports_a_file_end()
     {
         SourceLineReadResult result = Read("一\n二", 1, 10);
@@ -160,7 +160,7 @@ public sealed class SourceLineReaderTests
         Assert.True(result.ToBeyondEnd);
     }
 
-    [Fact]
+    [Fact(DisplayName = "字符预算用尽后停止")]
     public void Stops_after_the_character_budget()
     {
         SourceLineReadResult result = Read("一\r\n二\r\n", 1, 10, characterBudget: 1);
@@ -170,7 +170,7 @@ public sealed class SourceLineReaderTests
         Assert.False(result.ToBeyondEnd);
     }
 
-    [Fact]
+    [Fact(DisplayName = "处理跨越缓冲边界的 CRLF")]
     public void Handles_crlf_across_the_buffer_boundary()
     {
         string text = new string('a', 4095) + "\r\nb";
@@ -183,7 +183,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(new SourceLine(2, "b", null), result.Lines[1]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "处理长于缓冲的行")]
     public void Handles_a_line_longer_than_the_buffer()
     {
         string text = new string('a', 5000) + "\n";
@@ -195,7 +195,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(NewLineStyle.Lf, line.Terminator);
     }
 
-    [Fact]
+    [Fact(DisplayName = "跨缓冲保留代理对")]
     public void Preserves_surrogate_pairs_across_the_buffer()
     {
         string content = new string('a', 4095) + "𠀀";
@@ -206,7 +206,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(NewLineStyle.Lf, line.Terminator);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取空文件")]
     public void Reads_an_empty_file()
     {
         SourceLineReadResult result = Read(string.Empty, 1, 10);
@@ -215,7 +215,7 @@ public sealed class SourceLineReaderTests
         Assert.Empty(result.Lines);
     }
 
-    [Fact]
+    [Fact(DisplayName = "达到上限的行保留终止符")]
     public void Line_at_the_limit_keeps_the_terminator()
     {
         SourceLineReadResult result = Read("abcd\n", 1, 1, lineCharacterBudget: 5);
@@ -226,7 +226,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(5, line.LineLength);
     }
 
-    [Fact]
+    [Fact(DisplayName = "超过上限的行保留文本前缀并丢弃终止符")]
     public void Line_over_the_limit_keeps_the_text_prefix_and_drops_the_terminator()
     {
         SourceLineReadResult result = Read("abcdef\n", 1, 1, lineCharacterBudget: 5);
@@ -238,7 +238,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(7, line.LineLength);
     }
 
-    [Fact]
+    [Fact(DisplayName = "仅终止符也可以超过行上限")]
     public void Terminator_alone_can_exceed_the_line_limit()
     {
         SourceLineReadResult result = Read("abcd\r\n", 1, 1, lineCharacterBudget: 5);
@@ -250,7 +250,7 @@ public sealed class SourceLineReaderTests
         Assert.Equal(6, line.LineLength);
     }
 
-    [Fact]
+    [Fact(DisplayName = "行截断不拆分代理对")]
     public void Line_truncation_does_not_split_a_surrogate_pair()
     {
         SourceLineReadResult result = Read("ab𠀀c", 1, 1, lineCharacterBudget: 3);
@@ -261,7 +261,7 @@ public sealed class SourceLineReaderTests
         Assert.True(line.Truncated);
     }
 
-    [Fact]
+    [Fact(DisplayName = "截断行不消耗字符预算")]
     public void Truncated_line_does_not_consume_the_character_budget()
     {
         SourceLineReadResult result = Read(

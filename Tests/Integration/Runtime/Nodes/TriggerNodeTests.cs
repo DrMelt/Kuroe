@@ -11,8 +11,7 @@ namespace Kuroe.Integration.Tests.Runtime.Nodes;
 /// From 的组是一套完整的输入绑定方案，组内全部齐备该组才成立，组间任一齐备即启动。来源每次发布未消费的新版本触发一次启动。</summary>
 public sealed class TriggerNodeTests
 {
-    /// <summary>纯触发节点无数据输入也能启动：来源发布后触发启动，上下文不含来源产出。</summary>
-    [Fact]
+    [Fact(DisplayName = "纯触发节点无数据输入也能启动：来源发布后触发启动，上下文不含来源产出")]
     public void Trigger_only_node_starts_and_omits_source_output()
     {
         using TestEnvironment environment = TestEnvironment.Create(TriggerOnceFlow);
@@ -26,8 +25,7 @@ public sealed class TriggerNodeTests
         Assert.Empty(triggered.Input.Inputs);
     }
 
-    /// <summary>来源每次回答发布新版本触发一次：两轮回答两次触发，触发目标始终收不到内容。</summary>
-    [Fact]
+    [Fact(DisplayName = "来源每次回答发布新版本触发一次：两轮回答两次触发，触发目标始终收不到内容")]
     public void Every_trigger_version_starts_one_execution_without_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TriggerLoopFlow);
@@ -60,8 +58,7 @@ public sealed class TriggerNodeTests
     private static int RoundCount(TaskSnapshot snapshot, string label) =>
         snapshot.View.Steps.Single(step => step.Label == label).Executions.Count;
 
-    /// <summary>触发与数据 From 并存：数据源产出照常注入，触发源内容不进上下文。</summary>
-    [Fact]
+    [Fact(DisplayName = "触发与数据 From 并存：数据源产出照常注入，触发源内容不进上下文")]
     public void Mixed_trigger_and_data_from_keeps_data_only()
     {
         using TestEnvironment environment = TestEnvironment.Create(MixedTriggerFlow);
@@ -78,8 +75,7 @@ public sealed class TriggerNodeTests
             value.Origin is ExecutionSource { Node: var node } && node == NodePath.Of("整体", "信号"));
     }
 
-    /// <summary>容器作触发源：成员齐备放行后目标被触发，容器产出不进目标上下文。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器作触发源：成员齐备放行后目标被触发，容器产出不进目标上下文")]
     public void Released_container_acts_as_trigger_source()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerTriggerFlow);
@@ -92,8 +88,7 @@ public sealed class TriggerNodeTests
         Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("准备产出"));
     }
 
-    /// <summary>触发引用可带命名端口：来源放行该端口即触发，端口内容同样不进目标上下文。</summary>
-    [Fact]
+    [Fact(DisplayName = "触发引用可带命名端口：来源放行该端口即触发，端口内容同样不进目标上下文")]
     public void Named_port_trigger_fires_without_injecting_port_content()
     {
         using TestEnvironment environment = TestEnvironment.Create(NamedPortTriggerFlow);
@@ -107,8 +102,7 @@ public sealed class TriggerNodeTests
         Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("信号产出"));
     }
 
-    /// <summary>触发循环受 MaxExecutions 约束：到达上限后来源再发布新版本也不再启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "触发循环受 MaxExecutions 约束：到达上限后来源再发布新版本也不再启动")]
     public void Trigger_loop_stops_restarting_at_max_executions()
     {
         using TestEnvironment environment = TestEnvironment.Create(TriggerLoopWithLimitFlow);
@@ -128,8 +122,7 @@ public sealed class TriggerNodeTests
         Assert.Equal([1, 2], [.. environment.Runner.Started.Select(execution => execution.Input.ExecutionCount)]);
     }
 
-    /// <summary>装配层引用库执行节点注入信号条目：引用处的信号接线随实例生效，且库定义本身不写接线。</summary>
-    [Fact]
+    [Fact(DisplayName = "装配层引用库执行节点注入信号条目：引用处的信号接线随实例生效，且库定义本身不写接线")]
     public void Library_reference_receives_trigger_injection()
     {
         using TestEnvironment environment = TestEnvironment.Create(LibraryTriggerInjectionFlow);
@@ -142,8 +135,7 @@ public sealed class TriggerNodeTests
         Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("来源产出"));
     }
 
-    /// <summary>审批节点挡住信号驱动的触发节点：来源发布后停在待批准，批准后触发放行。</summary>
-    [Fact]
+    [Fact(DisplayName = "审批节点挡住信号驱动的触发节点：来源发布后停在待批准，批准后触发放行")]
     public void Approval_gates_a_signal_driven_trigger()
     {
         using TestEnvironment environment = TestEnvironment.Create(TriggerReviewFlow);
@@ -162,8 +154,7 @@ public sealed class TriggerNodeTests
         Assert.Single(done.View.Steps.Single(step => step.Label == "触发").Executions);
     }
 
-    /// <summary>Review 容器作触发源：成员齐备后审批节点停等批准，批准放行后再触发目标启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "Review 容器作触发源：成员齐备后审批节点停等批准，批准放行后再触发目标启动")]
     public void Review_container_trigger_parks_until_approval()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewContainerTriggerFlow);

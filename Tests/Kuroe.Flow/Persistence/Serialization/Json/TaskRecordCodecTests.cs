@@ -12,7 +12,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
 {
     protected override ITaskRecordCodec CreateCodec() => TaskRecordCodecs.Codec();
 
-    [Fact]
+    [Fact(DisplayName = "写入输出当前版本")]
     public void Write_emits_current_version()
     {
         string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();
@@ -20,13 +20,13 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Contains($"\"Version\": {TaskRecordSerializationVersion.Current}", json);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝格式错误的 JSON")]
     public void Read_rejects_malformed_json()
     {
         Assert.True(TaskRecordCodecs.Codec().Read("{").IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝未知版本")]
     public void Read_rejects_unknown_version()
     {
         const string future = """{"Version":999,"Task":{}}""";
@@ -34,7 +34,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Equal(FlowErrorCodes.RecordVersion, TaskRecordCodecs.Codec().Read(future).FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取接受当前版本")]
     public void Read_accepts_current_version()
     {
         TaskRecordCodec codec = TaskRecordCodecs.Codec();
@@ -44,7 +44,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.False(codec.Read(json).IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取在映射字段前拒绝不支持的旧版本")]
     public void Read_rejects_unsupported_old_version_before_mapping_fields()
     {
         const string legacy = """{"Version":1,"Task":{"Nodes":[{"Kind":"Executable","PublishedExecution":1}]}}""";
@@ -53,9 +53,9 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     }
 
     [Theory]
-    [InlineData(13)]
-    [InlineData(14)]
-    [InlineData(15)]
+    [InlineData(13, Label = "版本十三")]
+    [InlineData(14, Label = "版本十四")]
+    [InlineData(15, Label = "版本十五")]
     public void Read_rejects_previous_versions(int version)
     {
         string previous = $"{{\"Version\":{version},\"Task\":{{}}}}";
@@ -63,7 +63,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Equal(FlowErrorCodes.RecordVersion, TaskRecordCodecs.Codec().Read(previous).FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入输出端口历史且不内联发布")]
     public void Write_emits_port_history_without_inline_publication()
     {
         string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();
@@ -72,7 +72,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.DoesNotContain("\"Publication\":", json);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入为重跑目标保留存档字段名")]
     public void Write_keeps_archive_field_name_for_rerun_targets()
     {
         string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();
@@ -81,7 +81,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.DoesNotContain("\"RerunTargets\":", json);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入输出保存时间与阻塞字段")]
     public void Write_emits_save_time_and_block_fields()
     {
         string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();
@@ -91,7 +91,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Contains("\"Summary\": \"读取失败。\"", json);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取接受旧版尝试字段")]
     public void Read_accepts_legacy_attempt_field()
     {
         TaskRecordCodec codec = TaskRecordCodecs.Codec();
@@ -110,7 +110,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Equal(TaskRecordFixture.Create().Executions[0].Id, loaded.Executions[0].Id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入省略旧版尝试字段")]
     public void Write_omits_legacy_attempt_field()
     {
         string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();
@@ -118,7 +118,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.DoesNotContain("\"Attempt\"", json);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入输出上下文用量")]
     public void Write_emits_context_tokens()
     {
         string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();
@@ -126,7 +126,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Contains("\"ContextTokens\": 90", json);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入与读取保留恢复数据")]
     public void Write_and_read_preserve_restore_data()
     {
         TaskRecord record = TaskRecordFixture.Create();
@@ -146,7 +146,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Equal(first.ContinuedFrom, loaded.Executions[0].ContinuedFrom);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入与读取保留执行契约")]
     public void Write_and_read_preserve_execution_contract()
     {
         TaskRecord record = TaskRecordFixture.Create();
@@ -173,7 +173,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Equal(value, Assert.Single(outputs).Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入保留非 ASCII 字符")]
     public void Write_keeps_non_ascii_characters()
     {
         string json = TaskRecordCodecs.Codec().Write(TaskRecordFixture.Create()).ThrowIfError();

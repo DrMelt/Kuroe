@@ -9,10 +9,9 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>单节点最高执行次数：路径达上限后不再启动新执行，未成功的停在阻塞且重新执行不放行。</summary>
 public sealed class ExecutionLimitTests
 {
-    /// <summary>执行上限到点后不再重跑，未成功的停在阻塞且重新执行不放行。</summary>
     [Theory]
-    [InlineData("failed")]
-    [InlineData("uncollected")]
+    [InlineData("failed", Label = "执行失败")]
+    [InlineData("uncollected", Label = "输出未收口")]
     public void Exhausted_limit_blocks_and_rejects_rerun(string reason)
     {
         string flow = reason == "uncollected" ? SingleNodeLimitFlow : FailingNodeFlow;
@@ -45,8 +44,7 @@ public sealed class ExecutionLimitTests
         }
     }
 
-    /// <summary>容器上限是发布次数，不限制成员执行次数。</summary>
-    [Fact]
+    [Fact(DisplayName = "容器上限是发布次数，不限制成员执行次数")]
     public void Container_limit_does_not_cap_member_retries()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleExecutionContainerFlow);
@@ -61,8 +59,7 @@ public sealed class ExecutionLimitTests
         Assert.False(environment.Tasks.Rerun(id).IsError);
     }
 
-    /// <summary>引用容器时覆盖库定义上限，未覆盖时继承库定义。上限属于容器自身，不传给成员。</summary>
-    [Fact]
+    [Fact(DisplayName = "引用容器时覆盖库定义上限，未覆盖时继承库定义。上限属于容器自身，不传给成员")]
     public void Reference_overrides_and_inherits_container_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReferenceContainerLimitFlow);
@@ -78,8 +75,7 @@ public sealed class ExecutionLimitTests
             .Single(node => node.Path.Value == "整体/较重/干活").MaxExecutions);
     }
 
-    /// <summary>引用库执行定义时覆盖库上限，未覆盖时继承库定义。</summary>
-    [Fact]
+    [Fact(DisplayName = "引用库执行定义时覆盖库上限，未覆盖时继承库定义")]
     public void Reference_overrides_and_inherits_library_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(LibraryLimitFlow);

@@ -8,7 +8,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>容器常量输出：下游经静态输入读取，不依赖运行期产出。</summary>
 public sealed class StaticInputStartTests
 {
-    [Fact]
+    [Fact(DisplayName = "容器常量输出提供给同级节点")]
     public void Container_constant_output_feeds_a_sibling()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerConstantFlow);

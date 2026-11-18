@@ -19,7 +19,7 @@ public sealed class GraphExecutionInputBuilderTests
     private static readonly PortName Fallback = new("默认");
     private static readonly PortName Static = TestExecutableNodeType.StaticPort;
 
-    [Fact]
+    [Fact(DisplayName = "文本与完整输入一致")]
     public void Texts_match_the_full_inputs()
     {
         string longText = new('甲', 2100);
@@ -43,7 +43,7 @@ public sealed class GraphExecutionInputBuilderTests
         Assert.DoesNotContain(input.Inputs, value => value.Port == Static);
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态内容输入报告其开始端口")]
     public void Static_content_input_reports_its_start_port()
     {
         PortName start = new("来源");
@@ -60,7 +60,7 @@ public sealed class GraphExecutionInputBuilderTests
         Assert.Equal(start, Assert.IsType<StartSource>(value.Origin).Port);
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态内容输入报告其常量来源")]
     public void Static_content_input_reports_its_constant_source()
     {
         PortName output = new("要求");
@@ -85,7 +85,7 @@ public sealed class GraphExecutionInputBuilderTests
         Assert.Equal(output, source.Port);
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态内容输入报告其默认值")]
     public void Static_content_input_reports_its_default()
     {
         PortName target = new("目标");

@@ -6,7 +6,7 @@ namespace Kuroe.Tool.KuroeInfo.Tests;
 /// <summary>配置查询工具：用户层文件、各节设置项与来源标记。</summary>
 public sealed class SettingsKuroeInfoToolTests
 {
-    [Fact]
+    [Fact(DisplayName = "描述渲染分节与来源标记")]
     public void Describe_renders_sections_and_source_marks()
     {
         SettingsKuroeInfoTool tool = new(new FakeSettings());

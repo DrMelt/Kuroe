@@ -13,7 +13,7 @@ public sealed class NodeInputValuesTests
     private static readonly PortName Content = new("正文");
     private static readonly PortName Approval = new("批准");
 
-    [Fact]
+    [Fact(DisplayName = "文本按绑定顺序连接值")]
     public void Text_joins_values_in_binding_order()
     {
         NodeInputValues values = new(
@@ -27,7 +27,7 @@ public sealed class NodeInputValuesTests
         Assert.Equal(2, values.Values(Content).Count);
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口没有值时文本为空")]
     public void Text_is_empty_when_the_port_has_no_value()
     {
         NodeInputValues values = new([], new HashSet<PortName>());
@@ -37,7 +37,7 @@ public sealed class NodeInputValuesTests
         Assert.False(values.Connected(Content));
     }
 
-    [Fact]
+    [Fact(DisplayName = "连接判定区分没有值的端口")]
     public void Connected_distinguishes_ports_without_values()
     {
         NodeInputValues values = new([], new HashSet<PortName> { Approval });
@@ -46,7 +46,7 @@ public sealed class NodeInputValuesTests
         Assert.False(values.Connected(Content));
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态文本经文本读取且不进入动态值")]
     public void Static_texts_are_read_through_text_and_stay_out_of_dynamic_values()
     {
         PortName staticPort = new("静态");
@@ -60,7 +60,7 @@ public sealed class NodeInputValuesTests
         Assert.Empty(withStatic.Values(staticPort));
     }
 
-    [Fact]
+    [Fact(DisplayName = "空静态文本保留实例")]
     public void Empty_static_texts_keep_the_instance()
     {
         NodeInputValues values = new([], new HashSet<PortName>());
@@ -68,7 +68,7 @@ public sealed class NodeInputValuesTests
         Assert.Same(values, values.WithStatic(PortTexts.Empty));
     }
 
-    [Fact]
+    [Fact(DisplayName = "文本经同一条目读取静态端口")]
     public void Text_reads_a_static_port_through_the_same_entry()
     {
         PortName port = new("路径");

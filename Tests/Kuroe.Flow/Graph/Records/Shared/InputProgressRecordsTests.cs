@@ -13,7 +13,7 @@ namespace Kuroe.Flow.Graph.Records.Shared.Tests;
 /// <summary>输入侧进展的公共存档转换：版本、次数、启动组、消费、重跑与发布一次往返。</summary>
 public sealed class InputProgressRecordsTests
 {
-    [Fact]
+    [Fact(DisplayName = "捕获与恢复保留输入进度")]
     public void Capture_and_restore_preserve_input_progress()
     {
         NodePath source = NodePath.Of("来源");

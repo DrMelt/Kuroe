@@ -20,7 +20,7 @@ public sealed class InputNodeTests
         return environment.Snapshot(id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入节点停到回答后释放下游")]
     public void Input_node_parks_until_answered_then_releases_downstream()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
@@ -43,7 +43,7 @@ public sealed class InputNodeTests
                 && value.Origin is InputSource);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有待处理输入时回答失败")]
     public void Answer_without_pending_input_fails()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
@@ -59,8 +59,7 @@ public sealed class InputNodeTests
         Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
     }
 
-    /// <summary>两个待输入节点按图先根序列出，回答必须点名；逐个回答后任务收口。</summary>
-    [Fact]
+    [Fact(DisplayName = "两个待输入节点按图先根序列出，回答必须点名；逐个回答后任务收口")]
     public void Two_input_nodes_require_node_path()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.TwoInputFlow);
@@ -85,8 +84,7 @@ public sealed class InputNodeTests
         Assert.Equal(TaskState.Done, done.State);
     }
 
-    /// <summary>有上游的输入节点提交即停驻等待回答，上游发布后作答放行下游。</summary>
-    [Fact]
+    [Fact(DisplayName = "有上游的输入节点提交即停驻等待回答，上游发布后作答放行下游")]
     public void Input_node_with_upstream_answers_after_upstream_releases()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFromUpstreamFlow);
@@ -104,8 +102,7 @@ public sealed class InputNodeTests
         Assert.Equal(TaskState.Done, done.State);
     }
 
-    /// <summary>挂点环中输入节点每轮回答被反馈复位并重新挂起，回话随每轮发布的新版本重启。</summary>
-    [Fact]
+    [Fact(DisplayName = "挂点环中输入节点每轮回答被反馈复位并重新挂起，回话随每轮发布的新版本重启")]
     public void Input_node_in_loop_resets_and_reparks_each_round()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputLoopFlow);
@@ -131,7 +128,7 @@ public sealed class InputNodeTests
             .Select(execution => execution.Input.ExecutionCount)]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "空回答被拒绝且不消耗等待")]
     public void Empty_answer_is_rejected_without_consuming_waiting()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
@@ -148,7 +145,7 @@ public sealed class InputNodeTests
         Assert.Single(environment.Awaiting(id, PendingKind.Answer));
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入节点不携带模型定义")]
     public void Input_node_carries_no_model_definition()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
@@ -164,7 +161,7 @@ public sealed class InputNodeTests
         Assert.NotNull(implement.InputBindings);
     }
 
-    [Fact]
+    [Fact(DisplayName = "回答释放自动容器的下游")]
     public void Answer_releases_auto_container_downstream()
     {
         using TestEnvironment environment = TestEnvironment.Create(InputInAutoContainerFlow);
@@ -183,7 +180,7 @@ public sealed class InputNodeTests
         Assert.Equal(int.MaxValue, input.MaxExecutions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "回答与审批后任务继续")]
     public void Answer_then_approval_releases_task()
     {
         using TestEnvironment environment = TestEnvironment.Create(InputInReviewContainerFlow);
@@ -207,7 +204,7 @@ public sealed class InputNodeTests
         Assert.Empty(environment.Awaiting(id, PendingKind.Approve));
     }
 
-    [Fact]
+    [Fact(DisplayName = "等待输入时取消结束任务并拒绝回答")]
     public void Cancel_while_awaiting_input_ends_task_and_rejects_answers()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.TwoInputFlow);
@@ -225,7 +222,7 @@ public sealed class InputNodeTests
         Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("已终止，无法回答"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器停在输入时显示等待输入")]
     public void Container_with_parked_input_shows_awaiting_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(InputInAutoContainerFlow);
@@ -238,7 +235,7 @@ public sealed class InputNodeTests
         Assert.Single(environment.Awaiting(id, PendingKind.Answer));
     }
 
-    [Fact]
+    [Fact(DisplayName = "并行评审与输入等待共存")]
     public void Parallel_review_and_input_waits_coexist()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ParallelInputAndReviewFlow);
@@ -254,8 +251,7 @@ public sealed class InputNodeTests
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
     }
 
-    /// <summary>环内输入节点每轮回答驱动一轮迭代：回话随来源新版本重跑，反馈复位后重新挂起。</summary>
-    [Fact]
+    [Fact(DisplayName = "环内输入节点每轮回答驱动一轮迭代：回话随来源新版本重跑，反馈复位后重新挂起")]
     public void Loop_input_node_repeats_rounds_until_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(DialogueLoopFlow);
@@ -286,8 +282,7 @@ public sealed class InputNodeTests
         Assert.Contains(secondExecution.Journal, entry => entry.Text == "回复第2轮");
     }
 
-    /// <summary>回话执行在跑时收话已回答，此时再回答按没有等待回答的输入节点拒绝，收口后回到挂起。</summary>
-    [Fact]
+    [Fact(DisplayName = "回话执行在跑时收话已回答，此时再回答按没有等待回答的输入节点拒绝，收口后回到挂起")]
     public void Answer_while_loop_replying_fails_as_no_awaiting_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(DialogueLoopFlow);

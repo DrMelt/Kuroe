@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Nodes;
 /// <summary>一次发布：版本、触发位与内容同属一份产出，读取按端口进行。</summary>
 public sealed class PublicationTests
 {
-    [Fact]
+    [Fact(DisplayName = "没有触发条目的端口照常发布并保留记录的 false")]
     public void Ports_without_a_trigger_entry_fire_and_recorded_false_is_kept()
     {
         Publication publication = new(
@@ -20,7 +20,7 @@ public sealed class PublicationTests
         Assert.True(publication.Fires(new PortName("走")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "内容按端口读取缺失端口为空")]
     public void Content_is_read_per_port_and_missing_ports_are_empty()
     {
         PortName port = new("结论");
@@ -38,7 +38,7 @@ public sealed class PublicationTests
         Assert.Null(publication.Text(new PortName("另一端口")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "文本按来源顺序连接多个值")]
     public void Text_joins_multiple_values_in_source_order()
     {
         PortName port = new("上下文");

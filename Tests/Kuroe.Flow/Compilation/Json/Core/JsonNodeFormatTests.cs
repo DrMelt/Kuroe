@@ -9,7 +9,7 @@ public sealed class JsonNodeFormatTests
 {
     private static readonly JsonNodeFormat Format = new();
 
-    [Fact]
+    [Fact(DisplayName = "读取映射定义并拒绝引用")]
     public void Read_maps_definitions_and_rejects_references()
     {
         IReadOnlyList<NodeDefinitionDocument> nodes = Ok(Format.Read(Nodes));
@@ -26,7 +26,7 @@ public sealed class JsonNodeFormatTests
             error => error.Description.Contains("节点库定义不能是引用。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝流程字段")]
     public void Read_rejects_the_flows_field()
     {
         ErrorOr<IReadOnlyList<NodeDefinitionDocument>> document =
@@ -37,7 +37,7 @@ public sealed class JsonNodeFormatTests
             error => error.Description.Contains("流程写在 flows.json", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入保留参数并往返")]
     public void Write_keeps_parameters_and_round_trips()
     {
         IReadOnlyList<NodeDefinitionDocument> nodes = Ok(Format.Read(Nodes));
@@ -50,7 +50,7 @@ public sealed class JsonNodeFormatTests
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取与写入保留布尔参数")]
     public void Read_and_write_keep_boolean_parameters()
     {
         IReadOnlyList<NodeDefinitionDocument> nodes = Ok(Format.Read("""

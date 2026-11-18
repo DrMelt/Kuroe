@@ -44,7 +44,7 @@ public sealed class NodePathTests
         }
         """;
 
-    [Fact]
+    [Fact(DisplayName = "编译节点携带按层分段的树路径")]
     public void Compiled_nodes_carry_tree_path_segmented_by_level()
     {
         using TestEnvironment environment = TestEnvironment.Create(ChainFlow);
@@ -64,7 +64,7 @@ public sealed class NodePathTests
         Assert.Equal("整体/文档组/撰写", graph[NodePath.Of("整体", "文档组", "撰写")].Path.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "根执行节点的路径是自身")]
     public void Root_executable_path_is_itself()
     {
         using TestEnvironment environment = TestEnvironment.Create(RootExecutableFlow);
@@ -77,7 +77,7 @@ public sealed class NodePathTests
         Assert.Equal("直接执行", graph[NodePath.Of("直接执行")].Path.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器快照携带带类型的树路径")]
     public void Container_snapshot_carries_typed_tree_path()
     {
         using TestEnvironment environment = TestEnvironment.Create(ChainFlow);

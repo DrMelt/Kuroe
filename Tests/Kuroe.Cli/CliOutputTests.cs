@@ -8,7 +8,7 @@ public sealed class CliOutputTests
 {
     private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
-    [Fact]
+    [Fact(DisplayName = "文本与行进入标准输出错误进入标准错误")]
     public void Text_and_lines_go_to_stdout_and_errors_go_to_stderr()
     {
         StringWriter output = new();
@@ -25,7 +25,7 @@ public sealed class CliOutputTests
         Assert.Equal($"提示{Environment.NewLine}错误：Test.Code：失败说明{Environment.NewLine}", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "内容把回复写入标准输出并丢弃推理")]
     public void Content_writes_reply_to_stdout_and_drops_reasoning()
     {
         StringWriter output = new();
@@ -39,7 +39,7 @@ public sealed class CliOutputTests
         Assert.Empty(error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "条目把标签与文本写入标准错误")]
     public void Entry_writes_label_and_text_to_stderr()
     {
         StringWriter output = new();
@@ -64,7 +64,7 @@ public sealed class CliOutputTests
             error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "条目切分 CRLF 与 CR 文本")]
     public void Entry_splits_crlf_and_cr_text()
     {
         StringWriter output = new();

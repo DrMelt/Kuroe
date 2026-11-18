@@ -9,7 +9,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>执行器上报的用量进入执行快照，运行中为当前累计，收口后为最终值。</summary>
 public sealed class ExecutionUsageTests
 {
-    [Fact]
+    [Fact(DisplayName = "运行器用量进入执行快照")]
     public void Runner_usage_reaches_the_execution_snapshot()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);
@@ -23,7 +23,7 @@ public sealed class ExecutionUsageTests
         Assert.Equal(usage, execution.Usage);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行运行期间用量可见")]
     public void Runner_usage_is_visible_while_the_execution_runs()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);

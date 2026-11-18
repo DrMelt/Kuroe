@@ -10,7 +10,7 @@ namespace Kuroe.Flow.Shared.Tests.StaticGraph.Graph;
 /// <summary>端口绑定的角色：动态驱动、门控、静态与别名在驱动、触发与齐备上的参与方式。</summary>
 public sealed class InputBindingTests
 {
-    [Fact]
+    [Fact(DisplayName = "成员绑定以节点为来源")]
     public void Member_binding_carries_the_node_as_source()
     {
         InputBinding binding = InputBinding.Member(NodePath.Of("整体"), NodePath.Of("成员"));
@@ -23,7 +23,7 @@ public sealed class InputBindingTests
         Assert.Equal(new ConsumptionKey(NodePath.Of("成员"), null), binding.Key);
     }
 
-    [Fact]
+    [Fact(DisplayName = "门控绑定参与就绪但不推动版本")]
     public void Gate_binding_joins_readiness_without_driving_versions()
     {
         InputBinding binding = new(
@@ -38,7 +38,7 @@ public sealed class InputBindingTests
         Assert.True(binding.CarriesTrigger);
     }
 
-    [Fact]
+    [Fact(DisplayName = "静态绑定只约束启动")]
     public void Static_binding_only_guards_startup()
     {
         InputBinding binding = new(
@@ -52,7 +52,7 @@ public sealed class InputBindingTests
         Assert.False(binding.CarriesTrigger);
     }
 
-    [Fact]
+    [Fact(DisplayName = "组只由动态绑定驱动")]
     public void Group_drives_only_by_dynamic_bindings()
     {
         InputBinding member = InputBinding.Member(NodePath.Of("整体"), NodePath.Of("成员"));
@@ -70,7 +70,7 @@ public sealed class InputBindingTests
         Assert.False(group.DrivenBySignals);
     }
 
-    [Fact]
+    [Fact(DisplayName = "方案只分组动态绑定")]
     public void Plan_groups_only_dynamic_bindings()
     {
         InputBinding driven = new(
@@ -94,7 +94,7 @@ public sealed class InputBindingTests
         Assert.Equal(2, planned.Group);
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器方案把成员与门控放在同一组")]
     public void Container_plan_puts_members_and_gates_in_one_group()
     {
         ContainerNode container = new()

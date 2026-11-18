@@ -7,7 +7,7 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>表现层契约边界：表现快照只承载中性数据，不出现图或节点类型。</summary>
 public sealed class PresentationBoundaryTests
 {
-    [Fact]
+    [Fact(DisplayName = "表现共享层不含图与控制引用")]
     public void Presentation_shared_project_stays_free_of_graph_and_control_references()
     {
         string project = Path.Combine(
@@ -22,7 +22,7 @@ public sealed class PresentationBoundaryTests
         ReferencesStayUnder(project, "Kuroe.Presentation.Shared", "中性契约", execution, tasks);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务表现层不含图与节点类型")]
     public void Task_presentation_stays_free_of_graph_and_node_types()
     {
         string presentation = Path.Combine(KernelRoot, "Tasks", "Presentation", "Shared");
@@ -47,7 +47,7 @@ public sealed class PresentationBoundaryTests
         Assert.DoesNotContain("Containers", snapshot, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务表现层只引用中性契约")]
     public void Task_presentation_references_only_neutral_contracts()
     {
         string project = Path.Combine(

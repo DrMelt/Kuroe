@@ -8,7 +8,7 @@ namespace Kuroe.Cli.Tests.Commands;
 /// <summary>flow 命令对不可用流程的呈现与导入。</summary>
 public sealed class FlowCommandsTests
 {
-    [Fact]
+    [Fact(DisplayName = "流程清单报告不可用流程")]
     public async Task Flow_list_reports_unavailable_flow()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Input);
@@ -22,7 +22,7 @@ public sealed class FlowCommandsTests
         Assert.Contains("Input", output.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程添加只导入可编译流程")]
     public async Task Flow_add_imports_only_compilable_flows()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -40,7 +40,7 @@ public sealed class FlowCommandsTests
         Assert.DoesNotContain(environment.Session.Templates.All(), flow => flow.Name == "待输入");
     }
 
-    [Fact]
+    [Fact(DisplayName = "只有不可编译流程时添加不保存")]
     public async Task Flow_add_with_only_uncompilable_flows_saves_nothing()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -56,7 +56,7 @@ public sealed class FlowCommandsTests
         Assert.DoesNotContain(environment.Session.Templates.All(), flow => flow.Name == "待输入");
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程查看打印节点树")]
     public async Task Flow_show_prints_the_node_tree()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -71,8 +71,7 @@ public sealed class FlowCommandsTests
         Assert.Empty(error.ToString());
     }
 
-    /// <summary>开始端口的宿主输入名取自宿主开始输入表。</summary>
-    [Fact]
+    [Fact(DisplayName = "开始端口的宿主输入名取自宿主开始输入表")]
     public async Task Flow_show_prints_host_start_inputs_from_the_form()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.HostInput);

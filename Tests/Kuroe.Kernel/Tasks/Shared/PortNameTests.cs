@@ -6,8 +6,8 @@ namespace Kuroe.Tasks.Shared.Tests;
 public sealed class PortNameTests
 {
     [Theory]
-    [InlineData("  ")]
-    [InlineData("结论@甲")]
+    [InlineData("  ", Label = "空白名称")]
+    [InlineData("结论@甲", Label = "含 at 符号")]
     public void Invalid_port_name_is_rejected(string name) =>
         Assert.Equal(
             "端口名不能为空或含 @。",

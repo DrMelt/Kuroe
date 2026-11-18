@@ -11,7 +11,7 @@ public sealed class CommandToolRunnerTests
     /// <summary>路径实参：两个目录与一个以 - 开头的文件名。</summary>
     private static readonly string[] PathList = ["src/a", "docs/b", "-a.txt"];
 
-    [Fact]
+    [Fact(DisplayName = "执行返回合并输出与命令和退出码")]
     public void Execute_returns_merged_output_with_command_and_exit_code()
     {
         FakeProcessRunner process = new()
@@ -26,9 +26,9 @@ public sealed class CommandToolRunnerTests
     }
 
     [Theory]
-    [InlineData("甲 乙", "\"甲 乙\"")]
-    [InlineData("甲\"乙", "\"甲\"\"乙\"")]
-    [InlineData("", "\"\"")]
+    [InlineData("甲 乙", "\"甲 乙\"", Label = "含空格")]
+    [InlineData("甲\"乙", "\"甲\"\"乙\"", Label = "含引号")]
+    [InlineData("", "\"\"", Label = "空字符串")]
     public void Execute_quotes_arguments_that_need_it_in_the_command_line(string value, string expected)
     {
         CommandToolDefinition definition = new(
@@ -50,7 +50,7 @@ public sealed class CommandToolRunnerTests
         Assert.Equal($"命令：cmd echo {expected}\n退出码：0", result.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行按定义上限截断输出")]
     public void Execute_truncates_output_at_definition_limit()
     {
         FakeProcessRunner process = new()
@@ -64,7 +64,7 @@ public sealed class CommandToolRunnerTests
         Assert.Equal("命令：cmd\nabcde…输出已截断\n退出码：1", result.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行报告空输出与退出码")]
     public void Execute_reports_empty_output_with_exit_code()
     {
         FakeProcessRunner process = new()
@@ -78,7 +78,7 @@ public sealed class CommandToolRunnerTests
         Assert.Equal("命令：cmd\n退出码：3", result.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行把超时报告为失败")]
     public void Execute_reports_timeout_as_failure()
     {
         FakeProcessRunner process = new()
@@ -93,7 +93,7 @@ public sealed class CommandToolRunnerTests
         Assert.Equal("命令：cmd\n命令在 5 秒内未结束，已终止。", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行传播进程失败")]
     public void Execute_propagates_process_failure()
     {
         FakeProcessRunner process = new()
@@ -108,7 +108,7 @@ public sealed class CommandToolRunnerTests
         Assert.Equal("命令：cmd\n无法启动 cmd。", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行传递展开实参工作目录与超时")]
     public void Execute_passes_expanded_arguments_working_directory_and_timeout()
     {
         string root = Root();
@@ -131,7 +131,7 @@ public sealed class CommandToolRunnerTests
         Assert.Equal(TimeSpan.FromSeconds(7), process.Timeout);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行把超时限制到最大值")]
     public void Execute_clamps_timeout_to_maximum()
     {
         FakeProcessRunner process = new();
@@ -142,7 +142,7 @@ public sealed class CommandToolRunnerTests
         Assert.Equal(TimeSpan.FromSeconds(CommandToolTemplate.MaxTimeoutSeconds), process.Timeout);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行把路径参数展开为绝对路径")]
     public void Execute_expands_path_parameters_as_absolute_paths()
     {
         string root = Root();
@@ -169,7 +169,7 @@ public sealed class CommandToolRunnerTests
             process.Arguments);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行把标量路径参数展开为绝对路径")]
     public void Execute_expands_scalar_path_parameter_as_absolute_path()
     {
         string root = Root();
@@ -189,7 +189,7 @@ public sealed class CommandToolRunnerTests
         Assert.Equal([Path.GetFullPath("-a.txt", root)], process.Arguments);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行在启动进程前拒绝工作目录之外的路径")]
     public void Execute_rejects_path_outside_working_directory_before_starting_process()
     {
         CommandToolDefinition definition = PathDefinition(new ToolParameter(new ToolName("path"), "路径", Path: true));
@@ -206,7 +206,7 @@ public sealed class CommandToolRunnerTests
         Assert.False(process.Called);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行在启动进程前拒绝超出允许范围的路径列表项")]
     public void Execute_rejects_path_list_item_outside_allow_before_starting_process()
     {
         CommandToolDefinition definition = PathDefinition(
@@ -225,7 +225,7 @@ public sealed class CommandToolRunnerTests
         Assert.False(process.Called);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行从根变量解析工作目录")]
     public void Execute_resolves_working_directory_from_the_root_variable()
     {
         string root = Root();

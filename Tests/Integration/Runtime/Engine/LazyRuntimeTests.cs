@@ -51,7 +51,7 @@ public sealed class LazyRuntimeTests
         }
         """;
 
-    [Fact]
+    [Fact(DisplayName = "提交在审批节点激活前返回运行中")]
     public void Submit_returns_running_before_the_approval_node_activates()
     {
         using TestEnvironment environment = TestEnvironment.Create(ApprovalOnlyFlow);
@@ -61,11 +61,11 @@ public sealed class LazyRuntimeTests
             new FlowName("默认"),
             null);
 
-        Assert.False(submitted.IsError);
+        Assert.False(submitted.IsError, submitted.ErrorsText());
         Assert.Equal(TaskState.Running, submitted.Value.State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "未触及的节点保持未实例化")]
     public void Untouched_nodes_stay_unmaterialized()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewQueueFlow);
@@ -79,7 +79,7 @@ public sealed class LazyRuntimeTests
 
     /// <summary>容器成员里尚未放行的成员不因状态查询被实例化：查询只读已实例化节点，未实例化成员视为没有产出。
     /// 库容器内实施的成员在跑时，容器自身与它的下游都还未触达。</summary>
-    [Fact]
+    [Fact(DisplayName = "未释放的容器成员保持未实例化")]
     public void Unreleased_container_member_stays_unmaterialized()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContainerOutputsFlow);
@@ -93,7 +93,7 @@ public sealed class LazyRuntimeTests
         Assert.Equal(FlowItemState.Pending, environment.Snapshot(id).View.Steps[2].State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "快照从不实例化节点")]
     public void Snapshot_never_materializes_nodes()
     {
         using TestEnvironment environment = TestEnvironment.Create(FlowSamples.ReviewFlow);
@@ -112,7 +112,7 @@ public sealed class LazyRuntimeTests
             task.Snapshot().View.Steps.Select(step => step.State));
     }
 
-    [Fact]
+    [Fact(DisplayName = "已取消任务把迟到节点实例化为已取消")]
     public void Canceled_task_materializes_late_node_canceled()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);

@@ -6,7 +6,7 @@ namespace Kuroe.Tool.Command.Shared.Tests;
 /// <summary>命令工具：模板展开按命令行断言，全程不起进程。</summary>
 public sealed class CommandToolTemplateTests
 {
-    [Fact]
+    [Fact(DisplayName = "展开拒绝缺失必填项并省略空的可选列表")]
     public void Expand_rejects_required_missing_and_omits_empty_optional_list()
     {
         // 缺参与空列表在必填时都在展开期拒绝，不启动进程
@@ -20,7 +20,7 @@ public sealed class CommandToolTemplateTests
             Argv(Texts(["cmd", "/c", "echo", "开始", "{files}", "结束"]), [FileParameter], Given(("files", Array.Empty<string>()))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开为每个列表值生成一个实参")]
     public void Expand_spawns_one_argument_per_list_value()
     {
         Assert.Equal(
@@ -28,7 +28,7 @@ public sealed class CommandToolTemplateTests
             Argv(Texts(["cmd", "/c", "echo", "{files}"]), [FileParameter], Given(("files", stringArray))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开把不含占位符的项作为单个实参")]
     public void Expand_keeps_item_without_placeholder_as_single_argument()
     {
         // 无占位符的项整体是一个参数项，不做拆分
@@ -37,7 +37,7 @@ public sealed class CommandToolTemplateTests
             Argv(Texts(["cmd", "/c", "echo", "开始 结束"]), [], Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开携带标量与列表值")]
     public void Expand_carries_scalar_and_list_values()
     {
         Assert.Equal(
@@ -45,7 +45,7 @@ public sealed class CommandToolTemplateTests
             Argv(Texts(["cmd", "/c", "echo", "开始", "{text}", "{files}"]), [TextParameter, FileParameter], Given(("text", "你好"), ("files", stringArray))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开把标量空字符串视为已给值")]
     public void Expand_treats_scalar_empty_string_as_given_value()
     {
         Assert.Equal(
@@ -53,7 +53,7 @@ public sealed class CommandToolTemplateTests
             Argv(Texts(["cmd", "/c", "echo", "{text}"]), [TextParameter], Given(("text", ""))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在关联项缺失时省略配置项")]
     public void Expand_omits_configured_item_when_linked_missing()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -63,7 +63,7 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["cmd", "/c", "echo", "开始", "--app=x", "结束"], Argv(template, [TokenParameter], Given(("token", "x"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在关联布尔为真时加入固定文本项")]
     public void Expand_adds_fixed_text_item_when_linked_flag_is_true()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -74,7 +74,7 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["cmd", "/c", "echo", "开始", "结束"], Argv(template, [StagedParameter], Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开随列表参数省略固定文本项")]
     public void Expand_omits_fixed_text_item_with_its_list_parameter()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -84,7 +84,7 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["cmd", "/c", "echo", "开始"], Argv(template, [FileParameter], Given(("files", Array.Empty<string>()))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在关联必填项缺失时拒绝配置项")]
     public void Expand_rejects_configured_item_when_linked_required_missing()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -93,7 +93,7 @@ public sealed class CommandToolTemplateTests
         Assert.Equal("缺少参数 token。", Rejected(template, [RequiredTokenParameter], Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在可选内联项缺失时保留字面占位符")]
     public void Expand_keeps_literal_placeholder_when_optional_inline_missing()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -102,7 +102,7 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["cmd", "/c", "echo", "--app={token}"], Argv(template, [TokenParameter], Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在已给值旁保留缺失的可选占位符")]
     public void Expand_keeps_missing_optional_placeholder_alongside_given_ones()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -111,7 +111,7 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["cmd", "/c", "echo", "--user=alice:{pass}"], Argv(template, [UserParameter, PasswordParameter], Given(("user", "alice"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开铺开配置列表项并在空时省略")]
     public void Expand_spreads_configured_list_item_and_omits_when_empty()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -121,13 +121,13 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["cmd", "/c", "echo", "甲", "乙"], Argv(template, [FileParameter], Given(("files", stringArray))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝没有程序的定义")]
     public void Expand_rejects_definition_without_program()
     {
         Assert.Equal("模板展开后没有任何可执行的程序。", Rejected([], [], Given()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在参数之前替换路径变量")]
     public void Expand_replaces_path_variables_before_parameters()
     {
         CommandToolDefinition definition = new(
@@ -148,7 +148,7 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["D:/task/src"], argv.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开按值重复内嵌列表项")]
     public void Expand_repeats_embedded_list_item_per_value()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -159,7 +159,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [FileParameter], Given(("files", stringArray0))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开按顺序重复前缀与后缀")]
     public void Expand_repeats_prefix_and_suffix_in_order()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -170,7 +170,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [FileParameter], Given(("files", stringArray0))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开省略空的可选内嵌列表")]
     public void Expand_omits_empty_optional_embedded_list()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -179,7 +179,7 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["cmd"], Argv(template, [FileParameter], Given(("files", Array.Empty<string>()))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝空的必填内嵌列表")]
     public void Expand_rejects_required_empty_embedded_list()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -190,7 +190,7 @@ public sealed class CommandToolTemplateTests
             Rejected(template, [RequiredFileParameter], Given(("files", Array.Empty<string>()))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开按下标配对多个列表")]
     public void Expand_pairs_multiple_lists_by_index()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -201,7 +201,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [FileParameter, OthersParameter], Given(("files", stringArray), ("others", stringArray2))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝长度不等的列表")]
     public void Expand_rejects_unequal_list_lengths()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -212,7 +212,7 @@ public sealed class CommandToolTemplateTests
             Rejected(template, [FileParameter, OthersParameter], Given(("files", stringArray), ("others", stringArray3))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在所有可选列表为空时省略项")]
     public void Expand_omits_item_when_all_optional_lists_are_empty()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -224,7 +224,7 @@ public sealed class CommandToolTemplateTests
                 Given(("files", Array.Empty<string>()), ("others", Array.Empty<string>()))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝多个列表中的空必填列表")]
     public void Expand_rejects_required_empty_list_among_multiple()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -236,7 +236,7 @@ public sealed class CommandToolTemplateTests
                 Given(("files", Array.Empty<string>()), ("others", stringArray3))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开用单值重复同一列表参数")]
     public void Expand_repeats_same_list_parameter_with_one_value()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -247,7 +247,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [FileParameter], Given(("files", stringArray))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝列表项中缺失的可选标量")]
     public void Expand_rejects_missing_optional_scalar_in_list_item()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -259,7 +259,7 @@ public sealed class CommandToolTemplateTests
             StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开把标量应用到每个内嵌列表值")]
     public void Expand_applies_scalar_to_each_embedded_list_value()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -270,7 +270,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [FileParameter, RoleParameter], Given(("files", stringArray), ("role", "admin"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开不重新扫描替换值")]
     public void Expand_does_not_rescan_replacement_values()
     {
         IReadOnlyList<CommandToolTemplateItem> template =
@@ -281,7 +281,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [TextParameter, RoleParameter], Given(("text", "{role}"), ("role", "v"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝以短横线开头的裸值")]
     public void Expand_rejects_bare_value_starting_with_dash()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("{name}", null)];
@@ -291,7 +291,7 @@ public sealed class CommandToolTemplateTests
             Rejected(template, [NameParameter], Given(("name", "--help"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开接受不带短横线的裸值")]
     public void Expand_accepts_bare_value_without_dash()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("{name}", null)];
@@ -301,7 +301,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [NameParameter], Given(("name", "HEAD~1"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝以短横线开头的列表值")]
     public void Expand_rejects_list_values_starting_with_dash()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("{files}", null)];
@@ -311,7 +311,7 @@ public sealed class CommandToolTemplateTests
             Rejected(template, [FileParameter], Given(("files", stringArray1))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝终止符之后的短横线值")]
     public void Expand_rejects_dash_value_after_terminator()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("--", null), new("{name}", null)];
@@ -321,7 +321,7 @@ public sealed class CommandToolTemplateTests
             Rejected(template, [NameParameter], Given(("name", "-a.txt"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在参数允许时接受终止符之后的短横线值")]
     public void Expand_accepts_dash_value_after_terminator_when_parameter_allows_it()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("--", null), new("{name}", null)];
@@ -331,7 +331,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [AllowedNameParameter], Given(("name", "-a.txt"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝以短横线开头的内嵌值")]
     public void Expand_rejects_embedded_value_starting_with_dash()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("--name={name}", null)];
@@ -341,7 +341,7 @@ public sealed class CommandToolTemplateTests
             Rejected(template, [NameParameter], Given(("name", "--help"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在参数允许时接受内嵌短横线值")]
     public void Expand_accepts_embedded_dash_value_when_parameter_allows_it()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("--name={name}", null)];
@@ -351,7 +351,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [AllowedNameParameter], Given(("name", "--help"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开在参数允许时接受列表短横线值")]
     public void Expand_accepts_list_dash_value_when_parameter_allows_it()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("{files}", null)];
@@ -361,7 +361,7 @@ public sealed class CommandToolTemplateTests
             Argv(template, [AllowedFileParameter], Given(("files", stringArray1))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝关联选项之后的短横线值")]
     public void Expand_rejects_dash_value_after_linked_option()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("--name", "name"), new("{name}", null)];
@@ -371,7 +371,7 @@ public sealed class CommandToolTemplateTests
             Rejected(template, [NameParameter], Given(("name", "--help"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开拒绝未关联选项之后的值")]
     public void Expand_rejects_value_after_unlinked_option()
     {
         IReadOnlyList<CommandToolTemplateItem> template = [new("--name", null), new("{name}", null)];
@@ -381,7 +381,7 @@ public sealed class CommandToolTemplateTests
             Rejected(template, [NameParameter], Given(("name", "--help"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展开不检查路径变量值")]
     public void Expand_does_not_check_path_variable_values()
     {
         CommandToolDefinition definition = new(

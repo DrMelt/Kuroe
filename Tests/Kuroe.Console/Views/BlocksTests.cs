@@ -9,7 +9,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>结构块：标题按纯文本处理、列换行策略与字段表对齐。</summary>
 public sealed class BlocksTests
 {
-    [Fact]
+    [Fact(DisplayName = "区块把标题作为纯文本")]
     public void Section_treats_the_title_as_plain_text()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -19,7 +19,7 @@ public sealed class BlocksTests
         Assert.Contains("┌─任务 [1]", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "区块扩展到控制台宽度")]
     public void Section_expands_to_the_console_width()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -37,7 +37,7 @@ public sealed class BlocksTests
         Assert.True(top.Length > 40, output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表格只换行声明换行的列")]
     public void Table_wraps_only_the_columns_declared_to_wrap()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -50,7 +50,7 @@ public sealed class BlocksTests
         Assert.True(lines.Count(line => line.Contains('字')) >= 2, output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表格在窄控制台内换行")]
     public void Table_wraps_within_a_narrow_console()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -64,7 +64,7 @@ public sealed class BlocksTests
         Assert.True(lines.Count(line => line.Contains('字')) >= 4, output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "字段对齐标签与值")]
     public void Fields_aligns_labels_and_values()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -84,7 +84,7 @@ public sealed class BlocksTests
             lines[flow].IndexOf("默认", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "无标题区块绘制普通上边框")]
     public void Section_without_a_title_draws_a_plain_top_border()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -95,13 +95,13 @@ public sealed class BlocksTests
         Assert.Equal($"┌{new string('─', 38)}┐", Rows(output.Output)[0]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "只有菜单独占一行")]
     public void Only_the_menu_uses_its_own_line()
     {
         Assert.NotEqual(BoxSkin.Of(BoxKind.View).Line, BoxSkin.Of(BoxKind.Menu).Line);
     }
 
-    [Fact]
+    [Fact(DisplayName = "只有菜单使用圆角边框")]
     public void Only_the_menu_uses_a_rounded_box()
     {
         Assert.Equal("╭", BoxSkin.Of(BoxKind.Menu).Shape.GetPart(BoxBorderPart.TopLeft));

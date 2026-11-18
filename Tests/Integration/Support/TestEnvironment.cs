@@ -30,6 +30,7 @@ using Kuroe.Tool.Contract;
 using Kuroe.Flow.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using Kuroe.Execution.Shared.Ports;
+using Xunit;
 
 namespace Kuroe.Integration.Tests.Support;
 
@@ -307,8 +308,13 @@ public sealed class TestEnvironment : IDisposable
         bool seedCatalog = true,
         bool persistTasks = false,
         IProcessRunner? process = null,
-        string? root = null) =>
-        TryCreate(flowsJson, seedCatalog, persistTasks, process, root).ThrowIfError();
+        string? root = null)
+    {
+        TestEnvironment environment = TryCreate(flowsJson, seedCatalog, persistTasks, process, root).ThrowIfError();
+        TestContext.Current.TestOutputHelper?.WriteLine($"工作目录：{environment.Root}");
+
+        return environment;
+    }
 
     /// <summary>把测试夹具按顶层字段写成节点库、流程与宿主开始输入表，空对象不写文件。</summary>
     private static void WriteFlowFiles(KuroePaths paths, string text)

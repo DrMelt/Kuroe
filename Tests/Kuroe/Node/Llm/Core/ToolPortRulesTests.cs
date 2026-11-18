@@ -22,7 +22,7 @@ public sealed class ToolPortRulesTests
 
     private static readonly IToolContractCatalog Catalog = new FakeCatalog(Build, Read, Write, Info);
 
-    [Fact]
+    [Fact(DisplayName = "前缀映射覆盖每个白名单工具")]
     public void Prefix_mapping_covers_every_whitelisted_tool()
     {
         LlmParameters parameters = new()
@@ -34,7 +34,7 @@ public sealed class ToolPortRulesTests
         Assert.Empty(Failures(parameters, Text("任务路径")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "白名单变量工具缺少映射被拒绝")]
     public void Missing_mapping_for_a_whitelisted_variable_tool_is_rejected()
     {
         LlmParameters parameters = new() { Tools = [new ToolPath("file/read")] };
@@ -43,7 +43,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("工具 file/read/ReadFile 缺少路径变量 root 的映射", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知变量被拒绝")]
     public void Unknown_variable_is_rejected()
     {
         LlmParameters parameters = new()
@@ -63,7 +63,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("路径变量 extra 不属于工具定义", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少变量被拒绝")]
     public void Missing_variable_is_rejected()
     {
         LlmParameters parameters = new()
@@ -79,7 +79,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("工具 build/Build 缺少路径变量 root 的映射", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "未知工具被拒绝")]
     public void Unknown_tool_is_rejected()
     {
         LlmParameters parameters = new()
@@ -92,7 +92,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("工具路径 missing 没有匹配任何已注册工具", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "白名单之外的映射被拒绝")]
     public void Mapping_outside_the_whitelist_is_rejected()
     {
         LlmParameters parameters = new()
@@ -105,7 +105,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("工具路径 file/write 不在工具白名单内", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "为没有变量的工具做映射被拒绝")]
     public void Mapping_a_tool_without_variables_is_rejected()
     {
         LlmParameters parameters = new()
@@ -118,7 +118,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("工具 KuroeInfo/GetTask 没有路径变量，不能写映射", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "最长前缀优先且具体映射覆盖父项")]
     public void Longest_prefix_wins_and_specific_mapping_overrides_the_parent()
     {
         LlmParameters parameters = new()
@@ -134,7 +134,7 @@ public sealed class ToolPortRulesTests
         Assert.Empty(Failures(parameters, Text("任务路径"), Text("项目路径")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "映射端口必须是文本")]
     public void A_mapped_port_must_be_text()
     {
         LlmParameters parameters = new()
@@ -147,7 +147,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("输入端口 任务路径 必须是 Text", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "映射端口必须已声明")]
     public void A_mapped_port_must_be_declared()
     {
         LlmParameters parameters = new()
@@ -160,7 +160,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("映射到未声明的输入端口 任务路径", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "空映射键被拒绝")]
     public void An_empty_mapping_key_is_rejected()
     {
         LlmParameters parameters = new()
@@ -173,7 +173,7 @@ public sealed class ToolPortRulesTests
             error => error.Contains("工具路径不能为空", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "空变量名被拒绝")]
     public void An_empty_variable_name_is_rejected()
     {
         LlmParameters parameters = new()

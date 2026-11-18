@@ -28,7 +28,7 @@ public sealed class FlowKuroeInfoToolTests
         [],
         []);
 
-    [Fact]
+    [Fact(DisplayName = "流程清单渲染流程名与说明")]
     public void ListFlows_renders_the_flow_name_and_description()
     {
         FlowKuroeInfoTool tool = new(new FakeFlowCatalog());
@@ -39,7 +39,7 @@ public sealed class FlowKuroeInfoToolTests
         Assert.Contains("示例", output, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程查询渲染展开后的流程")]
     public void GetFlow_renders_the_expanded_flow()
     {
         FlowKuroeInfoTool tool = new(new FakeFlowCatalog());
@@ -50,8 +50,7 @@ public sealed class FlowKuroeInfoToolTests
         Assert.Contains("开始", output, StringComparison.Ordinal);
     }
 
-    /// <summary>开始端口的宿主输入名来自宿主开始输入表，端口名可以自定义。</summary>
-    [Fact]
+    [Fact(DisplayName = "流程查询从宿主开始输入表取名")]
     public void GetFlow_shows_the_host_start_input_from_the_form()
     {
         FlowKuroeInfoTool tool = new(new FakeFlowCatalog());
@@ -61,7 +60,7 @@ public sealed class FlowKuroeInfoToolTests
         Assert.Contains("启动路径←WORKSPACE_PATH", output, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程查询拒绝空白名称")]
     public void GetFlow_rejects_a_blank_name()
     {
         FlowKuroeInfoTool tool = new(new FakeFlowCatalog());

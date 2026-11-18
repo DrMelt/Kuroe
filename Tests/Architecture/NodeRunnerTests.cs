@@ -6,7 +6,7 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>节点与运行器边界：节点项目引用各自运行器实现，运行器与节点共享层不反向依赖。</summary>
 public sealed class NodeRunnerTests
 {
-    [Fact]
+    [Fact(DisplayName = "节点项目引用各自运行器实现")]
     public void Node_projects_reference_their_runner_implementation()
     {
         string runnerShared = Path.Combine(
@@ -48,10 +48,10 @@ public sealed class NodeRunnerTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行器项目不含节点与流程实现")]
     public void Runner_projects_stay_free_of_node_and_flow()
     {
-        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Runner")));
+        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Runner")), $"{Path.Combine(SourceRoot, "Kuroe.Runner")} 不应存在。");
         string runner = Path.Combine(SourceRoot, "Kuroe", "Runner");
         string[] forbidden =
         [
@@ -70,17 +70,17 @@ public sealed class NodeRunnerTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "进程项目是中性能力")]
     public void Process_project_is_a_neutral_capability()
     {
-        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe", "Process")));
+        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe", "Process")), $"{Path.Combine(SourceRoot, "Kuroe", "Process")} 不应存在。");
 
         string project = Path.Combine(SourceRoot, "Kuroe.Process", "Core", "Kuroe.Process.csproj");
-        Assert.True(File.Exists(project));
+        Assert.True(File.Exists(project), $"{project} 不存在。");
         Assert.Empty(ProjectReferences(project));
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行器共享层只引用中性契约")]
     public void Runner_shared_references_only_neutral_contracts()
     {
         string project = Path.Combine(SourceRoot, "Kuroe", "Runner", "Shared", "Kuroe.Runner.Shared.csproj");
@@ -88,7 +88,7 @@ public sealed class NodeRunnerTests
         Assert.Empty(ProjectReferences(project));
     }
 
-    [Fact]
+    [Fact(DisplayName = "LLM 执行参数不引用节点类型")]
     public void Llm_execution_parameters_do_not_reference_node_type()
     {
         string file = Path.Combine(

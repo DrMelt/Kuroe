@@ -7,7 +7,7 @@ namespace Kuroe.Tool.FileAccess.Tests.Output;
 /// <summary>目录列表文本：条目、目录标记、空目录与条目上限。</summary>
 public sealed class DirectoryListingTextTests
 {
-    [Fact]
+    [Fact(DisplayName = "目录清单文本列出条目并标记目录")]
     public void ToString_lists_entries_and_marks_directories()
     {
         DirectoryEntry[] entries = [new("a.txt", false), new("b", true)];
@@ -19,7 +19,7 @@ public sealed class DirectoryListingTextTests
             text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录清单文本报告空目录")]
     public void ToString_reports_an_empty_directory()
     {
         string text = new DirectoryListingText("工作目录根", []).ToString();
@@ -27,7 +27,7 @@ public sealed class DirectoryListingTextTests
         Assert.Equal("目录 工作目录根 为空。", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录清单文本按条目上限截断")]
     public void ToString_truncates_beyond_the_entry_limit()
     {
         DirectoryEntry[] entries =

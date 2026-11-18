@@ -10,7 +10,7 @@ public sealed class ReplaceReportTextTests
 {
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "kuroe-tests", "root");
 
-    [Fact]
+    [Fact(DisplayName = "替换报告文本报告没有匹配")]
     public void ToString_reports_no_match()
     {
         TextReplaceResult result = new([], ScannedFiles: 3);
@@ -20,7 +20,7 @@ public sealed class ReplaceReportTextTests
         Assert.Equal("在 . 中扫描 3 个文件，没有匹配，未修改文件。", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换报告文本报告失败与已变更文件")]
     public void ToString_reports_failed_and_changed_files()
     {
         TextReplaceFile changed = new(Path.Combine(Root, "a.txt"), 2, [1, 2], null);
@@ -34,7 +34,7 @@ public sealed class ReplaceReportTextTests
         Assert.Contains("已修改：\na.txt：2 处，第 1、2 行", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换报告文本使用试运行措辞")]
     public void ToString_uses_the_dry_run_wording()
     {
         TextReplaceFile changed = new(Path.Combine(Root, "a.txt"), 1, [1], null);
@@ -46,7 +46,7 @@ public sealed class ReplaceReportTextTests
         Assert.Contains("将修改：\na.txt：1 处，第 1 行", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "替换报告标记截断")]
     public void ToString_marks_truncation()
     {
         TextReplaceFile failed = new(

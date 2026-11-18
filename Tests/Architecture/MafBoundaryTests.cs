@@ -7,7 +7,7 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>Maf 边界：Maf 项目只依赖契约层与自己的记录定义，与流程区域互不引用。</summary>
 public sealed class MafBoundaryTests
 {
-    [Fact]
+    [Fact(DisplayName = "Maf 控制层只引用 Kernel 与 Maf 记录")]
     public void Maf_control_references_only_kernel_and_maf_records()
     {
         string project = Path.Combine(
@@ -39,7 +39,7 @@ public sealed class MafBoundaryTests
             mafDefinition);
     }
 
-    [Fact]
+    [Fact(DisplayName = "Maf 定义层只引用 Kernel 契约")]
     public void Maf_definition_references_only_kernel_contracts()
     {
         string project = Path.Combine(
@@ -64,7 +64,7 @@ public sealed class MafBoundaryTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "Maf 类型不出现在 Kernel 与宿主")]
     public void Maf_types_stay_out_of_kernel_and_hosts()
     {
         Assert.NotEmpty(SourceFiles(KernelRoot));
@@ -96,7 +96,7 @@ public sealed class MafBoundaryTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "Maf 项目不含流程区域")]
     public void Maf_projects_stay_free_of_flow_area()
     {
         string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
@@ -111,7 +111,7 @@ public sealed class MafBoundaryTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程区域不含 Maf")]
     public void Flow_area_stays_free_of_maf()
     {
         string flow = Path.Combine(SourceRoot, "Kuroe.Flow");

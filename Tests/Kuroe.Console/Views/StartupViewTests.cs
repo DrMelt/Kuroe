@@ -8,7 +8,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>启动横幅：目录规模与缺项指引。</summary>
 public sealed class StartupViewTests
 {
-    [Fact]
+    [Fact(DisplayName = "启动横幅报告规模与后续步骤")]
     public void Startup_banner_reports_scale_and_next_steps()
     {
         using ConsoleSession cli = new();
@@ -24,7 +24,7 @@ public sealed class StartupViewTests
         Assert.DoesNotContain("先「模型与提供商」", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "目录为空时启动横幅指向提供方设置")]
     public void Startup_banner_points_to_provider_setup_when_the_catalog_is_empty()
     {
         using ConsoleSession cli = new(seedCatalog: false);
@@ -36,7 +36,7 @@ public sealed class StartupViewTests
         Assert.Contains("先在「模型与提供商」菜单添加提供商", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "启动横幅报告其他进程持有的任务")]
     public void Startup_banner_reports_tasks_held_by_other_processes()
     {
         using ConsoleSession cli = new();

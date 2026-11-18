@@ -11,7 +11,7 @@ namespace Kuroe.Flow.Shared.Tests.StaticGraph.Graph;
 /// <summary>编译后的执行视图：节点统一编号，执行节点按名可定位。</summary>
 public sealed class NodeGraphTests
 {
-    [Fact]
+    [Fact(DisplayName = "节点图按路径定位执行节点")]
     public void NodeGraph_locates_executables_by_path()
     {
         var graph = new NodeGraph(

@@ -13,7 +13,7 @@ public sealed class FileSearchTests
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
     private readonly InMemoryWorkspaceFiles _files = new();
 
-    [Fact]
+    [Fact(DisplayName = "搜索按路径顺序返回匹配")]
     public void Search_returns_matches_in_path_order()
     {
         _files.AddFile(Path.Combine(_root, "b.txt"), "needle\n");
@@ -29,7 +29,7 @@ public sealed class FileSearchTests
         Assert.Equal(3, result.ScannedFiles);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件搜索按范围与扩展名过滤")]
     public void Search_filters_by_scope_and_extension()
     {
         _files.AddFile(Path.Combine(_root, "Source", "a.cs"), "needle\n");
@@ -42,7 +42,7 @@ public sealed class FileSearchTests
         Assert.EndsWith(Path.Combine("Source", "a.cs"), match.File, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索限制到显式文件并去重重叠")]
     public void Search_restricts_to_explicit_files_and_deduplicates_overlaps()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "needle\n");
@@ -54,7 +54,7 @@ public sealed class FileSearchTests
         Assert.Single(result.Matches, match => Path.GetFileName(match.File) == "a.txt");
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索按扩展名过滤显式文件")]
     public void Search_filters_explicit_files_by_extension()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "needle\n");
@@ -65,7 +65,7 @@ public sealed class FileSearchTests
         Assert.Equal(0, result.ScannedFiles);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件搜索跳过禁止目录")]
     public void Search_skips_denied_directories()
     {
         _files.AddFile(Path.Combine(_root, ".kuroe", "catalog.json"), "needle\n");
@@ -78,7 +78,7 @@ public sealed class FileSearchTests
         Assert.Equal("visible.txt", Path.GetFileName(match.File));
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索跳过二进制文件")]
     public void Search_skips_binary_files()
     {
         _files.AddFile(Path.Combine(_root, "text.txt"), "needle\n");
@@ -91,7 +91,7 @@ public sealed class FileSearchTests
         Assert.Equal(2, result.ScannedFiles);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索读取带 BOM 的 UTF-16 文件")]
     public void Search_reads_utf16_files_with_bom()
     {
         _files.AddFile(Path.Combine(_root, "utf16.txt"), "needle", Encoding.Unicode);
@@ -102,7 +102,7 @@ public sealed class FileSearchTests
         Assert.Equal("needle", match.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索在字符预算处停止")]
     public void Search_stops_at_the_character_budget()
     {
         _files.AddFile(
@@ -113,11 +113,13 @@ public sealed class FileSearchTests
         TextSearchResult full = Run([], Query("needle"), characterBudget: int.MaxValue);
 
         Assert.NotEmpty(limited.Matches);
-        Assert.True(limited.Matches.Count < full.Matches.Count);
+        Assert.True(
+            limited.Matches.Count < full.Matches.Count,
+            $"限定预算命中 {limited.Matches.Count} 次，完整预算命中 {full.Matches.Count} 次。");
         Assert.Equal(100, full.Matches.Count);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索统计一行中的全部匹配")]
     public void Search_counts_all_occurrences_on_a_line()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "needle needle\n");
@@ -129,7 +131,7 @@ public sealed class FileSearchTests
         Assert.Equal(2, result.Occurrences);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索在匹配数量上限处停止")]
     public void Search_stops_at_the_occurrence_limit()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "needle\nneedle\nneedle\n");
@@ -144,7 +146,7 @@ public sealed class FileSearchTests
         Assert.Equal(2, result.Occurrences);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索统计不重叠的匹配")]
     public void Search_counts_non_overlapping_occurrences()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "aaa\n");
@@ -156,7 +158,7 @@ public sealed class FileSearchTests
         Assert.Equal(1, result.Occurrences);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索先到达字符预算再到达数量上限")]
     public void Search_stops_at_the_character_budget_before_the_occurrence_limit()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "needle\nneedle\n");
@@ -166,7 +168,7 @@ public sealed class FileSearchTests
         Assert.Equal(1, result.Occurrences);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索拒绝非正的匹配数量上限")]
     public void Search_rejects_a_non_positive_occurrence_limit()
     {
         ErrorOr<TextSearchResult> result = new FileSearch(Scope())
@@ -176,7 +178,7 @@ public sealed class FileSearchTests
         Assert.Contains("出现次数上限", result.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索按回车与换行切分行")]
     public void Search_splits_lines_on_carriage_returns_and_line_feeds()
     {
         _files.AddFile(Path.Combine(_root, "mixed.txt"), "a1\r\na2\ra3\na4");
@@ -187,7 +189,7 @@ public sealed class FileSearchTests
         Assert.Equal(["a1", "a2", "a3", "a4"], result.Matches.Select(match => match.Text));
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索把 CRLF 计为两个终止字符")]
     public void Search_counts_crlf_as_two_terminator_characters()
     {
         _files.AddFile(Path.Combine(_root, "crlf.txt"), "needle\r\n");
@@ -199,7 +201,7 @@ public sealed class FileSearchTests
         Assert.Equal(8, match.LineLength);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索截断展示文本并保留后续行")]
     public void Search_truncates_display_text_and_keeps_later_lines()
     {
         _files.AddFile(
@@ -221,7 +223,7 @@ public sealed class FileSearchTests
         Assert.False(matches[1].Truncated);
     }
 
-    [Fact]
+    [Fact(DisplayName = "展示上限之后的匹配仍保持可见")]
     public void Search_keeps_the_match_after_the_display_limit_visible()
     {
         _files.AddFile(
@@ -238,7 +240,7 @@ public sealed class FileSearchTests
         Assert.True(match.Truncated);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索把展示窗口居中到匹配")]
     public void Search_centers_the_display_window_on_the_match()
     {
         string line = $"{new string('a', 700)}needle{new string('b', 794)}";
@@ -254,7 +256,7 @@ public sealed class FileSearchTests
         Assert.True(match.Truncated);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索不在窗口边缘拆分代理对")]
     public void Search_does_not_split_surrogate_pairs_at_the_window_edges()
     {
         string emoji = char.ConvertFromUtf32(0x1F600);
@@ -275,7 +277,7 @@ public sealed class FileSearchTests
         Assert.False(char.IsLowSurrogate(second.Text[^1]));
     }
 
-    [Fact]
+    [Fact(DisplayName = "展示达到上限的行不截断")]
     public void Search_keeps_a_line_at_the_display_limit_untruncated()
     {
         string line = $"needle{new string('a', TextSearchMatch.DisplayLimit - 6)}";
@@ -290,7 +292,7 @@ public sealed class FileSearchTests
         Assert.False(match.Truncated);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索拒绝缺少范围")]
     public void Search_rejects_a_missing_scope()
     {
         ErrorOr<TextSearchResult> result = new FileSearch(Scope())
@@ -300,7 +302,7 @@ public sealed class FileSearchTests
         Assert.Contains("不存在", result.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索区分大小写")]
     public void Search_is_case_sensitive()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "Needle\n");
@@ -308,7 +310,7 @@ public sealed class FileSearchTests
         Assert.Empty(Run([], Query("needle")).Matches);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件搜索接受空白模式")]
     public void Search_accepts_a_whitespace_pattern()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "a b\n");
@@ -319,7 +321,7 @@ public sealed class FileSearchTests
         Assert.Equal("a b", Assert.Single(result.Matches).Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索把锚点当作行边界")]
     public void Search_treats_anchors_as_line_boundaries()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "L1\nL22\nL333\n");
@@ -329,7 +331,7 @@ public sealed class FileSearchTests
         Assert.Equal([1, 2, 3], result.Matches.Select(match => match.Line));
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索不跨行匹配")]
     public void Search_does_not_match_across_lines()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "a\nb");
@@ -337,7 +339,7 @@ public sealed class FileSearchTests
         Assert.Empty(Run([], Query("a\\nb", regex: true)).Matches);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索统计一行中的正则匹配")]
     public void Search_counts_regex_occurrences_on_a_line()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "a1 b22 c333\n");
@@ -349,7 +351,7 @@ public sealed class FileSearchTests
         Assert.Equal("a1 b22 c333", match.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "搜索让正则匹配在数量上限处停止")]
     public void Search_stops_a_regex_at_the_occurrence_limit()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "a a a a\n");

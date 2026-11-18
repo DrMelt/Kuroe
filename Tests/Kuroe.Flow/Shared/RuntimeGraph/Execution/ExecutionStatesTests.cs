@@ -6,7 +6,7 @@ namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 /// <summary>执行状态的判定：终态与在跑。</summary>
 public sealed class ExecutionStatesTests
 {
-    [Fact]
+    [Fact(DisplayName = "执行状态表明是否收口")]
     public void Execution_state_tells_whether_it_settles()
     {
         Assert.False(ExecutionState.Queued.IsSettled());

@@ -26,7 +26,7 @@ public sealed class FileNodeTypeTests
     private static readonly FileReadNodeType ReadType = new(Parameters, RunnerFactory);
     private static readonly FileWriteNodeType WriteType = new(Parameters, RunnerFactory);
 
-    [Fact]
+    [Fact(DisplayName = "文件节点名称是文件书写的种类")]
     public void Names_are_the_kinds_written_in_files()
     {
         Assert.Equal("FileRead", FileReadNodeTypes.Name.Value);
@@ -35,7 +35,7 @@ public sealed class FileNodeTypeTests
         Assert.Equal(FileWriteNodeTypes.Name, WriteType.Kind);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件类型创建把声明保留在实例上")]
     public void Create_keeps_the_declaration_on_the_instance()
     {
         INodeType read = FileReadNodeTypes.Create(Parameters, RunnerFactory);
@@ -45,14 +45,14 @@ public sealed class FileNodeTypeTests
         Assert.Same(Parameters, Assert.IsType<FileWriteNodeType>(write).Parameters);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取默认八千字符写入默认无上限")]
     public void Default_limits_are_8000_for_read_and_unlimited_for_write()
     {
         Assert.Equal(8000, FileReadNodeTypes.DefaultMaxChars);
         Assert.Equal(0, FileWriteNodeTypes.DefaultMaxChars);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取形状接受文本与信号输入并产出文本")]
     public void Read_shape_takes_text_and_signal_inputs_and_produces_text()
     {
         NodeTypeShape shape = ReadType.Shape;
@@ -64,7 +64,7 @@ public sealed class FileNodeTypeTests
         Assert.Equal([PortTypes.Text], shape.OutputTypes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入形状接受文本与信号输入并可产出文本或信号")]
     public void Write_shape_takes_text_and_signal_inputs_and_may_produce_text_or_signal()
     {
         NodeTypeShape shape = WriteType.Shape;
@@ -76,13 +76,13 @@ public sealed class FileNodeTypeTests
         Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.OutputTypes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "普通读取节点通过")]
     public void Plain_read_node_passes() => Assert.Empty(Failures(ReadType, ReadNode()));
 
-    [Fact]
+    [Fact(DisplayName = "普通写入节点通过")]
     public void Plain_write_node_passes() => Assert.Empty(Failures(WriteType, WriteNode()));
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝非正的执行上限")]
     public void Read_rejects_non_positive_max_executions()
     {
         NodeSpec node = ReadNode() with
@@ -96,7 +96,7 @@ public sealed class FileNodeTypeTests
         Assert.EndsWith("MaxExecutions 必须是正整数。", item);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入拒绝非正的执行上限")]
     public void Write_rejects_non_positive_max_executions()
     {
         NodeSpec node = WriteNode() with
@@ -110,7 +110,7 @@ public sealed class FileNodeTypeTests
         Assert.EndsWith("MaxExecutions 必须是正整数。", item);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取要求一个触发输入与恰好一个输出")]
     public void Read_requires_one_trigger_input_and_exactly_one_output()
     {
         string[] errors = [.. Failures(ReadType, ReadNode() with { Inputs = [], Outputs = [] })];
@@ -120,7 +120,7 @@ public sealed class FileNodeTypeTests
         Assert.Contains(errors, error => error.EndsWith("文件读取节点必须声明一个输出端口，读取内容写入该端口。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝路径变量之外的文本输入")]
     public void Read_rejects_text_inputs_outside_path_variables()
     {
         InputPort[] inputs =
@@ -134,7 +134,7 @@ public sealed class FileNodeTypeTests
             error => error.EndsWith("文件读取节点的 Text 输入必须是路径变量端口。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝信号变量端口")]
     public void Read_rejects_a_signal_variable_port()
     {
         InputPort[] inputs =
@@ -147,7 +147,7 @@ public sealed class FileNodeTypeTests
             error => error.EndsWith("路径变量 root 映射到的输入端口 任务路径 必须是 Text。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取拒绝多于一个输出")]
     public void Read_rejects_more_than_one_output()
     {
         Port[] outputs =
@@ -160,7 +160,7 @@ public sealed class FileNodeTypeTests
             error => error.EndsWith("文件读取节点必须声明一个输出端口，读取内容写入该端口。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入要求恰好一个文本输入")]
     public void Write_requires_exactly_one_text_input()
     {
         InputPort[] inputs =
@@ -174,7 +174,7 @@ public sealed class FileNodeTypeTests
             error => error.EndsWith("文件写入节点必须声明一个 Text 输入端口，写入内容取自它。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入要求变量端口")]
     public void Write_requires_the_variable_port()
     {
         InputPort[] inputs = [new(new PortName("正文"), PortTypes.Text)];
@@ -183,7 +183,7 @@ public sealed class FileNodeTypeTests
             error => error.EndsWith("路径变量 root 映射到未声明的输入端口 任务路径。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入接受文本输入旁的信号输入")]
     public void Write_accepts_signal_inputs_alongside_the_text_input()
     {
         InputPort[] inputs =
@@ -196,7 +196,7 @@ public sealed class FileNodeTypeTests
         Assert.Empty(Failures(WriteType, WriteNode(inputs)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入拒绝多于一个输出")]
     public void Write_rejects_more_than_one_output()
     {
         Port[] outputs =
@@ -209,7 +209,7 @@ public sealed class FileNodeTypeTests
             error => error.EndsWith("文件写入节点最多声明一个输出端口。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件节点执行上限必须为正")]
     public void MaxExecutions_must_be_positive()
     {
         NodeSpec read = ReadNode() with { Spec = new ExecutableSpec { MaxExecutions = 0 } };

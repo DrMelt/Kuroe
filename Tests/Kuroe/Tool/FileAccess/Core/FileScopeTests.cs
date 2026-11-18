@@ -12,7 +12,7 @@ public sealed class FileScopeTests
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
     private readonly InMemoryWorkspaceFiles _files = new();
 
-    [Fact]
+    [Fact(DisplayName = "相对路径解析到根目录内")]
     public void Relative_path_resolves_inside_the_root()
     {
         ErrorOr<string> resolved = Scope().Resolve("notes/today.txt");
@@ -21,7 +21,7 @@ public sealed class FileScopeTests
         Assert.Equal(Path.Combine(_root, "notes", "today.txt"), resolved.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "根目录之外的路径被拒绝")]
     public void Path_outside_the_root_is_rejected()
     {
         ErrorOr<string> resolved = Scope().Resolve(Path.Combine("..", "escape.txt"));
@@ -30,7 +30,7 @@ public sealed class FileScopeTests
         Assert.Contains("工作目录", resolved.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "列条目按序数名排序")]
     public void List_entries_sorts_by_ordinal_name()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "内容");
@@ -44,7 +44,7 @@ public sealed class FileScopeTests
         Assert.True(entries.Value[1].IsDirectory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "把文件当作目录读取被拒绝")]
     public void Reading_a_file_as_a_directory_is_rejected()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "内容");
@@ -55,7 +55,7 @@ public sealed class FileScopeTests
         Assert.Contains("ReadFile", entries.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围返回请求的行")]
     public void Read_range_returns_the_requested_lines()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\n二\n三\n四\n");
@@ -74,7 +74,7 @@ public sealed class FileScopeTests
         Assert.False(read.Value.ToBeyondEnd);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有结束行的读取范围返回全部行")]
     public void Read_range_without_an_end_returns_every_line()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\n二\n三\n");
@@ -92,7 +92,7 @@ public sealed class FileScopeTests
         Assert.True(read.Value.ToBeyondEnd);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围保留每行终止符")]
     public void Read_range_preserves_each_line_terminator()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\r\n二\r三\n四");
@@ -117,7 +117,7 @@ public sealed class FileScopeTests
         Assert.True(read.Value.ToBeyondEnd);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围拒绝超出末尾的起始行")]
     public void Read_range_rejects_a_start_line_past_the_end()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\n");
@@ -134,7 +134,7 @@ public sealed class FileScopeTests
         Assert.Contains("超出文件长度", read.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围拒绝空文件中的起始行")]
     public void Read_range_rejects_a_start_line_in_an_empty_file()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), string.Empty);
@@ -151,7 +151,7 @@ public sealed class FileScopeTests
         Assert.Contains("超出文件长度", read.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围拒绝非正的字符预算")]
     public void Read_range_rejects_a_non_positive_character_budget()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\n");
@@ -168,7 +168,7 @@ public sealed class FileScopeTests
         Assert.Contains("字符预算", read.FirstError.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取范围拒绝非正的行数预算")]
     public void Read_range_rejects_a_non_positive_line_budget()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\n");

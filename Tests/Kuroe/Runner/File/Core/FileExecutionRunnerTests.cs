@@ -27,7 +27,7 @@ public sealed class FileExecutionRunnerTests
     private readonly InMemoryWorkspaceFiles _files = new();
     private readonly Entry _entry = new();
 
-    [Fact]
+    [Fact(DisplayName = "读取返回文件内容")]
     public async Task Read_returns_the_file_content()
     {
         _files.AddFile(Path.Combine(_root, "in.txt"), "文件内容");
@@ -42,7 +42,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Equal("文件内容", result.Value.Content);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取使用根变量")]
     public async Task Read_uses_the_root_variable()
     {
         _files.AddFile(Path.Combine(_root, "sub/in.txt"), "基准内容");
@@ -55,7 +55,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Equal("基准内容", result.Value.Content);
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺失文件失败")]
     public async Task Missing_file_fails()
     {
         ExecutableNode node = ReadNode("missing.txt");
@@ -69,7 +69,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Contains("读取 {root}/missing.txt 失败", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取按声明上限截断")]
     public async Task Read_truncates_at_the_declared_limit()
     {
         _files.AddFile(Path.Combine(_root, "in.txt"), "abcdef");
@@ -83,7 +83,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Equal("abc…内容已截断", result.Value.Content);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有上限时读取整个文件")]
     public async Task Read_without_a_limit_reads_the_whole_file()
     {
         string content = new('a', 9000);
@@ -98,7 +98,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Equal(content, result.Value.Content);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取工作区之外的路径失败")]
     public async Task Read_path_outside_the_workspace_fails()
     {
         ExecutableNode node = ReadNode("../escape.txt");
@@ -112,7 +112,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Contains("Path {root}/../escape.txt 不是工作区内的合法路径", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件执行变量根在工作区之外失败")]
     public async Task Variable_root_outside_the_workspace_fails()
     {
         ExecutableNode node = ReadNode("in.txt");
@@ -126,7 +126,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Contains("不是工作区内的合法路径", result.FirstError.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "已取消执行不读取")]
     public async Task Canceled_execution_does_not_read()
     {
         ExecutableNode node = ReadNode("missing.txt");
@@ -138,7 +138,7 @@ public sealed class FileExecutionRunnerTests
             .ExecuteAsync(cancellation.Token));
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入创建父目录并返回写入内容")]
     public async Task Write_creates_parent_directories_and_returns_the_written_content()
     {
         ExecutableNode node = WriteNode("out/nested/result.txt");
@@ -153,7 +153,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Equal("写入内容", _files.ReadText(Path.Combine(_root, "out/nested/result.txt")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入使用基准路径输入")]
     public async Task Write_uses_the_base_path_input()
     {
         ExecutableNode node = WriteNode("out.txt");
@@ -167,7 +167,7 @@ public sealed class FileExecutionRunnerTests
         Assert.Equal("写入内容", _files.ReadText(Path.Combine(_root, "sub/out.txt")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "超限内容失败且不写入")]
     public async Task Over_limit_content_fails_without_writing()
     {
         ExecutableNode node = WriteNode("out.txt", maxChars: 100);
@@ -182,7 +182,7 @@ public sealed class FileExecutionRunnerTests
         Assert.False(_files.FileExists(Path.Combine(_root, "out.txt")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有上限时写入长内容")]
     public async Task Write_without_a_limit_writes_long_content()
     {
         string content = new('a', 50000);

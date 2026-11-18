@@ -6,7 +6,7 @@ namespace Kuroe.Tool.FileAccess.Tests.Output;
 /// <summary>带字符上限的文本：截断、提示与代理对边界。</summary>
 public sealed class LimitedTextTests
 {
-    [Fact]
+    [Fact(DisplayName = "限制文本主体保留上限内的内容")]
     public void Body_keeps_content_within_the_limit()
     {
         LimitedText text = new("短文本", TextOutputLimit.Characters);
@@ -16,7 +16,7 @@ public sealed class LimitedTextTests
         Assert.Equal("短文本", text.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "限制文本在上限处不截断内容")]
     public void Body_keeps_content_at_the_limit_untruncated()
     {
         LimitedText text = new(new string('a', TextOutputLimit.Characters), TextOutputLimit.Characters);
@@ -26,7 +26,7 @@ public sealed class LimitedTextTests
         Assert.Equal(text.Body, text.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "限制文本不留下孤立回车")]
     public void Body_does_not_leave_a_bare_carriage_return()
     {
         LimitedText text = new(
@@ -38,7 +38,7 @@ public sealed class LimitedTextTests
         Assert.EndsWith("a", text.Body, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "限制文本不拆分代理对")]
     public void Body_does_not_split_a_surrogate_pair()
     {
         LimitedText text = new(
@@ -50,7 +50,7 @@ public sealed class LimitedTextTests
         Assert.EndsWith("a", text.Body, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "限制文本把提示放在主体之前")]
     public void ToString_puts_the_notice_before_the_body()
     {
         string notice = $"（内容超过 {TextOutputLimit.Characters} 字符，已截断）\n";
@@ -63,7 +63,7 @@ public sealed class LimitedTextTests
         Assert.Equal(TextOutputLimit.Characters, content.Length - notice.Length);
     }
 
-    [Fact]
+    [Fact(DisplayName = "自定义上限控制提示与主体")]
     public void Custom_limit_controls_the_notice_and_body()
     {
         LimitedText text = new("abcdef", 3);

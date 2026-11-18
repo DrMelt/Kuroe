@@ -18,7 +18,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
     private readonly TestEnvironment _environment = TestEnvironment.Create(persistTasks: true);
     private readonly RecordingTaskRecordStore _store = new();
 
-    [Fact]
+    [Fact(DisplayName = "刷新写入有变更的任务")]
     public async Task Flush_writes_dirty_task()
     {
         TaskId id = _environment.Submit("写存档");
@@ -31,7 +31,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         Assert.Equal(id, record.Identity.Id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "刷新单个任务写入其存档")]
     public async Task Flush_single_task_writes_it()
     {
         TaskId id = _environment.Submit("写单个任务");
@@ -42,7 +42,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         Assert.Equal(id, Assert.Single(_store.ReadAll().Records).Identity.Id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务变更时无需显式刷新即写入")]
     public async Task Change_writes_without_explicit_flush()
     {
         _ = CreateCoordinator();
@@ -53,7 +53,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         Assert.Equal(id, Assert.Single(_store.ReadAll().Records).Identity.Id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "阻塞任务无需显式刷新即写入原因")]
     public async Task Blocked_task_writes_reason_without_explicit_flush()
     {
         _ = CreateCoordinator();
@@ -72,7 +72,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         Assert.Contains("未交回", block.Summary);
     }
 
-    [Fact]
+    [Fact(DisplayName = "未标记变更的刷新不写入")]
     public async Task Flush_without_mark_writes_nothing()
     {
         TaskRecordCoordinator coordinator = CreateCoordinator();
@@ -82,7 +82,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         Assert.Empty(_store.ReadAll().Records);
     }
 
-    [Fact]
+    [Fact(DisplayName = "移除任务删除存档")]
     public void Remove_deletes_record()
     {
         TaskRecord record = TaskRecordFixture.Create();
@@ -90,12 +90,12 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         TaskRecordCoordinator coordinator = CreateCoordinator();
 
         ErrorOr<Success> removed = coordinator.Remove(record.Identity.Id);
-        Assert.False(removed.IsError);
+        Assert.False(removed.IsError, removed.ErrorsText());
 
         Assert.Empty(_store.ReadAll().Records);
     }
 
-    [Fact]
+    [Fact(DisplayName = "完成的任务写入终态存档")]
     public async Task Completed_task_writes_terminal_record()
     {
         _ = CreateCoordinator();
@@ -107,7 +107,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         Assert.True(write.Record.Completed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入失败时存档保留到下次刷新")]
     public async Task Write_failure_keeps_record_pending_until_next_flush()
     {
         TaskId id = _environment.Submit("失败重试");
@@ -123,7 +123,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         Assert.Equal(id, Assert.Single(inner.ReadAll().Records).Identity.Id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "写入期间发生的变更在同次刷新写入")]
     public async Task Change_during_write_is_written_in_the_same_flush()
     {
         TaskId id = _environment.Submit("写入期间变化");

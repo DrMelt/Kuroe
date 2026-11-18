@@ -6,7 +6,7 @@ namespace Kuroe.Tool.FileAccess.Shared.Tests;
 /// <summary>文本查找条件：后缀归一与非法条目拒绝，字面与正则模式的建立。</summary>
 public sealed class TextQueryTests
 {
-    [Fact]
+    [Fact(DisplayName = "创建归一化扩展名并拒绝非法条目")]
     public void Create_normalizes_extensions_and_rejects_invalid_entries()
     {
         ErrorOr<TextQuery> query = TextQuery.Create("x", ["CS", ".md", "cs"]);
@@ -20,7 +20,7 @@ public sealed class TextQueryTests
         Assert.True(TextQuery.Create("x", ["Source/cs"]).IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建模式默认使用字面模式")]
     public void CreatePattern_uses_a_literal_pattern_by_default()
     {
         ErrorOr<TextQuery> query = TextQuery.Create("a.c", null);
@@ -34,7 +34,7 @@ public sealed class TextQueryTests
         Assert.Equal(new TextMatchSummary(-1, 0), pattern.Value.Scan("abc", 10));
     }
 
-    [Fact]
+    [Fact(DisplayName = "要求时创建模式使用正则")]
     public void CreatePattern_uses_a_regex_pattern_when_requested()
     {
         ErrorOr<TextQuery> query = TextQuery.Create("^a+$", null, regex: true);
@@ -48,7 +48,7 @@ public sealed class TextQueryTests
         Assert.Equal(new TextMatchSummary(0, 1), pattern.Value.Scan("aaa", 10));
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建模式接受空白模式")]
     public void CreatePattern_accepts_a_whitespace_pattern()
     {
         foreach (bool regex in new[] { false, true })
@@ -62,7 +62,7 @@ public sealed class TextQueryTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "创建模式拒绝非法正则")]
     public void CreatePattern_rejects_an_invalid_regex()
     {
         ErrorOr<TextQuery> query = TextQuery.Create("(", null, regex: true);

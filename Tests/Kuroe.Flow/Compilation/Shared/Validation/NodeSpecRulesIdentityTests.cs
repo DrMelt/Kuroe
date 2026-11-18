@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
 /// <summary>节点标识规则：路径分隔符与定义标签。</summary>
 public sealed class NodeSpecRulesIdentityTests
 {
-    [Fact]
+    [Fact(DisplayName = "开始可作为定义名")]
     public void Start_name_is_allowed_as_a_definition_name()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("Start"));
@@ -16,7 +16,7 @@ public sealed class NodeSpecRulesIdentityTests
         Assert.Empty(Errors(node, NodeRuleContext.LibraryDefinition));
     }
 
-    [Fact]
+    [Fact(DisplayName = "引用上可以使用开始标签")]
     public void Start_label_is_allowed_on_a_reference()
     {
         NodeSpec node = NodeSpec.Reference(new NodeLabel("Start"), new NodeName("定义"));
@@ -24,7 +24,7 @@ public sealed class NodeSpecRulesIdentityTests
         Assert.Empty(Errors(node, NodeRuleContext.Reference));
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口分隔符被拒绝")]
     public void Port_separator_is_rejected()
     {
         NodeSpec node = NodeSpec.Reference(new NodeLabel("甲@乙"), new NodeName("定义"));
@@ -32,7 +32,7 @@ public sealed class NodeSpecRulesIdentityTests
         Assert.Contains("@", Errors(node, NodeRuleContext.Reference).Single());
     }
 
-    [Fact]
+    [Fact(DisplayName = "定义标签必须与节点名一致")]
     public void Definition_label_must_match_the_node_name()
     {
         NodeSpec node = new() { Name = new NodeName("甲"), Label = new NodeLabel("乙") };
@@ -40,7 +40,7 @@ public sealed class NodeSpecRulesIdentityTests
         Assert.Contains("不能另写标识", Errors(node, NodeRuleContext.FlowDefinition).Single());
     }
 
-    [Fact]
+    [Fact(DisplayName = "合法定义没有身份错误")]
     public void Valid_definition_has_no_identity_error()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施"));

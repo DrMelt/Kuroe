@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 /// <summary>执行通知：从错误集合取级别与文本。</summary>
 public sealed class ExecutionNoticeTests
 {
-    [Fact]
+    [Fact(DisplayName = "执行通知由错误构造")]
     public void ExecutionNotice_builds_from_errors()
     {
         IReadOnlyList<Error> errors = [Error.Failure("A", "甲失败"), Error.Failure("B", "乙失败")];

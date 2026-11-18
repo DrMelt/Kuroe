@@ -12,7 +12,7 @@ namespace Kuroe.Integration.Tests.Runtime.Nodes;
 /// <summary>输出端口：命名段交回与按端口消费，系统指令进入请求最前的系统指令通道。</summary>
 public sealed class PortNodeTests
 {
-    [Fact]
+    [Fact(DisplayName = "端口输出向下游提供命名段")]
     public void Port_output_feeds_named_segment_to_downstream()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
@@ -29,7 +29,7 @@ public sealed class PortNodeTests
         Assert.DoesNotContain(implement.Input.Inputs, value => value.Text.Contains("理由产出"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口输出没有提交值时阻塞")]
     public void Port_output_without_submitted_values_blocks()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
@@ -41,7 +41,7 @@ public sealed class PortNodeTests
         Assert.Contains(blocked.View.Steps, step => step.State == FlowItemState.Blocked);
     }
 
-    [Fact]
+    [Fact(DisplayName = "整节点引用作为命名端口载入")]
     public void Whole_node_reference_loads_as_named_port()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
@@ -57,7 +57,7 @@ public sealed class PortNodeTests
             value.Origin is ExecutionSource { Port: var port } && port.Value == "理由");
     }
 
-    [Fact]
+    [Fact(DisplayName = "上下文端口注入上游上下文并保留来源")]
     public void Context_port_injects_upstream_context_keeping_sources()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContextPortFlow);
@@ -74,7 +74,7 @@ public sealed class PortNodeTests
                 && value.Text.Contains("计划产出"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "上下文输入把来源输出放在首位")]
     public void Context_input_places_source_output_first()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContextInputFlow);
@@ -89,8 +89,7 @@ public sealed class PortNodeTests
         Assert.All(implement.Input.Inputs, value => Assert.Equal("结论产出", value.Text));
     }
 
-    /// <summary>只写 Context 条目、无数据 From 的节点也能启动：来源放行后启动，取值按原出处注入。</summary>
-    [Fact]
+    [Fact(DisplayName = "只写 Context 条目、无数据 From 的节点也能启动：来源放行后启动，取值按原出处注入")]
     public void Context_only_node_starts_after_source_releases()
     {
         const string flow = """
@@ -112,7 +111,7 @@ public sealed class PortNodeTests
         Assert.Contains(implement.Input.Inputs, value => value.Text.Contains("结论产出"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "系统提示来自声明的块")]
     public void System_prompt_comes_from_the_declared_blocks()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.SystemPromptFlow);
@@ -128,7 +127,7 @@ public sealed class PortNodeTests
         Assert.Equal(["固定背景一", "固定背景二"], declared.SystemPrompt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "契约工具模式列出声明的端口")]
     public void Contract_tool_schema_lists_declared_ports()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
@@ -144,7 +143,7 @@ public sealed class PortNodeTests
         Assert.True(properties.TryGetProperty("理由", out _));
     }
 
-    [Fact]
+    [Fact(DisplayName = "已提交端口值不能重复提交")]
     public void Submitted_port_values_cannot_be_submitted_twice()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
@@ -156,7 +155,7 @@ public sealed class PortNodeTests
         Assert.Contains(environment.Runner.Submissions, text => text.Contains("无需重复提交", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "端口键含 at 符号的提交被拒绝")]
     public void Port_submission_with_at_in_key_is_rejected()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
@@ -168,8 +167,7 @@ public sealed class PortNodeTests
         Assert.Contains(environment.Runner.Submissions, text => text.Contains("端口名不能为空或含 @"));
     }
 
-    /// <summary>Signal 端口交回端口名即收口，空值不算缺，本轮产出按声明齐备。</summary>
-    [Fact]
+    [Fact(DisplayName = "Signal 端口交回端口名即收口，空值不算缺，本轮产出按声明齐备")]
     public void Signal_port_settles_the_round_on_its_name_alone()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
@@ -182,8 +180,7 @@ public sealed class PortNodeTests
             text => text.Contains("已记录 1 个端口的产出。本轮产出已齐备。", StringComparison.Ordinal));
     }
 
-    /// <summary>Signal 端口的取值不承载内容，下游取不到它。</summary>
-    [Fact]
+    [Fact(DisplayName = "Signal 端口的取值不承载内容，下游取不到它")]
     public void Signal_port_content_stays_out_of_downstream_inputs()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
@@ -199,8 +196,7 @@ public sealed class PortNodeTests
         Assert.Empty(finish.Input.Inputs);
     }
 
-    /// <summary>Signal 端口未交回时本轮不收口，节点停在阻塞。</summary>
-    [Fact]
+    [Fact(DisplayName = "Signal 端口未交回时本轮不收口，节点停在阻塞")]
     public void Signal_port_without_its_submission_blocks()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
@@ -212,8 +208,7 @@ public sealed class PortNodeTests
         Assert.Contains(blocked.View.Steps, step => step.State == FlowItemState.Blocked);
     }
 
-    /// <summary>端口交回工具的参数 schema 按需交回端口列出 Signal 端口。</summary>
-    [Fact]
+    [Fact(DisplayName = "端口交回工具的参数 schema 按需交回端口列出 Signal 端口")]
     public void Contract_tool_schema_lists_the_signal_port()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);

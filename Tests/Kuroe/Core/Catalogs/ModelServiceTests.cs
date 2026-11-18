@@ -9,7 +9,7 @@ namespace Kuroe.Tests.Catalogs;
 /// <summary>模型选择与注销的联动：选择要求已注册，注销当前模型即取消选择。</summary>
 public sealed class ModelServiceTests
 {
-    [Fact]
+    [Fact(DisplayName = "选择未注册模型被拒绝")]
     public void Selecting_an_unregistered_model_is_rejected()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();
@@ -20,7 +20,7 @@ public sealed class ModelServiceTests
         Assert.Equal("fake", fixture.Models.Current?.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有选择时取消不改变状态")]
     public void Unselect_without_a_selection_changes_nothing()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();
@@ -32,7 +32,7 @@ public sealed class ModelServiceTests
         Assert.False(again.Value.Changed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除当前模型取消选择")]
     public void Removing_the_current_model_cancels_the_selection()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();
@@ -46,7 +46,7 @@ public sealed class ModelServiceTests
             model => model.ModelName.Value == "fake");
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除未选模型保留选择")]
     public void Removing_an_unselected_model_keeps_the_selection()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();

@@ -8,7 +8,7 @@ namespace Kuroe.Runner.Llm.Tests;
 /// 接入信息未变时复用客户端，变化时重建。</summary>
 public sealed class ClientProviderTests
 {
-    [Fact]
+    [Fact(DisplayName = "解析为已注册模型返回客户端")]
     public void Resolve_returns_a_client_for_a_registered_model()
     {
         using ClientProvider provider = new(new Access());
@@ -19,7 +19,7 @@ public sealed class ClientProviderTests
         Assert.NotNull(client.Value.Client);
     }
 
-    [Fact]
+    [Fact(DisplayName = "解析报告访问错误")]
     public void Resolve_reports_the_access_error()
     {
         using ClientProvider provider = new(new Access());
@@ -30,7 +30,7 @@ public sealed class ClientProviderTests
         Assert.Equal("Model.Missing", Assert.Single(client.Errors).Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "连接未变时解析复用客户端")]
     public void Resolve_reuses_the_client_for_an_unchanged_connection()
     {
         using ClientProvider provider = new(new Access());
@@ -44,7 +44,7 @@ public sealed class ClientProviderTests
         Assert.Same(first.Value.Client, second.Value.Client);
     }
 
-    [Fact]
+    [Fact(DisplayName = "连接变化时解析重建客户端")]
     public void Resolve_rebuilds_the_client_when_the_connection_changes()
     {
         Access access = new();

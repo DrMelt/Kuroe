@@ -6,27 +6,27 @@ namespace Kuroe.Tool.Tests;
 /// <summary>工具调用结果的文本渲染：成功原样返回，失败合并错误说明。</summary>
 public sealed class ToolResultTests
 {
-    [Fact]
+    [Fact(DisplayName = "渲染在成功时返回值")]
     public void Render_returns_value_when_succeeded() =>
         Assert.Equal("已写入 5 字符。", ToolResult.Render("已写入 5 字符。"));
 
-    [Fact]
+    [Fact(DisplayName = "渲染返回校验说明")]
     public void Render_returns_validation_description() =>
         Assert.Equal("缺少参数 path。", ToolResult.Render(Error.Validation("Tool.Argument", "缺少参数 path。")));
 
-    [Fact]
+    [Fact(DisplayName = "渲染返回未找到说明")]
     public void Render_returns_not_found_description() =>
         Assert.Equal("没有名为 missing 的流程。", ToolResult.Render(Error.NotFound("Flow.NotFound", "没有名为 missing 的流程。")));
 
-    [Fact]
+    [Fact(DisplayName = "渲染返回失败说明")]
     public void Render_returns_failure_description() =>
         Assert.Equal("读取 a.txt 失败：拒绝访问。", ToolResult.Render(Error.Failure("Tool.ReadFailed", "读取 a.txt 失败：拒绝访问。")));
 
-    [Fact]
+    [Fact(DisplayName = "渲染返回意外错误说明")]
     public void Render_returns_unexpected_description() =>
         Assert.Equal("该执行没有归属任务。", ToolResult.Render(Error.Unexpected("Tool.Internal", "该执行没有归属任务。")));
 
-    [Fact]
+    [Fact(DisplayName = "渲染连接多个错误说明")]
     public void Render_joins_error_descriptions()
     {
         List<Error> errors = [Error.Validation("Tool.Argument", "条目缺少字段。"), Error.Validation("Tool.Argument", "分支越界。")];

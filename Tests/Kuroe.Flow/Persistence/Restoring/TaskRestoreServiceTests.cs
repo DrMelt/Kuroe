@@ -12,7 +12,7 @@ namespace Kuroe.Tasks.Persistence.Restoring.Tests;
 /// <summary>启动加载服务：空存储与存储读取失败的转发。</summary>
 public sealed class TaskRestoreServiceTests
 {
-    [Fact]
+    [Fact(DisplayName = "恢复空存储返回空报告")]
     public void Restore_empty_store_returns_empty_report()
     {
         TaskLoadReport report = CreateService(new InMemoryTaskRecordStore()).Restore();
@@ -22,7 +22,7 @@ public sealed class TaskRestoreServiceTests
         Assert.Empty(report.Failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "恢复报告存储失败")]
     public void Restore_reports_store_failure()
     {
         InMemoryTaskRecordStore store = new();
@@ -39,7 +39,7 @@ public sealed class TaskRestoreServiceTests
         Assert.Contains(failure.Errors, error => error.Code == FlowErrorCodes.RecordVersion);
     }
 
-    [Fact]
+    [Fact(DisplayName = "恢复失败报告任务身份")]
     public void Restore_failure_reports_task_identity()
     {
         InMemoryTaskRecordStore store = new();
@@ -59,7 +59,7 @@ public sealed class TaskRestoreServiceTests
         Assert.Contains(record.Identity.Id, leases.Released);
     }
 
-    [Fact]
+    [Fact(DisplayName = "租约被持有时恢复报告忙碌")]
     public void Restore_reports_busy_when_the_lease_is_held()
     {
         InMemoryTaskRecordStore store = new();
@@ -77,7 +77,7 @@ public sealed class TaskRestoreServiceTests
         Assert.Empty(report.Failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "租约失败按任务失败报告")]
     public void Restore_reports_lease_failure_as_task_failure()
     {
         InMemoryTaskRecordStore store = new();

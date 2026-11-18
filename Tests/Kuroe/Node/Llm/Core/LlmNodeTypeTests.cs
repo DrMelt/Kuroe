@@ -16,14 +16,14 @@ public sealed class LlmNodeTypeTests
 
     private static readonly LlmNodeType NodeType = new(null, RunnerFactory);
 
-    [Fact]
+    [Fact(DisplayName = "LLM 节点名称是文件书写的种类")]
     public void Name_is_the_kind_written_in_files()
     {
         Assert.Equal("Llm", LlmNodeTypes.Name.Value);
         Assert.Equal(LlmNodeTypes.Name, NodeType.Kind);
     }
 
-    [Fact]
+    [Fact(DisplayName = "LLM 类型创建把声明保留在实例上")]
     public void Create_keeps_the_declaration_on_the_instance()
     {
         INodeType type = LlmNodeTypes.Create(new LlmParameters { Prompt = "拆一下" }, RunnerFactory);
@@ -32,7 +32,7 @@ public sealed class LlmNodeTypeTests
         Assert.Equal("拆一下", Assert.IsType<LlmNodeType>(type).Parameters?.Prompt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "形状派发执行")]
     public void Shape_dispatches_executions()
     {
         NodeTypeShape shape = NodeType.Shape;
@@ -43,7 +43,7 @@ public sealed class LlmNodeTypeTests
         Assert.Equal([PortTypes.Text, PortTypes.Context, PortTypes.Signal], shape.OutputTypes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行上限小于一被拒绝")]
     public void Max_executions_below_one_is_rejected()
     {
         List<string> errors = [];

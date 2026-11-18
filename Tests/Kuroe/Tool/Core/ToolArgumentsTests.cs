@@ -6,7 +6,7 @@ namespace Kuroe.Tool.Tests;
 /// <summary>工具实参读取：标量按文本给出，真假值单独认取，对象按 JSON 文本给出。</summary>
 public sealed class ToolArgumentsTests
 {
-    [Fact]
+    [Fact(DisplayName = "文本读取把标量与其他值转成文本")]
     public void Text_reads_scalars_and_other_values_as_text()
     {
         ToolArguments arguments = Arguments("""{"city": "北京", "passed": true, "count": 3}""");
@@ -17,7 +17,7 @@ public sealed class ToolArgumentsTests
         Assert.Null(arguments.Text(new ToolName("missing")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "JSON 读取对象字符串与缺失值")]
     public void Json_reads_objects_strings_and_missing_values()
     {
         ToolArguments arguments = Arguments("""{"payload":{"text":"完成","trigger":true},"note":"空"}""");
@@ -27,7 +27,7 @@ public sealed class ToolArgumentsTests
         Assert.Null(arguments.Json(new ToolName("missing")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "JSON 写入把 CLR 字典写成对象")]
     public void Json_writes_clr_dictionaries_as_objects()
     {
         ToolArguments arguments = new(new Dictionary<string, object?>
@@ -46,7 +46,7 @@ public sealed class ToolArgumentsTests
         Assert.True(document.RootElement.GetProperty("trigger").GetBoolean());
     }
 
-    [Fact]
+    [Fact(DisplayName = "JSON 读取数字与数组原样保留")]
     public void Json_reads_numbers_and_arrays_verbatim()
     {
         ToolArguments arguments = Arguments("""{"count":3,"files":["甲","乙"]}""");
@@ -55,7 +55,7 @@ public sealed class ToolArgumentsTests
         Assert.Equal("""["甲","乙"]""", arguments.Json(new ToolName("files")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "JSON 写入把 CLR 列表写成数组")]
     public void Json_writes_clr_lists_as_arrays()
     {
         ToolArguments arguments = new(new Dictionary<string, object?>
@@ -70,7 +70,7 @@ public sealed class ToolArgumentsTests
         Assert.Equal(2, document.RootElement[1].GetInt32());
     }
 
-    [Fact]
+    [Fact(DisplayName = "布尔读取接受布尔并解析文本形式")]
     public void Flag_reads_bool_and_parses_text_forms()
     {
         ToolArguments arguments = Arguments("""{"yes": true, "no": "false", "city": "北京", "none": null}""");
@@ -82,7 +82,7 @@ public sealed class ToolArgumentsTests
         Assert.Null(arguments.Flag(new ToolName("missing")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "CLR 值按 JSON 值方式读取")]
     public void Clr_values_are_read_like_json_ones()
     {
         ToolArguments arguments = new(new Dictionary<string, object?>
@@ -97,7 +97,7 @@ public sealed class ToolArgumentsTests
         Assert.Equal("3", arguments.Text(new ToolName("count")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "参数默认是字符串且非必填")]
     public void Parameters_default_to_string_and_not_required()
     {
         ToolParameter parameter = new(new ToolName("city"), "城市的中文名称");
@@ -109,7 +109,7 @@ public sealed class ToolArgumentsTests
         Assert.Null(parameter.PathAccess);
     }
 
-    [Fact]
+    [Fact(DisplayName = "列表读取数组与单个字符串")]
     public void List_reads_arrays_and_single_strings()
     {
         ToolArguments arguments = Arguments("""{"files": ["a", "b", "", null], "single": "x", "none": null}""");
@@ -124,7 +124,7 @@ public sealed class ToolArgumentsTests
 
     private static readonly string[] values = ["a", "b"];
 
-    [Fact]
+    [Fact(DisplayName = "列表读取 CLR 字符串数组")]
     public void List_reads_clr_string_arrays()
     {
         ToolArguments arguments = new(new Dictionary<string, object?>

@@ -11,7 +11,7 @@ namespace Kuroe.Flow.Compilation.Tests.Description;
 /// <summary>参数字段的描述读取：按字段表转换取值、未知字段与形状不符的报出。</summary>
 public sealed class ParameterDocumentReaderTests
 {
-    [Fact]
+    [Fact(DisplayName = "读取按声明形状转换值")]
     public void Read_converts_values_by_the_declared_shape()
     {
         List<string> errors = [];
@@ -33,7 +33,7 @@ public sealed class ParameterDocumentReaderTests
         Assert.True(parameters.Flag);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取对缺失字段采用安全默认值")]
     public void Read_takes_safe_defaults_for_missing_fields()
     {
         List<string> errors = [];
@@ -48,13 +48,13 @@ public sealed class ParameterDocumentReaderTests
         Assert.Null(parameters.Flag);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取报告未知字段")]
     public void Read_reports_unknown_fields() =>
         Assert.Equal(
             ["流程 测试 的节点 干活：字段 Extra 不属于 Test 节点。"],
             Errors([("Text", new FlowValue.Text("展开")), ("Extra", new FlowValue.Text("多余"))]));
 
-    [Fact]
+    [Fact(DisplayName = "读取报告形状错误的值")]
     public void Read_reports_values_of_the_wrong_shape() =>
         Assert.Equal(
             [
@@ -71,13 +71,13 @@ public sealed class ParameterDocumentReaderTests
                     ("Flag", new FlowValue.Text("真")),
                 ]));
 
-    [Fact]
+    [Fact(DisplayName = "读取报告非整数的数字")]
     public void Read_reports_numbers_that_are_not_integers() =>
         Assert.Equal(
             ["流程 测试 的节点 干活：字段 Number 必须是整数。"],
             Errors([("Number", new FlowValue.Number("1.5"))]));
 
-    [Fact]
+    [Fact(DisplayName = "读取报告形状错误的数组项")]
     public void Read_reports_array_items_of_the_wrong_shape() =>
         Assert.Equal(
             ["流程 测试 的节点 干活：字段 Texts 的元素必须是文本。"],

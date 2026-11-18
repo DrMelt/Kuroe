@@ -17,7 +17,7 @@ public sealed class FlowRulesLimitTests
 {
     private static readonly PortName StartPort = new("目标");
 
-    [Fact]
+    [Fact(DisplayName = "未配置节点使用默认上限")]
     public void Unconfigured_node_uses_the_default_limit()
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: null, source: null, Exec("干活"))));
@@ -25,7 +25,7 @@ public sealed class FlowRulesLimitTests
         Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "干活").MaxExecutions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "显式成员上限保留")]
     public void Explicit_member_limit_is_kept()
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: null, source: null, Exec("重点", max: 5), Exec("普通"))));
@@ -33,7 +33,7 @@ public sealed class FlowRulesLimitTests
         Assert.Equal(5, Executable(graph, "重点").MaxExecutions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器上限保留在容器上")]
     public void Container_limit_is_kept_on_the_container()
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: 2, source: null, Exec("普通"))));
@@ -43,7 +43,7 @@ public sealed class FlowRulesLimitTests
         Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "成员上限独立于容器")]
     public void Member_limit_is_independent_of_the_container()
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: 2, source: null, Exec("重点", max: 5), Exec("普通"))));
@@ -52,7 +52,7 @@ public sealed class FlowRulesLimitTests
         Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
     }
 
-    [Fact]
+    [Fact(DisplayName = "嵌套容器上限保留")]
     public void Nested_container_limits_are_kept()
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: 2, source: null,

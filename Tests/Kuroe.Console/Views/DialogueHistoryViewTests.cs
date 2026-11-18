@@ -14,7 +14,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>会话历史按用户与助手区块呈现，基础历史只显示文本，尾部执行给出状态。</summary>
 public sealed class DialogueHistoryViewTests
 {
-    [Fact]
+    [Fact(DisplayName = "用户与助手文本分块打印")]
     public void Prints_user_and_assistant_text_in_separate_blocks()
     {
         using ConsoleSession cli = new();
@@ -43,7 +43,7 @@ public sealed class DialogueHistoryViewTests
         Assert.DoesNotContain("你：", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "隐藏系统与工具消息")]
     public void Hides_system_and_tool_messages()
     {
         using ConsoleSession cli = new();
@@ -71,7 +71,7 @@ public sealed class DialogueHistoryViewTests
         Assert.DoesNotContain("工具结果", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "尾部执行显示输入与失败状态")]
     public void Tail_execution_shows_input_and_failure_state()
     {
         using ConsoleSession cli = new();
@@ -87,7 +87,7 @@ public sealed class DialogueHistoryViewTests
         Assert.Contains("〔失败〕模型错误", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "成功的尾部执行仍给出状态")]
     public void A_succeeded_tail_execution_still_gives_its_state()
     {
         using ConsoleSession cli = new();
@@ -101,7 +101,7 @@ public sealed class DialogueHistoryViewTests
         Assert.Contains("〔已完成〕", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "空历史只给出提示")]
     public void Empty_history_only_gives_a_hint()
     {
         using ConsoleSession cli = new();
@@ -113,7 +113,7 @@ public sealed class DialogueHistoryViewTests
         Assert.DoesNotContain("会话历史", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "超出上限的消息省略并提示")]
     public void Messages_beyond_the_limit_are_omitted_with_a_hint()
     {
         using ConsoleSession cli = new();
@@ -132,7 +132,7 @@ public sealed class DialogueHistoryViewTests
         Assert.Contains("消息40", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "超出上限的尾部执行省略并提示")]
     public void Tail_executions_beyond_the_limit_are_omitted_with_a_hint()
     {
         using ConsoleSession cli = new();

@@ -10,7 +10,7 @@ public sealed class ToolJsonTests
 {
     private static readonly ToolJson Json = new();
 
-    [Fact]
+    [Fact(DisplayName = "模式声明文本参数与必填条目")]
     public void Schema_declares_text_parameters_and_required_entries()
     {
         JsonElement schema = Json.Schema(
@@ -26,7 +26,7 @@ public sealed class ToolJsonTests
         Assert.Equal(["files"], schema.GetProperty("required").EnumerateArray().Select(item => item.GetString()));
     }
 
-    [Fact]
+    [Fact(DisplayName = "模式把列表参数声明为字符串数组")]
     public void Schema_declares_list_parameters_as_string_arrays()
     {
         JsonElement schema = Json.Schema([new ToolParameter(new ToolName("files"), "要处理的文件", List: true)]);
@@ -37,7 +37,7 @@ public sealed class ToolJsonTests
         Assert.False(schema.TryGetProperty("required", out _));
     }
 
-    [Fact]
+    [Fact(DisplayName = "模式把路径参数作为文本")]
     public void Schema_treats_path_parameters_as_text()
     {
         ToolParameter[] parameters =
@@ -55,7 +55,7 @@ public sealed class ToolJsonTests
         Assert.Equal("string", paths.GetProperty("items").GetProperty("type").GetString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "模式原样使用声明的参数模式")]
     public void Schema_uses_a_declared_parameter_schema_verbatim()
     {
         using JsonDocument document = JsonDocument.Parse(
@@ -75,7 +75,7 @@ public sealed class ToolJsonTests
         Assert.False(parameter.GetProperty("additionalProperties").GetBoolean());
     }
 
-    [Fact]
+    [Fact(DisplayName = "模式不合并参数说明")]
     public void Schema_does_not_merge_the_parameter_description()
     {
         using JsonDocument document = JsonDocument.Parse(
@@ -90,7 +90,7 @@ public sealed class ToolJsonTests
         Assert.False(parameter.TryGetProperty("description", out _));
     }
 
-    [Fact]
+    [Fact(DisplayName = "描述把字典值写成对象")]
     public void Describe_writes_dictionary_values_as_objects()
     {
         AIFunctionArguments arguments = new(new Dictionary<string, object?>
@@ -110,7 +110,7 @@ public sealed class ToolJsonTests
         Assert.True(payload.GetProperty("trigger").GetBoolean());
     }
 
-    [Fact]
+    [Fact(DisplayName = "描述原样写出 JSON 值其余写成文本")]
     public void Describe_writes_json_values_verbatim_and_other_values_as_text()
     {
         using JsonDocument document = JsonDocument.Parse("""["甲", "乙"]""");

@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Shared.Tests.StaticGraph.Ports;
 /// <summary>端口规则：交回判定按端口语义、模式与产出模式给出，原始名清单按声明序生成。</summary>
 public sealed class PortRulesTests
 {
-    [Fact]
+    [Fact(DisplayName = "提交规则覆盖文本与信号语义")]
     public void Submission_covers_text_and_signal_semantics()
     {
         Assert.True(PortRules.RequiresSubmission(PortTypes.Text));
@@ -21,7 +21,7 @@ public sealed class PortRulesTests
         Assert.False(PortRules.CarriesContent(PortTypes.Signal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行期常量端口只对单次节点可提交")]
     public void Runtime_constant_ports_are_submittable_only_for_once_nodes()
     {
         Port constant = new(new PortName("常量"), PortTypes.Text, mode: PortMode.Constant);
@@ -32,7 +32,7 @@ public sealed class PortRulesTests
         Assert.Single(PortRules.SubmittablePorts([constant], NodeEmission.Once));
     }
 
-    [Fact]
+    [Fact(DisplayName = "名称清单列出原始端口名")]
     public void Names_list_the_original_port_names()
     {
         Assert.Equal(

@@ -6,7 +6,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>行输入的提交、取消、退格与掩码回显。</summary>
 public sealed class LinePromptTests
 {
-    [Fact]
+    [Fact(DisplayName = "行提示在回车时返回文本")]
     public void Line_prompt_returns_the_text_on_enter()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -17,7 +17,7 @@ public sealed class LinePromptTests
         Assert.Contains("patch", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "行提示在返回键返回空")]
     public void Line_prompt_returns_null_on_escape()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -27,7 +27,7 @@ public sealed class LinePromptTests
         Assert.Null(terminal.Ask("Kuroe >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "行提示在空行返回空")]
     public void Line_prompt_returns_null_on_an_empty_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -36,7 +36,7 @@ public sealed class LinePromptTests
         Assert.Null(terminal.Ask("Kuroe >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "行提示退格删除最后一个字符")]
     public void Line_prompt_backspace_removes_the_last_character()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -47,7 +47,7 @@ public sealed class LinePromptTests
         Assert.Equal("abd", terminal.Ask("Kuroe >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "行提示按纯文本写出标签")]
     public void Line_prompt_writes_the_label_without_markup_parsing()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -57,7 +57,7 @@ public sealed class LinePromptTests
         Assert.Contains("[red]标签[/]", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "秘密行提示掩码回显")]
     public void Secret_line_prompt_masks_the_echo()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

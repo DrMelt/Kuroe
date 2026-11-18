@@ -16,7 +16,7 @@ public sealed class WorkTaskTests
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
     private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(new Kuroe.Execution.ExecutionDispatcher());
-    [Fact]
+    [Fact(DisplayName = "暂停接受瞬时完成快照")]
     public void Pause_accepts_transient_done_snapshot()
     {
         WorkTask task = CreateTask();
@@ -31,7 +31,7 @@ public sealed class WorkTaskTests
         Assert.False(task.Completed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "终止接受瞬时完成快照")]
     public void Terminate_accepts_transient_done_snapshot()
     {
         WorkTask task = CreateTask();
@@ -46,7 +46,7 @@ public sealed class WorkTaskTests
         Assert.False(task.Completed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "暂停拒绝已完成任务")]
     public void Pause_rejects_completed_task()
     {
         WorkTask task = CreateTask();
@@ -58,7 +58,7 @@ public sealed class WorkTaskTests
         Assert.Equal(FlowErrorCodes.TaskDoneCannotPause, paused.FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "终止拒绝已完成任务")]
     public void Terminate_rejects_completed_task()
     {
         WorkTask task = CreateTask();
@@ -70,7 +70,7 @@ public sealed class WorkTaskTests
         Assert.Equal(FlowErrorCodes.TaskDoneCannotTerminate, terminated.FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "构造只绑定一次状态")]
     public void Construction_binds_state_once()
     {
         StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
@@ -91,7 +91,7 @@ public sealed class WorkTaskTests
         Assert.Equal(1, provider.Binder.Binds);
     }
 
-    [Fact]
+    [Fact(DisplayName = "清理已收口移除输入注册")]
     public void ClearSettled_removes_input_registration()
     {
         FakeInputDelivery inputs = new([]);
@@ -105,7 +105,7 @@ public sealed class WorkTaskTests
         Assert.Equal([task.Id], inputs.Removed);
     }
 
-    [Fact]
+    [Fact(DisplayName = "快照装配任务与表现的公共字段")]
     public void Snapshot_assembles_common_fields_from_task_and_presentation()
     {
         FlowPendingStep pending = new(FlowStepPath.Of("等待"), FlowPendingKind.Approve, "确认");
@@ -116,19 +116,22 @@ public sealed class WorkTaskTests
 
         TaskSnapshot snapshot = TaskSnapshotFactory.Create(task, view, startTexts);
 
-        Assert.Equal(task.Id, snapshot.Id);
-        Assert.Equal(task.Title, snapshot.Title);
-        Assert.Equal(task.Inputs, snapshot.Inputs);
-        Assert.Same(view, snapshot.View);
-        Assert.Equal(task.State, snapshot.State);
-        Assert.Equal(task.JournalEntries, snapshot.Journal);
-        Assert.Equal(task.CreatedAt, snapshot.CreatedAt);
-        Assert.Equal(task.LastActivityAt, snapshot.LastActivityAt);
-        Assert.Same(startTexts, snapshot.StartTexts);
+        Assert.Multiple(
+            () => Assert.Equal(task.Id, snapshot.Id),
+            () => Assert.Equal(task.Title, snapshot.Title),
+            () => Assert.Equal(task.Inputs, snapshot.Inputs),
+            () => Assert.Same(view, snapshot.View),
+            () => Assert.Equal(task.State, snapshot.State),
+            () => Assert.Equal(task.JournalEntries, snapshot.Journal),
+            () => Assert.Equal(task.CreatedAt, snapshot.CreatedAt),
+            () => Assert.Equal(task.LastActivityAt, snapshot.LastActivityAt),
+            () => Assert.Same(startTexts, snapshot.StartTexts));
+
         PendingStepView step = Assert.Single(snapshot.Pending);
-        Assert.Equal("等待", step.Path);
-        Assert.Equal(PendingStepKind.Approve, step.Kind);
-        Assert.Equal("确认", step.Question);
+        Assert.Multiple(
+            () => Assert.Equal("等待", step.Path),
+            () => Assert.Equal(PendingStepKind.Approve, step.Kind),
+            () => Assert.Equal("确认", step.Question));
     }
 
     private static WorkTask CreateTask(TaskRegistry? registry = null)

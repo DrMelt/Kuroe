@@ -14,7 +14,7 @@ public sealed class GraphExecutionTests
     private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(new Kuroe.Execution.ExecutionDispatcher());
 
-    [Fact]
+    [Fact(DisplayName = "没有过程记录的快照没有条目")]
     public void Snapshot_without_journal_has_no_entries()
     {
         GraphExecution execution = Create();
@@ -26,7 +26,7 @@ public sealed class GraphExecutionTests
         Assert.False(snapshot.HasRestoreData);
     }
 
-    [Fact]
+    [Fact(DisplayName = "请求携带必填输出端口与说明")]
     public void Request_carries_required_output_port_and_description()
     {
         GraphExecutionInput input = Input() with

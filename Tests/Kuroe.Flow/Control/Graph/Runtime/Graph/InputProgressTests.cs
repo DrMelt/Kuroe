@@ -12,7 +12,7 @@ namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Graph;
 /// <summary>输入侧进展：消费版本、发布版本、作废与执行计数。</summary>
 public sealed class InputProgressTests
 {
-    [Fact]
+    [Fact(DisplayName = "消费记录每个来源的当前修订")]
     public void Consume_records_the_current_revision_of_every_source()
     {
         NodePath source = NodePath.Of("来源");
@@ -46,7 +46,7 @@ public sealed class InputProgressTests
         Assert.Equal(0, progress.ConsumedRevision(new ConsumptionKey(source, new PortName("另一端口"))));
     }
 
-    [Fact]
+    [Fact(DisplayName = "发布设置修订失效保留修订")]
     public void Publish_sets_the_revision_and_invalidate_keeps_it()
     {
         InputProgress progress = new();
@@ -67,7 +67,7 @@ public sealed class InputProgressTests
         Assert.Equal(2, progress.Revision);
     }
 
-    [Fact]
+    [Fact(DisplayName = "发布历史保留已失效的发布")]
     public void Publish_history_keeps_invalidated_publications()
     {
         InputProgress progress = new();
@@ -88,7 +88,7 @@ public sealed class InputProgressTests
         Assert.Same(second, progress.Publication);
     }
 
-    [Fact]
+    [Fact(DisplayName = "已开始计数执行且重跑被消费")]
     public void Started_counts_executions_and_rerun_is_consumed()
     {
         InputProgress progress = new();

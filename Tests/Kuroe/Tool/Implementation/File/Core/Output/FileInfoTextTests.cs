@@ -9,7 +9,7 @@ public sealed class FileInfoTextTests
 {
     private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
-    [Fact]
+    [Fact(DisplayName = "文件信息文本渲染大小时间与属性")]
     public void ToString_renders_size_times_and_attributes()
     {
         FileFacts facts = new(42, At, At, At, FileAttributes.Archive);
@@ -27,7 +27,7 @@ public sealed class FileInfoTextTests
             text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件信息文本按固定顺序列出多个属性")]
     public void ToString_lists_multiple_attributes_in_a_fixed_order()
     {
         FileFacts facts = new(1, At, At, At, FileAttributes.Hidden | FileAttributes.ReadOnly);
@@ -37,7 +37,7 @@ public sealed class FileInfoTextTests
         Assert.Contains("属性：只读、隐藏", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件信息文本报告没有属性")]
     public void ToString_reports_no_attributes()
     {
         FileFacts facts = new(1, At, At, At, FileAttributes.Normal);

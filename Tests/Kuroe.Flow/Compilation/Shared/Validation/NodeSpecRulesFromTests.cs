@@ -13,7 +13,7 @@ public sealed class NodeSpecRulesFromTests
     private static readonly PortName Input = new("输入");
     private static readonly PortName Output = new("输出");
 
-    [Fact]
+    [Fact(DisplayName = "容器动态输入要求来源")]
     public void Container_dynamic_input_requires_from()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
@@ -27,7 +27,7 @@ public sealed class NodeSpecRulesFromTests
             Errors(fail => node.CheckFrom(fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器动态输入接受一个来源组")]
     public void Container_accepts_one_from_group_for_dynamic_inputs()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
@@ -40,7 +40,7 @@ public sealed class NodeSpecRulesFromTests
         Assert.Empty(Errors(fail => node.CheckFrom(fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器拒绝多个来源组")]
     public void Container_rejects_multiple_from_groups()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
@@ -59,7 +59,7 @@ public sealed class NodeSpecRulesFromTests
             Errors(fail => node.CheckFrom(fail)).Single());
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行组可以省略控制输入")]
     public void Executable_group_may_omit_control_input()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -72,7 +72,7 @@ public sealed class NodeSpecRulesFromTests
         Assert.Empty(Errors(fail => node.CheckFrom(fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行动态控制输入仍要求来源")]
     public void Executable_dynamic_control_input_still_requires_from()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with

@@ -22,7 +22,7 @@ public sealed class RuntimeExecutableTests
 {
     private static readonly PortName Conclusion = new("结论");
 
-    [Fact]
+    [Fact(DisplayName = "发布的 false 触发使端口静默")]
     public async Task Published_false_trigger_silences_the_port()
     {
         (RuntimeExecutable node, RuntimeExecution execution) = Node();
@@ -35,7 +35,7 @@ public sealed class RuntimeExecutableTests
         Assert.False(node.Triggers(Conclusion));
     }
 
-    [Fact]
+    [Fact(DisplayName = "发布的 true 触发使端口发布")]
     public async Task Published_true_trigger_fires_the_port()
     {
         (RuntimeExecutable node, RuntimeExecution execution) = Node();
@@ -45,7 +45,7 @@ public sealed class RuntimeExecutableTests
         Assert.True(node.Triggers(Conclusion));
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少提交报告为未完成端口")]
     public async Task Missing_submission_is_reported_as_outstanding_ports()
     {
         (RuntimeExecutable node, RuntimeExecution execution) = Node();
@@ -57,7 +57,7 @@ public sealed class RuntimeExecutableTests
         Assert.Empty(node.OutstandingPorts(execution));
     }
 
-    [Fact]
+    [Fact(DisplayName = "失效移除已发布的触发值")]
     public async Task Invalidate_removes_the_published_trigger_value()
     {
         (RuntimeExecutable node, RuntimeExecution execution) = Node();

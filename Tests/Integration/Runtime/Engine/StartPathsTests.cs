@@ -50,7 +50,7 @@ public sealed class StartPathsTests
         }
         """;
 
-    [Fact]
+    [Fact(DisplayName = "宿主路径到达执行的静态输入")]
     public void Host_paths_reach_the_execution_static_inputs()
     {
         using TestEnvironment environment = TestEnvironment.Create(FixedPortFlow);
@@ -71,7 +71,7 @@ public sealed class StartPathsTests
         Assert.DoesNotContain(execution.Input.Inputs, value => value.Text == taskDirectory);
     }
 
-    [Fact]
+    [Fact(DisplayName = "宿主端口拒绝提交的输入")]
     public void A_host_port_rejects_submitted_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(FixedPortFlow);
@@ -90,8 +90,7 @@ public sealed class StartPathsTests
         Assert.Equal("开始端口 启动 由宿主提供，不接受提交输入。", submitted.FirstError.Description);
     }
 
-    /// <summary>开始端口名与宿主输入名相同但不在表里时按普通用户输入处理，不接受宿主值。</summary>
-    [Fact]
+    [Fact(DisplayName = "开始端口名与宿主输入名相同但不在表里时按普通用户输入处理，不接受宿主值")]
     public void A_port_named_after_a_host_input_takes_submitted_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(NamedPortFlow);
@@ -113,8 +112,7 @@ public sealed class StartPathsTests
         Assert.Null(Texts(done).Text(new PortName("WORKSPACE_PATH")));
     }
 
-    /// <summary>带默认值的开始端口进表后由宿主给值，默认值不生效。</summary>
-    [Fact]
+    [Fact(DisplayName = "带默认值的开始端口进表后由宿主给值，默认值不生效")]
     public void A_defaulted_port_in_the_form_takes_the_host_value()
     {
         using TestEnvironment environment = TestEnvironment.Create(DefaultedPortFlow);
@@ -126,8 +124,7 @@ public sealed class StartPathsTests
         Assert.DoesNotContain(done.Inputs.Values, value => value.Text == "fallback");
     }
 
-    /// <summary>表里的开始端口必须在流程开始入口声明，提交时报告。</summary>
-    [Fact]
+    [Fact(DisplayName = "表里的开始端口必须在流程开始入口声明，提交时报告")]
     public void An_undeclared_form_port_is_rejected_at_submit()
     {
         using TestEnvironment environment = TestEnvironment.Create(UndeclaredFormPortFlow);
@@ -140,8 +137,7 @@ public sealed class StartPathsTests
         Assert.Equal("流程 默认 的开始入口没有声明开始输入表里的端口 未声明。", submitted.FirstError.Description);
     }
 
-    /// <summary>表里的宿主输入名必须受支持，提交时报告。</summary>
-    [Fact]
+    [Fact(DisplayName = "表里的宿主输入名必须受支持，提交时报告")]
     public void An_unsupported_form_input_is_rejected_at_submit()
     {
         using TestEnvironment environment = TestEnvironment.Create(UnsupportedFormInputFlow);
@@ -154,8 +150,7 @@ public sealed class StartPathsTests
         Assert.Equal("流程 默认 的开始端口 启动 引用了不受支持的宿主输入 NOPE。", submitted.FirstError.Description);
     }
 
-    /// <summary>非 Text 开始端口不能由宿主给值，提交时报告而不是丢弃。</summary>
-    [Fact]
+    [Fact(DisplayName = "非 Text 开始端口不能由宿主给值，提交时报告而不是丢弃")]
     public void A_non_text_form_port_is_rejected_at_submit()
     {
         using TestEnvironment environment = TestEnvironment.Create(SignalFormPortFlow);
@@ -168,8 +163,7 @@ public sealed class StartPathsTests
         Assert.Equal("流程 默认 的开始端口 触发 不是 Text 端口，不能由宿主给值。", submitted.FirstError.Description);
     }
 
-    /// <summary>带固定值的开始端口不能进表，提交时报告。</summary>
-    [Fact]
+    [Fact(DisplayName = "带固定值的开始端口不能进表，提交时报告")]
     public void A_constant_port_in_the_form_is_rejected_at_submit()
     {
         using TestEnvironment environment = TestEnvironment.Create(ConstantFormPortFlow);
@@ -344,7 +338,7 @@ public sealed class StartPathsTests
         }
         """;
 
-    [Fact]
+    [Fact(DisplayName = "静态任务路径是文件节点的基础目录")]
     public void A_static_task_path_is_the_base_of_file_nodes()
     {
         using TestEnvironment environment = TestEnvironment.Create(TaskPathFlow);

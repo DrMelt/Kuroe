@@ -20,21 +20,21 @@ public sealed class MafFlowSubmissionTests
         new FakeRunnerFactory(() => new FakeRunner());
 
     [Theory]
-    [InlineData("")]
-    [InlineData("  ")]
-    [InlineData("甲/乙")]
+    [InlineData("", Label = "空文本")]
+    [InlineData("  ", Label = "空白文本")]
+    [InlineData("甲/乙", Label = "含斜杠")]
     public void Step_id_rejects_invalid_text(string value)
     {
         Assert.True(MafStepId.Create(value).IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "步骤标识去掉两侧空白")]
     public void Step_id_trims_text()
     {
         Assert.Equal("甲", MafStepId.Create(" 甲 ").Value.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备要求每个没有默认值的开始端口")]
     public void Prepare_requires_every_start_port_without_default()
     {
         ErrorOr<FlowSubmission> prepared = Submit([]);
@@ -43,7 +43,7 @@ public sealed class MafFlowSubmissionTests
         Assert.Contains(prepared.ErrorsOrEmptyList, error => error.Code == FlowErrorCodes.TaskInput);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝未知开始端口")]
     public void Prepare_rejects_unknown_start_ports()
     {
         ErrorOr<FlowSubmission> prepared = Submit([
@@ -55,7 +55,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备填充声明的默认值")]
     public void Prepare_fills_declared_defaults()
     {
         ErrorOr<FlowSubmission> prepared = Submit([
@@ -66,7 +66,7 @@ public sealed class MafFlowSubmissionTests
         Assert.Equal("默认目标", prepared.Value.State.Inputs.Text(new PortName("目标")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备要求模型")]
     public void Prepare_requires_a_model()
     {
         ErrorOr<FlowSubmission> prepared = Submit([
@@ -76,7 +76,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "记录编解码往返定义与状态")]
     public void Record_codec_round_trips_definition_and_state()
     {
         ErrorOr<FlowSubmission> prepared = Submit([
@@ -109,7 +109,7 @@ public sealed class MafFlowSubmissionTests
         Assert.Equal("做点事", roundTripped.Inputs.Text(new PortName("目标")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝重复步骤标识")]
     public void Prepare_rejects_duplicate_step_ids()
     {
         ErrorOr<FlowSubmission> prepared = Submit(
@@ -124,7 +124,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝非法步骤标识")]
     public void Prepare_rejects_invalid_step_ids()
     {
         ErrorOr<FlowSubmission> prepared = Submit(
@@ -136,7 +136,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝目标工厂错误")]
     public void Prepare_rejects_target_factory_errors()
     {
         MafStep step = new(
@@ -151,7 +151,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝目标标识不匹配")]
     public void Prepare_rejects_target_id_mismatch()
     {
         MafStep step = new(
@@ -168,7 +168,7 @@ public sealed class MafFlowSubmissionTests
             error => error.Description.Contains("不一致", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝连接缺失步骤")]
     public void Prepare_rejects_connections_to_missing_steps()
     {
         ErrorOr<FlowSubmission> prepared = Submit(
@@ -180,7 +180,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝多个上游")]
     public void Prepare_rejects_multiple_upstreams()
     {
         ErrorOr<FlowSubmission> prepared = Submit(
@@ -196,7 +196,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝没有模型端口的定义")]
     public void Prepare_rejects_definitions_without_a_model_port()
     {
         ErrorOr<FlowSubmission> prepared = Submit(
@@ -210,7 +210,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝从入口不可达的步骤")]
     public void Prepare_rejects_steps_unreachable_from_the_entry()
     {
         ErrorOr<FlowSubmission> prepared = Submit(
@@ -227,7 +227,7 @@ public sealed class MafFlowSubmissionTests
         Assert.Contains(prepared.ErrorsOrEmptyList, error => error.Description.Contains("不可达", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "记录编解码拒绝非法分段")]
     public void Record_codec_rejects_invalid_segments()
     {
         MafFlowRecordCodec codec = new();
@@ -238,7 +238,7 @@ public sealed class MafFlowSubmissionTests
         Assert.True(codec.ReadState(empty).IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "记录编解码只处理 Maf 流程种类")]
     public void Record_codec_handles_only_maf_flow_kind()
     {
         MafFlowRecordCodec codec = new();

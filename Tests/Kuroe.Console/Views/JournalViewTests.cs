@@ -10,7 +10,7 @@ public sealed class JournalViewTests
     /// <summary>固定的记录时间。</summary>
     private static readonly DateTimeOffset At = new(2026, 1, 2, 15, 4, 5, TimeSpan.FromHours(8));
 
-    [Fact]
+    [Fact(DisplayName = "条目渲染标签与文本")]
     public void Entry_renders_label_and_text()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -22,7 +22,7 @@ public sealed class JournalViewTests
         Assert.Contains("内容", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "多行文本逐行渲染")]
     public void Multiline_text_renders_each_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -39,7 +39,7 @@ public sealed class JournalViewTests
         Assert.DoesNotContain("失败", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "CRLF 与 CR 文本逐行渲染")]
     public void Crlf_and_cr_text_renders_each_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -51,12 +51,12 @@ public sealed class JournalViewTests
         int first = Array.FindIndex(lines, line => line.Contains("1 |一", StringComparison.Ordinal));
         int second = Array.FindIndex(lines, line => line.Contains("2 |二", StringComparison.Ordinal));
         int third = Array.FindIndex(lines, line => line.Contains("3 |三", StringComparison.Ordinal));
-        Assert.True(first >= 0);
-        Assert.True(second > first);
-        Assert.True(third > second);
+        Assert.True(first >= 0, $"找不到第一行，行序为 {first}、{second}、{third}。");
+        Assert.True(second > first, $"第二行不在第一行之后，行序为 {first}、{second}、{third}。");
+        Assert.True(third > second, $"第三行不在第二行之后，行序为 {first}、{second}、{third}。");
     }
 
-    [Fact]
+    [Fact(DisplayName = "丢弃与受限条目被报告")]
     public void Dropped_and_limited_entries_are_reported()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -69,7 +69,7 @@ public sealed class JournalViewTests
         Assert.Contains("只呈现最近 40 条记录。", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "空过程记录报告无条目")]
     public void Empty_journal_reports_no_entries()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

@@ -12,7 +12,7 @@ public sealed class DialogueFlowTests
 {
     private const string DefaultLanguage = "中文";
 
-    [Fact]
+    [Fact(DisplayName = "对话参数携带身份模式与语言系统提示")]
     public void Dialogue_parameters_carry_the_identity_mode_and_language_system_prompt()
     {
         LlmParameters parameters = DialogueFlow.Parameters(DialogueMode.Read, DefaultLanguage);
@@ -27,7 +27,7 @@ public sealed class DialogueFlowTests
         Assert.Null(parameters.Prompt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话参数使用配置的语言")]
     public void Dialogue_parameters_use_the_configured_language()
     {
         LlmParameters parameters = DialogueFlow.Parameters(DialogueMode.Edit, "English");
@@ -41,7 +41,7 @@ public sealed class DialogueFlowTests
             parameters.SystemPrompt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话流程按路径白名单只读工具")]
     public void Dialogue_flow_whitelists_read_tools_by_path()
     {
         LlmParameters parameters = DialogueFlow.Parameters(DialogueMode.Read, DefaultLanguage);
@@ -58,7 +58,7 @@ public sealed class DialogueFlowTests
             parameters.Tools);
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话流程按路径白名单编辑工具")]
     public void Dialogue_flow_whitelists_edit_tools_by_path()
     {
         LlmParameters parameters = DialogueFlow.Parameters(DialogueMode.Edit, DefaultLanguage);
@@ -76,7 +76,7 @@ public sealed class DialogueFlowTests
             parameters.Tools);
     }
 
-    [Fact]
+    [Fact(DisplayName = "编辑模式不授予仓库或命令写入工具")]
     public void Edit_mode_does_not_grant_repository_or_command_write_tools()
     {
         LlmParameters parameters = DialogueFlow.Parameters(DialogueMode.Edit, DefaultLanguage);
@@ -86,7 +86,7 @@ public sealed class DialogueFlowTests
         Assert.DoesNotContain(parameters.Tools, tool => tool.Value == "git/branch");
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话参数把工作区端口映射到工具根")]
     public void Dialogue_parameters_map_the_workspace_port_to_tool_roots()
     {
         LlmParameters parameters = DialogueFlow.Parameters(DialogueMode.Read, DefaultLanguage);
@@ -96,7 +96,7 @@ public sealed class DialogueFlowTests
         Assert.Equal(DialogueFlow.WorkspacePort.Value, parameters.ToolPorts["dotnet"][PathVariables.RootName]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话模式解析回退到只读")]
     public void Dialogue_mode_parse_falls_back_to_read()
     {
         Assert.Same(DialogueMode.Edit, DialogueMode.Parse("edit"));
@@ -105,7 +105,7 @@ public sealed class DialogueFlowTests
         Assert.Same(DialogueMode.Read, DialogueMode.Parse(null));
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话回复步骤是单个根路径")]
     public void Dialogue_reply_step_is_a_single_root_path()
     {
         Assert.Equal("回话", DialogueFlow.ReplyStep.Value);

@@ -11,7 +11,7 @@ public sealed class PortLabelsTests
 {
     private static readonly PortName Result = new("结论");
 
-    [Fact]
+    [Fact(DisplayName = "负向来源追加翻转标记")]
     public void Negative_source_appends_the_flip_marker()
     {
         FromLink link = new(
@@ -22,7 +22,7 @@ public sealed class PortLabelsTests
         Assert.Equal("来源@结论·翻转", link.SourceLabel());
     }
 
-    [Fact]
+    [Fact(DisplayName = "正向来源只显示引用")]
     public void Positive_source_shows_only_the_reference()
     {
         FromLink link = new(Result, PortRef.Named(new NodeLabel("来源"), Result));
@@ -30,7 +30,7 @@ public sealed class PortLabelsTests
         Assert.Equal("来源@结论", link.SourceLabel());
     }
 
-    [Fact]
+    [Fact(DisplayName = "输出标签标记触发与信号模式")]
     public void Output_label_marks_trigger_and_signal_modes()
     {
         Assert.Equal(
@@ -44,7 +44,7 @@ public sealed class PortLabelsTests
             new Port(new PortName("完成"), PortTypes.Signal).Label());
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入标签标记触发与信号模式")]
     public void Input_label_marks_trigger_and_signal_modes()
     {
         Assert.Equal(
@@ -55,7 +55,7 @@ public sealed class PortLabelsTests
             new InputPort(new PortName("信号"), PortTypes.Signal, mode: PortMode.Trigger).Label());
     }
 
-    [Fact]
+    [Fact(DisplayName = "开始标签显示默认值")]
     public void Start_label_shows_the_default_value()
     {
         Port port = new(

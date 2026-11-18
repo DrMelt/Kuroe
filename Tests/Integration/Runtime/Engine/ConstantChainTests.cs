@@ -9,7 +9,7 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>常量链：静态输入绑定到上游唯一一次执行的产出，上游发布后下游按依赖启动。</summary>
 public sealed class ConstantChainTests
 {
-    [Fact]
+    [Fact(DisplayName = "上游常量发布后下游启动")]
     public void Second_node_starts_after_first_constant_is_published()
     {
         using TestEnvironment environment = TestEnvironment.Create(ConstantChainFlow);
@@ -34,7 +34,7 @@ public sealed class ConstantChainTests
         Assert.All(done.View.Steps, step => Assert.Single(step.Executions));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器被引用两次时每个实例各发布一份常量")]
     public void Container_referenced_twice_publishes_one_constant_per_instance()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerConstantFlow);
@@ -49,7 +49,7 @@ public sealed class ConstantChainTests
         Assert.Equal(2, compare.Input.Inputs.Count(value => value.Port.Value is "甲稿" or "乙稿"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "单次节点失败后可重试")]
     public void Once_node_can_retry_after_a_failed_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create(RetryOnceFlow);
@@ -153,7 +153,7 @@ public sealed class ConstantChainTests
         }
         """;
 
-    [Fact]
+    [Fact(DisplayName = "动态节点等待运行期常量并保留触发")]
     public void Dynamic_node_waits_for_a_runtime_constant_and_keeps_its_trigger()
     {
         using TestEnvironment environment = TestEnvironment.Create(MixedInputFlow);
@@ -267,7 +267,7 @@ public sealed class ConstantChainTests
           ]
         }
         """;
-    [Fact]
+    [Fact(DisplayName = "上下文常量静态输入进入上下文内容")]
     public void Context_constant_static_input_enters_context_content()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContextConstantFlow);

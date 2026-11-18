@@ -16,7 +16,7 @@ namespace Kuroe.Execution.Tests;
 /// <summary>执行单元的状态机：启动、契约产出、中断与存档恢复。</summary>
 public sealed class ExecutionTests
 {
-    [Fact]
+    [Fact(DisplayName = "标记运行只通知一次并记录开始")]
     public void Mark_running_notifies_once_and_records_start()
     {
         NeutralExecution unit = new(new ExecutionId(1), Request());
@@ -31,7 +31,7 @@ public sealed class ExecutionTests
         Assert.NotNull(unit.Snapshot().StartedAt);
     }
 
-    [Fact]
+    [Fact(DisplayName = "提交的输出在成功后保留")]
     public void Submitted_outputs_survive_success()
     {
         ExecutionPortName port = new("结论");
@@ -50,7 +50,7 @@ public sealed class ExecutionTests
         Assert.Equal(ExecutionOutputKind.Ports, snapshot.Output?.Kind);
     }
 
-    [Fact]
+    [Fact(DisplayName = "中断后收口记录原因")]
     public void Interrupt_then_settle_records_reason()
     {
         NeutralExecution unit = new(new ExecutionId(1), Request());
@@ -64,7 +64,7 @@ public sealed class ExecutionTests
         Assert.Contains("任务终止。", snapshot.Failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "恢复运行中状态标记为已中断")]
     public void Restoring_a_live_state_marks_interrupted()
     {
         NeutralExecution unit = NeutralExecution.Restore(
@@ -85,7 +85,7 @@ public sealed class ExecutionTests
         Assert.Contains("进程退出前未收口。", unit.Snapshot().Failures);
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行拒绝与请求不匹配的目标")]
     public async Task Run_rejects_a_target_that_does_not_match_the_request()
     {
         Kuroe.Execution.ExecutionRuntime runtime = new(new Kuroe.Execution.ExecutionDispatcher());
@@ -112,7 +112,7 @@ public sealed class ExecutionTests
             new Dictionary<ExecutionPortName, string>(),
             ports);
 
-    [Fact]
+    [Fact(DisplayName = "过程记录条目内容与进度进入快照")]
     public void Journal_entries_content_and_progress_reach_the_snapshot()
     {
         NeutralExecution unit = new(new ExecutionId(1), Request());
@@ -136,7 +136,7 @@ public sealed class ExecutionTests
         Assert.Single(snapshot.Journal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "用量读取器跟随到收口")]
     public void Usage_reader_is_followed_until_settled()
     {
         NeutralExecution unit = new(new ExecutionId(1), Request());
@@ -156,7 +156,7 @@ public sealed class ExecutionTests
         Assert.Equal(settled, unit.Snapshot().Usage);
     }
 
-    [Fact]
+    [Fact(DisplayName = "成功之后保留恢复数据读取器")]
     public void Restore_data_reader_is_kept_after_success()
     {
         NeutralExecution unit = new(new ExecutionId(1), Request());
@@ -173,7 +173,7 @@ public sealed class ExecutionTests
         Assert.Equal(new ExecutionRestoreState("test", "data"), unit.Snapshot().RestoreData);
     }
 
-    [Fact]
+    [Fact(DisplayName = "开始事件只触发一次")]
     public void Started_event_fires_once()
     {
         NeutralExecution unit = new(new ExecutionId(1), Request());

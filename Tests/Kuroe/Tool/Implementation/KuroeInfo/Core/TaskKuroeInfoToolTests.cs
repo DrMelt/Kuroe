@@ -10,7 +10,7 @@ namespace Kuroe.Tool.KuroeInfo.Tests;
 /// <summary>任务查询工具：空目录提示、未知任务与非法执行号的拒绝。</summary>
 public sealed class TaskKuroeInfoToolTests
 {
-    [Fact]
+    [Fact(DisplayName = "没有任务时任务清单打印提示")]
     public void ListTasks_without_tasks_prints_a_hint()
     {
         TaskKuroeInfoTool tool = new(new FakeTaskReader());
@@ -18,7 +18,7 @@ public sealed class TaskKuroeInfoToolTests
         Assert.Contains("还没有任务", Call(tool, "ListTasks"), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务查询报告缺失任务")]
     public void GetTask_reports_a_missing_task()
     {
         TaskKuroeInfoTool tool = new(new FakeTaskReader());
@@ -27,7 +27,7 @@ public sealed class TaskKuroeInfoToolTests
         Assert.Contains("没有任务 99", Call(tool, "GetTask", ("taskId", "99")), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行查询报告实参错误")]
     public void GetExecution_reports_bad_arguments()
     {
         TaskKuroeInfoTool tool = new(new FakeTaskReader());

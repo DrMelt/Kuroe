@@ -6,7 +6,7 @@ namespace Kuroe.Tool.Time.Tests;
 /// <summary>系统时间工具：返回当地时间并附带 UTC 偏移。</summary>
 public sealed class TimeToolTests
 {
-    [Fact]
+    [Fact(DisplayName = "本地时间输出携带 UTC 偏移")]
     public void GetLocalTime_output_carries_utc_offset()
     {
         TimeZoneInfo zone = TimeZoneInfo.CreateCustomTimeZone("UTC+08", TimeSpan.FromHours(8), "UTC+08", "UTC+08");

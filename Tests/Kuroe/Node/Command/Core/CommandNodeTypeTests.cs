@@ -27,14 +27,14 @@ public sealed class CommandNodeTypeTests
 
     private static readonly CommandNodeType Type = new(Parameters, RunnerFactory);
 
-    [Fact]
+    [Fact(DisplayName = "命令节点名称是文件书写的种类")]
     public void Name_is_the_kind_written_in_files()
     {
         Assert.Equal("Command", CommandNodeTypes.Name.Value);
         Assert.Equal(CommandNodeTypes.Name, Type.Kind);
     }
 
-    [Fact]
+    [Fact(DisplayName = "形状以文本与信号输入派发内容输出")]
     public void Shape_dispatches_content_output_with_text_and_signal_inputs()
     {
         NodeTypeShape shape = Type.Shape;
@@ -50,7 +50,7 @@ public sealed class CommandNodeTypeTests
         Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.AllowedOutputTypes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "命令类型创建把声明保留在实例上")]
     public void Create_keeps_the_declaration_on_the_instance()
     {
         INodeType type = CommandNodeTypes.Create(Parameters, RunnerFactory);
@@ -59,10 +59,10 @@ public sealed class CommandNodeTypeTests
         Assert.Same(Parameters, command.Parameters);
     }
 
-    [Fact]
+    [Fact(DisplayName = "普通命令节点通过")]
     public void Plain_command_node_passes() => Assert.Empty(Failures(Type, Node()));
 
-    [Fact]
+    [Fact(DisplayName = "要求触发")]
     public void Trigger_is_required()
     {
         string[] errors = [.. Failures(Type, Node() with { Inputs = [] })];
@@ -70,7 +70,7 @@ public sealed class CommandNodeTypeTests
         Assert.EndsWith("命令执行节点必须声明至少一个 Signal 输入端口作为触发。", Assert.Single(errors));
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有变量映射的文本输入被拒绝")]
     public void Text_input_without_a_variable_mapping_is_rejected()
     {
         InputPort[] inputs =
@@ -83,7 +83,7 @@ public sealed class CommandNodeTypeTests
             error => error.EndsWith("命令执行节点的 Text 输入必须是命令变量端口。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "信号变量端口被拒绝")]
     public void A_signal_variable_port_is_rejected()
     {
         CommandExecutionParameters parameters = Parameters with
@@ -102,7 +102,7 @@ public sealed class CommandNodeTypeTests
             error => error.EndsWith("命令变量 root 映射到的输入端口 任务路径 必须是 Text。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "实参占位符要求变量映射")]
     public void Argument_placeholders_require_variable_mapping()
     {
         CommandExecutionParameters parameters = Parameters with
@@ -115,7 +115,7 @@ public sealed class CommandNodeTypeTests
             error => error.EndsWith("命令占位符 {branch} 没有对应的命令变量映射。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "实参占位符接受已映射的文本输入")]
     public void Argument_placeholders_accept_mapped_text_inputs()
     {
         CommandExecutionParameters parameters = Parameters with
@@ -133,7 +133,7 @@ public sealed class CommandNodeTypeTests
         Assert.Empty(Failures(type, Node(inputs, type: type)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "实参未使用的变量被拒绝")]
     public void A_variable_not_used_by_arguments_is_rejected()
     {
         CommandExecutionParameters parameters = Parameters with
@@ -152,7 +152,7 @@ public sealed class CommandNodeTypeTests
             error => error.EndsWith("命令变量 url 没有被 Directory 或 Arguments 引用。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "变量名不能包含空白")]
     public void Variable_names_must_not_contain_blanks()
     {
         CommandExecutionParameters parameters = Parameters with
@@ -171,7 +171,7 @@ public sealed class CommandNodeTypeTests
             error => error.EndsWith("命令变量名 bad name 不能含空白与花括号。"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "命令节点执行上限必须为正")]
     public void MaxExecutions_must_be_positive()
     {
         NodeSpec node = Node() with { Spec = new ExecutableSpec { MaxExecutions = 0 } };

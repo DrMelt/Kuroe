@@ -10,7 +10,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>任务树的渲染：直接构造任务快照，不提交任务。</summary>
 public sealed class TaskTreeViewTests
 {
-    [Fact]
+    [Fact(DisplayName = "树只打印节点树")]
     public void Tree_prints_only_the_node_tree()
     {
         using ConsoleSession cli = new();
@@ -25,7 +25,7 @@ public sealed class TaskTreeViewTests
         Assert.DoesNotContain('┌', output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "树打印阻塞原因")]
     public void Tree_prints_the_blocked_reason()
     {
         using ConsoleSession cli = new();
@@ -36,7 +36,7 @@ public sealed class TaskTreeViewTests
         Assert.Contains("阻塞原因 节点失败原因。", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "树从快照读取节点状态")]
     public void Tree_reads_the_node_state_from_the_snapshot()
     {
         using ConsoleSession cli = new();

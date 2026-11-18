@@ -14,8 +14,7 @@ public sealed class NodeReadinessTests
 {
     private static readonly PortName OutputPort = new("结论");
 
-    /// <summary>来源有新版本才启动：已消费过的版本不再触发，来源再发布即重新就绪。</summary>
-    [Fact]
+    [Fact(DisplayName = "来源有新版本才启动：已消费过的版本不再触发，来源再发布即重新就绪")]
     public void Version_driven_node_needs_a_new_source_version()
     {
         (NodeInputPlan plan, FakeSources sources, FakeProgress node) = Single();
@@ -32,8 +31,7 @@ public sealed class NodeReadinessTests
         Assert.True(plan.Ready(node, sources));
     }
 
-    /// <summary>组间任一齐备即启动：另一组的数据来源尚未放行也能启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "组间任一齐备即启动：另一组的数据来源尚未放行也能启动")]
     public void Any_ready_group_starts_the_node()
     {
         (NodeInputPlan plan, FakeSources sources, FakeProgress node) = TwoGroups();
@@ -43,8 +41,7 @@ public sealed class NodeReadinessTests
         Assert.True(plan.Ready(node, sources));
     }
 
-    /// <summary>生效组取有驱动来源的齐备组，不是第一个齐备组。</summary>
-    [Fact]
+    [Fact(DisplayName = "生效组取有驱动来源的齐备组，不是第一个齐备组")]
     public void Driven_group_returns_the_group_with_a_fresh_source()
     {
         (NodeInputPlan plan, FakeSources sources, FakeProgress node) = TwoGroups();
@@ -57,8 +54,7 @@ public sealed class NodeReadinessTests
         Assert.Equal(1, plan.DrivenGroup(node, sources));
     }
 
-    /// <summary>强制重跑在没有任何齐备组时也能启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "强制重跑在没有任何齐备组时也能启动")]
     public void Forced_rerun_is_ready_without_a_driven_group()
     {
         (NodeInputPlan plan, FakeSources sources, FakeProgress node) = TwoGroups();
@@ -68,8 +64,7 @@ public sealed class NodeReadinessTests
         Assert.True(plan.Ready(node, sources));
     }
 
-    /// <summary>组内必须全部齐备：缺一处时组不齐备，任何组都不成立即不启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "组内必须全部齐备：缺一处时组不齐备，任何组都不成立即不启动")]
     public void Group_waits_for_every_binding()
     {
         (NodeInputPlan plan, FakeSources sources, FakeProgress node) = OneGroupOfTwo();
@@ -81,8 +76,7 @@ public sealed class NodeReadinessTests
         Assert.True(plan.Ready(node, sources));
     }
 
-    /// <summary>组内有信号绑定时只认信号来源的新版本：数据来源再发布也不触发。</summary>
-    [Fact]
+    [Fact(DisplayName = "组内有信号绑定时只认信号来源的新版本：数据来源再发布也不触发")]
     public void Signal_binding_drives_only_by_the_signal_source()
     {
         (NodeInputPlan plan, FakeSources sources, FakeProgress node) = WithSignal();
@@ -100,8 +94,7 @@ public sealed class NodeReadinessTests
         Assert.True(plan.Ready(node, sources));
     }
 
-    /// <summary>只门控的绑定不驱动新版本：门控来源再发布不启动，成员新版本仍启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "只门控的绑定不驱动新版本：门控来源再发布不启动，成员新版本仍启动")]
     public void Gate_binding_does_not_drive_new_versions()
     {
         NodeInputPlan plan = GatePlan(PortTypes.Text);
@@ -123,8 +116,7 @@ public sealed class NodeReadinessTests
         Assert.Equal(0, plan.DrivenGroup(node, sources));
     }
 
-    /// <summary>Signal 门控只参与抑制，不把驱动收窄为门控来源：成员新版本仍启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "Signal 门控只参与抑制，不把驱动收窄为门控来源：成员新版本仍启动")]
     public void Signal_gate_does_not_mask_member_new_versions()
     {
         NodeInputPlan plan = GatePlan(PortTypes.Signal);
@@ -146,8 +138,7 @@ public sealed class NodeReadinessTests
         Assert.False(plan.Ready(node, sources));
     }
 
-    /// <summary>门控来源触发值为 false 时，成员新版本驱动的组被抑制。</summary>
-    [Fact]
+    [Fact(DisplayName = "门控来源触发值为 false 时，成员新版本驱动的组被抑制")]
     public void Gate_with_false_trigger_suppresses_member_drive()
     {
         NodeInputPlan plan = GatePlan(PortTypes.Signal);
@@ -163,8 +154,7 @@ public sealed class NodeReadinessTests
         Assert.NotNull(plan.SuppressedGroup(node, sources));
     }
 
-    /// <summary>翻转门控：来源触发值为 false 时放行，true 时抑制。</summary>
-    [Fact]
+    [Fact(DisplayName = "翻转门控：来源触发值为 false 时放行，true 时抑制")]
     public void Flipped_gate_admits_a_false_trigger()
     {
         NodeInputPlan plan = GatePlan(PortTypes.Signal, TriggerCondition.Negative);
@@ -185,8 +175,7 @@ public sealed class NodeReadinessTests
         Assert.NotNull(plan.SuppressedGroup(node, sources));
     }
 
-    /// <summary>达到执行次数上限后不再启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "达到执行次数上限后不再启动")]
     public void Execution_limit_stops_further_starts()
     {
         NodeInputPlan plan = Plan([Value("节点1", "节点2", PortTypes.Text)], maxExecutions: 1);
@@ -202,8 +191,7 @@ public sealed class NodeReadinessTests
         Assert.False(plan.Ready(node, sources));
     }
 
-    /// <summary>重新执行作废后的重跑意图越过版本比较直接启动。</summary>
-    [Fact]
+    [Fact(DisplayName = "重新执行作废后的重跑意图越过版本比较直接启动")]
     public void Forced_rerun_starts_without_a_new_version()
     {
         (NodeInputPlan plan, FakeSources sources, FakeProgress node) = Single();

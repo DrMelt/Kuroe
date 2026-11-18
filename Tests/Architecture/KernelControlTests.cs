@@ -7,7 +7,7 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>控制模块边界：控制契约只描述流程视图与命令，流程运行时留在 Kernel 自己的项目内。</summary>
 public sealed class KernelControlTests
 {
-    [Fact]
+    [Fact(DisplayName = "流程运行期不含图控制")]
     public void Flow_runtime_stays_free_of_graph_control()
     {
         string file = Path.Combine(
@@ -24,7 +24,7 @@ public sealed class KernelControlTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程运行期独立成项目")]
     public void Flow_runtime_lives_in_its_own_project()
     {
         string runtime = Path.Combine(SourceRoot, "Kuroe.Kernel", "Control", "Runtime", "FlowRuntime.cs");
@@ -38,9 +38,9 @@ public sealed class KernelControlTests
             "Engine",
             "FlowRuntime.cs");
 
-        Assert.True(File.Exists(runtime));
-        Assert.True(File.Exists(project));
-        Assert.False(File.Exists(old));
+        Assert.True(File.Exists(runtime), $"{runtime} 不存在。");
+        Assert.True(File.Exists(project), $"{project} 不存在。");
+        Assert.False(File.Exists(old), $"{old} 不应存在。");
 
         IReadOnlyList<string> references = ProjectReferences(project);
 
@@ -50,7 +50,7 @@ public sealed class KernelControlTests
             IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Node")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "控制共享层不含图运行期")]
     public void Control_shared_stays_free_of_graph_runtime()
     {
         string control = Path.Combine(KernelRoot, "Control", "Shared");
@@ -67,7 +67,7 @@ public sealed class KernelControlTests
         SourcesExclude(control, "图运行期语义", forbidden);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行索引不含流程负载")]
     public void Execution_index_stays_free_of_flow_payload()
     {
         string file = Path.Combine(
@@ -82,7 +82,7 @@ public sealed class KernelControlTests
         Assert.DoesNotContain("object?", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行网关保持中性")]
     public void Execution_gateway_stays_neutral()
     {
         string file = Path.Combine(
@@ -94,7 +94,7 @@ public sealed class KernelControlTests
         Assert.DoesNotContain("Attach", File.ReadAllText(file), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程恢复按身份解析")]
     public void Flow_restore_resolves_by_identity()
     {
         string framework = Path.Combine(
@@ -128,7 +128,7 @@ public sealed class KernelControlTests
         Assert.Contains("Handles(identity)", File.ReadAllText(source), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "控制共享层只引用中性契约")]
     public void Control_shared_project_references_only_neutral_contracts()
     {
         string project = Path.Combine(
@@ -157,7 +157,7 @@ public sealed class KernelControlTests
             reference => IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程控制端口不含表现与停止命令")]
     public void Flow_control_port_excludes_presentation_and_stop()
     {
         string control = Path.Combine(KernelRoot, "Control", "Shared", "IFlowControl.cs");
@@ -169,7 +169,7 @@ public sealed class KernelControlTests
         Assert.DoesNotContain("Attach", File.ReadAllText(factory), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程端口只暴露视图待处理步骤与流程记录")]
     public void Flow_ports_expose_views_pending_steps_and_flow_records()
     {
         string presentation = Path.Combine(
@@ -191,7 +191,7 @@ public sealed class KernelControlTests
         Assert.DoesNotContain("CaptureExecutions", File.ReadAllText(dialogueRecords), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程运行期只引用中性契约")]
     public void Flow_runtime_references_only_neutral_contracts()
     {
         string project = Path.Combine(
@@ -217,7 +217,7 @@ public sealed class KernelControlTests
             presentation);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程控制不点名具体执行类型")]
     public void Flow_control_does_not_name_concrete_execution()
     {
         string[] directories =
@@ -249,7 +249,7 @@ public sealed class KernelControlTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程控制端口不含输入交付")]
     public void Flow_control_port_excludes_input_delivery()
     {
         string control = Path.Combine(KernelRoot, "Control", "Shared", "IFlowControl.cs");
@@ -262,7 +262,7 @@ public sealed class KernelControlTests
         Assert.DoesNotContain("Deliver", controlText, StringComparison.Ordinal);
         Assert.DoesNotContain("Accept", controlText, StringComparison.Ordinal);
         Assert.DoesNotContain("Advance", File.ReadAllText(runtime), StringComparison.Ordinal);
-        Assert.False(File.Exists(Path.Combine(KernelRoot, "Control", "Shared", "IFlowAdvance.cs")));
+        Assert.False(File.Exists(Path.Combine(KernelRoot, "Control", "Shared", "IFlowAdvance.cs")), $"{Path.Combine(KernelRoot, "Control", "Shared", "IFlowAdvance.cs")} 不应存在。");
         Assert.Contains("Accept", File.ReadAllText(channel), StringComparison.Ordinal);
         Assert.Contains("Decline", File.ReadAllText(channel), StringComparison.Ordinal);
         Assert.Contains("Pending", File.ReadAllText(delivery), StringComparison.Ordinal);
@@ -271,7 +271,7 @@ public sealed class KernelControlTests
             File.Exists(Path.Combine(KernelRoot, "Control", "Shared", "IFlowInputControl.cs")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程控制端口不含进程专用命令")]
     public void Flow_control_port_excludes_process_specific_commands()
     {
         string control = Path.Combine(KernelRoot, "Control", "Shared", "IFlowControl.cs");
@@ -283,7 +283,7 @@ public sealed class KernelControlTests
         Assert.Contains("Rerun", File.ReadAllText(rerun), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程模板目录使用提供方来源")]
     public void Flow_template_catalog_uses_provider_sources()
     {
         string catalog = Path.Combine(SourceRoot, "Kuroe.Kernel", "Control", "Runtime", "FlowTemplateCatalog.cs");
@@ -294,7 +294,7 @@ public sealed class KernelControlTests
         Assert.DoesNotContain("FlowProvider", catalogText, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程控制只使用一个执行网关")]
     public void Flow_control_uses_one_execution_gateway()
     {
         string gateway = Path.Combine(KernelRoot, "Control", "Shared", "IFlowExecutionGateway.cs");

@@ -9,7 +9,7 @@ public sealed class SourceToolTests
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
     private readonly InMemoryWorkspaceFiles _files = new();
 
-    [Fact]
+    [Fact(DisplayName = "列源码目录列出根条目")]
     public void ListSourceDirectory_lists_root_entries()
     {
         _files.AddFile(Path.Combine(_root, "Kuroe", "Tools", "FileTool.cs"), "class A");
@@ -26,7 +26,7 @@ public sealed class SourceToolTests
             $"条目按名字序数排序，Kuroe 应排在 docs 之前：\n{output}");
     }
 
-    [Fact]
+    [Fact(DisplayName = "列源码目录列出子目录条目")]
     public void ListSourceDirectory_lists_subdirectory_entries()
     {
         _files.AddFile(Path.Combine(_root, "Kuroe", "Core", "Kuroe.csproj"), "<Project />");
@@ -39,7 +39,7 @@ public sealed class SourceToolTests
         Assert.Contains("  Kuroe.cs", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "列源码目录报告空目录")]
     public void ListSourceDirectory_reports_empty_directory()
     {
         _files.AddDirectory(_root);
@@ -47,13 +47,13 @@ public sealed class SourceToolTests
         Assert.Equal("目录 导出目录根 为空。", Call("ListSourceDirectory"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "列源码目录报告缺失目录")]
     public void ListSourceDirectory_reports_missing_directory()
     {
         Assert.Contains("不存在", Call("ListSourceDirectory"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "列源码目录拒绝文件路径")]
     public void ListSourceDirectory_rejects_file_path()
     {
         _files.AddFile(Path.Combine(_root, "Kuroe.cs"), "class A");
@@ -64,13 +64,13 @@ public sealed class SourceToolTests
         Assert.Contains("ReadSourceFile", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "列源码目录拒绝源码目录之外的路径")]
     public void ListSourceDirectory_rejects_path_outside_source_directory()
     {
         Assert.Contains("不在导出目录内", Call("ListSourceDirectory", ("path", "..")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "列源码目录按上限截断")]
     public void ListSourceDirectory_truncates_beyond_limit()
     {
         for (int index = 1; index <= 201; index++)
@@ -84,7 +84,7 @@ public sealed class SourceToolTests
         Assert.DoesNotContain("File201.cs", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件读取精确行范围")]
     public void ReadSourceFile_reads_exact_line_range()
     {
         _files.AddFile(Path.Combine(_root, "Kuroe.cs"), "一\n二\n三\n四\n五\n");
@@ -94,7 +94,7 @@ public sealed class SourceToolTests
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>>2 |二\n3 |三\n4 |四\n<<<KUROE_TEXT_END>>>", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件可以省略行号")]
     public void ReadSourceFile_can_omit_line_numbers()
     {
         _files.AddFile(Path.Combine(_root, "raw.cs"), "一\r\n二\r三\n四");
@@ -104,7 +104,7 @@ public sealed class SourceToolTests
         Assert.Equal("（已到文件结尾，实际返回第 1 到 4 行）\n<<<KUROE_TEXT_BEGIN>>>一\r\n二\r三\n四<<<KUROE_TEXT_END>>>", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件保留 CRLF 行终止符")]
     public void ReadSourceFile_preserves_crlf_line_terminators()
     {
         _files.AddFile(Path.Combine(_root, "Kuroe.cs"), "一\r\n二\r\n");
@@ -114,7 +114,7 @@ public sealed class SourceToolTests
             Call("ReadSourceFile", ("path", "Kuroe.cs"), ("from", "1"), ("to", "2")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件接受源码目录内的绝对路径")]
     public void ReadSourceFile_accepts_absolute_path_inside_source_directory()
     {
         string file = Path.Combine(_root, "Kuroe.cs");
@@ -123,7 +123,7 @@ public sealed class SourceToolTests
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>>2 |二\n<<<KUROE_TEXT_END>>>", Call("ReadSourceFile", ("path", file), ("from", "2"), ("to", "2")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件接受以点开头的名称")]
     public void ReadSourceFile_accepts_name_starting_with_dots()
     {
         _files.AddFile(Path.Combine(_root, "..foo.cs"), "一\n");
@@ -131,7 +131,7 @@ public sealed class SourceToolTests
         Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n<<<KUROE_TEXT_BEGIN>>>1 |一\n2 |<<<KUROE_TEXT_END>>>", Call("ReadSourceFile", ("path", "..foo.cs")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件默认读取整个文件并标注末尾")]
     public void ReadSourceFile_defaults_to_the_whole_file_and_notes_file_end()
     {
         _files.AddFile(
@@ -148,7 +148,7 @@ public sealed class SourceToolTests
         Assert.DoesNotContain("已截断", output, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件截断过长内容")]
     public void ReadSourceFile_truncates_long_content()
     {
         _files.AddFile(Path.Combine(_root, "long.cs"), new string('a', 12000));
@@ -158,7 +158,7 @@ public sealed class SourceToolTests
         Assert.StartsWith("（内容超过 10000 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>", output, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件按默认值截断过长单行")]
     public void ReadSourceFile_truncates_a_long_line_by_default()
     {
         _files.AddFile(Path.Combine(_root, "line.cs"), new string('a', 400));
@@ -171,7 +171,7 @@ public sealed class SourceToolTests
             StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件接受读取上限")]
     public void ReadSourceFile_accepts_read_limits()
     {
         _files.AddFile(Path.Combine(_root, "short.cs"), "abcdef");
@@ -181,7 +181,7 @@ public sealed class SourceToolTests
             Call("ReadSourceFile", ("path", "short.cs"), ("maxChars", "5"), ("maxLineChars", "100")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件拒绝非法读取上限")]
     public void ReadSourceFile_rejects_invalid_read_limits()
     {
         Assert.Contains(
@@ -194,7 +194,7 @@ public sealed class SourceToolTests
             StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件拒绝缺失与非法参数")]
     public void ReadSourceFile_rejects_missing_and_illegal_arguments()
     {
         Assert.Contains("缺少参数 path", Call("ReadSourceFile"));
@@ -204,7 +204,7 @@ public sealed class SourceToolTests
             "ReadSourceFile", ("path", "a.cs"), ("from", "5"), ("to", "3")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件拒绝源码目录之外的路径")]
     public void ReadSourceFile_rejects_path_outside_source_directory()
     {
         string output = Call("ReadSourceFile", ("path", ".."));
@@ -215,7 +215,7 @@ public sealed class SourceToolTests
         Assert.Contains("不在导出目录内", Call("ReadSourceFile", ("path", outside)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件拒绝目录与缺失文件")]
     public void ReadSourceFile_rejects_directory_and_missing_file()
     {
         _files.AddDirectory(Path.Combine(_root, "Kuroe"));
@@ -227,7 +227,7 @@ public sealed class SourceToolTests
         Assert.Contains("不存在", Call("ReadSourceFile", ("path", "Kuroe/nope.cs")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取源码文件声明路径参数")]
     public void ReadSourceFile_declares_path_parameter()
     {
         SourceTool tool = Tool();

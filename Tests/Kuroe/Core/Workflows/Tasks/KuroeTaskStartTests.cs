@@ -11,7 +11,7 @@ public sealed class KuroeTaskStartTests
 {
     private static readonly PortName Model = new("MODEL_NAME");
 
-    [Fact]
+    [Fact(DisplayName = "模型输入采用当前选择")]
     public void Model_input_takes_the_current_selection()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();
@@ -24,7 +24,7 @@ public sealed class KuroeTaskStartTests
         Assert.Equal("fake", values.Value.Text(Model));
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有选择时模型输入被拒绝")]
     public void Model_input_without_a_selection_is_rejected()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create(selectModel: false);
@@ -37,8 +37,7 @@ public sealed class KuroeTaskStartTests
         Assert.Equal("当前未选择模型。", values.FirstError.Description);
     }
 
-    /// <summary>未知的宿主输入名返回错误，不抛异常。</summary>
-    [Fact]
+    [Fact(DisplayName = "未知的宿主输入名返回错误，不抛异常")]
     public void Unknown_host_input_is_rejected()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();

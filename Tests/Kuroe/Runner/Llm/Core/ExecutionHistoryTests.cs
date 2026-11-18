@@ -9,7 +9,7 @@ namespace Kuroe.Runner.Llm.Tests;
 /// <summary>本轮请求历史：输入取值按来源与文本写成模型消息。</summary>
 public sealed class ExecutionHistoryTests
 {
-    [Fact]
+    [Fact(DisplayName = "执行来源渲染节点端口与文本")]
     public void Execution_source_renders_node_port_and_text()
     {
         ExecutionRequest request = Request(
@@ -24,7 +24,7 @@ public sealed class ExecutionHistoryTests
         Assert.Equal("节点「整体/制定计划」的端口「计划」产出：\n计划产出", Assert.Single(messages).Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "长输入布局不截断")]
     public void Long_input_is_laid_out_without_truncation()
     {
         string text = new('甲', 3000);
@@ -37,7 +37,7 @@ public sealed class ExecutionHistoryTests
         Assert.EndsWith(text, Assert.Single(messages).Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入追加到已有历史")]
     public void Inputs_are_appended_to_the_existing_history()
     {
         ExecutionRequest request = Request(

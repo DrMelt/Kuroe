@@ -10,7 +10,7 @@ public sealed class MultilinePromptTests
 {
     private const int Width = 80;
 
-    [Fact]
+    [Fact(DisplayName = "回车插入换行终止行提交")]
     public void Enter_inserts_a_line_break_and_the_terminator_submits()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -22,7 +22,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("first\nsecond", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "终止行只有独占整行才提交")]
     public void Terminator_only_submits_when_it_occupies_the_whole_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -34,7 +34,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("value\n;;tail", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "两侧有空格的终止行不提交")]
     public void Terminator_with_surrounding_spaces_does_not_submit()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -46,7 +46,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("value\n ;; ", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "文本中的空行保留")]
     public void Blank_lines_inside_the_text_are_kept()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -60,7 +60,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("first\n\nsecond", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "空输入上的终止行返回空")]
     public void Terminator_on_an_empty_input_returns_null()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -69,7 +69,7 @@ public sealed class MultilinePromptTests
         Assert.Null(terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "返回键返回空并丢弃文本")]
     public void Escape_returns_null_and_discards_the_text()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -79,7 +79,7 @@ public sealed class MultilinePromptTests
         Assert.Null(terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "退格删除当前行最后一个字符")]
     public void Backspace_removes_the_last_character_of_the_current_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -92,7 +92,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("first", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "空行退格并入上一行")]
     public void Backspace_on_an_empty_line_joins_the_previous_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -105,7 +105,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("firstx", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "退格依次并入连续空行")]
     public void Backspace_joins_repeated_empty_lines()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -120,7 +120,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("firstx", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "退格并入选宽字符结尾的行")]
     public void Backspace_joins_a_line_ending_with_a_wide_character()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -133,7 +133,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("中x", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入开头的退格不生效")]
     public void Backspace_at_the_start_of_the_input_does_nothing()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -143,7 +143,7 @@ public sealed class MultilinePromptTests
         Assert.Null(terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "退格并入把光标移到上一行末尾")]
     public void Backspace_join_moves_the_cursor_to_the_previous_line_end()
     {
         Terminal terminal = NewRecordingTerminal(out TestConsole output, out CursorRecordingConsole recording);
@@ -158,7 +158,7 @@ public sealed class MultilinePromptTests
         Assert.Equal((CursorDirection.Up, 1), item);
     }
 
-    [Fact]
+    [Fact(DisplayName = "退格并入按换行前的行数计算行")]
     public void Backspace_join_counts_the_rows_of_a_wrapped_previous_line()
     {
         Terminal terminal = NewRecordingTerminal(out TestConsole output, out CursorRecordingConsole recording);
@@ -174,7 +174,7 @@ public sealed class MultilinePromptTests
         Assert.Equal((CursorDirection.Up, 2), item);
     }
 
-    [Fact]
+    [Fact(DisplayName = "退格并入空的起始行")]
     public void Backspace_joins_an_empty_first_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -186,7 +186,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("x", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "退格删除当前行的宽字符")]
     public void Backspace_removes_a_wide_character_on_the_current_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -199,7 +199,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("中", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "退格把代理对作为一个字符删除")]
     public void Backspace_removes_a_surrogate_pair_as_one_character()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -213,7 +213,7 @@ public sealed class MultilinePromptTests
         Assert.Equal("x", terminal.AskMultiline("回答 >"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "多行提示把标签写在独立行")]
     public void Multiline_prompt_writes_the_label_on_its_own_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

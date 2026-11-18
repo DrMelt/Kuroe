@@ -12,7 +12,7 @@ public sealed class TaskDirectoryTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
-    [Fact]
+    [Fact(DisplayName = "无关目录被忽略")]
     public void Unrelated_directories_are_ignored()
     {
         Directory.CreateDirectory(_root);
@@ -30,7 +30,7 @@ public sealed class TaskDirectoryTests : IDisposable
         Assert.Equal(prepared, directory.Find(id));
     }
 
-    [Fact]
+    [Fact(DisplayName = "名称被占用时报告冲突")]
     public void An_occupied_name_reports_a_conflict()
     {
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
@@ -42,7 +42,7 @@ public sealed class TaskDirectoryTests : IDisposable
         Assert.Equal(ErrorCodes.TaskWorkspaceConflict, second.FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "根被文件占用时报告工作区错误")]
     public void A_root_occupied_by_a_file_reports_the_workspace_error()
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));

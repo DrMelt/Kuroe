@@ -11,7 +11,7 @@ public sealed class TaskLeaseLifecycleTests : IDisposable
 {
     private readonly TestEnvironment _environment = TestEnvironment.Create(TestFlows.InputFlow, persistTasks: true);
 
-    [Fact]
+    [Fact(DisplayName = "提交后持有租约直到任务停止")]
     public void Submit_holds_the_lease_until_the_task_is_stopped()
     {
         using FileTaskLeaseStore probe = new(KuroePaths.At(_environment.Root).RecordsDirectory);
@@ -27,7 +27,7 @@ public sealed class TaskLeaseLifecycleTests : IDisposable
         probe.TryAcquire(id).ThrowIfError();
     }
 
-    [Fact]
+    [Fact(DisplayName = "清理已收口任务释放租约")]
     public void Clear_settled_releases_the_lease()
     {
         using FileTaskLeaseStore probe = new(KuroePaths.At(_environment.Root).RecordsDirectory);
@@ -43,7 +43,7 @@ public sealed class TaskLeaseLifecycleTests : IDisposable
         probe.TryAcquire(id).ThrowIfError();
     }
 
-    [Fact]
+    [Fact(DisplayName = "关闭释放租约")]
     public async Task Shutdown_releases_the_lease()
     {
         using FileTaskLeaseStore probe = new(KuroePaths.At(_environment.Root).RecordsDirectory);

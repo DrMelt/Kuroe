@@ -10,7 +10,7 @@ namespace Kuroe.Integration.Tests.Hosting;
 /// <summary>内置对话的状态查询工具：输出文本供模型回答，值来自各服务的只读快照。</summary>
 public sealed class KuroeInfoToolTests
 {
-    [Fact]
+    [Fact(DisplayName = "任务查询列出并描述已提交任务")]
     public void Task_queries_list_and_describe_the_submitted_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -27,7 +27,7 @@ public sealed class KuroeInfoToolTests
         Assert.Contains("输入 目标：", detail);
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话任务对任务查询不可见")]
     public async Task Dialogue_task_is_not_visible_to_task_queries()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -36,12 +36,12 @@ public sealed class KuroeInfoToolTests
 
         TaskKuroeInfoTool tool = new(environment.TaskReader);
 
-        Assert.False(reply.IsError);
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Contains("还没有任务", Call(tool, "ListTasks"));
         Assert.Contains("没有任务", Call(tool, "GetTask", ("taskId", "1")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行查询渲染过程与工具条目")]
     public async Task GetExecution_renders_execution_process_and_tool_entry()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -73,7 +73,7 @@ public sealed class KuroeInfoToolTests
         Assert.Contains("\n         完成", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行状态附加进行中的工具调用进度")]
     public void Execution_state_attaches_ongoing_tool_call_progress()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -103,7 +103,7 @@ public sealed class KuroeInfoToolTests
         environment.Runner.Gate.ClearHolds();
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行状态用输出替换工具进度")]
     public void Execution_state_replaces_tool_progress_with_output()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -133,7 +133,7 @@ public sealed class KuroeInfoToolTests
         environment.Runner.Gate.ClearHolds();
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程清单列出流程与默认流程")]
     public void ListFlows_lists_flows_and_default()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -144,7 +144,7 @@ public sealed class KuroeInfoToolTests
         Assert.Contains("默认", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程查询描述节点")]
     public void GetFlow_describes_nodes()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -156,8 +156,7 @@ public sealed class KuroeInfoToolTests
         Assert.Contains("模型 @MODEL_NAME", output);
     }
 
-    /// <summary>开始端口的宿主输入名来自宿主开始输入表，端口名可以自定义。</summary>
-    [Fact]
+    [Fact(DisplayName = "流程查询显示宿主开始输入表的名称")]
     public void GetFlow_shows_the_host_start_input_from_the_form()
     {
         using TestEnvironment environment = TestEnvironment.Create("""
@@ -189,7 +188,7 @@ public sealed class KuroeInfoToolTests
         Assert.Contains("启动路径←WORKSPACE_PATH", output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程查询报告流程不存在")]
     public void GetFlow_reports_missing_flow()
     {
         using TestEnvironment environment = TestEnvironment.Create();

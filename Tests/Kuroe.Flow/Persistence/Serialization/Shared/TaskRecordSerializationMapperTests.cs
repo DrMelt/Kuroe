@@ -12,7 +12,7 @@ public sealed class TaskRecordSerializationMapperTests
 {
     private static readonly TaskRecordSerializationMapper Mapper = new([new FakeCodec()]);
 
-    [Fact]
+    [Fact(DisplayName = "序列化映射往返保留任务存档")]
     public void Round_trip_preserves_task_record()
     {
         TaskRecord record = Record();
@@ -29,7 +29,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(record.Executions[0].Usage, loaded.Executions[0].Usage);
     }
 
-    [Fact]
+    [Fact(DisplayName = "转换文档使用当前版本")]
     public void To_document_uses_current_version()
     {
         TaskRecordDocument document = Mapper.ToDocument(Record()).ThrowIfError();
@@ -37,7 +37,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(TaskRecordSerializationVersion.Current, document.Version);
     }
 
-    [Fact]
+    [Fact(DisplayName = "从文档转换拒绝未知版本")]
     public void From_document_rejects_unknown_version()
     {
         TaskRecordDocument document = new(999, null);
@@ -45,7 +45,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(FlowErrorCodes.RecordVersion, Mapper.FromDocument(document).FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "从文档转换拒绝不支持的旧版本")]
     public void From_document_rejects_unsupported_old_version()
     {
         TaskRecordDocument document = Document();
@@ -54,7 +54,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(FlowErrorCodes.RecordVersion, Mapper.FromDocument(legacy).FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "从文档转换拒绝缺少任务")]
     public void From_document_rejects_missing_task()
     {
         TaskRecordDocument document = new(TaskRecordSerializationVersion.Current, null);
@@ -62,7 +62,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(FlowErrorCodes.RecordFormat, Mapper.FromDocument(document).FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "转换文档拒绝未注册流程")]
     public void To_document_rejects_an_unregistered_flow()
     {
         TaskRecord record = Record() with
@@ -76,7 +76,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(FlowErrorCodes.RecordWrite, Mapper.ToDocument(record).FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "从文档转换拒绝未注册流程")]
     public void From_document_rejects_an_unregistered_flow()
     {
         TaskRecordDocument document = Document();
@@ -93,7 +93,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(FlowErrorCodes.RecordFormat, Mapper.FromDocument(changed).FirstError.Code);
     }
 
-    [Fact]
+    [Fact(DisplayName = "同一身份的多个编解码器被拒绝")]
     public void Several_codecs_for_the_same_identity_are_rejected()
     {
         TaskRecordSerializationMapper mapper = new([new FakeCodec(), new FakeCodec()]);

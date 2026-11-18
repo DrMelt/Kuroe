@@ -7,7 +7,7 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>Kernel 区域整体约束：工程只引 Kernel、源码无图节点词汇、无具体流程记录，中性共享层不使用图命名空间，Input 模块只依赖 Kernel 契约。</summary>
 public sealed class KernelAreaTests
 {
-    [Fact]
+    [Fact(DisplayName = "Kernel 项目只引用 Kernel")]
     public void Kernel_projects_reference_only_kernel()
     {
         IReadOnlyList<string> projects = [.. ProjectFiles(KernelRoot)];
@@ -24,7 +24,7 @@ public sealed class KernelAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "Kernel 源码不含图与节点词汇")]
     public void Kernel_sources_stay_free_of_graph_and_node_vocabulary()
     {
         string pattern = @"(?<![A-Za-z])(Graph|Node)(?![A-Za-z])";
@@ -40,7 +40,7 @@ public sealed class KernelAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "Kernel 不含具体流程记录")]
     public void Kernel_has_no_concrete_flow_records()
     {
         Assert.NotEmpty(SourceFiles(KernelRoot));
@@ -54,7 +54,7 @@ public sealed class KernelAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入项目只引用 Kernel 契约")]
     public void Input_projects_reference_only_kernel_contracts()
     {
         string input = Path.Combine(KernelRoot, "Input");
@@ -69,7 +69,7 @@ public sealed class KernelAreaTests
             ProjectReferences(runtime));
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入项目不含流程实现")]
     public void Input_projects_stay_free_of_flow_implementation()
     {
         string input = Path.Combine(KernelRoot, "Input");
@@ -91,7 +91,7 @@ public sealed class KernelAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入项目不含图与节点词汇")]
     public void Input_projects_stay_free_of_graph_and_node_vocabulary()
     {
         string input = Path.Combine(KernelRoot, "Input");
@@ -106,7 +106,7 @@ public sealed class KernelAreaTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "中性共享层不使用图命名空间")]
     public void Neutral_shared_layers_use_no_graph_namespaces()
     {
         string[] directories =

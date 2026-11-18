@@ -6,7 +6,7 @@ namespace Kuroe.Presentation.Shared.Tests;
 /// <summary>token 用量条目与请求次数的展示文本。</summary>
 public sealed class InfoLabelsTests
 {
-    [Fact]
+    [Fact(DisplayName = "用量条目按输入输出及其子集分组")]
     public void Token_entries_group_input_and_output_with_their_subsets()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(100, 20, 120, 80, 5));
@@ -20,7 +20,7 @@ public sealed class InfoLabelsTests
             InfoLabels.TokenEntries(usage));
     }
 
-    [Fact]
+    [Fact(DisplayName = "用量条目省略缺失的子集")]
     public void Token_entries_omit_subsets_that_are_missing()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(100, 20, 120, null, null));
@@ -34,7 +34,7 @@ public sealed class InfoLabelsTests
             InfoLabels.TokenEntries(usage));
     }
 
-    [Fact]
+    [Fact(DisplayName = "一侧未知时省略总量占比")]
     public void Token_entries_omit_total_shares_when_one_side_is_unknown()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(100, null, 100, null, null));
@@ -48,7 +48,7 @@ public sealed class InfoLabelsTests
             InfoLabels.TokenEntries(usage));
     }
 
-    [Fact]
+    [Fact(DisplayName = "父项未知时保留子集")]
     public void Token_entries_keep_a_subset_when_its_parent_is_unknown()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(null, 20, 20, 80, null));
@@ -62,7 +62,7 @@ public sealed class InfoLabelsTests
             InfoLabels.TokenEntries(usage));
     }
 
-    [Fact]
+    [Fact(DisplayName = "四舍五入后总量占比保持一百")]
     public void Token_entries_keep_the_total_shares_at_one_hundred_after_rounding()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(1, 7, 8, null, null));
@@ -76,7 +76,7 @@ public sealed class InfoLabelsTests
             InfoLabels.TokenEntries(usage));
     }
 
-    [Fact]
+    [Fact(DisplayName = "基数为零时省略占比")]
     public void Token_entries_omit_shares_on_a_zero_base()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(0, 0, 0, 0, 0));
@@ -90,7 +90,7 @@ public sealed class InfoLabelsTests
             InfoLabels.TokenEntries(usage));
     }
 
-    [Fact]
+    [Fact(DisplayName = "子集超过父项时省略子集占比")]
     public void Token_entries_omit_subset_share_when_the_subset_exceeds_its_parent()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(100, 20, 120, 120, 30));
@@ -104,7 +104,7 @@ public sealed class InfoLabelsTests
             InfoLabels.TokenEntries(usage));
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有已知计数时报告缺失")]
     public void Token_entries_report_missing_when_no_counts_are_known()
     {
         ExecutionUsage usage = new(1, 0, new TokenUsage(null, null, null, 80, 5));
@@ -114,7 +114,7 @@ public sealed class InfoLabelsTests
             InfoLabels.TokenEntries(usage));
     }
 
-    [Fact]
+    [Fact(DisplayName = "请求追加没有用量的请求次数")]
     public void Requests_append_the_count_of_requests_without_usage()
     {
         Assert.Equal("0 次", InfoLabels.Requests(ExecutionUsage.None));

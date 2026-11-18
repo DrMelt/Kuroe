@@ -7,7 +7,7 @@ namespace Kuroe.Integration.Tests.Workflows.Tasks;
 /// <summary>任务目录接入任务提交：提交建目录，其他目录不影响新提交，对话任务不建目录。</summary>
 public sealed class TaskDirectoryAcceptanceTests
 {
-    [Fact]
+    [Fact(DisplayName = "提交任务创建其目录")]
     public void Submitting_a_task_creates_its_directory()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -20,7 +20,7 @@ public sealed class TaskDirectoryAcceptanceTests
         Assert.Equal(new TaskId(1), id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "无关目录不影响新提交")]
     public void Unrelated_directories_do_not_affect_a_new_submission()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -30,10 +30,10 @@ public sealed class TaskDirectoryAcceptanceTests
         TaskId id = environment.Submit("修复登录超时");
 
         Assert.Equal(2, Directory.GetDirectories(tasks).Count(path => Path.GetFileName(path) != ".records"));
-        Assert.True(Directory.Exists(Path.Combine(tasks, id.Value)));
+        Assert.True(Directory.Exists(Path.Combine(tasks, id.Value)), $"{Path.Combine(tasks, id.Value)} 不存在。");
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话任务没有任务目录")]
     public async Task The_dialogue_task_has_no_directory()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -41,7 +41,7 @@ public sealed class TaskDirectoryAcceptanceTests
 
         ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
-        Assert.False(reply.IsError);
-        Assert.False(Directory.Exists(Path.Combine(environment.Root, ".kuroe_tasks")));
+        Assert.False(reply.IsError, reply.ErrorsText());
+        Assert.False(Directory.Exists(Path.Combine(environment.Root, ".kuroe_tasks")), $"{Path.Combine(environment.Root, ".kuroe_tasks")} 不应存在。");
     }
 }

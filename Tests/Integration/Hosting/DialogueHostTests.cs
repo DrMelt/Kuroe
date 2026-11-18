@@ -20,7 +20,7 @@ namespace Kuroe.Integration.Tests.Hosting;
 /// <summary>内置助手会话宿主：无模型时报模型未选择、一轮落到代码流程、多轮在同一会话上接续、语言与模型只影响新建会话、会话隔离与忙时拒绝、历史与任务域生命周期。</summary>
 public sealed class DialogueHostTests
 {
-    [Fact]
+    [Fact(DisplayName = "未选择模型时报出模型错误")]
     public async Task Without_model_reports_the_model_error()
     {
         using TestEnvironment environment = TestEnvironment.Create(seedCatalog: false);
@@ -28,10 +28,10 @@ public sealed class DialogueHostTests
         ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
         Assert.True(reply.IsError);
-        Assert.Equal("当前未选择模型。", ErrorText(reply));
+        Assert.Equal("当前未选择模型。", reply.ErrorsText());
     }
 
-    [Fact]
+    [Fact(DisplayName = "选择模型后通过对话任务回复")]
     public async Task With_model_replies_through_dialogue_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -40,11 +40,11 @@ public sealed class DialogueHostTests
 
         ErrorOr<Success> reply = await environment.SayAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
-        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Equal(["回复你好"], observer.Texts);
     }
 
-    [Fact]
+    [Fact(DisplayName = "多轮在同一对话任务上接续")]
     public async Task Rounds_continue_on_the_same_dialogue_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -55,12 +55,12 @@ public sealed class DialogueHostTests
         ErrorOr<Success> first = await environment.SayAsync("第一问", new ProcessObserver(observer.Content, observer.Entry));
         ErrorOr<Success> second = await environment.SayAsync("第二问", new ProcessObserver(observer.Content, observer.Entry));
 
-        Assert.False(first.IsError, ErrorText(first));
-        Assert.False(second.IsError, ErrorText(second));
+        Assert.False(first.IsError, first.ErrorsText());
+        Assert.False(second.IsError, second.ErrorsText());
         Assert.Equal(["回复1", "回复2"], observer.Texts);
     }
 
-    [Fact]
+    [Fact(DisplayName = "切换模式保留对话任务并改变下一轮工具")]
     public async Task Switching_mode_keeps_the_dialogue_task_and_changes_the_next_round_tools()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -86,8 +86,7 @@ public sealed class DialogueHostTests
         Assert.Contains("更改模式", edit.SystemPrompt[1], StringComparison.Ordinal);
     }
 
-    /// <summary>建立会话时给出的模式作用于首轮。</summary>
-    [Fact]
+    [Fact(DisplayName = "建立会话时给出的模式作用于首轮")]
     public async Task The_mode_given_at_creation_applies_to_the_first_round()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -102,7 +101,7 @@ public sealed class DialogueHostTests
         Assert.Contains("更改模式", parameters.SystemPrompt[1], StringComparison.Ordinal);
     }
 
-    [Fact]
+    [Fact(DisplayName = "下一轮从上次执行会话快照继续")]
     public async Task Rounds_continue_from_the_previous_execution_session_snapshot()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -122,8 +121,7 @@ public sealed class DialogueHostTests
         Assert.Equal(seed, second.ConversationSeed);
     }
 
-    /// <summary>语言变化不改变已有会话，新会话使用新语言。</summary>
-    [Fact]
+    [Fact(DisplayName = "语言变化不改变已有会话，新会话使用新语言")]
     public async Task Language_change_keeps_the_existing_session_and_applies_to_a_new_session()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -140,8 +138,7 @@ public sealed class DialogueHostTests
         Assert.NotEqual(firstOwner, environment.Runner.StartedCode[2].Request.Owner.Value);
     }
 
-    /// <summary>模型变化不改变已有会话，新会话使用新模型。</summary>
-    [Fact]
+    [Fact(DisplayName = "模型变化不改变已有会话，新会话使用新模型")]
     public async Task Model_change_keeps_the_existing_session_and_applies_to_a_new_session()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -166,7 +163,7 @@ public sealed class DialogueHostTests
         Assert.NotEqual(firstOwner, environment.Runner.StartedCode[2].Request.Owner.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "各会话保持独立的任务与模式")]
     public async Task Sessions_keep_separate_tasks_and_modes()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -183,7 +180,7 @@ public sealed class DialogueHostTests
         Assert.NotEqual(first.Id, second.Id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "运行中的会话拒绝第二次发送")]
     public async Task A_running_session_rejects_a_second_send()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -196,14 +193,15 @@ public sealed class DialogueHostTests
 
         ErrorOr<Success> second = await environment.Dialogue.SendAsync(session.Id, "第二问", null);
 
-        Assert.True(second.IsError);
-        Assert.Contains("正在执行", ErrorText(second));
+        Assert.True(second.IsError, "第二问应被拒绝。");
+        Assert.Contains("正在执行", second.ErrorsText());
 
         environment.Runner.Gate.ClearHolds();
-        Assert.False((await running.WaitAsync(TestContext.Current.CancellationToken)).IsError);
+        ErrorOr<Success> first = await running.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.False(first.IsError, first.ErrorsText());
     }
 
-    [Fact]
+    [Fact(DisplayName = "首条输入成为会话标题")]
     public async Task The_first_input_becomes_the_session_title()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -217,7 +215,7 @@ public sealed class DialogueHostTests
             environment.Dialogue.Sessions.Single(candidate => candidate.Id == session.Id).Title);
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除会话不影响其他会话")]
     public async Task Deleting_a_session_leaves_the_other_sessions()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -233,7 +231,7 @@ public sealed class DialogueHostTests
         Assert.Equal(second.Id, remaining.Id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除当前会话后选中最近剩余的会话")]
     public async Task Deleting_the_active_session_selects_the_most_recent_remaining_one()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -248,7 +246,7 @@ public sealed class DialogueHostTests
         Assert.Equal(first.Id, environment.Dialogue.Active?.Id);
     }
 
-    [Fact]
+    [Fact(DisplayName = "重命名会话改变其标题")]
     public async Task Renaming_a_session_changes_its_title()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -259,7 +257,7 @@ public sealed class DialogueHostTests
         Assert.Equal("排查构建失败", Assert.Single(environment.Dialogue.Sessions).Title);
     }
 
-    [Fact]
+    [Fact(DisplayName = "完成的一轮通过宿主事件报告")]
     public async Task A_finished_turn_reports_through_the_host_event()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -275,7 +273,7 @@ public sealed class DialogueHostTests
         Assert.True(notice.Succeeded);
     }
 
-    [Fact]
+    [Fact(DisplayName = "无法读取的恢复快照把执行留在历史尾部")]
     public async Task An_unreadable_restore_snapshot_leaves_the_execution_in_the_history_tail()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -288,13 +286,13 @@ public sealed class DialogueHostTests
             session.Id,
             TestContext.Current.CancellationToken);
 
-        Assert.False(history.IsError, ErrorText(history));
+        Assert.False(history.IsError, history.ErrorsText());
         Assert.Empty(history.Value.Conversation.Messages);
         Assert.Single(history.Value.Tail);
         Assert.NotEmpty(history.Value.Errors);
     }
 
-    [Fact]
+    [Fact(DisplayName = "关闭助手写入会话记录")]
     public async Task Closing_the_assistant_writes_session_records()
     {
         using TestEnvironment environment = TestEnvironment.Create(persistTasks: true);
@@ -305,11 +303,11 @@ public sealed class DialogueHostTests
         await environment.Dialogue.CloseAsync();
 
         string records = KuroePaths.At(environment.Root).AssistantRecordsDirectory;
-        Assert.True(Directory.Exists(records));
+        Assert.True(Directory.Exists(records), $"{records} 不存在。");
         Assert.NotEmpty(Directory.EnumerateFiles(records));
     }
 
-    [Fact]
+    [Fact(DisplayName = "删除已持久化的会话同时删除其记录")]
     public async Task Deleting_a_persisted_session_removes_its_record()
     {
         using TestEnvironment environment = TestEnvironment.Create(persistTasks: true);
@@ -317,14 +315,14 @@ public sealed class DialogueHostTests
         string record = Path.Combine(
             KuroePaths.At(environment.Root).AssistantRecordsDirectory,
             $"{session.Id.Value}.json");
-        Assert.True(File.Exists(record));
+        Assert.True(File.Exists(record), $"{record} 不存在。");
 
         (await environment.Dialogue.DeleteAsync(session.Id, TestContext.Current.CancellationToken)).ThrowIfError();
 
-        Assert.False(File.Exists(record));
+        Assert.False(File.Exists(record), $"{record} 不应存在。");
     }
 
-    [Fact]
+    [Fact(DisplayName = "新实例从助手记录恢复会话")]
     public async Task A_new_instance_restores_sessions_from_the_assistant_records()
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
@@ -360,7 +358,7 @@ public sealed class DialogueHostTests
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "对话轮次不发任务通知")]
     public async Task Dialogue_round_emits_no_task_notice()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -370,11 +368,11 @@ public sealed class DialogueHostTests
 
         ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
-        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Empty(notices);
     }
 
-    [Fact]
+    [Fact(DisplayName = "连续轮次不报告任务收口")]
     public async Task Consecutive_rounds_never_report_settlement()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -386,7 +384,7 @@ public sealed class DialogueHostTests
         {
             ErrorOr<Success> reply = await environment.SayAsync($"第{index}问", new ProcessObserver(observer.Content, observer.Entry));
 
-            Assert.False(reply.IsError, ErrorText(reply));
+            Assert.False(reply.IsError, reply.ErrorsText());
         }
 
         Assert.Equal(
@@ -395,7 +393,7 @@ public sealed class DialogueHostTests
         Assert.Single(environment.Runner.StartedCode.Select(execution => execution.Request.Owner).Distinct());
     }
 
-    [Fact]
+    [Fact(DisplayName = "一轮把工具调用交给观察者")]
     public async Task A_round_hands_tool_calls_to_its_observer()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -406,13 +404,13 @@ public sealed class DialogueHostTests
 
         ErrorOr<Success> reply = await environment.SayAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
-        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.False(reply.IsError, reply.ErrorsText());
         JournalEntry entry = Assert.Single(observer.Entries);
         Assert.Equal("工具", entry.Label);
         Assert.Equal("GetLocalTime {}\n2026-10-18 19:10:48", entry.Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "一轮记录节点条目并流式输出内容")]
     public async Task A_round_records_node_entries_and_streams_content()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -426,7 +424,7 @@ public sealed class DialogueHostTests
 
         ErrorOr<Success> reply = await environment.SayAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
-        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Equal(["增量", "回复你好"], observer.Texts);
 
         IExecution round = Assert.Single(environment.Runner.StartedCode);
@@ -435,7 +433,7 @@ public sealed class DialogueHostTests
         Assert.Contains(entries, entry => entry.Text.Contains("增量", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "一轮把推理内容交给观察者")]
     public async Task A_round_hands_reasoning_to_its_observer()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -446,12 +444,12 @@ public sealed class DialogueHostTests
 
         ErrorOr<Success> reply = await environment.SayAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
-        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Equal(["先想"], observer.Reasonings);
         Assert.Empty(observer.Texts);
     }
 
-    [Fact]
+    [Fact(DisplayName = "已收口对话的错误按展示名报出状态")]
     public void Settled_dialogue_error_names_the_state_in_its_display_form()
     {
         Error error = PendingErrors.DialogueSettled(TaskState.Blocked);
@@ -459,7 +457,7 @@ public sealed class DialogueHostTests
         Assert.Equal("对话已阻塞，无法继续对话。", error.Description);
     }
 
-    [Fact]
+    [Fact(DisplayName = "暂停中断运行中的对话轮次恢复后继续")]
     public async Task Pause_interrupts_a_running_dialogue_round_and_resume_continues()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -491,7 +489,7 @@ public sealed class DialogueHostTests
 
         ErrorOr<Success> reply = await environment.SayAsync("第二问", null);
 
-        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Equal(2, environment.Runner.StartedCode.Count);
     }
 
@@ -511,9 +509,6 @@ public sealed class DialogueHostTests
             execution.Changed -= OnChanged;
         }
     }
-
-    private static string ErrorText<T>(ErrorOr<T> result) =>
-        result.IsError ? string.Join("；", result.ErrorsOrEmptyList.Select(error => error.Description)) : string.Empty;
 
     private static LlmParameters Parameters(TestEnvironment environment, int round)
     {

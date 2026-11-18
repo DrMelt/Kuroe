@@ -19,7 +19,7 @@ public sealed class InputExecutionRunnerTests
     private static readonly NodePath Path = NodePath.Of("整体", "收话");
     private static readonly FlowStepPath Step = NodeStepPaths.From(Path);
 
-    [Fact]
+    [Fact(DisplayName = "执行声明接收并返回回答")]
     public async Task Execution_declares_reception_and_returns_the_answer()
     {
         StubInputChannel channel = new();
@@ -43,7 +43,7 @@ public sealed class InputExecutionRunnerTests
         Assert.Empty(channel.Declined);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入执行取消拒绝等待")]
     public async Task Cancellation_declines_the_wait()
     {
         StubInputChannel channel = new();

@@ -6,7 +6,7 @@ namespace Kuroe.Execution.Shared.Tests;
 /// <summary>执行过程记录：内容合并、进度与条目保留。</summary>
 public sealed class ExecutionJournalTests
 {
-    [Fact]
+    [Fact(DisplayName = "内容增量合并为一条条目并报告进度")]
     public void Content_deltas_merge_into_one_entry_and_report_progress()
     {
         ExecutionJournal journal = new();
@@ -27,7 +27,7 @@ public sealed class ExecutionJournalTests
             contents);
     }
 
-    [Fact]
+    [Fact(DisplayName = "执行记录条目无数量上限保留")]
     public void Entries_are_retained_without_a_count_limit()
     {
         ExecutionJournal journal = new();

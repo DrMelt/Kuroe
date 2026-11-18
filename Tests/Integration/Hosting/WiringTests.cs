@@ -22,7 +22,7 @@ public sealed class WiringTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
-    [Fact]
+    [Fact(DisplayName = "真实执行运行器可解析")]
     public void Real_execution_runner_resolves()
     {
         using ServiceProvider provider = Services();
@@ -32,7 +32,7 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<SessionFactory>());
     }
 
-    [Fact]
+    [Fact(DisplayName = "配置的命令工具加入工具面")]
     public void Configured_command_tools_join_the_tool_face()
     {
         Directory.CreateDirectory(_root);
@@ -52,7 +52,7 @@ public sealed class WiringTests : IDisposable
         Assert.Contains(new ToolName("GetLocalTime"), tools.Names);
     }
 
-    [Fact]
+    [Fact(DisplayName = "命令工具重复内置路径时启动失败")]
     public void Command_tool_duplicating_builtin_path_fails_startup()
     {
         Directory.CreateDirectory(_root);
@@ -74,7 +74,7 @@ public sealed class WiringTests : IDisposable
         Assert.Contains(startup.ErrorsOrEmptyList, error => error.Description.Contains("重复", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "命令工具与内置调用名冲突时启动失败")]
     public void Command_tool_colliding_with_a_builtin_call_name_fails_startup()
     {
         Directory.CreateDirectory(_root);
@@ -97,7 +97,7 @@ public sealed class WiringTests : IDisposable
             error => error.Description.Contains("模型调用名", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(DisplayName = "每个注册工具都有模型接口接受的名称")]
     public void Every_registered_tool_has_a_name_the_model_interface_accepts()
     {
         using ServiceProvider provider = Services();
@@ -110,7 +110,7 @@ public sealed class WiringTests : IDisposable
         Assert.All(names, name => Assert.Matches("^[a-zA-Z0-9_-]+$", name));
     }
 
-    [Fact]
+    [Fact(DisplayName = "内置 Git 工具加入工具面")]
     public void Builtin_git_tools_join_the_tool_face()
     {
         using ServiceProvider provider = Services();
@@ -123,7 +123,7 @@ public sealed class WiringTests : IDisposable
         Assert.Contains("git/branch/Switch", paths);
     }
 
-    [Fact]
+    [Fact(DisplayName = "内置 dotnet 工具加入工具面")]
     public void Builtin_dotnet_tools_join_the_tool_face()
     {
         using ServiceProvider provider = Services();
@@ -136,7 +136,7 @@ public sealed class WiringTests : IDisposable
         Assert.Contains("dotnet/write/Build", paths);
     }
 
-    [Fact]
+    [Fact(DisplayName = "宿主需要的每个服务都可解析")]
     public void Every_service_the_host_needs_resolves()
     {
         using ServiceProvider provider = Services();
@@ -161,13 +161,13 @@ public sealed class WiringTests : IDisposable
         services.AddLogging();
 
         ErrorOr<KuroeComposition> composition = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
-        Assert.False(composition.IsError);
+        Assert.False(composition.IsError, composition.ErrorsText());
 
         ErrorOr<Success> graph = services.AddKuroeGraphFlows(composition.Value);
-        Assert.False(graph.IsError);
+        Assert.False(graph.IsError, graph.ErrorsText());
 
         ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(_root, "source"));
-        Assert.False(assistant.IsError);
+        Assert.False(assistant.IsError, assistant.ErrorsText());
 
         return services.BuildServiceProvider();
     }

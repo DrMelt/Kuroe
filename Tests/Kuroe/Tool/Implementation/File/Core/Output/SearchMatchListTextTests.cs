@@ -9,7 +9,7 @@ public sealed class SearchMatchListTextTests
 {
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "kuroe-tests", "root");
 
-    [Fact]
+    [Fact(DisplayName = "匹配列表文本按文件分组并给出行号")]
     public void ToString_groups_matches_by_file_with_numbered_lines()
     {
         TextSearchMatch[] matches =
@@ -29,7 +29,7 @@ public sealed class SearchMatchListTextTests
         Assert.Equal(expected, text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "匹配列表文本标记截断的展示窗口")]
     public void ToString_marks_a_truncated_display_window()
     {
         TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 1, "needle", 1001, 1, 0)];

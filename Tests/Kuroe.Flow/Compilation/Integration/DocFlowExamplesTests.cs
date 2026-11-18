@@ -51,7 +51,7 @@ public sealed class DocFlowExamplesTests
     /// <summary>从文档页面取出每个 Flows 代码块，与所在小节的 Nodes 代码块配对。格式不合法时直接失败。</summary>
     private static TheoryData<string, string, string> ExamplesOf(string relative)
     {
-        TheoryData<string, string, string> examples = new();
+        TheoryData<string, string, string> examples = [];
         int count = 0;
         foreach (Section section in Sections(relative, File.ReadAllLines(Path.Combine(RepositoryRoot(), relative))))
         {

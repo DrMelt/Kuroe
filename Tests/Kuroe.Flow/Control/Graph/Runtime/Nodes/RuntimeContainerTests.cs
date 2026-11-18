@@ -14,7 +14,7 @@ namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Nodes;
 /// <summary>容器内容齐备只由内容来源决定，门控来源不撤销已发布快照。</summary>
 public sealed class RuntimeContainerTests
 {
-    [Fact]
+    [Fact(DisplayName = "门控释放不改变已发布内容的就绪")]
     public void Gate_release_does_not_change_published_content_readiness()
     {
         NodePath containerPath = NodePath.Of("整体");

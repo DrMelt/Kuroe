@@ -12,7 +12,7 @@ namespace Kuroe.Tool.Contract.Tests;
 /// <summary>查看本轮契约状态的载体：报出步骤、轮次、状态、缺口与已上报的无法完成原因。</summary>
 public sealed class StatusToolTests
 {
-    [Fact]
+    [Fact(DisplayName = "描述渲染回合契约")]
     public void Describe_renders_the_round_contract()
     {
         StatusTool tool = new(

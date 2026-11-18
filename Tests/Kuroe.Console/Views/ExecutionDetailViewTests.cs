@@ -16,7 +16,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>执行详情的渲染：直接构造执行快照，断言契约端口区与输入取值区。</summary>
 public sealed class ExecutionDetailViewTests
 {
-    [Fact]
+    [Fact(DisplayName = "LLM 执行详情打印契约端口")]
     public void Llm_execution_prints_the_required_ports()
     {
         Terminal terminal = NewTerminal(out TestConsole output);
@@ -30,22 +30,23 @@ public sealed class ExecutionDetailViewTests
 
         new ExecutionDetailView(terminal).Print(task, execution);
 
-        Assert.Contains("契约端口 3 个", output.Output);
-        Assert.Contains("类型", output.Output);
-        Assert.Contains("模式", output.Output);
-        Assert.Contains("说明", output.Output);
-        Assert.Contains("结论", output.Output);
-        Assert.Contains("Text", output.Output);
-        Assert.Contains("Signal", output.Output);
-        Assert.Contains("Trigger", output.Output);
-        Assert.Contains("是否通过", output.Output);
-        Assert.Contains("信号", output.Output);
-        Assert.Contains("报告", output.Output);
-        Assert.Contains("Plain", output.Output);
-        Assert.Contains("返工问题清单", output.Output);
+        Assert.Multiple(
+            () => Assert.Contains("契约端口 3 个", output.Output),
+            () => Assert.Contains("类型", output.Output),
+            () => Assert.Contains("模式", output.Output),
+            () => Assert.Contains("说明", output.Output),
+            () => Assert.Contains("结论", output.Output),
+            () => Assert.Contains("Text", output.Output),
+            () => Assert.Contains("Signal", output.Output),
+            () => Assert.Contains("Trigger", output.Output),
+            () => Assert.Contains("是否通过", output.Output),
+            () => Assert.Contains("信号", output.Output),
+            () => Assert.Contains("报告", output.Output),
+            () => Assert.Contains("Plain", output.Output),
+            () => Assert.Contains("返工问题清单", output.Output));
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有契约端口的 LLM 执行报告无端口")]
     public void Llm_execution_without_required_ports_reports_none()
     {
         Terminal terminal = NewTerminal(out TestConsole output);
@@ -56,7 +57,7 @@ public sealed class ExecutionDetailViewTests
         Assert.Contains("本次执行没有需要交回的端口。", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "其他节点类型的执行仍打印契约端口")]
     public void Execution_of_another_node_type_still_prints_the_required_ports()
     {
         Terminal terminal = NewTerminal(out TestConsole output);
@@ -69,7 +70,7 @@ public sealed class ExecutionDetailViewTests
         Assert.Contains("结论", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "输入值显示来源端口与截断提示")]
     public void Input_values_show_source_port_and_truncation_hint()
     {
         Terminal terminal = NewTerminal(out TestConsole output);

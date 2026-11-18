@@ -16,7 +16,7 @@ namespace Kuroe.Runner.Llm.Tests.Executions;
 /// <summary>Llm 恢复准备：无法完成的执行不允许恢复，负载格式与模型在准备阶段校验。</summary>
 public sealed class LlmExecutionRunnerFactoryTests
 {
-    [Fact]
+    [Fact(DisplayName = "准备拒绝报告无法完成的执行")]
     public void Prepare_rejects_an_execution_that_reported_cannot_complete()
     {
         LlmExecutionRunnerFactory factory = new(Factory());
@@ -25,7 +25,7 @@ public sealed class LlmExecutionRunnerFactoryTests
         Assert.True(factory.Prepare(context).IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备接受可读取的会话负载")]
     public void Prepare_accepts_a_readable_session_payload()
     {
         LlmExecutionRunnerFactory factory = new(Factory());
@@ -34,7 +34,7 @@ public sealed class LlmExecutionRunnerFactoryTests
         Assert.False(factory.Prepare(context).IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝来自其他模型的负载")]
     public void Prepare_rejects_a_payload_from_another_model()
     {
         LlmExecutionRunnerFactory factory = new(Factory());
@@ -43,7 +43,7 @@ public sealed class LlmExecutionRunnerFactoryTests
         Assert.True(factory.Prepare(context).IsError);
     }
 
-    [Fact]
+    [Fact(DisplayName = "准备拒绝未知负载格式")]
     public void Prepare_rejects_an_unknown_payload_format()
     {
         LlmExecutionRunnerFactory factory = new(Factory());

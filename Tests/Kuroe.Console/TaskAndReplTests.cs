@@ -13,7 +13,7 @@ namespace Kuroe.Console.Tests;
 /// <summary>任务浏览与终端主循环。</summary>
 public sealed partial class TaskAndReplTests
 {
-    [Fact]
+    [Fact(DisplayName = "提交任务报告该任务")]
     public void Task_submit_reports_the_task()
     {
         using ConsoleSession cli = new();
@@ -24,7 +24,7 @@ public sealed partial class TaskAndReplTests
         Assert.Single(cli.Environment.TaskReader.Snapshots());
     }
 
-    [Fact]
+    [Fact(DisplayName = "空目标提交被拒绝")]
     public void Task_submit_with_a_blank_goal_is_rejected()
     {
         using ConsoleSession cli = new();
@@ -35,7 +35,7 @@ public sealed partial class TaskAndReplTests
         Assert.Empty(cli.Environment.TaskReader.Snapshots());
     }
 
-    [Fact]
+    [Fact(DisplayName = "提交任务询问每个开始端口")]
     public void Task_submit_asks_every_start_port()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.MultiStartFlow);
@@ -71,7 +71,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal(["readme", "plain"], task.Inputs.Values.Select(input => input.Text));
     }
 
-    [Fact]
+    [Fact(DisplayName = "提交任务把固定开始端口作为上下文显示")]
     public void Task_submit_shows_fixed_start_ports_as_context()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.FixedStartFlow);
@@ -99,7 +99,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal("readme", cli.Environment.Snapshot(new TaskId(1)).Inputs.Values.Single().Text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "提交在确认处取消")]
     public void Task_submit_is_cancelled_at_the_confirmation()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.MultiStartFlow);
@@ -125,7 +125,7 @@ public sealed partial class TaskAndReplTests
         Assert.Empty(cli.Environment.TaskReader.Snapshots());
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务概览打印执行")]
     public void Task_overview_prints_the_executions()
     {
         using ConsoleSession cli = new();
@@ -139,7 +139,7 @@ public sealed partial class TaskAndReplTests
         Assert.DoesNotContain("├", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务概览打印待处理节点但不打印树")]
     public void Task_overview_prints_pending_nodes_without_the_tree()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
@@ -153,7 +153,7 @@ public sealed partial class TaskAndReplTests
         Assert.DoesNotContain("├", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务概览打印阻塞原因")]
     public void Task_overview_prints_the_blocked_reason()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.BlockingFlow);
@@ -168,7 +168,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("输出端口内容未交回", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务过程打印过程记录")]
     public void Task_journal_prints_the_process_records()
     {
         using ConsoleSession cli = new();
@@ -184,7 +184,7 @@ public sealed partial class TaskAndReplTests
         Assert.DoesNotContain("├", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务树作为页面打开")]
     public void Task_tree_opens_as_a_page()
     {
         using ConsoleSession cli = new();
@@ -199,7 +199,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("├", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务树打印树并标记等待节点")]
     public void Task_tree_prints_a_tree_and_marks_waiting_nodes()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
@@ -214,7 +214,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("待批准：确认计划", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务浏览器打开概览时不展开树")]
     public void Task_browser_opens_the_overview_without_the_tree()
     {
         using ConsoleSession cli = new();
@@ -242,7 +242,7 @@ public sealed partial class TaskAndReplTests
             output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务浏览器标记任务与执行层级")]
     public void Task_browser_marks_the_task_and_execution_levels()
     {
         using ConsoleSession cli = new();
@@ -269,7 +269,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal(2, taskPages.Length);
     }
 
-    [Fact]
+    [Fact(DisplayName = "停止确认未接受时任务浏览器保留任务")]
     public void Task_browser_keeps_the_task_when_the_stop_confirmation_is_not_accepted()
     {
         using ConsoleSession cli = new();
@@ -300,7 +300,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.StopTask(new TaskId(1));
     }
 
-    [Fact]
+    [Fact(DisplayName = "确认后任务浏览器停止任务")]
     public void Task_browser_stops_the_task_after_confirmation()
     {
         using ConsoleSession cli = new();
@@ -329,7 +329,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal(TaskState.Terminated, cli.Environment.Snapshot(new TaskId(1)).State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务浏览器列出等待输入并回答选中节点")]
     public void Task_browser_lists_waiting_inputs_and_answers_the_selected_node()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.TwoInputFlow);
@@ -361,7 +361,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal("整体/输入一", left.Value);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务浏览器从菜单提交任务")]
     public void Task_browser_submits_a_task_from_the_menu()
     {
         using ConsoleSession cli = new();
@@ -384,7 +384,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal("menu-submit", Assert.Single(cli.Environment.TaskReader.Snapshots()).Title);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务列表显示创建时间不显示进度")]
     public void Task_list_shows_the_creation_time_without_progress()
     {
         using ConsoleSession cli = new();
@@ -398,7 +398,7 @@ public sealed partial class TaskAndReplTests
         Assert.DoesNotContain("进度", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务列表显示等待节点数")]
     public void Task_list_shows_waiting_node_count()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
@@ -416,7 +416,7 @@ public sealed partial class TaskAndReplTests
         Assert.DoesNotContain("整体/审阅", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务执行渲染输入来源与过程")]
     public void Task_execution_renders_input_sources_and_process()
     {
         using ConsoleSession cli = new();
@@ -435,7 +435,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("› 执行 #1 ", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有待批准时批准被拒绝")]
     public void Task_approve_without_awaiting_approval_rejects()
     {
         using ConsoleSession cli = new();
@@ -447,7 +447,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("未生效。", cli.ErrorsOut.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "清理丢弃已收口任务")]
     public void Task_clear_drops_settled_tasks()
     {
         using ConsoleSession cli = new();
@@ -460,7 +460,7 @@ public sealed partial class TaskAndReplTests
         Assert.Empty(cli.Environment.TaskReader.Snapshots());
     }
 
-    [Fact]
+    [Fact(DisplayName = "批准完成评审任务")]
     public void Task_approve_completes_a_review_task()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
@@ -476,7 +476,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("任务 00000001 已批准，继续下一步。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "多个输入等待时回答需要节点路径")]
     public void Task_answer_requires_node_path_when_multiple_inputs_wait()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.TwoInputFlow);
@@ -493,7 +493,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal(TaskState.Done, cli.Environment.Snapshot(new TaskId(1)).State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "回答文本保留开头节点标签")]
     public void Task_answer_keeps_the_leading_node_label_in_text()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.InputFlow);
@@ -508,7 +508,7 @@ public sealed partial class TaskAndReplTests
             value => value.Text.Contains("用户输入 需要 补充多语言"));
     }
 
-    [Fact]
+    [Fact(DisplayName = "并行等待时批准与回答可并行工作")]
     public void Task_approve_and_answer_work_side_by_side_on_parallel_waits()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ParallelInputAndReviewFlow);
@@ -527,7 +527,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal(TaskState.Done, cli.Environment.Snapshot(new TaskId(1)).State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "回答报告回执")]
     public void Task_answer_reports_the_receipt()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.InputFlow);
@@ -539,7 +539,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("任务 00000001 已收到回答，继续下一步。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "标题重命名任务")]
     public void Task_title_renames_the_task()
     {
         using ConsoleSession cli = new();
@@ -551,7 +551,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal("文档 补齐", cli.Environment.Snapshot(new TaskId(1)).Title);
     }
 
-    [Fact]
+    [Fact(DisplayName = "重跑恢复阻塞任务")]
     public void Task_rerun_resumes_a_blocked_task()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.BlockingFlow);
@@ -565,7 +565,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("任务 00000001 已重新执行。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "停止终止任务")]
     public void Task_stop_terminates_the_task()
     {
         using ConsoleSession cli = new();
@@ -579,7 +579,7 @@ public sealed partial class TaskAndReplTests
         Assert.Equal(TaskState.Terminated, cli.Environment.Snapshot(new TaskId(1)).State);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务浏览器提供暂停后恢复")]
     public void Task_browser_offers_pause_then_resume()
     {
         using ConsoleSession cli = new();
@@ -612,7 +612,7 @@ public sealed partial class TaskAndReplTests
     }
 
 
-    [Fact]
+    [Fact(DisplayName = "停止执行只停止单个执行")]
     public void Task_stop_execution_stops_a_single_execution()
     {
         using ConsoleSession cli = new();
@@ -625,7 +625,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("执行 #1 已停止。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "任务列表不显示对话任务")]
     public async Task Task_list_does_not_show_the_dialogue_task()
     {
         using ConsoleSession cli = new();
@@ -638,7 +638,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("还没有任务", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "停止不能作用于对话任务")]
     public async Task Task_stop_cannot_reach_the_dialogue_task()
     {
         using ConsoleSession cli = new();
@@ -650,7 +650,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("没有任务 00000001", cli.ErrorsOut.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "助手菜单列出操作与状态")]
     public async Task Assistant_menu_lists_the_actions_and_status()
     {
         using ConsoleSession cli = new();
@@ -668,7 +668,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("← 返回主菜单", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "助手会话列表不提供全局模型切换")]
     public async Task Assistant_session_list_does_not_offer_the_global_model_switch()
     {
         using ConsoleSession cli = new();
@@ -688,7 +688,7 @@ public sealed partial class TaskAndReplTests
         Assert.DoesNotContain("切换全局模型", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "助手发送在空行时回到菜单")]
     public async Task Assistant_send_returns_to_the_menu_on_an_empty_line()
     {
         using ConsoleSession cli = new();
@@ -703,7 +703,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("助手操作", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "助手菜单切换模式")]
     public async Task Assistant_menu_switches_the_mode()
     {
         using ConsoleSession cli = new();
@@ -721,7 +721,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("模式已切换为更改，下一轮生效。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "助手菜单切换模型")]
     public async Task Assistant_menu_switches_the_model()
     {
         using ConsoleSession cli = new();
@@ -742,7 +742,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("已保存并生效。", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "REPL 工具页回到主菜单")]
     public async Task Repl_tool_page_returns_to_the_main_menu()
     {
         using ConsoleSession cli = new();
@@ -766,7 +766,7 @@ public sealed partial class TaskAndReplTests
         Assert.True(back >= 0 && output.IndexOf("Kuroe 助手", back, StringComparison.Ordinal) > back, output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "REPL 显示主菜单并退出")]
     public async Task Repl_shows_the_main_menu_and_exits()
     {
         using ConsoleSession cli = new();
@@ -782,7 +782,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("退出程序", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "REPL 退出确认前回到菜单")]
     public async Task Repl_exit_returns_to_the_menu_until_confirmed()
     {
         using ConsoleSession cli = new();
@@ -801,7 +801,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("× 确认退出", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "REPL 默认进入对话并在空行返回")]
     public async Task Repl_enters_dialogue_by_default_and_returns_on_an_empty_line()
     {
         using ConsoleSession cli = new();
@@ -820,7 +820,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("Kuroe >", cli.Output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "REPL 按返回键离开对话")]
     public async Task Repl_leaves_the_dialogue_on_escape()
     {
         using ConsoleSession cli = new();

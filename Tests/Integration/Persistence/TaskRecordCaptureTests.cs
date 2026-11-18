@@ -13,7 +13,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
 {
     private readonly TestEnvironment _environment = TestEnvironment.Create(TestFlows.InputFlow, persistTasks: true);
 
-    [Fact]
+    [Fact(DisplayName = "存档捕获使用待处理步骤")]
     public void Capture_uses_the_pending_step()
     {
         TaskId id = _environment.Submit("捕获存档");
@@ -28,7 +28,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
         Assert.NotEmpty(State(record).Nodes);
     }
 
-    [Fact]
+    [Fact(DisplayName = "存档捕获保留已发布端口历史")]
     public void Capture_retains_published_port_history()
     {
         using TestEnvironment environment = TestEnvironment.Create(persistTasks: true);
@@ -47,7 +47,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
         Assert.All(State(record).Ports, port => Assert.NotEqual(default, port.At));
     }
 
-    [Fact]
+    [Fact(DisplayName = "存档捕获保留成功执行的恢复数据")]
     public void Capture_retains_restore_data_of_a_successful_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow, persistTasks: true);

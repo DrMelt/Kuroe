@@ -8,7 +8,7 @@ namespace Kuroe.Integration.Tests.Runtime.Nodes;
 /// <summary>文件读取与写入节点：按版本读取工作目录内文件，内容写入下游或落到文件，失败阻塞后重新执行。</summary>
 public sealed class FileNodeTests
 {
-    [Fact]
+    [Fact(DisplayName = "读取再写入复制文件内容")]
     public void Read_then_write_copies_the_file()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReadWriteFlow);
@@ -21,7 +21,7 @@ public sealed class FileNodeTests
         Assert.Equal("文件内容", File.ReadAllText(Path.Combine(environment.Root, "out", "result.txt")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "读取内容进入下游执行输入")]
     public async Task Read_content_enters_the_downstream_execution_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReadThenLlmFlow);
@@ -36,7 +36,7 @@ public sealed class FileNodeTests
             value => value.Text == "文件内容" && value.Origin is ExecutionSource);
     }
 
-    [Fact]
+    [Fact(DisplayName = "文件缺失时任务阻塞重跑后继续")]
     public void Missing_file_blocks_the_task_and_rerun_resumes_it()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReadWriteFlow);
@@ -55,7 +55,7 @@ public sealed class FileNodeTests
         Assert.Equal("恢复内容", File.ReadAllText(Path.Combine(environment.Root, "out", "result.txt")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "配置的最大字符数截断文件内容")]
     public void Configured_max_chars_truncates_the_file_content()
     {
         using TestEnvironment environment = TestEnvironment.Create(LimitedReadFlow);
@@ -67,7 +67,7 @@ public sealed class FileNodeTests
         Assert.Equal("文件…内容已截断", File.ReadAllText(Path.Combine(environment.Root, "out", "result.txt")));
     }
 
-    [Fact]
+    [Fact(DisplayName = "工作目录之外的路径阻塞任务")]
     public void Path_outside_the_working_directory_blocks_the_task()
     {
         using TestEnvironment environment = TestEnvironment.Create(EscapePathFlow);

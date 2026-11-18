@@ -7,7 +7,7 @@ namespace Kuroe.Cli.Tests.Commands;
 /// <summary>run 命令的驱动语义与退出码。</summary>
 public sealed class RunCommandTests
 {
-    [Fact]
+    [Fact(DisplayName = "完成流程流式输出文本并返回成功")]
     public async Task Done_flow_streams_text_and_returns_success()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -22,8 +22,8 @@ public sealed class RunCommandTests
     }
 
     [Theory]
-    [InlineData(CliFlows.Input, "Input")]
-    [InlineData(CliFlows.Approval, "Approval")]
+    [InlineData(CliFlows.Input, "Input", Label = "输入节点流程")]
+    [InlineData(CliFlows.Approval, "Approval", Label = "审批节点流程")]
     public async Task Waiting_node_flow_is_unavailable(string flowsJson, string kind)
     {
         await using CliEnvironment environment = CliEnvironment.Create(flowsJson);
@@ -36,7 +36,7 @@ public sealed class RunCommandTests
         Assert.Contains("未注册", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "阻塞流程返回阻塞码")]
     public async Task Blocked_flow_returns_blocked()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Blocked);
@@ -48,7 +48,7 @@ public sealed class RunCommandTests
         Assert.Contains("已阻塞", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "多个输入按端口名给出")]
     public async Task Multiple_inputs_are_given_by_port_name()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.MultiStart);
@@ -60,7 +60,7 @@ public sealed class RunCommandTests
         Assert.Contains("输出", output.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "缺少开始输入被拒绝")]
     public async Task Missing_start_input_is_rejected()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.MultiStart);
@@ -72,7 +72,7 @@ public sealed class RunCommandTests
         Assert.Contains("开始端口 风格 没有输入。", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "宿主开始端口输入被拒绝")]
     public async Task Host_start_port_input_is_rejected()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.HostInput);
@@ -84,7 +84,7 @@ public sealed class RunCommandTests
         Assert.Contains("开始端口 启动路径 由宿主提供，不接受提交输入。", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "没有端口名的输入被拒绝")]
     public async Task Input_without_port_name_is_rejected()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -96,7 +96,7 @@ public sealed class RunCommandTests
         Assert.Contains("端口=值", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "完成流程报告请求用量与上下文")]
     public async Task Done_flow_reports_requests_tokens_and_context()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
@@ -119,7 +119,7 @@ public sealed class RunCommandTests
         Assert.Contains("上下文 75", error.ToString());
     }
 
-    [Fact]
+    [Fact(DisplayName = "完成流程报告未知上下文")]
     public async Task Done_flow_reports_unknown_context()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);

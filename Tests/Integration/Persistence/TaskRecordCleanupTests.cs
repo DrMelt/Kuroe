@@ -11,7 +11,7 @@ public sealed class TaskRecordCleanupTests : IDisposable
     private static readonly TaskRecordCodec Codec = Kuroe.Flow.TestSupport.TaskRecordCodecs.Codec();
     private readonly TestEnvironment _environment = TestEnvironment.Create(persistTasks: true);
 
-    [Fact]
+    [Fact(DisplayName = "清理已收口任务删除存档")]
     public async Task Clear_settled_tasks_deletes_records()
     {
         TaskId id = _environment.Submit("清理任务");
@@ -24,7 +24,8 @@ public sealed class TaskRecordCleanupTests : IDisposable
         _environment.Tasks.ClearSettled().ThrowIfError();
 
         Assert.DoesNotContain(store.ReadAll().Records, record => record.Identity.Id == id);
-        Assert.False(File.Exists(Path.Combine(directory, $"{id.Value}{Codec.FileExtension}")));
+        string recordFile = Path.Combine(directory, $"{id.Value}{Codec.FileExtension}");
+        Assert.False(File.Exists(recordFile), $"{recordFile} 不应存在。");
     }
 
     public void Dispose() => _environment.Dispose();

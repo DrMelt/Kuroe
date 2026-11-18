@@ -11,7 +11,7 @@ namespace Kuroe.Tasks.Persistence.Json.Tests;
 /// <summary>新增流程实现只需提供自己的记录与编解码器，不改中央序列化项目。</summary>
 public sealed class FlowRecordCodecRegistrationTests
 {
-    [Fact]
+    [Fact(DisplayName = "新流程经 JSON 编解码往返")]
     public void A_new_flow_round_trips_through_the_json_codec()
     {
         TaskRecord record = TaskRecordFixture.Create() with

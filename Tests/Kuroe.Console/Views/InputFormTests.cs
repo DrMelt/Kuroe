@@ -7,7 +7,7 @@ namespace Kuroe.Console.Tests.Views;
 /// <summary>输入表的选择、重印、上下文、凭据遮罩与取消。</summary>
 public sealed class InputFormTests
 {
-    [Fact]
+    [Fact(DisplayName = "表单打印全部字段与已填值")]
     public void Form_prints_every_field_and_the_filled_values()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -35,7 +35,7 @@ public sealed class InputFormTests
         Assert.DoesNotContain("输入中", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单打印上下文与当前说明")]
     public void Form_prints_context_and_the_current_description()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -55,7 +55,7 @@ public sealed class InputFormTests
         Assert.Contains("新值：按 JSON 字面量解析", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单掩码秘密值")]
     public void Form_masks_secret_values()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -70,7 +70,7 @@ public sealed class InputFormTests
         Assert.Contains("已填写", text);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单允许乱序填写字段")]
     public void Form_allows_filling_fields_out_of_order()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -90,7 +90,7 @@ public sealed class InputFormTests
         Assert.Equal(["alpha", "beta"], values);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单允许重写已填字段")]
     public void Form_allows_rewriting_a_filled_field()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -112,7 +112,7 @@ public sealed class InputFormTests
         Assert.Equal(["second", "beta"], values);
     }
 
-    [Fact]
+    [Fact(DisplayName = "字段未填时不提供提交")]
     public void Form_does_not_offer_submit_while_a_field_is_unfilled()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -124,7 +124,7 @@ public sealed class InputFormTests
         Assert.DoesNotContain("√ 提交", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单在返回键返回空")]
     public void Form_returns_null_on_escape()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -133,7 +133,7 @@ public sealed class InputFormTests
         Assert.Null(new InputForm(terminal, "填写", [new FormField("甲"), new FormField("乙")]).Run());
     }
 
-    [Fact]
+    [Fact(DisplayName = "字段输入取消时表单返回空")]
     public void Form_returns_null_when_a_field_input_is_cancelled()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -144,7 +144,7 @@ public sealed class InputFormTests
         Assert.Null(new InputForm(terminal, "填写", [new FormField("甲"), new FormField("乙")]).Run());
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单在空行返回空")]
     public void Form_returns_null_on_an_empty_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -154,7 +154,7 @@ public sealed class InputFormTests
         Assert.Null(new InputForm(terminal, "填写", [new FormField("甲")]).Run());
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单填完后打印完整表格并去掉选择菜单")]
     public void Form_prints_the_completed_table_without_the_selection_menu()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -171,7 +171,7 @@ public sealed class InputFormTests
         Assert.DoesNotContain("甲 · 未填写", text[submit..]);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单读取多行字段直到终止行")]
     public void Form_reads_a_multiline_field_until_the_terminator_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -200,7 +200,7 @@ public sealed class InputFormTests
         Assert.Contains("second", table);
     }
 
-    [Fact]
+    [Fact(DisplayName = "多行字段取消时表单返回空")]
     public void Form_returns_null_when_a_multiline_field_is_cancelled()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -214,7 +214,7 @@ public sealed class InputFormTests
             [new FormField("回答", Kind: FieldKind.Multiline)]).Run());
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单以初始值开始并提交")]
     public void Form_starts_with_initial_values_and_submits_them()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -229,7 +229,7 @@ public sealed class InputFormTests
         Assert.Contains("main", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "只填必填字段时表单可提交")]
     public void Form_submits_when_only_required_fields_are_filled()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -246,7 +246,7 @@ public sealed class InputFormTests
         Assert.Contains("乙 · 可留空", output.Output);
     }
 
-    [Fact]
+    [Fact(DisplayName = "表单允许重写初始值")]
     public void Form_allows_rewriting_an_initial_value()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -263,7 +263,7 @@ public sealed class InputFormTests
         Assert.Equal(["dev"], values);
     }
 
-    [Fact]
+    [Fact(DisplayName = "无字段表单返回空结果且不显示菜单")]
     public void Form_without_fields_returns_an_empty_result_without_a_menu()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

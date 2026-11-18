@@ -14,16 +14,13 @@ public sealed class HostStartInputsStoreTests : IDisposable
 
     private string FilePath => Path.Combine(_root, "hostStartInputs.json");
 
-    /// <summary>文件不存在时没有表项。</summary>
-    [Fact]
+    [Fact(DisplayName = "文件不存在时没有表项")]
     public void A_missing_file_has_no_entries() => Assert.Empty(Load());
 
-    /// <summary>空对象没有表项。</summary>
-    [Fact]
+    [Fact(DisplayName = "空对象没有表项")]
     public void An_empty_object_has_no_entries() => Assert.Empty(Load("{}"));
 
-    /// <summary>表项按流程名与开始端口名读出。</summary>
-    [Fact]
+    [Fact(DisplayName = "表项按流程名与开始端口名读出")]
     public void Entries_are_read_by_flow_and_port()
     {
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> entries = Load("""
@@ -39,12 +36,10 @@ public sealed class HostStartInputsStoreTests : IDisposable
         Assert.Equal("MODEL", entry["模型"]);
     }
 
-    /// <summary>表为 null 时没有表项。</summary>
-    [Fact]
+    [Fact(DisplayName = "表为 null 时没有表项")]
     public void A_null_section_has_no_entries() => Assert.Empty(Load("""{ "HostStartInputs": null }"""));
 
-    /// <summary>非法 JSON 报错时带上文件路径。</summary>
-    [Fact]
+    [Fact(DisplayName = "非法 JSON 报错时带上文件路径")]
     public void Invalid_json_reports_the_file()
     {
         ErrorOr<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> loaded = TryLoad("{");
@@ -53,30 +48,25 @@ public sealed class HostStartInputsStoreTests : IDisposable
         Assert.Contains("hostStartInputs.json", loaded.FirstError.Description, StringComparison.Ordinal);
     }
 
-    /// <summary>根节点必须是对象。</summary>
-    [Fact]
+    [Fact(DisplayName = "根节点必须是对象")]
     public void A_root_that_is_not_an_object_is_rejected() =>
         Assert.Contains("JSON 对象", Errors("[]").Single().Description, StringComparison.Ordinal);
 
-    /// <summary>顶层只认 HostStartInputs。</summary>
-    [Fact]
+    [Fact(DisplayName = "顶层只认 HostStartInputs")]
     public void An_unknown_section_is_rejected() =>
         Assert.Contains("不认识 Flows", Errors("""{ "Flows": {} }""").Single().Description, StringComparison.Ordinal);
 
-    /// <summary>HostStartInputs 必须是流程名到端口表的映射。</summary>
-    [Fact]
+    [Fact(DisplayName = "HostStartInputs 必须是流程名到端口表的映射")]
     public void A_section_that_is_not_an_object_is_rejected() =>
         Assert.Contains("必须是流程名到端口表的映射",
             Errors("""{ "HostStartInputs": [] }""").Single().Description, StringComparison.Ordinal);
 
-    /// <summary>流程表必须是开始端口到宿主输入名的映射。</summary>
-    [Fact]
+    [Fact(DisplayName = "流程表必须是开始端口到宿主输入名的映射")]
     public void A_flow_that_is_not_an_object_is_rejected() =>
         Assert.Contains("必须是开始端口到宿主输入名的映射",
             Errors("""{ "HostStartInputs": { "默认": [] } }""").Single().Description, StringComparison.Ordinal);
 
-    /// <summary>流程名与端口名不能为空或重复，错误一次给全。</summary>
-    [Fact]
+    [Fact(DisplayName = "流程名与端口名不能为空或重复，错误一次给全")]
     public void Flow_and_port_names_must_be_present_and_unique()
     {
         List<Error> errors = Errors("""
@@ -94,8 +84,7 @@ public sealed class HostStartInputsStoreTests : IDisposable
         Assert.Contains(errors, error => error.Description.Contains("端口 启动路径 重复", StringComparison.Ordinal));
     }
 
-    /// <summary>宿主输入名必须是非空字符串。</summary>
-    [Fact]
+    [Fact(DisplayName = "宿主输入名必须是非空字符串")]
     public void A_port_value_must_be_a_non_blank_string()
     {
         List<Error> errors = Errors("""

@@ -13,7 +13,7 @@ public sealed class NodeSpecRulesWiringTests
     private static readonly PortName Input = new("输入");
     private static readonly PortName Output = new("输出");
 
-    [Fact]
+    [Fact(DisplayName = "引用容器保留来源用于输入接线")]
     public void Reference_container_keeps_from_for_input_wiring()
     {
         NodeSpec node = NodeSpec.Reference(new NodeLabel("组"), new NodeName("库组")) with
@@ -24,7 +24,7 @@ public sealed class NodeSpecRulesWiringTests
         Assert.Empty(Errors(fail => node.CheckWiring(NodeRuleContext.Reference, fail, container: true)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "引用执行节点绑定在展开后解析")]
     public void Reference_execution_node_bindings_are_resolved_after_expansion()
     {
         NodeSpec node = NodeSpec.Reference(new NodeLabel("实施"), new NodeName("库实施")) with
@@ -35,7 +35,7 @@ public sealed class NodeSpecRulesWiringTests
         Assert.Empty(Errors(fail => node.CheckWiring(NodeRuleContext.Reference, fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "库执行定义不能声明来源")]
     public void Library_execution_definition_cannot_declare_from()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -48,7 +48,7 @@ public sealed class NodeSpecRulesWiringTests
             Errors(fail => node.CheckWiring(NodeRuleContext.LibraryDefinition, fail)).Single());
     }
 
-    [Fact]
+    [Fact(DisplayName = "流程执行节点在来源中保留动态接线")]
     public void Flow_execution_node_keeps_dynamic_wiring_in_from()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
@@ -61,7 +61,7 @@ public sealed class NodeSpecRulesWiringTests
         Assert.Empty(Errors(fail => node.CheckWiring(NodeRuleContext.FlowDefinition, fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "容器绑定按静态输入绑定声明")]
     public void Container_bindings_are_declared_as_static_input_bindings()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
@@ -74,7 +74,7 @@ public sealed class NodeSpecRulesWiringTests
         Assert.Empty(Errors(fail => node.CheckWiring(NodeRuleContext.FlowDefinition, fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "库容器定义不能声明绑定")]
     public void Library_container_definition_cannot_declare_bindings()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
@@ -88,7 +88,7 @@ public sealed class NodeSpecRulesWiringTests
             Errors(fail => node.CheckWiring(NodeRuleContext.LibraryDefinition, fail)));
     }
 
-    [Fact]
+    [Fact(DisplayName = "库执行定义不能声明绑定")]
     public void Library_execution_definition_cannot_declare_bindings()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
