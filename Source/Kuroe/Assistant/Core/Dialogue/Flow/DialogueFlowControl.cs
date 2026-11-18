@@ -167,7 +167,7 @@ internal sealed class DialogueFlowControl(
             execution = gateway.Open(task, Request(input));
             IExecution? previous = task.Executions.Count > 0 ? task.Executions[^1] : null;
             invocation = new ExecutionInvocation(
-                new ExecutionTargetId(DialogueFlow.ReplyLabel),
+                new ExecutionStepId(DialogueFlow.ReplyLabel),
                 _runnerFactory,
                 state.Parameters.ToExecutionParameters(
                     state.Model,
@@ -184,7 +184,7 @@ internal sealed class DialogueFlowControl(
     private ExecutionRequest Request(string text) =>
         new(
             new ExecutionOwnerId(task.Id.Value),
-            new ExecutionTargetId(DialogueFlow.ReplyLabel),
+            new ExecutionStepId(DialogueFlow.ReplyLabel),
             [],
             [new ExecutionInputValue(new ExecutionPortName(DialogueFlow.InputPort.Value), text, null)],
             new Dictionary<ExecutionPortName, string>

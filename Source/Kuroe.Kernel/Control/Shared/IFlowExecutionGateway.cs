@@ -18,7 +18,7 @@ public interface ITaskExecutionGateway : IExecutionOwnerIndex
     /// <summary>校验恢复负载并准备一次恢复。</summary>
     ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context);
 
-    /// <summary>装配执行目标、派发执行并等待收口。</summary>
+    /// <summary>装配执行、派发执行并等待收口。</summary>
     Task<ErrorOr<Success>> RunAsync(
         IExecution execution,
         ExecutionInvocation invocation);

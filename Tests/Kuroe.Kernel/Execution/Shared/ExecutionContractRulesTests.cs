@@ -110,7 +110,7 @@ public sealed class ExecutionContractRulesTests
     private static ExecutionRequest Request(ExecutionOutputPort output) =>
         new(
             new ExecutionOwnerId("task"),
-            new ExecutionTargetId("step"),
+            new ExecutionStepId("step"),
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),

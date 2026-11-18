@@ -24,10 +24,10 @@ public sealed class ExecutionRuntime(
     {
         try
         {
-            if (invocation.Target != execution.Request.Target)
+            if (invocation.Step != execution.Request.Step)
             {
                 throw new InvalidOperationException(
-                    $"执行目标 {invocation.Target} 与请求目标 {execution.Request.Target} 不一致。");
+                    $"执行步骤 {invocation.Step} 与请求步骤 {execution.Request.Step} 不一致。");
             }
 
             ExecutionRun run = ExecutionRun.Create(Unit(execution), invocation);
@@ -48,11 +48,11 @@ public sealed class ExecutionRuntime(
     {
         try
         {
-            if (prepared.Context.Invocation.Target != prepared.Context.Request.Target
-                || prepared.Invocation.Target != prepared.Context.Invocation.Target)
+            if (prepared.Context.Invocation.Step != prepared.Context.Request.Step
+                || prepared.Invocation.Step != prepared.Context.Invocation.Step)
             {
                 throw new InvalidOperationException(
-                    $"恢复目标 {prepared.Invocation.Target} 与请求目标 {prepared.Context.Request.Target} 不一致。");
+                    $"恢复步骤 {prepared.Invocation.Step} 与请求步骤 {prepared.Context.Request.Step} 不一致。");
             }
 
             Unit(execution).ContinueFrom(Unit(source));

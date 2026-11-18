@@ -6,7 +6,7 @@ using Kuroe.Execution.Shared.Identity;
 
 namespace Kuroe.Flow.Graph.Records.Shared.Tests;
 
-/// <summary>图记录的目标标识与来源标识往返。</summary>
+/// <summary>图记录的步骤标识与来源标识往返。</summary>
 public sealed class GraphRecordConversionTests
 {
     [Fact]
@@ -14,7 +14,7 @@ public sealed class GraphRecordConversionTests
     {
         NodePath path = NodePath.Of("整体", "计划/复核");
 
-        NodePath parsed = GraphRecordTargets.Parse(GraphRecordTargets.Format(path));
+        NodePath parsed = GraphRecordSteps.Parse(GraphRecordSteps.Format(path));
 
         Assert.Equal(path, parsed);
     }

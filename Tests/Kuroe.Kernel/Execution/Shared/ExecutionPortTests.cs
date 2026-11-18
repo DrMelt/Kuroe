@@ -31,14 +31,14 @@ public sealed class ExecutionPortTests
         ExecutionPortName output = new("output");
         ExecutionRequest request = new(
             new ExecutionOwnerId("task"),
-            new ExecutionTargetId("step"),
+            new ExecutionStepId("step"),
             [new ExecutionInputPort(input, ExecutionPortKind.Text, ExecutionPortRole.Content, true, null)],
             [new ExecutionInputValue(input, "hello", "start")],
             new Dictionary<ExecutionPortName, string> { [input] = "hello" },
             [new ExecutionOutputPort(output, ExecutionPortKind.Signal, true, true)]);
 
         Assert.Equal("task", request.Owner.Value);
-        Assert.Equal("step", request.Target.Value);
+        Assert.Equal("step", request.Step.Value);
         Assert.Equal(input, Assert.Single(request.InputPorts).Name);
         Assert.Equal("hello", Assert.Single(request.Inputs).Text);
         Assert.Equal("hello", request.Texts[input]);

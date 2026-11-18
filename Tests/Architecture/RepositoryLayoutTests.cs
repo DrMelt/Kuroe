@@ -173,7 +173,7 @@ public sealed class RepositoryLayoutTests
             "ExecutableNode",
             "ModelPort",
             "GraphExecution",
-            "IExecutionTargetResolver",
+            "IExecutionNodeDeclarationResolver",
             "RuntimeGraph.Execution",
             "IsConstant",
             "RequiresSubmission",

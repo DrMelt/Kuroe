@@ -1,6 +1,6 @@
 namespace Kuroe.Execution.Shared.Restore;
 
-/// <summary>一次执行保留的恢复负载快照。格式由执行目标类型解释。</summary>
+/// <summary>一次执行保留的恢复负载快照。格式由执行实现解释。</summary>
 public sealed record ExecutionRestoreState(
     string Format,
     string Payload);

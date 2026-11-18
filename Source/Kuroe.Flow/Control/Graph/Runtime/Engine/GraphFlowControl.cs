@@ -17,7 +17,7 @@ namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 internal sealed class GraphFlowControl(
     ITaskFlowContext task,
     GraphFlowState state,
-    IExecutionTargetResolver targetResolver,
+    IExecutionNodeDeclarationResolver declarationResolver,
     ITaskExecutionGateway gateway) : IFlowControl, IFlowRerun
 {
     private readonly Lock _gate = new();
@@ -581,12 +581,12 @@ internal sealed class GraphFlowControl(
                 return;
             }
 
-            ErrorOr<INodeDeclaration> declaration = targetResolver.For(executable, inputs);
+            ErrorOr<INodeDeclaration> declaration = declarationResolver.For(executable, inputs);
             if (declaration.IsError)
             {
                 node.ReleaseActive();
                 string reason = string.IsNullOrWhiteSpace(declaration.FirstError.Description)
-                    ? "执行目标解析失败。"
+                    ? "执行节点声明解析失败。"
                     : declaration.FirstError.Description;
                 node.EnterBlocked([node.Path], new NodeBlock(reason, null, DateTimeOffset.UtcNow));
                 task.AppendError(reason);

@@ -98,7 +98,7 @@ public sealed class KuroeToolFactoryTests
     private static ExecutionRequest Request(IReadOnlyDictionary<ExecutionPortName, string> texts) =>
         new(
             new ExecutionOwnerId("1"),
-            new ExecutionTargetId("流程/节点"),
+            new ExecutionStepId("流程/节点"),
             [],
             [],
             texts,

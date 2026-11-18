@@ -371,7 +371,7 @@ internal sealed class TaskBrowser(
             "主菜单",
             "任务",
             $"{found.Value.Task.Id} {found.Value.Task.Title}",
-            $"{found.Value.Execution.Id} {found.Value.Execution.Request.Target}");
+            $"{found.Value.Execution.Id} {found.Value.Execution.Request.Step}");
         executionView.Print(found.Value.Task, found.Value.Execution);
         terminal.Hint($"› {found.Value.Execution.Id} · 第 {found.Value.Task.RoundOf(found.Value.Execution)} 轮"
             + $" · {found.Value.Execution.State}");
@@ -389,7 +389,7 @@ internal sealed class TaskBrowser(
             TaskSnapshot task = found.Value.Task;
             Execution.Shared.State.ExecutionSnapshot snapshot = found.Value.Execution;
 
-            terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Request.Target}");
+            terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Request.Step}");
             executionView.Print(task, snapshot);
             terminal.NewLine();
 

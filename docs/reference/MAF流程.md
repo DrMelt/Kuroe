@@ -20,12 +20,12 @@ services.AddKuroeMafFlows(
                 new MafStepId("计划"),
                 "计划",
                 [new PortName("计划")],
-                new MafStepTarget(composition.LlmRunner, context => CreateParameters(context))),
+                new MafStepInvocationFactory(composition.LlmRunner, context => CreateParameters(context))),
             new MafStep(
                 new MafStepId("执行"),
                 "执行",
                 [new PortName("结论")],
-                new MafStepTarget(composition.LlmRunner, context => CreateParameters(context))),
+                new MafStepInvocationFactory(composition.LlmRunner, context => CreateParameters(context))),
         ],
         [
             new MafEdge(new MafStepId("计划"), new MafStepId("执行")),
@@ -35,7 +35,7 @@ services.AddKuroeMafFlows(
     });
 ```
 
-`CreateParameters` 接收 `ExecutionParameterContext`，返回 `ErrorOr<IExecutionParameters>`，由宿主按模型与当前轮次构造参数。步骤的每次运行建立一次参数。`MafStepTarget` 持有执行运行器工厂实例，由框架建立执行装配结果，目标标识直接来自步骤标识。需要自定义执行装配时实现 `IMafStepTargetFactory`，提交时校验目标标识必须与步骤标识一致。`AddKuroeMafFlows` 同时注册流程实现、存档编解码与流程模板，流程进入流程目录，可以从 Console 与 CLI 按名字提交。传入 `IMafFlowSource` 时按该来源取定义。
+`CreateParameters` 接收 `ExecutionParameterContext`，返回 `ErrorOr<IExecutionParameters>`，由宿主按模型与当前轮次构造参数。步骤的每次运行建立一次参数。`MafStepInvocationFactory` 持有执行运行器工厂实例，由框架建立执行装配结果，装配结果使用步骤标识。需要自定义执行装配时实现 `IMafStepInvocationFactory`，提交时校验装配结果的步骤标识必须与步骤标识一致。`AddKuroeMafFlows` 同时注册流程实现、存档编解码与流程模板，流程进入流程目录，可以从 Console 与 CLI 按名字提交。传入 `IMafFlowSource` 时按该来源取定义。
 
 ## 定义
 
@@ -43,15 +43,15 @@ services.AddKuroeMafFlows(
 | --- | --- |
 | `Name` | 流程名，提交与恢复按它选择实现 |
 | `StartPorts` | 开始端口与默认值，必须包含 `MODEL_NAME` |
-| `Steps` | 步骤标识、标签、输出端口与执行目标工厂 |
+| `Steps` | 步骤标识、标签、输出端口与执行装配工厂 |
 | `Edges` | 步骤之间的连接 |
 | `Description` | 流程说明，进入流程目录 |
 
-步骤标识同时是执行目标标识与流程步骤路径，标识不能为空，也不能含 `/`。执行装配结果的 `ExecutionInvocation.Target` 必须与步骤标识一致，提交时校验。一个步骤至多一个上游，分叉后的步骤可以并行执行，多个上游的收敛不支持。
+步骤标识同时是执行步骤标识与流程步骤路径，标识不能为空，也不能含 `/`。执行装配结果的 `ExecutionInvocation.Step` 必须与步骤标识一致，提交时校验。一个步骤至多一个上游，分叉后的步骤可以并行执行，多个上游的收敛不支持。
 
 ## 输入与产出
 
-提交时按开始端口校验输入，省略的端口用默认值补齐。`MODEL_NAME` 必填，模型名交给每个步骤建立执行目标。
+提交时按开始端口校验输入，省略的端口用默认值补齐。`MODEL_NAME` 必填，模型名交给每个步骤建立执行装配。
 
 入口步骤的输入是开始端口文本，`MODEL_NAME` 不进入执行输入。其余步骤的输入是直接上游步骤的输出端口。步骤的 `Outputs` 声明需要交回的执行端口，交回的端口文本作为消息交给下游，更早步骤的产出不再向后传递。
 

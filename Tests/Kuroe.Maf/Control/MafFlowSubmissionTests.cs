@@ -143,7 +143,7 @@ public sealed class MafFlowSubmissionTests
             new MafStepId("步骤"),
             "步骤",
             [new PortName("输出")],
-            new FailingTargetFactory());
+            new FailingInvocationFactory());
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition([step], []),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
@@ -158,7 +158,7 @@ public sealed class MafFlowSubmissionTests
             new MafStepId("步骤"),
             "步骤",
             [new PortName("输出")],
-            new MismatchedTargetFactory());
+            new MismatchedInvocationFactory());
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition([step], []),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
@@ -272,25 +272,25 @@ public sealed class MafFlowSubmissionTests
         [Edge("第一步", "第二步")]);
 
     private static MafStep Step(string id, string? label = null) =>
-        new(new MafStepId(id), label ?? id, [new PortName("输出")], Target());
+        new(new MafStepId(id), label ?? id, [new PortName("输出")], Invocation());
 
     private static MafEdge Edge(string from, string to) =>
         new(new MafStepId(from), new MafStepId(to));
 
-    private static MafStepTarget Target() =>
+    private static MafStepInvocationFactory Invocation() =>
         new(TestRunner, _ => EmptyExecutionParameters.Instance);
 
-    private sealed class FailingTargetFactory : IMafStepTargetFactory
+    private sealed class FailingInvocationFactory : IMafStepInvocationFactory
     {
         public ErrorOr<ExecutionInvocation> Create(MafStepId step, string model, ExecutionParameterContext context) =>
-            Error.Validation("Maf.Target", "没有执行目标。");
+            Error.Validation("Maf.Invocation", "没有执行装配。");
     }
 
-    private sealed class MismatchedTargetFactory : IMafStepTargetFactory
+    private sealed class MismatchedInvocationFactory : IMafStepInvocationFactory
     {
         public ErrorOr<ExecutionInvocation> Create(MafStepId step, string model, ExecutionParameterContext context) =>
             new ExecutionInvocation(
-                new ExecutionTargetId("其他"),
+                new ExecutionStepId("其他"),
                 TestRunner,
                 EmptyExecutionParameters.Instance);
     }

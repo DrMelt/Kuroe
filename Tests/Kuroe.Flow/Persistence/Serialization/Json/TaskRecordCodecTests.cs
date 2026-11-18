@@ -55,6 +55,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     [Theory]
     [InlineData(13)]
     [InlineData(14)]
+    [InlineData(15)]
     public void Read_rejects_previous_versions(int version)
     {
         string previous = $"{{\"Version\":{version},\"Task\":{{}}}}";

@@ -10,8 +10,8 @@ using Xunit;
 
 namespace Kuroe.Flow.Control.Graph.Tests.Runtime;
 
-/// <summary>执行目标解析：没有模型端口的节点不进入模型解析器。</summary>
-public sealed class ExecutionTargetResolverTests
+/// <summary>执行节点声明解析：没有模型端口的节点不进入模型解析器。</summary>
+public sealed class ExecutionNodeDeclarationResolverTests
 {
     [Fact]
     public void Unmodeled_node_returns_an_empty_declaration()
@@ -25,7 +25,7 @@ public sealed class ExecutionTargetResolverTests
             Outputs = [],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
         };
-        ExecutionTargetResolver resolver = new(new ThrowingResolver());
+        ExecutionNodeDeclarationResolver resolver = new(new ThrowingResolver());
 
         ErrorOr<INodeDeclaration> result = resolver.For(node, PortTexts.Empty);
 
@@ -40,7 +40,7 @@ public sealed class ExecutionTargetResolverTests
         public NodeTypeShape Shape { get; } = new() { DispatchesExecutions = true };
     }
 
-    private sealed class ThrowingResolver : IExecutionTargetResolver
+    private sealed class ThrowingResolver : IExecutionNodeDeclarationResolver
     {
         public ErrorOr<INodeDeclaration> For(ExecutableNode executable, IPortTexts portTexts) =>
             throw new InvalidOperationException("无模型端口的节点不应进入模型解析。");

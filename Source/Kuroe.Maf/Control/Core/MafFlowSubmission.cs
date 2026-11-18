@@ -55,10 +55,10 @@ public sealed class MafFlowSubmission(
                 $"开始端口 {MafFlowDefinition.ModelPort} 没有给出模型。")];
         }
 
-        ErrorOr<Success> targets = ValidateTargets(definition, model, id);
-        if (targets.IsError)
+        ErrorOr<Success> invocations = ValidateInvocations(definition, model, id);
+        if (invocations.IsError)
         {
-            return targets.ErrorsOrEmptyList;
+            return invocations.ErrorsOrEmptyList;
         }
 
         MafFlowState state = new(definition, effective, new FlowTexts(Texts(effective)), model);
@@ -126,10 +126,10 @@ public sealed class MafFlowSubmission(
             }
         }
 
-        ErrorOr<Success> targets = ValidateTargets(flow, model, record.Identity.Id);
-        if (targets.IsError)
+        ErrorOr<Success> invocations = ValidateInvocations(flow, model, record.Identity.Id);
+        if (invocations.IsError)
         {
-            return targets.ErrorsOrEmptyList;
+            return invocations.ErrorsOrEmptyList;
         }
 
         MafFlowState state = new(
@@ -191,16 +191,16 @@ public sealed class MafFlowSubmission(
         out IExecution? execution)
     {
         execution = null;
-        MafStep? step = definition.Steps.FirstOrDefault(candidate => candidate.ExecutionTargetId == record.Target);
+        MafStep? step = definition.Steps.FirstOrDefault(candidate => candidate.ExecutionStepId == record.Step);
         if (step is null)
         {
             return Error.Failure(FlowErrorCodes.RecordFormat,
-                $"存档里的步骤 {record.Target.Value} 不在流程定义中。");
+                $"存档里的步骤 {record.Step.Value} 不在流程定义中。");
         }
 
         ExecutionRequest request = new(
             new ExecutionOwnerId(taskId.Value),
-            record.Target,
+            record.Step,
             [.. record.Inputs.Select(input => new ExecutionInputPort(
                 input.Port,
                 ExecutionPortKind.Text,
@@ -252,8 +252,8 @@ public sealed class MafFlowSubmission(
         return null;
     }
 
-    /// <summary>按模型校验全部步骤的执行目标；目标建立失败或标识不一致时返回错误。</summary>
-    private static ErrorOr<Success> ValidateTargets(
+    /// <summary>按模型校验全部步骤的执行装配；装配建立失败或步骤标识不一致时返回错误。</summary>
+    private static ErrorOr<Success> ValidateInvocations(
         MafFlowDefinition definition,
         string model,
         TaskId task)
@@ -263,7 +263,7 @@ public sealed class MafFlowSubmission(
         {
             ExecutionParameterContext context = new(
                 new ExecutionOwnerId(task.Value),
-                step.ExecutionTargetId,
+                step.ExecutionStepId,
                 1,
                 1,
                 [],
@@ -271,18 +271,18 @@ public sealed class MafFlowSubmission(
                 new Dictionary<ExecutionPortName, string>(),
                 [],
                 model);
-            ErrorOr<ExecutionInvocation> target = step.TargetFactory.Create(step.Id, model, context);
-            if (target.IsError)
+            ErrorOr<ExecutionInvocation> invocation = step.InvocationFactory.Create(step.Id, model, context);
+            if (invocation.IsError)
             {
-                errors.AddRange(target.ErrorsOrEmptyList);
+                errors.AddRange(invocation.ErrorsOrEmptyList);
                 continue;
             }
 
-            if (target.Value.Target != step.ExecutionTargetId)
+            if (invocation.Value.Step != step.ExecutionStepId)
             {
                 errors.Add(FlowErrors.Body(
                     definition.Name.Value,
-                    $"步骤「{step.Id.Value}」的执行目标标识 {target.Value.Target.Value} 与步骤标识不一致。"));
+                    $"步骤「{step.Id.Value}」的执行步骤标识 {invocation.Value.Step.Value} 与步骤标识不一致。"));
             }
         }
 

@@ -87,7 +87,7 @@ internal sealed class DialogueFlowSubmission(
     {
         ExecutionRequest request = new(
             new ExecutionOwnerId(task.Value),
-            record.Target,
+            record.Step,
             [],
             [.. record.Inputs.Select(input => new ExecutionInputValue(
                 input.Port,

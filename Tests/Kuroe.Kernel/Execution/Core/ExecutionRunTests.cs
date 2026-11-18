@@ -97,7 +97,7 @@ public sealed class ExecutionRunTests
     private static ExecutionRequest Request() =>
         new(
             new ExecutionOwnerId("任务"),
-            new ExecutionTargetId("节点"),
+            new ExecutionStepId("节点"),
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),
@@ -105,7 +105,7 @@ public sealed class ExecutionRunTests
 
     private static ExecutionInvocation Invocation(IExecutionRunner runner) =>
         new(
-            new ExecutionTargetId("节点"),
+            new ExecutionStepId("节点"),
             new TestFactory(runner),
             EmptyExecutionParameters.Instance);
 

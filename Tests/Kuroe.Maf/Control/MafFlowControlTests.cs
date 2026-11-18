@@ -32,7 +32,7 @@ public sealed class MafFlowControlTests
 
         Assert.Equal(2, harness.Work.Executions.Count);
         Assert.All(harness.Work.Executions, execution => Assert.Equal(ExecutionState.Succeeded, execution.State));
-        Assert.Equal(["第一步", "第二步"], harness.Work.Executions.Select(execution => execution.Request.Target.Value));
+        Assert.Equal(["第一步", "第二步"], harness.Work.Executions.Select(execution => execution.Request.Step.Value));
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public sealed class MafFlowControlTests
 
         Assert.Equal(
             ForkedSteps.Order(StringComparer.Ordinal),
-            harness.Work.Executions.Select(execution => execution.Request.Target.Value).Order(StringComparer.Ordinal));
+            harness.Work.Executions.Select(execution => execution.Request.Step.Value).Order(StringComparer.Ordinal));
         Assert.All(harness.Work.Executions, execution => Assert.Equal(ExecutionState.Succeeded, execution.State));
     }
 
@@ -226,8 +226,8 @@ public sealed class MafFlowControlTests
         harness.Resume();
         await WaitUntil(() => harness.Work.State == TaskState.Done);
 
-        Assert.Equal(2, harness.Work.Executions.Count(execution => execution.Request.Target.Value == "第一步"));
-        Assert.Single(harness.Work.Executions, execution => execution.Request.Target.Value == "第二步");
+        Assert.Equal(2, harness.Work.Executions.Count(execution => execution.Request.Step.Value == "第一步"));
+        Assert.Single(harness.Work.Executions, execution => execution.Request.Step.Value == "第二步");
         Assert.DoesNotContain(
             harness.Work.JournalEntries,
             entry => entry.Text.Contains("可恢复阻塞", StringComparison.Ordinal));

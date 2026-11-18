@@ -91,7 +91,7 @@ public sealed class ExecutionTests
         Kuroe.Execution.ExecutionRuntime runtime = new(new Kuroe.Execution.ExecutionDispatcher());
         IExecution execution = runtime.Create(new ExecutionId(1), Request());
         ExecutionInvocation invocation = new(
-            new ExecutionTargetId("其他"),
+            new ExecutionStepId("其他"),
             new UnusedFactory(),
             EmptyExecutionParameters.Instance);
 
@@ -106,7 +106,7 @@ public sealed class ExecutionTests
     private static ExecutionRequest Request(params ExecutionOutputPort[] ports) =>
         new(
             new ExecutionOwnerId("任务"),
-            new ExecutionTargetId("节点"),
+            new ExecutionStepId("节点"),
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),

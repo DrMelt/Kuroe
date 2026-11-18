@@ -158,7 +158,7 @@ public sealed class DialogueHistoryViewTests
     {
         ExecutionRequest request = new(
             new ExecutionOwnerId("task"),
-            new ExecutionTargetId("回话"),
+            new ExecutionStepId("回话"),
             [],
             [new ExecutionInputValue(new ExecutionPortName("回答"), input, null)],
             new Dictionary<ExecutionPortName, string>(),

@@ -24,7 +24,7 @@ public sealed class EngineAdvanceTests
                 step.Label == "收官" && step.Executions.Count > 0));
 
             Assert.Contains(environment.TaskReader.LiveExecutions(), execution =>
-            Uri.UnescapeDataString(execution.Request.Target.Value).EndsWith("慢工"));
+            Uri.UnescapeDataString(execution.Request.Step.Value).EndsWith("慢工"));
         }
         finally
         {

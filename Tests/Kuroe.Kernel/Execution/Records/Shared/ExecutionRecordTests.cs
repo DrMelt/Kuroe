@@ -17,7 +17,7 @@ public sealed class ExecutionRecordTests
         ExecutionPortName port = new("结论");
         ExecutionRecord record = new(
             new ExecutionId(3),
-            new ExecutionTargetId("整体/计划"),
+            new ExecutionStepId("整体/计划"),
             ExecutionState.Succeeded,
             "完成",
             DateTimeOffset.UnixEpoch,
@@ -35,7 +35,7 @@ public sealed class ExecutionRecordTests
                     [port] = new(port, "完成"),
                 }));
 
-        Assert.Equal(new ExecutionTargetId("整体/计划"), record.Target);
+        Assert.Equal(new ExecutionStepId("整体/计划"), record.Step);
         Assert.Equal("start:目标", Assert.Single(record.Inputs).Source);
         Assert.Equal("完成", record.Contract!.Outputs![port].Text);
         Assert.Equal(10, record.Usage.Tokens.Input);
@@ -46,7 +46,7 @@ public sealed class ExecutionRecordTests
     {
         ExecutionRecord record = new(
             new ExecutionId(1),
-            new ExecutionTargetId("步骤"),
+            new ExecutionStepId("步骤"),
             ExecutionState.Queued,
             "",
             DateTimeOffset.UnixEpoch,
@@ -93,7 +93,7 @@ public sealed class ExecutionRecordTests
         new ExecutionId(4),
         new ExecutionRequest(
             new ExecutionOwnerId("task"),
-            new ExecutionTargetId("step"),
+            new ExecutionStepId("step"),
             [],
             [input],
             new Dictionary<ExecutionPortName, string> { [input.Port] = input.Text },

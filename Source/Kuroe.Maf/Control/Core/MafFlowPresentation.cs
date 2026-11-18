@@ -34,7 +34,7 @@ public sealed class MafFlowPresentation : IFlowPresentation
         IReadOnlyList<FlowExecutionView> executions =
         [
             .. task.Executions
-                .Where(execution => execution.Request.Target == step.ExecutionTargetId)
+                .Where(execution => execution.Request.Step == step.ExecutionStepId)
                 .Select((execution, index) => Execution(execution, index + 1)),
         ];
         FlowExecutionView? last = executions.LastOrDefault(

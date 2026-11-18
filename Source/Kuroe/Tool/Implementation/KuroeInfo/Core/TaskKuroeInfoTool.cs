@@ -178,7 +178,7 @@ public sealed class TaskKuroeInfoTool : ITool
         var text = new StringBuilder();
         TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
         text.AppendLine($"{execution.Id} · 第 {task.RoundOf(execution)} 轮");
-        text.AppendLine($"{task.Id} {task.Title} · 目标 {execution.Request.Target}");
+        text.AppendLine($"{task.Id} {task.Title} · 步骤 {execution.Request.Step}");
         string stateLabel = execution.State.IsLive() && execution.Progress.Length > 0
             ? $"{execution.State.Label()}（{execution.Progress}）"
             : execution.State.Label();

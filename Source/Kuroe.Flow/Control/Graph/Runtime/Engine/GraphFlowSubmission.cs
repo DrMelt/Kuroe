@@ -24,7 +24,7 @@ public sealed class GraphFlowSubmission(
     IFlowSnapshotCompiler compiler,
     IHostStartInputs hostStartInputs,
     IHostTaskStart host,
-    IExecutionTargetResolver targets,
+    IExecutionNodeDeclarationResolver declarations,
     ITaskExecutionGateway executions,
     IFlowSnapshotSource? snapshots = null) : IFlowSubmission
 {
@@ -90,7 +90,7 @@ public sealed class GraphFlowSubmission(
 
         StartPortValues startPorts = new(graph.StartPorts, start.Value, effectiveInputs);
 
-        // 等待型节点不进入派发路径；派发节点在静态值全部就绪后再要求执行目标可解析
+        // 等待型节点不进入派发路径；派发节点在静态值全部就绪后再要求执行节点声明可解析
         StaticPortValues staticPorts = new(graph, startPorts);
         foreach (InputBinding binding in graph.StartOutgoing)
         {
@@ -101,7 +101,7 @@ public sealed class GraphFlowSubmission(
                 continue;
             }
 
-            ErrorOr<INodeDeclaration> declaration = targets.For(target, staticPorts.For(target));
+            ErrorOr<INodeDeclaration> declaration = declarations.For(target, staticPorts.For(target));
             if (declaration.IsError)
             {
                 return declaration.ErrorsOrEmptyList;
@@ -148,7 +148,7 @@ public sealed class GraphFlowSubmission(
         {
             foreach (ExecutionRecord executionRecord in record.Executions)
             {
-                NodePath path = GraphRecordTargets.Parse(executionRecord.Target);
+                NodePath path = GraphRecordSteps.Parse(executionRecord.Step);
                 if (flow.Graph[path] is not ExecutableNode node)
                 {
                     return [Error.Failure(
@@ -156,8 +156,8 @@ public sealed class GraphFlowSubmission(
                         $"存档执行节点 {path} 不在流程图中。")];
                 }
 
-                int attempt = rounds.GetValueOrDefault(executionRecord.Target.Value) + 1;
-                rounds[executionRecord.Target.Value] = attempt;
+                int attempt = rounds.GetValueOrDefault(executionRecord.Step.Value) + 1;
+                rounds[executionRecord.Step.Value] = attempt;
                 GraphExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord, flow.Graph, attempt);
                 GraphExecution execution = GraphExecution.Restore(executionRecord, input, executions);
                 state.Bind(execution.Unit.Id, input, execution.ControlVersion);
@@ -203,7 +203,7 @@ public sealed class GraphFlowSubmission(
             OutputPorts = node.SubmittablePorts,
         };
 
-        if (targets.For(node, input) is { IsError: false } declaration)
+        if (declarations.For(node, input) is { IsError: false } declaration)
         {
             input = input with { Declaration = declaration.Value };
         }

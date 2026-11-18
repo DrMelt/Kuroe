@@ -136,7 +136,7 @@ public sealed class CodeFlowExecutionTests
         {
             ExecutionRequest request = new(
                 new ExecutionOwnerId(Task.Id.Value),
-                new ExecutionTargetId("回话"),
+                new ExecutionStepId("回话"),
                 [new ExecutionInputPort(Input, ExecutionPortKind.Text, ExecutionPortRole.Content, true, null)],
                 [new ExecutionInputValue(Input, "目标", null)],
                 new Dictionary<ExecutionPortName, string> { [Input] = "目标" },
@@ -159,7 +159,7 @@ public sealed class CodeFlowExecutionTests
                 .RunAsync(
                     execution,
                     new ExecutionInvocation(
-                        execution.Request.Target,
+                        execution.Request.Step,
                         factory,
                         EmptyExecutionParameters.Instance));
     }

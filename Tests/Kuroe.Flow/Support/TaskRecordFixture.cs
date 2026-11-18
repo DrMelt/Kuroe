@@ -108,7 +108,7 @@ public static class TaskRecordFixture
             [
                 new ExecutionRecord(
                     new Kuroe.Execution.Shared.Identity.ExecutionId(taskId * 10 + 1),
-                    GraphRecordTargets.Format(plan),
+                    GraphRecordSteps.Format(plan),
                     Kuroe.Execution.Shared.State.ExecutionState.Succeeded,
                     "完成",
                     At(3, 4, 10),
@@ -128,7 +128,7 @@ public static class TaskRecordFixture
                     }),
                 new ExecutionRecord(
                     new Kuroe.Execution.Shared.Identity.ExecutionId(taskId * 10 + 2),
-                    GraphRecordTargets.Format(read),
+                    GraphRecordSteps.Format(read),
                     Kuroe.Execution.Shared.State.ExecutionState.Failed,
                     "失败",
                     At(3, 4, 20),
@@ -140,7 +140,7 @@ public static class TaskRecordFixture
                     new Dictionary<Kuroe.Execution.Shared.Ports.ExecutionPortName, string>()),
                 new ExecutionRecord(
                     new Kuroe.Execution.Shared.Identity.ExecutionId(taskId * 10 + 3),
-                    GraphRecordTargets.Format(answer),
+                    GraphRecordSteps.Format(answer),
                     Kuroe.Execution.Shared.State.ExecutionState.Interrupted,
                     "已中断",
                     At(3, 4, 30),

@@ -56,7 +56,7 @@ public sealed class ContractReminderTests
     private static ExecutionStatus Status(
         IReadOnlyList<ExecutionPortName> outstanding,
         string? reason = null) =>
-        new(new ExecutionTargetId("实施"), ExecutionState.Running, outstanding, reason);
+        new(new ExecutionStepId("实施"), ExecutionState.Running, outstanding, reason);
 
     private sealed class FakeEntry(ExecutionStatus status) : IExecutionRequestEntry
     {

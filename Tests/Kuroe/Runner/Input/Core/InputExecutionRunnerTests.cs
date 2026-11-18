@@ -62,7 +62,7 @@ public sealed class InputExecutionRunnerTests
     private static ExecutionRequest Request() =>
         new(
             new ExecutionOwnerId("task-1"),
-            ExecutionTargetPaths.Target(Path),
+            ExecutionStepPaths.From(Path),
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),

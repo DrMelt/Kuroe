@@ -35,7 +35,7 @@ public sealed class StatusTool(
         string limit = maxAttempts == int.MaxValue ? "不限" : maxAttempts.ToString();
 
         var text = new StringBuilder();
-        text.AppendLine($"节点 {status.Target} · 第 {attempt} 轮 · 执行上限 {limit}");
+        text.AppendLine($"步骤 {status.Step} · 第 {attempt} 轮 · 执行上限 {limit}");
         text.AppendLine($"执行状态：{status.State.Label()}");
         text.AppendLine(ContractReceipts.Needs(status));
 

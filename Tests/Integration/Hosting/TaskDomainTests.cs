@@ -106,6 +106,6 @@ public sealed class TaskDomainTests
         Assert.False(second.IsError);
         Assert.Equal(new TaskId(1), id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, environment.Runner.StartedCode.Count(execution => execution.Request.Target.Value == "回话"));
+        Assert.Equal(2, environment.Runner.StartedCode.Count(execution => execution.Request.Step.Value == "回话"));
     }
 }

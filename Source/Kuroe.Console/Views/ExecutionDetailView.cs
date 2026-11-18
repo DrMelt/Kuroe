@@ -20,7 +20,7 @@ internal sealed class ExecutionDetailView(Terminal terminal)
         List<(string Label, IRenderable Value)> fields =
         [
             ("任务", new Text($"{task.Id} {task.Title}")),
-            ("节点", new Text(execution.Request.Target.Value)),
+            ("步骤", new Text(execution.Request.Step.Value)),
             ("轮次", new Text($"第 {task.RoundOf(execution)} 轮")),
             ("请求", new Text(ViewLabels.Requests(execution.Usage), Styles.Hint)),
             .. ViewLabels.TokenEntries(execution.Usage)

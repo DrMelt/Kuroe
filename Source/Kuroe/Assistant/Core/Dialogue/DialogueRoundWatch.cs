@@ -25,13 +25,13 @@ internal sealed class DialogueRoundWatch : IDisposable
     internal Task<ErrorOr<Success>> Outcome => _outcome.Task;
 
     /// <summary>建立本轮观察：旧执行的通知一律忽略，观察者在接受本轮执行后挂上。</summary>
-    internal static DialogueRoundWatch Attach(WorkTask task, string target, ProcessObserver? observer)
+    internal static DialogueRoundWatch Attach(WorkTask task, string step, ProcessObserver? observer)
     {
         DialogueRoundWatch watch = new(task);
 
         task.UnderLock(() =>
         {
-            watch.Subscribe(target, observer);
+            watch.Subscribe(step, observer);
             return true;
         });
 
@@ -45,7 +45,7 @@ internal sealed class DialogueRoundWatch : IDisposable
         _unsubscribeSettled();
     }
 
-    private void Subscribe(string target, ProcessObserver? observer)
+    private void Subscribe(string step, ProcessObserver? observer)
     {
         _boundary = _task.Executions.Count == 0
             ? 0
@@ -53,7 +53,7 @@ internal sealed class DialogueRoundWatch : IDisposable
 
         _unsubscribeAttached = _task.SubscribeExecutionAttached(execution =>
         {
-            if (execution.Id.Value <= _boundary || Uri.UnescapeDataString(execution.Request.Target.Value) != target)
+            if (execution.Id.Value <= _boundary || Uri.UnescapeDataString(execution.Request.Step.Value) != step)
             {
                 return;
             }
@@ -87,7 +87,7 @@ internal sealed class DialogueRoundWatch : IDisposable
 
         _unsubscribeSettled = _task.SubscribeExecutionSettled(execution =>
         {
-            if (execution.Id.Value <= _boundary || Uri.UnescapeDataString(execution.Request.Target.Value) != target)
+            if (execution.Id.Value <= _boundary || Uri.UnescapeDataString(execution.Request.Step.Value) != step)
             {
                 return;
             }

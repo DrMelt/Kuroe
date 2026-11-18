@@ -141,16 +141,16 @@ public sealed record MafFlowDefinition(
 /// <summary>MAF 流程的开始端口。</summary>
 public sealed record MafStartPort(PortName Name, string? Default = null);
 
-/// <summary>MAF 流程的步骤：标识、标签、输出端口与执行目标工厂。
-/// 步骤标识同时是执行目标标识；步骤的输入是直接上游步骤的输出。</summary>
+/// <summary>MAF 流程的步骤：标识、标签、输出端口与执行装配工厂。
+/// 步骤标识同时是执行步骤标识；步骤的输入是直接上游步骤的输出。</summary>
 public sealed record MafStep(
     MafStepId Id,
     string Label,
     IReadOnlyList<PortName> Outputs,
-    IMafStepTargetFactory TargetFactory)
+    IMafStepInvocationFactory InvocationFactory)
 {
-    /// <summary>步骤对应的执行目标标识。</summary>
-    public ExecutionTargetId ExecutionTargetId => Id.ToExecutionTargetId();
+    /// <summary>步骤对应的执行步骤标识。</summary>
+    public ExecutionStepId ExecutionStepId => Id.ToExecutionStepId();
 }
 
 /// <summary>步骤之间的连接。</summary>

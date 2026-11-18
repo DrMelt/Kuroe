@@ -8,7 +8,7 @@ using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Control.Runtime;
 
-/// <summary>执行网关：把执行号归属交给任务域，装配执行目标，其余执行操作交给执行单元。</summary>
+/// <summary>执行网关：把执行号归属交给任务域，装配执行，其余执行操作交给执行单元。</summary>
 public sealed class TaskExecutionGateway(
     IExecutionIndex executions,
     IExecutionRuntime runtime) : ITaskExecutionGateway
@@ -28,11 +28,11 @@ public sealed class TaskExecutionGateway(
     /// <inheritdoc/>
     public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context)
     {
-        if (context.Invocation.Target != context.Request.Target)
+        if (context.Invocation.Step != context.Request.Step)
         {
             return Error.Failure(
                 "Execution.Assembly",
-                $"执行目标 {context.Invocation.Target} 与请求目标 {context.Request.Target} 不一致。");
+                $"执行步骤 {context.Invocation.Step} 与请求步骤 {context.Request.Step} 不一致。");
         }
 
         if (context.Invocation.Factory is not IExecutionRestorer restorer)

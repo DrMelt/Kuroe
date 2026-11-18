@@ -9,7 +9,7 @@ namespace Kuroe.Execution.Records.Shared;
 /// <summary>一次执行的持久状态。执行记录只使用中性执行端口与不透明来源标识。</summary>
 public sealed record ExecutionRecord(
     ExecutionId Id,
-    ExecutionTargetId Target,
+    ExecutionStepId Step,
     ExecutionState State,
     string Progress,
     DateTimeOffset CreatedAt,
@@ -29,7 +29,7 @@ public sealed record ExecutionInputRecord(
     string Source,
     string Text);
 
-/// <summary>一次执行保留的恢复负载，格式由执行目标类型解释。</summary>
+/// <summary>一次执行保留的恢复负载，格式由执行实现解释。</summary>
 public sealed record ExecutionRestoreRecord(
     string Format,
     string Payload);

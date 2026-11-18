@@ -257,14 +257,14 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
             return await ExecuteCodeAsync(requests, journal, cancellationToken).ConfigureAwait(false);
         }
 
-        NodePath node = GraphRecordTargets.Parse(request.Target);
+        NodePath node = GraphRecordSteps.Parse(request.Step);
 
         lock (_gate)
         {
             _started.Add(started);
         }
 
-        ExecutionHandle handle = Gate.Arrive(execution, node, NextRound(request.Target.Value));
+        ExecutionHandle handle = Gate.Arrive(execution, node, NextRound(request.Step.Value));
         try
         {
             Emits?.Invoke(started, journal);
@@ -347,10 +347,10 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         }
 
         NodePath node = new(
-            [.. request.Target.Value
+            [.. request.Step.Value
                 .Split('/', StringSplitOptions.RemoveEmptyEntries)
                 .Select(level => new NodeLabel(Uri.UnescapeDataString(level)))]);
-        ExecutionHandle handle = Gate.Arrive(execution, node, NextRound(request.Target.Value));
+        ExecutionHandle handle = Gate.Arrive(execution, node, NextRound(request.Step.Value));
         try
         {
             await Gate.WaitOpen(handle).WaitAsync(cancellationToken);

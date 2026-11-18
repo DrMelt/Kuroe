@@ -155,7 +155,7 @@ public sealed class GraphExecution : IGraphExecution
     internal static ExecutionRequest BuildRequest(GraphExecutionInput input) =>
         new(
             new ExecutionOwnerId(input.Task.Value),
-            GraphRecordTargets.Format(input.Node),
+            GraphRecordSteps.Format(input.Node),
             [
                 .. input.InputPorts.Select(port => new ExecutionInputPort(
                     new ExecutionPortName(port.Name.Value),
@@ -192,7 +192,7 @@ public sealed class GraphExecution : IGraphExecution
     {
         ExecutionParameterContext context = new(
             request.Owner,
-            request.Target,
+            request.Step,
             input.ExecutionCount,
             input.MaxAttempts,
             request.InputPorts,
@@ -209,7 +209,7 @@ public sealed class GraphExecution : IGraphExecution
             : EmptyExecutionParameters.Instance;
 
         return new ExecutionInvocation(
-            GraphRecordTargets.Format(input.Node),
+            GraphRecordSteps.Format(input.Node),
             runnerFactory,
             parameters);
     }

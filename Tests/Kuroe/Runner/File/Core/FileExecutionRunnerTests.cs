@@ -203,7 +203,7 @@ public sealed class FileExecutionRunnerTests
     {
         ExecutionRequest request = new(
             new ExecutionOwnerId("1"),
-            new ExecutionTargetId(node.Path.Value),
+            new ExecutionStepId(node.Path.Value),
             [
                 .. node.Inputs.Select(port => new ExecutionInputPort(
                     new ExecutionPortName(port.Name.Value),

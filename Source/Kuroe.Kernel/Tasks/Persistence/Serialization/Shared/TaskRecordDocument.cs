@@ -46,7 +46,7 @@ public sealed record FlowData(
 /// <summary>一次执行的形状。</summary>
 public sealed record ExecutionData(
     int Id,
-    string? Target,
+    string? Step,
     ExecutionState State,
     string? Progress,
     DateTimeOffset CreatedAt,

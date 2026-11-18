@@ -67,13 +67,13 @@ public sealed class LlmExecutionRunnerFactoryTests
 
         ExecutionRequest request = new(
             new ExecutionOwnerId("1"),
-            new ExecutionTargetId("实施"),
+            new ExecutionStepId("实施"),
             [],
             [],
             new Dictionary<ExecutionPortName, string>(),
             []);
         ExecutionInvocation target = new(
-            new ExecutionTargetId("实施"),
+            new ExecutionStepId("实施"),
             new LlmExecutionRunnerFactory(Factory()),
             new LlmExecutionParameters(null, [], [], new Dictionary<string, IReadOnlyDictionary<string, string>>(), "fake"));
 

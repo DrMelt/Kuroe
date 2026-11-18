@@ -55,7 +55,7 @@ public sealed class ExecutionHistoryTests
     private static ExecutionRequest Request(IReadOnlyList<ExecutionInputValue> inputs) =>
         new(
             new ExecutionOwnerId("1"),
-            new ExecutionTargetId("实施"),
+            new ExecutionStepId("实施"),
             [],
             inputs,
             new Dictionary<ExecutionPortName, string>(),

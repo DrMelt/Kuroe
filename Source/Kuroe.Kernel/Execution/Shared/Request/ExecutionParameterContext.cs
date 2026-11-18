@@ -3,10 +3,10 @@ using Kuroe.Execution.Shared.Ports;
 
 namespace Kuroe.Execution.Shared.Request;
 
-/// <summary>流程控制建立执行目标时交给目标类型的输入。</summary>
+/// <summary>流程控制建立执行装配时交给执行参数构造的输入。</summary>
 public sealed record ExecutionParameterContext(
     ExecutionOwnerId Owner,
-    ExecutionTargetId Target,
+    ExecutionStepId Step,
     int Attempt,
     int MaxAttempts,
     IReadOnlyList<ExecutionInputPort> InputPorts,

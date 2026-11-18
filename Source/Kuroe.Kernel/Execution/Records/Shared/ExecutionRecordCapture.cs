@@ -11,7 +11,7 @@ public static class ExecutionRecordCapture
     public static ExecutionRecord CaptureRecord(this ExecutionSnapshot snapshot) =>
         new(
             snapshot.Id,
-            snapshot.Request.Target,
+            snapshot.Request.Step,
             snapshot.State,
             snapshot.Progress,
             snapshot.CreatedAt,

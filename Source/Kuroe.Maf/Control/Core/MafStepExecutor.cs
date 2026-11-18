@@ -38,12 +38,12 @@ internal sealed class MafStepExecutor(
             throw new InvalidOperationException($"步骤 {step.Id} 在流程停止后不再执行。");
         }
 
-        ExecutionTargetId targetId = step.ExecutionTargetId;
-        int attempt = task.Executions.Count(execution => execution.Request.Target == targetId) + 1;
+        ExecutionStepId stepId = step.ExecutionStepId;
+        int attempt = task.Executions.Count(execution => execution.Request.Step == stepId) + 1;
         ExecutionRequest request = Request(message);
         ExecutionParameterContext context = new(
             request.Owner,
-            request.Target,
+            request.Step,
             attempt,
             1,
             request.InputPorts,
@@ -51,10 +51,10 @@ internal sealed class MafStepExecutor(
             request.Texts,
             request.OutputPorts,
             model);
-        ErrorOr<ExecutionInvocation> target = step.TargetFactory.Create(step.Id, model, context);
-        if (target.IsError)
+        ErrorOr<ExecutionInvocation> invocation = step.InvocationFactory.Create(step.Id, model, context);
+        if (invocation.IsError)
         {
-            throw new InvalidOperationException(target.FirstError.Description);
+            throw new InvalidOperationException(invocation.FirstError.Description);
         }
 
         IExecution execution = gateway.Open(task, request);
@@ -66,7 +66,7 @@ internal sealed class MafStepExecutor(
         using CancellationTokenRegistration registration = cancellationToken.Register(
             () => gateway.Interrupt(execution, "MAF 流程取消。"));
 
-        ErrorOr<Success> run = await gateway.RunAsync(execution, target.Value).ConfigureAwait(false);
+        ErrorOr<Success> run = await gateway.RunAsync(execution, invocation.Value).ConfigureAwait(false);
 
         ExecutionSnapshot snapshot = execution.Snapshot();
         if (snapshot.State == ExecutionState.Interrupted)
@@ -99,7 +99,7 @@ internal sealed class MafStepExecutor(
     private ExecutionRequest Request(MafStepMessage message) =>
         new(
             new ExecutionOwnerId(task.Id.Value),
-            step.ExecutionTargetId,
+            step.ExecutionStepId,
             [.. message.Outputs.Select(output => new ExecutionInputPort(
                 new ExecutionPortName(output.Port.Value),
                 ExecutionPortKind.Text,

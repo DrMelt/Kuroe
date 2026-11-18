@@ -106,7 +106,7 @@ public sealed class ExecutionDetailViewTests
     {
         ExecutionRequest request = new(
             new ExecutionOwnerId("1"),
-            new ExecutionTargetId("制定计划"),
+            new ExecutionStepId("制定计划"),
             [],
             inputs ?? [],
             new Dictionary<ExecutionPortName, string>(),

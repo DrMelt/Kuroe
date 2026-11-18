@@ -405,7 +405,7 @@ public sealed class PortToolTests
         schema.GetProperty("required").EnumerateArray().Select(item => item.GetString());
 
     private static ExecutionStatus Status(IReadOnlyList<ExecutionPortName> outstanding) =>
-        new(new ExecutionTargetId("节点"), ExecutionState.Running, outstanding, null);
+        new(new ExecutionStepId("节点"), ExecutionState.Running, outstanding, null);
 
     private static ToolArguments Given(params (string Name, object? Value)[] values) =>
         new(values.ToDictionary(value => value.Name, value => value.Value));
@@ -422,7 +422,7 @@ public sealed class PortToolTests
             throw new NotSupportedException();
 
         public ExecutionStatus Outcome { get; init; } =
-            new(new ExecutionTargetId("节点"), ExecutionState.Running, [], null);
+            new(new ExecutionStepId("节点"), ExecutionState.Running, [], null);
 
         public Error? Failure { get; init; }
 

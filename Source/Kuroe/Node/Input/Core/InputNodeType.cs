@@ -46,9 +46,9 @@ public sealed class InputNodeType(
         Reject(node.Outputs.Any(port => port.Trigger), "输入节点的输出端口不能使用触发。");
     }
 
-    /// <summary>按本次执行建立输入参数，等待步骤取执行目标。</summary>
+    /// <summary>按本次执行建立输入参数，等待步骤取执行步骤标识。</summary>
     public IExecutionParameters Create(ExecutionParameterContext context) =>
-        new InputExecutionParameters(Parameters?.Question, ExecutionTargetPaths.StepPath(context.Target));
+        new InputExecutionParameters(Parameters?.Question, ExecutionStepPaths.ToFlowStepPath(context.Step));
 
     /// <summary>把回答文本投影为承载文本的输出端口，出处指向本节点的输入。</summary>
     public Publication Project(ExecutionId execution, GraphExecutionInput input, ExecutionOutput output)

@@ -47,9 +47,9 @@ public sealed class ApprovalNodeType(
         Reject(node.MaxExecutions is not null, "审批节点不能声明 MaxExecutions。");
     }
 
-    /// <summary>按本次执行建立审批参数，等待步骤取执行目标。</summary>
+    /// <summary>按本次执行建立审批参数，等待步骤取执行步骤标识。</summary>
     public IExecutionParameters Create(ExecutionParameterContext context) =>
-        new ApprovalExecutionParameters(Parameters?.Question, ExecutionTargetPaths.StepPath(context.Target));
+        new ApprovalExecutionParameters(Parameters?.Question, ExecutionStepPaths.ToFlowStepPath(context.Step));
 
     /// <summary>把停驻输入按同名输出端口投影为节点发布，保留出处与多段内容，不携带触发。</summary>
     public Publication Project(ExecutionId execution, GraphExecutionInput input, ExecutionOutput output)

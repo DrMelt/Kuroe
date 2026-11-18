@@ -19,7 +19,7 @@ internal static class PlainTaskView
         {
             foreach (string failure in execution.Failures)
             {
-                output.ErrorLine($"节点 {execution.Request.Target}：{failure}");
+                output.ErrorLine($"步骤 {execution.Request.Step}：{failure}");
             }
         }
     }
@@ -34,7 +34,7 @@ internal static class PlainTaskView
                 continue;
             }
 
-            output.Hint($"节点 {execution.Request.Target} 第 {task.RoundOf(execution)} 轮"
+            output.Hint($"步骤 {execution.Request.Step} 第 {task.RoundOf(execution)} 轮"
                 + $" · 请求 {InfoLabels.Requests(execution.Usage)}"
                 + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
             foreach ((string label, string value) in InfoLabels.TokenEntries(execution.Usage))

@@ -75,7 +75,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>运行期节点物化器，快照投影按它读已实例化节点。</summary>
     internal NodeMaterializer Materializer => _materializer;
 
-    /// <summary>任务内的静态端口解析，执行目标解析与激活输入共用。</summary>
+    /// <summary>任务内的静态端口解析，执行节点声明解析与激活输入共用。</summary>
     internal StaticPortValues StaticPorts => _staticPorts;
 
     /// <summary>按节点路径取运行时节点对象，未实例化时按图定义实例化。读写要求持有 Gate。</summary>

@@ -43,13 +43,13 @@ public sealed class MafWorkflowRunnerTests
             new FlowName("测试"),
             [new MafStartPort(new PortName("目标")), new MafStartPort(MafFlowDefinition.ModelPort)],
             [
-                new MafStep(new MafStepId("第一步"), "第一步", [new PortName("输出")], Target()),
-                new MafStep(new MafStepId("第二步"), "第二步", [new PortName("输出")], Target()),
+                new MafStep(new MafStepId("第一步"), "第一步", [new PortName("输出")], Invocation()),
+                new MafStep(new MafStepId("第二步"), "第二步", [new PortName("输出")], Invocation()),
             ],
             [new MafEdge(new MafStepId("第一步"), new MafStepId("第二步"))]);
 
-    private static MafStepTarget Target() =>
-        TestFlow.Target(TestFlow.Factory);
+    private static MafStepInvocationFactory Invocation() =>
+        TestFlow.Invocation(TestFlow.Factory);
 
     private sealed class MemoryCheckpoints : IMafWorkflowCheckpoints
     {

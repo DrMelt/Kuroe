@@ -139,7 +139,7 @@ public static class GraphFlowServiceCollectionExtensions
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
         services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
-        services.AddSingleton<IExecutionTargetResolver>(sp => new ExecutionTargetResolver(
+        services.AddSingleton<IExecutionNodeDeclarationResolver>(sp => new ExecutionNodeDeclarationResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
         GraphFlowTemplateSource templates = new(flows.Value, hostStartInputs.Value);
         composition.FlowTemplates.Register(templates);
@@ -151,12 +151,12 @@ public static class GraphFlowServiceCollectionExtensions
                 flows.Value,
                 hostStartInputs.Value,
                 sp.GetRequiredService<IHostTaskStart>(),
-                sp.GetRequiredService<IExecutionTargetResolver>(),
+                sp.GetRequiredService<IExecutionNodeDeclarationResolver>(),
                 sp.GetRequiredService<ITaskExecutionGateway>(),
                 composition.PersistTasks ? flows.Value : null),
             new GraphFlowStateBinder(),
             new GraphFlowControlFactory(
-                sp.GetRequiredService<IExecutionTargetResolver>(),
+                sp.GetRequiredService<IExecutionNodeDeclarationResolver>(),
                 sp.GetRequiredService<ITaskExecutionGateway>()),
             new GraphFlowPresentation(),
             new GraphFlowRecordSource()));

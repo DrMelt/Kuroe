@@ -9,7 +9,7 @@ using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Tool.Contract.Tests;
 
-/// <summary>查看本轮契约状态的载体：报出节点、轮次、状态、缺口与已上报的无法完成原因。</summary>
+/// <summary>查看本轮契约状态的载体：报出步骤、轮次、状态、缺口与已上报的无法完成原因。</summary>
 public sealed class StatusToolTests
 {
     [Fact]
@@ -17,14 +17,14 @@ public sealed class StatusToolTests
     {
         StatusTool tool = new(
             new FakeEntry(new ExecutionStatus(
-                new ExecutionTargetId("节点"), ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料")),
+                new ExecutionStepId("节点"), ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料")),
             2,
             5);
 
         ErrorOr<string> result = Assert.Single(tool.Functions).Invoke(new ToolArguments(new Dictionary<string, object?>()));
 
         Assert.False(result.IsError);
-        Assert.Contains("节点 节点 · 第 2 轮 · 执行上限 5", result.Value, StringComparison.Ordinal);
+        Assert.Contains("步骤 节点 · 第 2 轮 · 执行上限 5", result.Value, StringComparison.Ordinal);
         Assert.Contains("本轮仍需交回：端口「结论」", result.Value, StringComparison.Ordinal);
         Assert.Contains("已上报无法完成：缺少输入资料", result.Value, StringComparison.Ordinal);
     }

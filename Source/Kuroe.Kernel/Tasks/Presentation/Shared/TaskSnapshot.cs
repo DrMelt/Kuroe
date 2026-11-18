@@ -49,7 +49,7 @@ public sealed record TaskSnapshot(
         int round = 0;
         foreach (ExecutionSnapshot candidate in Executions)
         {
-            if (candidate.Request.Target == execution.Request.Target)
+            if (candidate.Request.Step == execution.Request.Step)
             {
                 round++;
             }

@@ -106,7 +106,7 @@ public sealed class TaskRecordSerializationMapper(IReadOnlyList<IFlowRecordCodec
     private static ExecutionData ToData(ExecutionRecord execution) =>
         new(
             execution.Id.Value,
-            execution.Target.Value,
+            execution.Step.Value,
             execution.State,
             execution.Progress,
             execution.CreatedAt,
@@ -223,7 +223,7 @@ public sealed class TaskRecordSerializationMapper(IReadOnlyList<IFlowRecordCodec
     private static ExecutionRecord ReadExecution(ExecutionData dto) =>
         new(
             new RecordExecutionId(dto.Id),
-            new ExecutionTargetId(RequiredText(dto.Target, "执行目标")),
+            new ExecutionStepId(RequiredText(dto.Step, "执行步骤")),
             dto.State,
             dto.Progress ?? string.Empty,
             dto.CreatedAt,

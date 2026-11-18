@@ -104,7 +104,7 @@ public sealed class RuntimeExecutableTests
             .RunAsync(
                 execution.Unit,
                 new ExecutionInvocation(
-                    execution.Request.Target,
+                    execution.Request.Step,
                     new SubmittingFactory(ToNeutralOutputs(values)),
                     EmptyExecutionParameters.Instance));
 
