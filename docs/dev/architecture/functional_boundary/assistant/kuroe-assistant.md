@@ -1,0 +1,25 @@
+# Kuroe.Assistant
+
+内置助手：独立的会话任务域、代码定义的对话流程、会话目录与工具面。会话存档与用户任务分开，共用执行索引、流程运行期与执行运行期。
+
+## 职责
+
+- 装配入口：在核心装配之上注册助手，工具去重与核心共用同一工具集。
+- 会话任务域：独立的注册表、存档目录、租约、写盘协调、租约与恢复服务。
+- 对话流程：代码定义，状态由对话框架维护，不经过节点图；等待输入与每轮回话执行。
+- 会话目录：建立、选择、改名与删除会话，给出只读摘要；模型与语言在会话建立时固定。
+- 会话轮次：同一会话同一时刻只允许一轮，轮次结束给出通知。
+- 能力模式：决定回话执行可用的工具与恒定指令。
+- 会话历史读取：基础历史取最后一次可读的恢复数据，其后的执行作为尾部返回。
+- 工具面查询源：内置对话各模式白名单与配置工具的只读呈现。
+
+## 边界外
+
+- 不含执行与任务机制：执行索引、流程运行期与执行运行期来自 Kernel。
+- 不含图流程与图命名空间。
+- 不含输入实现与工具实现本身。
+- 不含宿主装配与入口。
+
+## 依赖
+
+- Kuroe、Kuroe.Shared、Kuroe.Node.Llm、Kuroe.Runner.Shared、Kuroe.Runner.Llm、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Tool.KuroeInfo、Kuroe.Tool.Source、Kuroe.CodeFlow.Persistence、Kuroe.CodeFlow.Records.Shared、Kuroe.Files.Shared、Kuroe.Control.Runtime、Kuroe.Control.Shared、Kuroe.Execution.Records.Shared、Kuroe.Execution.Shared、Kuroe.Input.Shared、Kuroe.Presentation.Shared、Kuroe.Tasks.Persistence.Files.Shared、Kuroe.Tasks.Persistence.Restoring.Shared、Kuroe.Tasks.Persistence.Saving.Shared、Kuroe.Tasks.Persistence.Serialization.Shared、Kuroe.Tasks.Presentation.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Tasks.Runtime、Kuroe.Tasks.Shared。

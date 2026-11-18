@@ -4,7 +4,7 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>仓库与测试工程结构：InternalsVisibleTo 指向、共享测试工程引用、编译集成测试归属、旧图命名空间与已移除词汇的全局残留。</summary>
+/// <summary>仓库与测试工程结构：InternalsVisibleTo 指向、共享测试工程引用、编译集成测试归属、图命名空间禁用项与禁用词汇的全局残留。</summary>
 public sealed class RepositoryStructureTests
 {
     [Fact]
@@ -72,11 +72,11 @@ public sealed class RepositoryStructureTests
             "Kuroe.Control.Runtime.Nodes",
         ];
 
-        SourcesExclude(SourceRoot, "旧图命名空间", forbidden);
+        SourcesExclude(SourceRoot, "图命名空间禁用项", forbidden);
     }
 
     [Fact]
-    public void Execution_kind_is_removed()
+    public void Execution_kind_appears_nowhere()
     {
         string[] roots =
         [
@@ -84,11 +84,11 @@ public sealed class RepositoryStructureTests
             TestsRoot,
         ];
 
-        string removed = "Execution" + "Kind";
+        string forbidden = "Execution" + "Kind";
         foreach (string file in roots.SelectMany(SourceFiles))
         {
             Assert.DoesNotContain(
-                removed,
+                forbidden,
                 File.ReadAllText(file),
                 StringComparison.Ordinal);
         }

@@ -1,0 +1,20 @@
+# Kuroe.CodeFlow.Persistence
+
+代码流程记录的存档编解码：定义与状态各自成为一段 JSON 片段，并提供记录编解码的注册入口。
+
+## 职责
+
+- 代码流程定义与状态的存档形状与映射。
+- 任务开始状态与开始输入的形状。
+- 片段读写约定：读取拒绝未定义字段，写出省略空字段。
+- 注册入口：把代码流程记录的编解码登记到宿主。
+
+## 边界外
+
+- 不含记录模型与种类常量：在 Kuroe.CodeFlow.Records.Shared。
+- 不含流程实现与控制。
+- 不含任务存档中央映射与图流程编解码。
+
+## 依赖
+
+- Kuroe.CodeFlow.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。

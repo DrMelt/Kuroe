@@ -1,0 +1,19 @@
+# Kuroe.Maf.Records.Shared
+
+MAF 编排流程的存档记录与种类：流程定义记录与流程状态记录。状态记录承载模型、运行期检查点与未走完的步骤。
+
+## 职责
+
+- 流程种类常量：MAF 编排流程的存档种类。
+- 流程定义记录：实现标识与流程名。
+- 流程状态记录：开始状态、模型、运行期检查点与未走完的步骤。
+
+## 边界外
+
+- 不含流程定义与运行时：在 Kuroe.Maf.Definition 与 Kuroe.Maf.Control。
+- 不含编解码实现：在 Kuroe.Maf.Persistence。
+- 不依赖执行、图、节点与流程控制。
+
+## 依赖
+
+- Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。

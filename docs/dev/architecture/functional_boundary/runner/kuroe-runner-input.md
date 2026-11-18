@@ -1,0 +1,19 @@
+# Kuroe.Runner.Input
+
+输入等待运行器：登记等待用户回答，收到回答后把回答作为执行内容交回。
+
+## 职责
+
+- 执行参数：等待回答时的提示文本与等待步骤键。
+- 等待登记：按等待步骤键向输入通道登记。
+- 交付收口：收到回答后交回执行内容。
+
+## 边界外
+
+- 不含节点类型与参数读取：在 Kuroe.Node.Input。
+- 不含输入通道实现：在 Kuroe.Input.Runtime。
+- 不含流程推进与图。
+
+## 依赖
+
+- Kuroe.Execution.Shared、Kuroe.Input.Shared、Kuroe.Tasks.Shared。

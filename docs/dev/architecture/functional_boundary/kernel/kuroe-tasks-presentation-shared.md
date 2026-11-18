@@ -1,0 +1,21 @@
+# Kuroe.Tasks.Presentation.Shared
+
+任务表现的共享形状：任务只读查询面、任务快照、等待步骤视图与任务变化通知。宿主与信息工具只读取这里的形状，不接触任务状态改动能力。
+
+## 职责
+
+- 任务快照：某一刻的流程视图、过程记录与全部执行的只读形状，渲染时不再回读可变状态。
+- 等待步骤视图：路径、等待种类与提问。
+- 任务只读查询面：按任务标识读取快照，供信息工具与宿主浏览。
+- 任务变化通知：任务变化时向外发出信号。
+
+## 边界外
+
+- 不含任务域与任务状态迁移：在 Kuroe.Tasks.Runtime。
+- 不含流程视图与展示文本：在 Kuroe.Presentation.Shared。
+- 不含执行形状：在 Kuroe.Execution.Shared。
+- 不依赖流程实现、图与节点。
+
+## 依赖
+
+- Kuroe.Tasks.Shared、Kuroe.Presentation.Shared、Kuroe.Execution.Shared。

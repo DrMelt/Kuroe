@@ -1,0 +1,25 @@
+# Kuroe
+
+核心装配：中性基础设施、任务运行时、提供商与模型目录、偏好配置、等待型节点功能、任务域装配与工具载体创建。具体流程由各自的装配入口并入，核心不引用图运行期与 MAF。
+
+## 职责
+
+- 核心装配入口：装配中性基础设施与任务运行时，返回启动信息与可继续并入的工具集，容器在全部装配完成后构建。
+- 提供商与模型目录：目录文件的读写、目录快照、当前模型选择与注销，改动在锁内基于副本进行，落盘成功后才换快照。
+- 输入解析：把宿主提交的文本解析为值对象，同一请求内的非法项一次给出。
+- 偏好配置：设置项声明表、用户层配置文件绑定、生效快照替换与改动影响判定；凭据不在配置层。
+- 等待型节点功能：定位待处理节点、点名与歧义判定、交付外部输入并推进流程；回答与批准按宿主读法分派。
+- 任务域装配：按存档目录建立注册表、存档、租约、写盘协调与恢复服务，供用户任务域与内置助手会话域共用。
+- 工具载体创建：合并节点的工具变量映射，按本轮工具面裁剪后交给各工具源。
+- 配置工具源与核心状态查询工具源。
+
+## 边界外
+
+- 不含图运行期、图控制与 `Kuroe.Flow` 下任何项目。
+- 不含 MAF 流程：在 Kuroe.Maf，由宿主另行注册。
+- 不含入口与界面：在 Kuroe.Console 与 Kuroe.Cli。
+- 不含节点与运行器实现：只做装配接线。
+
+## 依赖
+
+- Kuroe.Tool、Kuroe.Tool.Time、Kuroe.Tool.File、Kuroe.Tool.Git、Kuroe.Tool.Dotnet、Kuroe.Tool.Json、Kuroe.Tool.Command.Json、Kuroe.Tool.Contract、Kuroe.Tool.KuroeInfo、Kuroe.Shared、Kuroe.Files.Shared、Kuroe.Files、Kuroe.Execution.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Tasks.Persistence.Serialization.Shared、Kuroe.Tasks.Persistence.Files.Shared、Kuroe.Tasks.Persistence.Restoring、Kuroe.Tasks.Persistence.Restoring.Shared、Kuroe.Tasks.Persistence.Saving、Kuroe.Tasks.Persistence.Saving.Shared、Kuroe.Tasks.Persistence.Files、Kuroe.Tasks.Persistence.Json、Kuroe.Tasks.Runtime、Kuroe.Control.Runtime、Kuroe.Input.Shared、Kuroe.Input.Runtime、Kuroe.Execution、Kuroe.Node.Llm、Kuroe.Runner.Shared、Kuroe.Runner.Llm、Kuroe.Tasks.Shared、Kuroe.Control.Shared、Kuroe.Presentation.Shared、Kuroe.Tasks.Presentation.Shared。

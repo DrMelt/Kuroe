@@ -1,0 +1,20 @@
+# Kuroe.Tasks.Persistence.Saving.Shared
+
+写盘协调契约：接收任务变更标记，按任务号捕获存档，并报告捕获结果。捕获由运行时实现查找、加锁与状态读取。
+
+## 职责
+
+- 变更标记：任务状态变化时登记待写任务。
+- 捕获端口：按任务号取得一份存档，运行时负责查找、加锁与读取状态。
+- 写盘等待：要求全部或指定任务落盘后再返回。
+- 捕获结果：一次捕获的成功或失败原因。
+
+## 边界外
+
+- 不含协调实现：合并与后台写盘在 Kuroe.Tasks.Persistence.Saving。
+- 不含文件存储与编解码：在 Kuroe.Tasks.Persistence.Files 与 Kuroe.Tasks.Persistence.Json。
+- 不含任务域。
+
+## 依赖
+
+- Kuroe.Tasks.Records.Shared、Kuroe.Tasks.Presentation.Shared、Kuroe.Tasks.Shared。
