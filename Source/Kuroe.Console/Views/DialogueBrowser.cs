@@ -106,7 +106,7 @@ internal sealed class DialogueBrowser(
             }
 
             redraw = true;
-            Item[] items = [Send, ModelItem, Mode, RenameItem, DeleteItem, List, Refresh, Back];
+            Item[] items = [Refresh, Send, ModelItem, Mode, RenameItem, DeleteItem, List, Back];
             Item picked = terminal.Choose("助手操作", items, item => item.Label, Back);
             switch (picked.Action)
             {

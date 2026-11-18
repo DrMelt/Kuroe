@@ -672,7 +672,7 @@ public sealed partial class TaskAndReplTests
     public async Task Assistant_session_list_does_not_offer_the_global_model_switch()
     {
         using ConsoleSession cli = new();
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 6; i++)
         {
             cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         }
@@ -692,6 +692,7 @@ public sealed partial class TaskAndReplTests
     public async Task Assistant_send_returns_to_the_menu_on_an_empty_line()
     {
         using ConsoleSession cli = new();
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
@@ -706,6 +707,7 @@ public sealed partial class TaskAndReplTests
     public async Task Assistant_menu_switches_the_mode()
     {
         using ConsoleSession cli = new();
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -727,6 +729,7 @@ public sealed partial class TaskAndReplTests
             ModelName.Create("m2").Value,
             ProviderName.Create("test").Value,
             ProviderModelName.Create("m2").Value).ThrowIfError();
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
@@ -803,6 +806,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new();
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
@@ -821,6 +825,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new();
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
