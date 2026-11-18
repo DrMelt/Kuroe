@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Graph.Records.Shared;
+using Kuroe.Flow.Records.Shared;
 using Kuroe.Tasks.Persistence.Files.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;

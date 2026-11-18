@@ -13,10 +13,9 @@ public sealed class RecordPersistenceTests
         string project = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
-            "Graph",
             "Records",
             "Shared",
-            "Kuroe.Flow.Graph.Records.Shared.csproj");
+            "Kuroe.Flow.Records.Shared.csproj");
         string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string tasksRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
@@ -85,13 +84,13 @@ public sealed class RecordPersistenceTests
                 "Core",
                 "Kuroe.Tasks.Persistence.Json.csproj"),
         ];
-        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
+        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
         string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
         string flowContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string[] forbidden =
         [
             "Kuroe.Flow.Node",
-            "Kuroe.Flow.Graph",
+            "Kuroe.Flow.Records",
             "Kuroe.Flow.Shared",
             "GraphFlowDefinitionRecord",
             "CodeFlowDefinitionRecord",
@@ -128,7 +127,6 @@ public sealed class RecordPersistenceTests
         string graph = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
-            "Graph",
             "Records",
             "Shared",
             "GraphFlowKind.cs");

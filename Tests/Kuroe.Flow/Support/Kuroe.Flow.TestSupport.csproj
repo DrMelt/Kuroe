@@ -14,7 +14,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Records\Shared\Kuroe.Flow.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Tasks\Persistence\Serialization\Json\Core\Kuroe.Tasks.Persistence.Json.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Persistence\Serialization\Graph\Core\Kuroe.Flow.Persistence.Graph.csproj" />

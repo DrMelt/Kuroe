@@ -1,4 +1,4 @@
-using Kuroe.Flow.Graph.Records.Shared;
+using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Runtime.Persistence;

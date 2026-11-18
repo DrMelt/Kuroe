@@ -4,7 +4,7 @@ using Kuroe.Tasks.Shared;
 using Xunit;
 using Kuroe.Execution.Shared.Identity;
 
-namespace Kuroe.Flow.Graph.Records.Shared.Tests;
+namespace Kuroe.Flow.Records.Shared.Tests;
 
 /// <summary>图记录的步骤标识与来源标识往返。</summary>
 public sealed class GraphRecordConversionTests

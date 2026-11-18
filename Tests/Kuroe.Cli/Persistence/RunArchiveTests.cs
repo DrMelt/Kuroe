@@ -1,7 +1,7 @@
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Tests.Support;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Graph.Records.Shared;
+using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Tasks.Persistence.Files;
 using Kuroe.Tasks.Records.Shared;

@@ -8,7 +8,7 @@ using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Graph.Records.Shared.Tests;
+namespace Kuroe.Flow.Records.Shared.Tests;
 
 /// <summary>输入侧进展的公共存档转换：版本、次数、启动组、消费、重跑与发布一次往返。</summary>
 public sealed class InputProgressRecordsTests

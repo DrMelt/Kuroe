@@ -1,4 +1,4 @@
-# Kuroe.Flow.Graph.Records.Shared
+# Kuroe.Flow.Records.Shared
 
 图流程的存档记录与种类：流程定义记录、流程状态记录、任务开始时的锁定输入，以及流程快照与编译、输入出处与执行步骤标识的两处转换。
 

@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Graph.Records.Shared;
+namespace Kuroe.Flow.Records.Shared;
 
 /// <summary>图驱动流程的存档种类。</summary>
 public static class GraphFlowKind

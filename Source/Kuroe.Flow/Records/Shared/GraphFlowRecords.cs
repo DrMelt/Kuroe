@@ -4,7 +4,7 @@ using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.Flow.Graph.Records.Shared;
+namespace Kuroe.Flow.Records.Shared;
 
 /// <summary>图驱动流程的持久定义：流程名、节点库文本与流程文本。</summary>
 public sealed record GraphFlowDefinitionRecord(FlowName Name, string Nodes, string Flow) : IFlowDefinitionRecord;

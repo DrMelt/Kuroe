@@ -40,7 +40,7 @@
     <Project Path="Source/Kuroe.Kernel/Tasks/Presentation/Shared/Kuroe.Tasks.Presentation.Shared.csproj" />
     <Project Path="Source/Kuroe.Kernel/Tasks/Records/Shared/Kuroe.Tasks.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Kernel/Presentation/Shared/Kuroe.Presentation.Shared.csproj" />
-    <Project Path="Source/Kuroe.Flow/Graph/Records/Shared/Kuroe.Flow.Graph.Records.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Records/Shared/Kuroe.Flow.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.CodeFlow/Records/Shared/Kuroe.CodeFlow.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Maf/Records/Shared/Kuroe.Maf.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Maf/Definition/Core/Kuroe.Maf.Definition.csproj" />
@@ -105,7 +105,7 @@
     <Project Path="Tests/Kuroe.Kernel/Tasks/Shared/Kuroe.Tasks.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Kernel/Tasks/Records/Shared/Kuroe.Tasks.Records.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Kernel/Presentation/Shared/Kuroe.Presentation.Shared.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Graph/Records/Shared/Kuroe.Flow.Graph.Records.Shared.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Records/Shared/Kuroe.Flow.Records.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Shared/Kuroe.Flow.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Support/Kuroe.Flow.TestSupport.csproj" />
     <Project Path="Tests/Kuroe.Kernel/Tasks/Runtime/Kuroe.Tasks.Runtime.Tests.csproj" />

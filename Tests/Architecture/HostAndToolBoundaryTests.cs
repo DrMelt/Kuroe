@@ -68,7 +68,7 @@ public sealed class HostAndToolBoundaryTests
             "Kuroe.Flow.Node.RuntimeGraph",
             "Kuroe.Flow.Control",
             "Kuroe.Flow.Node.Shared",
-            "Kuroe.Flow.Graph.Records",
+            "Kuroe.Flow.Records",
         ];
 
         foreach (string directory in directories)

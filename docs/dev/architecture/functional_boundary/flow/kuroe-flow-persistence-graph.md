@@ -12,10 +12,10 @@
 
 ## 边界外
 
-- 不含流程记录模型与种类：在 Kuroe.Flow.Graph.Records.Shared。
+- 不含流程记录模型与种类：在 Kuroe.Flow.Records.Shared。
 - 不含图运行期与流程控制。
 - 不含任务存档的中央映射与其他流程种类的编解码。
 
 ## 依赖
 
-- Kuroe.Flow.Graph.Records.Shared、Kuroe.Flow.Node.Shared、Kuroe.Flow.Shared、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。
+- Kuroe.Flow.Records.Shared、Kuroe.Flow.Node.Shared、Kuroe.Flow.Shared、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。

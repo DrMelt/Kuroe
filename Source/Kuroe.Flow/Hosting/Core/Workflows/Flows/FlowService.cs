@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Documents.Shared;
 using Kuroe.Flow.Control.Runtime.Catalog;
-using Kuroe.Flow.Graph.Records.Shared;
+using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Shared;

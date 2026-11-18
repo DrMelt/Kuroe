@@ -38,7 +38,7 @@ graph TD
     subgraph DFlow["flow：图流程模型、编译、控制与装配"]
         FlowShared["Flow.Shared<br>节点名 / 类型名 / 节点路径"]
         FlowNodeShared["Flow.Node.Shared<br>图结构 / 运行期节点 / 节点规则"]
-        FlowGraphRecordsShared["Flow.Graph.Records.Shared<br>图流程记录与种类"]
+        FlowRecordsShared["Flow.Records.Shared<br>图流程记录与种类"]
         FlowCompilationDocumentsShared["Flow.Compilation.Documents.Shared<br>流程描述 / 参数段"]
         FlowCompilationShared["Flow.Compilation.Shared<br>编译契约 / 类型描述 / 参数读侧"]
         FlowCompilation["Flow.Compilation<br>流程描述编译与图编译"]
@@ -203,23 +203,23 @@ graph TD
     FlowControl --> FlowShared
     FlowControl --> ExecutionShared
     FlowControl --> ExecutionRecordsShared
-    FlowControl --> FlowGraphRecordsShared
+    FlowControl --> FlowRecordsShared
     FlowControl --> FlowNodeShared
     FlowControl --> PresentationShared
     FlowControl --> TasksShared
     FlowControl --> TasksRecordsShared
-    FlowGraphRecordsShared --> FlowShared
-    FlowGraphRecordsShared --> TasksShared
-    FlowGraphRecordsShared --> TasksRecordsShared
-    FlowGraphRecordsShared --> ExecutionShared
-    FlowGraphRecordsShared --> FlowNodeShared
+    FlowRecordsShared --> FlowShared
+    FlowRecordsShared --> TasksShared
+    FlowRecordsShared --> TasksRecordsShared
+    FlowRecordsShared --> ExecutionShared
+    FlowRecordsShared --> FlowNodeShared
     FlowHosting --> Core
     FlowHosting --> Shared
     FlowHosting --> FilesShared
     FlowHosting --> Process
     FlowHosting --> FlowShared
     FlowHosting --> FlowNodeShared
-    FlowHosting --> FlowGraphRecordsShared
+    FlowHosting --> FlowRecordsShared
     FlowHosting --> FlowCompilationShared
     FlowHosting --> FlowCompilationDocumentsShared
     FlowHosting --> FlowCompilation
@@ -264,7 +264,7 @@ graph TD
     FlowNodeTypeContainer --> FlowCompilationShared
     FlowNodeTypeContainer --> TasksShared
     FlowNodeTypeContainer --> FlowNodeShared
-    FlowPersistenceGraph --> FlowGraphRecordsShared
+    FlowPersistenceGraph --> FlowRecordsShared
     FlowPersistenceGraph --> FlowNodeShared
     FlowPersistenceGraph --> FlowShared
     FlowPersistenceGraph --> ExecutionShared
@@ -527,7 +527,7 @@ graph TD
 | `Kuroe.Tasks.Persistence.Json` | kernel | [kuroe-tasks-persistence-json](functional_boundary/kernel/kuroe-tasks-persistence-json.md) |
 | `Kuroe.Flow.Shared` | flow | [kuroe-flow-shared](functional_boundary/flow/kuroe-flow-shared.md) |
 | `Kuroe.Flow.Node.Shared` | flow | [kuroe-flow-node-shared](functional_boundary/flow/kuroe-flow-node-shared.md) |
-| `Kuroe.Flow.Graph.Records.Shared` | flow | [kuroe-flow-graph-records-shared](functional_boundary/flow/kuroe-flow-graph-records-shared.md) |
+| `Kuroe.Flow.Records.Shared` | flow | [kuroe-flow-records-shared](functional_boundary/flow/kuroe-flow-records-shared.md) |
 | `Kuroe.Flow.Compilation.Shared` | flow | [kuroe-flow-compilation-shared](functional_boundary/flow/kuroe-flow-compilation-shared.md) |
 | `Kuroe.Flow.Compilation` | flow | [kuroe-flow-compilation](functional_boundary/flow/kuroe-flow-compilation.md) |
 | `Kuroe.Flow.Json.Shared` | flow | [kuroe-flow-json-shared](functional_boundary/flow/kuroe-flow-json-shared.md) |

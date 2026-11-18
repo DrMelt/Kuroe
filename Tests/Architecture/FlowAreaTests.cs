@@ -47,7 +47,7 @@ public sealed class FlowAreaTests
         string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
         string execution = Path.Combine(KernelRoot, "Execution", "Core");
         string flow = Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Runtime");
-        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records");
+        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records");
 
         Assert.NotEmpty(ProjectFiles(nodes));
         foreach (string project in ProjectFiles(nodes))
@@ -264,7 +264,7 @@ public sealed class FlowAreaTests
         string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
-        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
+        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
         string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
@@ -348,7 +348,7 @@ public sealed class FlowAreaTests
             string text = File.ReadAllText(file);
 
             Assert.DoesNotContain("Kuroe.Flow.Node", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("Kuroe.Flow.Graph", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Kuroe.Flow.Records", text, StringComparison.Ordinal);
             Assert.DoesNotContain("Kuroe.Flow.Control", text, StringComparison.Ordinal);
         }
     }
