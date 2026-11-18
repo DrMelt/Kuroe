@@ -18,7 +18,7 @@ public sealed class GraphFlowPresentation : IFlowPresentation
         TaskRuntime runtime = state.Runtime;
         TaskProjection projection = new(state.Flow.Graph, runtime.Materializer, runtime.StaticPorts);
 
-        return projection.View(state.Flow.Model, GraphExecutions(task, state));
+        return projection.View(state.Flow.Definition, GraphExecutions(task, state));
     }
 
     private static IReadOnlyList<GraphExecutionSnapshot> GraphExecutions(

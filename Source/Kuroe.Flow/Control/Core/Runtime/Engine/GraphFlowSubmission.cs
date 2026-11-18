@@ -31,7 +31,7 @@ public sealed class GraphFlowSubmission(
     /// <inheritdoc/>
     public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title)
     {
-        ErrorOr<CompiledFlow> compiled = flows.FindCompiled(name);
+        ErrorOr<FlowGraph> compiled = flows.FindCompiled(name);
         if (compiled.IsError)
         {
             return compiled.ErrorsOrEmptyList;
@@ -43,14 +43,14 @@ public sealed class GraphFlowSubmission(
     /// <summary>按已编译流程准备提交。</summary>
     public ErrorOr<FlowSubmission> PrepareCompiled(
         TaskId id,
-        CompiledFlow flow,
+        FlowGraph flow,
         StartInputs inputs,
         string? title)
     {
         NodeGraph graph = flow.Graph;
 
         // 宿主输入表在提交时解析，流程编译不涉及这份配置
-        ErrorOr<IReadOnlyDictionary<PortName, string>> resolved = hostStartInputs.Resolve(flow.Model);
+        ErrorOr<IReadOnlyDictionary<PortName, string>> resolved = hostStartInputs.Resolve(flow.Definition);
         if (resolved.IsError)
         {
             return resolved.ErrorsOrEmptyList;
@@ -63,12 +63,12 @@ public sealed class GraphFlowSubmission(
         }
 
         StartInputs effectiveInputs = FillDefaults(inputs, graph.StartPorts, hostInputs);
-        string taskTitle = TaskTitle.Compose(effectiveInputs, flow.Model.Name, title);
+        string taskTitle = TaskTitle.Compose(effectiveInputs, flow.Definition.Name, title);
 
         GraphFlowDefinitionRecord? definition = null;
         if (snapshots is { } snapshotSource)
         {
-            ErrorOr<GraphFlowDefinitionRecord> captured = snapshotSource.Capture(flow.Model.Name);
+            ErrorOr<GraphFlowDefinitionRecord> captured = snapshotSource.Capture(flow.Definition.Name);
             if (captured.IsError)
             {
                 return captured.ErrorsOrEmptyList;
@@ -125,13 +125,13 @@ public sealed class GraphFlowSubmission(
             return [Error.Failure(FlowErrorCodes.RecordFormat, "存档的流程记录不是图流程。")];
         }
 
-        ErrorOr<CompiledFlow> compiled = compiler.Compile(definition);
+        ErrorOr<FlowGraph> compiled = compiler.Compile(definition);
         if (compiled.IsError)
         {
             return compiled.ErrorsOrEmptyList;
         }
 
-        CompiledFlow flow = compiled.Value;
+        FlowGraph flow = compiled.Value;
         PortTexts startTexts = new(saved.Start.StartTexts);
         StartPortValues startPorts = new(flow.Graph.StartPorts, startTexts, saved.Start.Inputs);
         GraphFlowState state = new(flow, saved.Start.Inputs, startTexts, startPorts, definition, executions)

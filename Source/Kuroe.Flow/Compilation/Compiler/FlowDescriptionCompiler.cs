@@ -18,7 +18,7 @@ public sealed class FlowDescriptionCompiler(
     IFlowExpander expander) : IFlowDescriptionCompiler
 {
     /// <summary>编译一份描述文档。任一条流程失败时返回全部错误。</summary>
-    ErrorOr<CompiledDocument> IFlowDescriptionCompiler.Compile(
+    ErrorOr<IReadOnlyList<FlowGraph>> IFlowDescriptionCompiler.Compile(
         FlowDocument document,
         IReadOnlyList<NodeSpec> builtins)
     {
@@ -53,7 +53,7 @@ public sealed class FlowDescriptionCompiler(
             return expanded.ErrorsOrEmptyList;
         }
 
-        List<CompiledFlow> flows = [];
+        List<FlowGraph> flows = [];
         foreach (FlowDefinition flow in expanded.Value)
         {
             ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(flow);
@@ -63,10 +63,15 @@ public sealed class FlowDescriptionCompiler(
                 continue;
             }
 
-            flows.Add(new CompiledFlow(flow, compiled.Value));
+            flows.Add(new FlowGraph(flow, compiled.Value));
         }
 
-        return errors.Count > 0 ? errors : new CompiledDocument(flows);
+        if (errors.Count > 0)
+        {
+            return errors;
+        }
+
+        return flows;
     }
 
     /// <summary>流程名重复：同一文档内名字是流程的唯一标识。</summary>

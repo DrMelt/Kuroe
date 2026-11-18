@@ -8,5 +8,5 @@ namespace Kuroe.Flow.Control.Runtime.Catalog;
 public interface IFlowRuntimeCatalog
 {
     /// <summary>按名取编译完成的流程，不存在时返回错误。</summary>
-    ErrorOr<CompiledFlow> FindCompiled(FlowName name);
+    ErrorOr<FlowGraph> FindCompiled(FlowName name);
 }

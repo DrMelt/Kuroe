@@ -19,7 +19,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     private readonly bool _tolerateFailures;
     private readonly Lock _gate = new();
     private FlowDocument _document;
-    private IReadOnlyList<CompiledFlow> _compiled;
+    private IReadOnlyList<FlowGraph> _compiled;
     private IReadOnlyList<FlowFailure> _failures;
 
     private FlowService(
@@ -28,7 +28,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         IFlowDescriptionCompiler compiler,
         bool tolerateFailures,
         FlowDocument document,
-        IReadOnlyList<CompiledFlow> compiled,
+        IReadOnlyList<FlowGraph> compiled,
         IReadOnlyList<FlowFailure> failures)
     {
         _store = store;
@@ -92,24 +92,24 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     {
         lock (_gate)
         {
-            return [.. _compiled.Select(flow => flow.Model)];
+            return [.. _compiled.Select(flow => flow.Definition)];
         }
     }
 
     /// <summary>按名取展开后的流程，不存在时返回错误。</summary>
     public ErrorOr<FlowDefinition> Find(FlowName name)
     {
-        ErrorOr<CompiledFlow> flow = FindCompiled(name);
+        ErrorOr<FlowGraph> flow = FindCompiled(name);
 
-        return flow.IsError ? flow.ErrorsOrEmptyList : flow.Value.Model;
+        return flow.IsError ? flow.ErrorsOrEmptyList : flow.Value.Definition;
     }
 
     /// <summary>按名取编译完成的流程，不存在时返回错误。</summary>
-    public ErrorOr<CompiledFlow> FindCompiled(FlowName name)
+    public ErrorOr<FlowGraph> FindCompiled(FlowName name)
     {
         lock (_gate)
         {
-            CompiledFlow? flow = _compiled.FirstOrDefault(candidate => candidate.Model.Name == name);
+            FlowGraph? flow = _compiled.FirstOrDefault(candidate => candidate.Definition.Name == name);
             if (flow is not null)
             {
                 return flow;
@@ -143,7 +143,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         }
     }
 
-    ErrorOr<CompiledFlow> IFlowSnapshotCompiler.Compile(GraphFlowDefinitionRecord snapshot)
+    ErrorOr<FlowGraph> IFlowSnapshotCompiler.Compile(GraphFlowDefinitionRecord snapshot)
     {
         ErrorOr<IReadOnlyList<NodeDefinitionDocument>> nodes = _store.ReadNodesText(snapshot.Nodes);
         if (nodes.IsError)
@@ -167,7 +167,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             return compiled.ErrorsOrEmptyList;
         }
 
-        CompiledFlow? flow = compiled.Value.Flows.FirstOrDefault(candidate => candidate.Model.Name == snapshot.Name);
+        FlowGraph? flow = compiled.Value.Flows.FirstOrDefault(candidate => candidate.Definition.Name == snapshot.Name);
 
         return flow is null
             ? [Error.Failure(FlowErrorCodes.RecordFlowSnapshot, $"流程快照中没有流程 {snapshot.Name}。")]
@@ -218,7 +218,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             }
 
             List<NodeDefinitionDocument> nodes = MergeByName(_document.Nodes, file.Nodes, node => node.Name);
-            ErrorOr<CompiledDocument> library = _compiler.Compile(new FlowDocument(nodes, []), _builtins);
+            ErrorOr<IReadOnlyList<FlowGraph>> library = _compiler.Compile(new FlowDocument(nodes, []), _builtins);
             if (library.IsError)
             {
                 return library.ErrorsOrEmptyList;
@@ -237,7 +237,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                     return [.. compiled.Value.Failures.SelectMany(failure => failure.Errors)];
                 }
 
-                HashSet<FlowName> available = [.. _compiled.Select(flow => flow.Model.Name)];
+                HashSet<FlowName> available = [.. _compiled.Select(flow => flow.Definition.Name)];
                 List<FlowFailure> broken =
                     [.. compiled.Value.Failures.Where(failure => available.Contains(failure.Name))];
                 if (broken.Count > 0)
@@ -279,7 +279,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         lock (_gate)
         {
             List<FlowDocumentFlow> flows = MergeByName(_document.Flows, file.Flows, flow => flow.Name);
-            ErrorOr<CompiledDocument> compiled =
+            ErrorOr<IReadOnlyList<FlowGraph>> compiled =
                 _compiler.Compile(new FlowDocument(_document.Nodes, flows), _builtins);
             if (compiled.IsError)
             {
@@ -300,7 +300,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             }
 
             _document = new FlowDocument(_document.Nodes, flows);
-            _compiled = compiled.Value.Flows;
+            _compiled = compiled.Value;
             _failures = [];
 
             return new FlowImport(
@@ -323,7 +323,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 return checkedIncoming.ErrorsOrEmptyList;
             }
 
-            HashSet<FlowName> accepted = [.. checkedIncoming.Value.Flows.Select(flow => flow.Model.Name)];
+            HashSet<FlowName> accepted = [.. checkedIncoming.Value.Flows.Select(flow => flow.Definition.Name)];
             List<FlowDocumentFlow> acceptedFlows =
                 [.. file.Flows.Where(flow => accepted.Contains(new FlowName(flow.Name.Trim())))];
 
@@ -377,7 +377,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
 
     /// <summary>一次流程库编译的结果：可用流程与不可用流程。</summary>
     private sealed record CompileResult(
-        IReadOnlyList<CompiledFlow> Flows,
+        IReadOnlyList<FlowGraph> Flows,
         IReadOnlyList<FlowFailure> Failures);
 
     /// <summary>按流程隔离编译：整体成功直接用结果，整体失败时逐条流程编译。</summary>
@@ -392,10 +392,10 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             return duplicates;
         }
 
-        ErrorOr<CompiledDocument> whole = compiler.Compile(document, builtins);
+        ErrorOr<IReadOnlyList<FlowGraph>> whole = compiler.Compile(document, builtins);
         if (!whole.IsError)
         {
-            return new CompileResult(whole.Value.Flows, []);
+            return new CompileResult(whole.Value, []);
         }
 
         if (document.Flows.Count == 0)
@@ -403,11 +403,11 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             return whole.ErrorsOrEmptyList;
         }
 
-        List<CompiledFlow> flows = [];
+        List<FlowGraph> flows = [];
         List<FlowFailure> failures = [];
         foreach (FlowDocumentFlow flow in document.Flows)
         {
-            ErrorOr<CompiledDocument> single = compiler.Compile(
+            ErrorOr<IReadOnlyList<FlowGraph>> single = compiler.Compile(
                 new FlowDocument(document.Nodes, [flow]),
                 builtins);
             if (single.IsError)
@@ -419,7 +419,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             }
             else
             {
-                flows.Add(single.Value.Flows[0]);
+                flows.Add(single.Value[0]);
             }
         }
 

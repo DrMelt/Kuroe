@@ -10,9 +10,9 @@ using Kuroe.Execution.Shared.State;
 
 namespace Kuroe.Flow.Control.Runtime.Graph;
 
-/// <summary>图流程的运行状态：锁定的编译结果、开始端口值、运行期节点与执行上下文。</summary>
+/// <summary>图流程的运行状态：锁定的流程与图、开始端口值、运行期节点与执行上下文。</summary>
 internal sealed class GraphFlowState(
-    CompiledFlow flow,
+    FlowGraph flow,
     StartInputs inputs,
     IPortTexts startTexts,
     StartPortValues startPorts,
@@ -23,8 +23,8 @@ internal sealed class GraphFlowState(
     private ITaskFlowContext? _task;
     private TaskRuntime? _runtime;
 
-    /// <summary>锁定的编译流程。</summary>
-    public CompiledFlow Flow { get; } = flow;
+    /// <summary>锁定的流程与图。</summary>
+    public FlowGraph Flow { get; } = flow;
 
     /// <summary>提交时的开始输入。</summary>
     public StartInputs Inputs { get; } = inputs;

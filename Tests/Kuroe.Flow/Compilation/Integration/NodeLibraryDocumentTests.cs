@@ -20,7 +20,7 @@ namespace Kuroe.Flow.Compilation.Integration.Tests;
 public sealed class NodeLibraryDocumentTests
 {
     /// <summary>编译一份流程文档，任一条失败时返回全部错误。</summary>
-    private static ErrorOr<CompiledDocument> Compile(string json)
+    private static ErrorOr<IReadOnlyList<FlowGraph>> Compile(string json)
     {
         ErrorOr<FlowDocument> document = FlowDocumentSource.Read(json);
         if (document.IsError)
@@ -36,11 +36,11 @@ public sealed class NodeLibraryDocumentTests
 
     /// <summary>按名字取展开后的流程定义。</summary>
     private static FlowDefinition Find(string json, FlowName name) =>
-        Compile(json).ThrowIfError().Flows.Single(flow => flow.Model.Name == name).Model;
+        Compile(json).ThrowIfError().Single(flow => flow.Definition.Name == name).Definition;
 
     /// <summary>按名字取编译后的流程。</summary>
-    private static CompiledFlow FindCompiled(string json, FlowName name) =>
-        Compile(json).ThrowIfError().Flows.Single(flow => flow.Model.Name == name);
+    private static FlowGraph FindCompiled(string json, FlowName name) =>
+        Compile(json).ThrowIfError().Single(flow => flow.Definition.Name == name);
 
     /// <summary>断言编译失败且错误说明包含给定文本。</summary>
     private static void AssertFails(string json, string expected) =>
@@ -71,17 +71,17 @@ public sealed class NodeLibraryDocumentTests
     [Fact(DisplayName = "容器模型槽按流程绑定不同模型")]
     public void Container_model_slot_bound_to_distinct_models_per_flow()
     {
-        CompiledFlow first = FindCompiled(PerFlowModelBinding, new FlowName("甲"));
+        FlowGraph first = FindCompiled(PerFlowModelBinding, new FlowName("甲"));
         ExecutableNode firstImplement = first.Graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
         Assert.Equal("执行者", StaticText(first, firstImplement, LlmNodeTypes.ModelPort));
 
-        CompiledFlow second = FindCompiled(PerFlowModelBinding, new FlowName("乙"));
+        FlowGraph second = FindCompiled(PerFlowModelBinding, new FlowName("乙"));
         ExecutableNode secondImplement = second.Graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
         Assert.Equal("实施者", StaticText(second, secondImplement, LlmNodeTypes.ModelPort));
     }
 
     /// <summary>按编译视图取执行节点静态端口的值，没有开始端口值。</summary>
-    private static string? StaticText(CompiledFlow flow, ExecutableNode node, PortName port) =>
+    private static string? StaticText(FlowGraph flow, ExecutableNode node, PortName port) =>
         new StaticPortValues(flow.Graph, PortTexts.Empty).For(node).Text(port);
 
     [Fact(DisplayName = "未知引用报告缺失定义")]
@@ -148,7 +148,7 @@ public sealed class NodeLibraryDocumentTests
     [Fact(DisplayName = "流程名与库作用域名相同时错误仍按流程作用域给出")]
     public void Flow_named_like_library_scope_keeps_flow_errors()
     {
-        ErrorOr<CompiledDocument> compiled = Compile(FlowNamedLikeLibraryScope);
+        ErrorOr<IReadOnlyList<FlowGraph>> compiled = Compile(FlowNamedLikeLibraryScope);
 
         Assert.NotEmpty(compiled.ErrorsOrEmptyList);
         Assert.All(compiled.ErrorsOrEmptyList,

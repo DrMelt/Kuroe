@@ -6,6 +6,7 @@ using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Validation;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.Node.Shared.Model;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
@@ -69,14 +70,14 @@ public sealed class FlowDocumentTests
     [Fact(DisplayName = "审批节点派生的输出端口只转发内容，不声明触发模式")]
     public void Approval_output_port_is_plain()
     {
-        ErrorOr<CompiledDocument> compiled = Compiler.Compile(FlowDocumentSource.Read("""
+        ErrorOr<IReadOnlyList<FlowGraph>> compiled = Compiler.Compile(FlowDocumentSource.Read("""
             { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Signal", "Mode": "Plain" }], "Root": { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "@目标" } ] } } ] }
             """).Value, []);
 
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
         Assert.Equal(
             PortMode.Plain,
-            compiled.Value.Flows.Single().Graph.ExecutableNodes.Single().Outputs.Single().Mode);
+            compiled.Value.Single().Graph.ExecutableNodes.Single().Outputs.Single().Mode);
     }
 
     [Fact(DisplayName = "审批输出不携带触发值，翻转条件绑定审批输出在编译期被拒绝")]
@@ -93,11 +94,11 @@ public sealed class FlowDocumentTests
     [Fact(DisplayName = "类型给出的输出端口由节点类型提供，流程不声明")]
     public void Given_output_ports_come_from_the_node_type()
     {
-        ErrorOr<CompiledDocument> compiled = CompileWith(new GivenOutputDescription(), GivenOutputFlow);
+        ErrorOr<IReadOnlyList<FlowGraph>> compiled = CompileWith(new GivenOutputDescription(), GivenOutputFlow);
 
         Assert.False(compiled.IsError,
             string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
-        IReadOnlyList<Port> outputs = compiled.Value.Flows.Single().Graph.ExecutableNodes.Single().Outputs;
+        IReadOnlyList<Port> outputs = compiled.Value.Single().Graph.ExecutableNodes.Single().Outputs;
         Assert.Equal([new PortName("Output"), new PortName("Completed")], outputs.Select(port => port.Name));
         Assert.Equal([PortTypes.Text, PortTypes.Signal], outputs.Select(port => port.Type));
     }
@@ -110,11 +111,11 @@ public sealed class FlowDocumentTests
     [Fact(DisplayName = "节点库定义的输出端口由类型给出，引用处继承这些端口")]
     public void Given_output_ports_reach_a_library_reference()
     {
-        ErrorOr<CompiledDocument> compiled = CompileWith(new GivenOutputDescription(), GivenOutputLibraryFlow);
+        ErrorOr<IReadOnlyList<FlowGraph>> compiled = CompileWith(new GivenOutputDescription(), GivenOutputLibraryFlow);
 
         Assert.False(compiled.IsError,
             string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
-        IReadOnlyList<Port> outputs = compiled.Value.Flows.Single().Graph.ExecutableNodes
+        IReadOnlyList<Port> outputs = compiled.Value.Single().Graph.ExecutableNodes
             .Single(node => node.Label.Value == "执行").Outputs;
         Assert.Equal([new PortName("Output"), new PortName("Completed")], outputs.Select(port => port.Name));
     }
@@ -995,7 +996,7 @@ public sealed class FlowDocumentTests
         """;
 
     /// <summary>按给定类型描述编译一份文档，读取失败时给读取错误。</summary>
-    private static ErrorOr<CompiledDocument> CompileWith(INodeTypeDescription description, string json)
+    private static ErrorOr<IReadOnlyList<FlowGraph>> CompileWith(INodeTypeDescription description, string json)
     {
         NodeTypeDescriptionRegistry files = TestTypeFiles.Registry();
         files.Register(description);

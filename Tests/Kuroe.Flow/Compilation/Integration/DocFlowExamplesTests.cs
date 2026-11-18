@@ -3,6 +3,7 @@ using ErrorOr;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Documents.Shared;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Node.Approval;
@@ -18,7 +19,7 @@ namespace Kuroe.Flow.Compilation.Integration.Tests;
 public sealed class DocFlowExamplesTests
 {
     /// <summary>按当前注册的节点类型编译一份文档。</summary>
-    private static ErrorOr<CompiledDocument> Compile(FlowDocument document)
+    private static ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDocument document)
     {
         NodeTypeDescriptionRegistry files = new();
         ContainerNodeTypeDescriptions.RegisterInto(files);
@@ -45,7 +46,7 @@ public sealed class DocFlowExamplesTests
         ErrorOr<FlowDocument> read = FlowDocumentSource.Read(json);
         Assert.False(read.IsError, $"{Page} 的「{heading}」读取失败：{Describe(read.ErrorsOrEmptyList)}");
 
-        ErrorOr<CompiledDocument> compiled = Compile(read.Value);
+        ErrorOr<IReadOnlyList<FlowGraph>> compiled = Compile(read.Value);
         Assert.False(compiled.IsError, $"{Page} 的「{heading}」编译失败：{Describe(compiled.ErrorsOrEmptyList)}");
     }
 

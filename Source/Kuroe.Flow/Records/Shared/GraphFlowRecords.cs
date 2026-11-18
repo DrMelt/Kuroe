@@ -32,5 +32,5 @@ public interface IFlowSnapshotSource
 public interface IFlowSnapshotCompiler
 {
     /// <summary>编译快照，失败时返回流程错误。</summary>
-    ErrorOr<CompiledFlow> Compile(GraphFlowDefinitionRecord snapshot);
+    ErrorOr<FlowGraph> Compile(GraphFlowDefinitionRecord snapshot);
 }

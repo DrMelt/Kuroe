@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Documents.Shared;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Compilation.Shared;
@@ -8,5 +9,5 @@ namespace Kuroe.Flow.Compilation.Shared;
 public interface IFlowDescriptionCompiler
 {
     /// <summary>编译一份描述文档。内置定义由调用方给出，文件定义来自文档。</summary>
-    ErrorOr<CompiledDocument> Compile(FlowDocument document, IReadOnlyList<NodeSpec> builtins);
+    ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDocument document, IReadOnlyList<NodeSpec> builtins);
 }
