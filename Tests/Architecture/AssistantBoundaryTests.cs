@@ -26,7 +26,7 @@ public sealed class AssistantBoundaryTests
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph")));
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core")));
         Assert.DoesNotContain(references, reference =>
             IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Compilation", "Shared")));
         Assert.DoesNotContain(references, reference =>

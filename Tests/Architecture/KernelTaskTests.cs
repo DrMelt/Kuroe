@@ -17,7 +17,7 @@ public sealed class KernelTaskTests
             Path.GetFileName(project),
             "执行核与图控制",
             Path.Combine(KernelRoot, "Execution", "Core"),
-            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph"));
+            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core"));
     }
 
     [Fact(DisplayName = "核心源码不含图运行期")]
@@ -41,7 +41,7 @@ public sealed class KernelTaskTests
     public void Graph_runtime_lives_in_control_graph()
     {
         string core = Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Runtime");
-        string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph");
+        string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core");
 
         Assert.True(File.Exists(Path.Combine(core, "WorkTask.cs")), $"{Path.Combine(core, "WorkTask.cs")} 不存在。");
         Assert.False(File.Exists(Path.Combine(graph, "Runtime", "Tasks", "WorkTask.cs")), $"{Path.Combine(graph, "Runtime", "Tasks", "WorkTask.cs")} 不应存在。");
@@ -123,7 +123,7 @@ public sealed class KernelTaskTests
         string control = Path.Combine(KernelRoot, "Control", "Shared");
         string factory = Path.Combine(control, "TaskSnapshotFactory.cs");
         string graph = Path.Combine(
-            SourceRoot, "Kuroe.Flow", "Control", "Graph", "Runtime", "Engine", "GraphFlowPresentation.cs");
+            SourceRoot, "Kuroe.Flow", "Control", "Core", "Runtime", "Engine", "GraphFlowPresentation.cs");
         string dialogue = Path.Combine(
             SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow", "DialogueFlowPresentation.cs");
         string workTask = Path.Combine(

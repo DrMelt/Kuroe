@@ -118,7 +118,7 @@ public sealed class KernelAreaTests
         [
             "Kuroe.Flow.Node.RuntimeGraph",
             "Kuroe.Flow.Node.StaticGraph",
-            "Kuroe.Flow.Control.Graph",
+            "Kuroe.Flow.Control",
             "Kuroe.Flow.Node.Shared",
         ];
 

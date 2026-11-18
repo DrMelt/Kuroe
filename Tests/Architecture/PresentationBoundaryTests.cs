@@ -31,7 +31,7 @@ public sealed class PresentationBoundaryTests
             "GraphFlowControl",
             "TaskRuntime",
             "NodeGraph",
-            "Control.Graph",
+            "Kuroe.Flow.Control",
             "NodePath",
             "ExecutableSnapshot",
             "ExecutableStateSnapshot",

@@ -44,7 +44,7 @@ public sealed class HostAndToolBoundaryTests
             IReadOnlyList<string> references = ProjectReferences(project);
 
             Assert.DoesNotContain(references, reference =>
-                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph")));
+                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core")));
             Assert.DoesNotContain(references, reference =>
                 IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared")));
             Assert.DoesNotContain(references, reference =>
@@ -66,7 +66,7 @@ public sealed class HostAndToolBoundaryTests
         [
             "Kuroe.Flow.Node.StaticGraph",
             "Kuroe.Flow.Node.RuntimeGraph",
-            "Kuroe.Flow.Control.Graph",
+            "Kuroe.Flow.Control",
             "Kuroe.Flow.Node.Shared",
             "Kuroe.Flow.Graph.Records",
         ];

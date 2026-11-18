@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Flow.Control.Tests" />
+    </ItemGroup>
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
+    </ItemGroup>
+</Project>

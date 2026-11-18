@@ -18,7 +18,7 @@
 
 - 不含图编译与库展开：在 Kuroe.Flow.Compilation 与 Kuroe.Flow.NodeLibrary。
 - 不含流程级与图级校验：在 Kuroe.Flow.Compilation 与 Kuroe.Flow.NodeLibrary。
-- 不含图运行期调度与流程控制：在 Kuroe.Flow.Control.Graph。
+- 不含图运行期调度与流程控制：在 Kuroe.Flow.Control。
 - 不含具体节点类型与运行器实现。
 - 不含持久化编解码与文件格式。
 

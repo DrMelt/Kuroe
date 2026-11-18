@@ -33,7 +33,7 @@ public sealed class KernelControlTests
             SourceRoot,
             "Kuroe.Flow",
             "Control",
-            "Graph",
+            "Core",
             "Runtime",
             "Engine",
             "FlowRuntime.cs");
@@ -45,7 +45,7 @@ public sealed class KernelControlTests
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph")));
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core")));
         Assert.DoesNotContain(references, reference =>
             IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Node")));
     }
@@ -177,7 +177,7 @@ public sealed class KernelControlTests
         string records = Path.Combine(
             KernelRoot, "Control", "Shared", "IFlowRecordSource.cs");
         string graphRecords = Path.Combine(
-            SourceRoot, "Kuroe.Flow", "Control", "Graph", "Runtime", "Engine", "GraphFlowRecordSource.cs");
+            SourceRoot, "Kuroe.Flow", "Control", "Core", "Runtime", "Engine", "GraphFlowRecordSource.cs");
         string dialogueRecords = Path.Combine(
             SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow", "DialogueFlowRecordSource.cs");
 
@@ -223,7 +223,7 @@ public sealed class KernelControlTests
         string[] directories =
         [
             Path.Combine(KernelRoot, "Control", "Shared"),
-            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph"),
+            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core"),
             Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core"),
         ];
         string[] forbidden =
@@ -302,7 +302,7 @@ public sealed class KernelControlTests
             SourceRoot,
             "Kuroe.Flow",
             "Control",
-            "Graph",
+            "Core",
             "Runtime",
             "Engine",
             "GraphFlowControlFactory.cs");

@@ -152,7 +152,7 @@ public sealed class FlowAreaTests
             SourceRoot,
             "Kuroe.Flow",
             "Control",
-            "Graph",
+            "Core",
             "Runtime",
             "Graph",
             "GraphFlowState.cs");
@@ -166,7 +166,7 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "流程实现按端口类别拆分文件")]
     public void Flow_implementations_split_ports_by_class()
     {
-        string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph", "Runtime", "Engine");
+        string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core", "Runtime", "Engine");
         string dialogue = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow");
 
         Assert.False(File.Exists(Path.Combine(graph, "GraphFlowFramework.cs")), $"{Path.Combine(graph, "GraphFlowFramework.cs")} 不应存在。");
@@ -242,7 +242,7 @@ public sealed class FlowAreaTests
         string[] directories =
         [
             Path.Combine(SourceRoot, "Kuroe.Flow", "Node"),
-            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph"),
+            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core"),
         ];
 
         foreach (string directory in directories)
@@ -258,8 +258,8 @@ public sealed class FlowAreaTests
             SourceRoot,
             "Kuroe.Flow",
             "Control",
-            "Graph",
-            "Kuroe.Flow.Control.Graph.csproj");
+            "Core",
+            "Kuroe.Flow.Control.csproj");
         string control = Path.Combine(KernelRoot, "Control", "Shared");
         string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
@@ -272,7 +272,7 @@ public sealed class FlowAreaTests
 
         ReferencesStayUnder(
             project,
-            "Kuroe.Flow.Control.Graph",
+            "Kuroe.Flow.Control",
             "契约层与图记录",
             control,
             shared,
@@ -288,7 +288,7 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "图控制不驱动执行状态机")]
     public void Graph_control_does_not_drive_the_execution_state_machine()
     {
-        string directory = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph");
+        string directory = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core");
         string[] forbidden =
         [
             "MarkRunning",
@@ -311,7 +311,7 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "图控制不引用输入模块")]
     public void Graph_control_does_not_reference_input()
     {
-        string project = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph", "Kuroe.Flow.Control.Graph.csproj");
+        string project = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core", "Kuroe.Flow.Control.csproj");
         string input = Path.Combine(KernelRoot, "Input");
 
         Assert.DoesNotContain(ProjectReferences(project), reference => IsUnder(reference, input));

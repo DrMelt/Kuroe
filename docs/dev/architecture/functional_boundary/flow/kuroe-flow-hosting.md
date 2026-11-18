@@ -16,10 +16,10 @@
 ## 边界外
 
 - 不含图编译与描述模型：在 Kuroe.Flow.Compilation.*。
-- 不含图运行期与流程控制：在 Kuroe.Flow.Control.Graph。
+- 不含图运行期与流程控制：在 Kuroe.Flow.Control。
 - 不含节点与运行器实现。
 - 不含核心装配与入口：在 Kuroe 与宿主项目。
 
 ## 依赖
 
-- Kuroe、Kuroe.Shared、Kuroe.Files.Shared、Kuroe.Process、Kuroe.Flow.Shared、Kuroe.Flow.Node.Shared、Kuroe.Flow.Graph.Records.Shared、Kuroe.Flow.Compilation.Shared、Kuroe.Flow.Compilation、Kuroe.Flow.Json.Shared、Kuroe.Flow.Json、Kuroe.Input.Shared、Kuroe.Flow.NodeLibrary、Kuroe.Flow.NodeType.Container、Kuroe.Flow.Control.Graph、Kuroe.Flow.Persistence.Graph、Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Runner.Shared、Kuroe.Runner.Command、Kuroe.Runner.File、Kuroe.Runner.Input、Kuroe.Runner.Approval、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Tool.Contract、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Presentation.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Control.Shared、Kuroe.Control.Runtime、Kuroe.Tasks.Persistence.Files.Shared、Kuroe.Tasks.Persistence.Files、Kuroe.Presentation.Shared。
+- Kuroe、Kuroe.Shared、Kuroe.Files.Shared、Kuroe.Process、Kuroe.Flow.Shared、Kuroe.Flow.Node.Shared、Kuroe.Flow.Graph.Records.Shared、Kuroe.Flow.Compilation.Shared、Kuroe.Flow.Compilation、Kuroe.Flow.Json.Shared、Kuroe.Flow.Json、Kuroe.Input.Shared、Kuroe.Flow.NodeLibrary、Kuroe.Flow.NodeType.Container、Kuroe.Flow.Control、Kuroe.Flow.Persistence.Graph、Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Runner.Shared、Kuroe.Runner.Command、Kuroe.Runner.File、Kuroe.Runner.Input、Kuroe.Runner.Approval、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Tool.Contract、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Presentation.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Control.Shared、Kuroe.Control.Runtime、Kuroe.Tasks.Persistence.Files.Shared、Kuroe.Tasks.Persistence.Files、Kuroe.Presentation.Shared。

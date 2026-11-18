@@ -46,7 +46,7 @@ graph TD
         FlowJson["Flow.Json<br>流程文件 JSON 读写"]
         FlowNodeLibrary["Flow.NodeLibrary<br>节点库展开与作用域"]
         FlowNodeTypeContainer["Flow.NodeType.Container<br>容器节点类型"]
-        FlowControlGraph["Flow.Control.Graph<br>图流程控制与运行期"]
+        FlowControl["Flow.Control<br>图流程控制与运行期"]
         FlowHosting["Flow.Hosting<br>图流程注册与流程库装配"]
         FlowPersistenceGraph["Flow.Persistence.Graph<br>图流程记录编解码"]
     end
@@ -199,15 +199,15 @@ graph TD
     FlowCompilationShared --> TasksShared
     FlowCompilationShared --> FlowNodeShared
     FlowCompilationDocumentsShared --> FlowNodeShared
-    FlowControlGraph --> ControlShared
-    FlowControlGraph --> FlowShared
-    FlowControlGraph --> ExecutionShared
-    FlowControlGraph --> ExecutionRecordsShared
-    FlowControlGraph --> FlowGraphRecordsShared
-    FlowControlGraph --> FlowNodeShared
-    FlowControlGraph --> PresentationShared
-    FlowControlGraph --> TasksShared
-    FlowControlGraph --> TasksRecordsShared
+    FlowControl --> ControlShared
+    FlowControl --> FlowShared
+    FlowControl --> ExecutionShared
+    FlowControl --> ExecutionRecordsShared
+    FlowControl --> FlowGraphRecordsShared
+    FlowControl --> FlowNodeShared
+    FlowControl --> PresentationShared
+    FlowControl --> TasksShared
+    FlowControl --> TasksRecordsShared
     FlowGraphRecordsShared --> FlowShared
     FlowGraphRecordsShared --> TasksShared
     FlowGraphRecordsShared --> TasksRecordsShared
@@ -228,7 +228,7 @@ graph TD
     FlowHosting --> InputShared
     FlowHosting --> FlowNodeLibrary
     FlowHosting --> FlowNodeTypeContainer
-    FlowHosting --> FlowControlGraph
+    FlowHosting --> FlowControl
     FlowHosting --> FlowPersistenceGraph
     FlowHosting --> NodeLlm
     FlowHosting --> NodeFile
@@ -534,7 +534,7 @@ graph TD
 | `Kuroe.Flow.Json` | flow | [kuroe-flow-json](functional_boundary/flow/kuroe-flow-json.md) |
 | `Kuroe.Flow.NodeLibrary` | flow | [kuroe-flow-nodelibrary](functional_boundary/flow/kuroe-flow-nodelibrary.md) |
 | `Kuroe.Flow.NodeType.Container` | flow | [kuroe-flow-nodetype-container](functional_boundary/flow/kuroe-flow-nodetype-container.md) |
-| `Kuroe.Flow.Control.Graph` | flow | [kuroe-flow-control-graph](functional_boundary/flow/kuroe-flow-control-graph.md) |
+| `Kuroe.Flow.Control` | flow | [kuroe-flow-control](functional_boundary/flow/kuroe-flow-control.md) |
 | `Kuroe.Flow.Hosting` | flow | [kuroe-flow-hosting](functional_boundary/flow/kuroe-flow-hosting.md) |
 | `Kuroe.Flow.Persistence.Graph` | flow | [kuroe-flow-persistence-graph](functional_boundary/flow/kuroe-flow-persistence-graph.md) |
 | `Kuroe.CodeFlow.Records.Shared` | codeflow | [kuroe-codeflow-records-shared](functional_boundary/codeflow/kuroe-codeflow-records-shared.md) |
@@ -580,7 +580,7 @@ graph TD
 
 ## 命名空间与路径
 
-命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Node.Shared` 的分段固定为 `StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records`，`Kuroe.Flow.Control.Graph` 的命名空间全部在 `Kuroe.Flow.Control.Graph.Runtime` 之下。
+命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Node.Shared` 的分段固定为 `StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records`，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
 
 `Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
 
