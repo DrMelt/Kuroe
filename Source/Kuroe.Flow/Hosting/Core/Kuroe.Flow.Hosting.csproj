@@ -18,7 +18,7 @@
         <ProjectReference Include="..\..\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
         <ProjectReference Include="..\..\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
-        <ProjectReference Include="..\..\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
+        <ProjectReference Include="..\..\Compilation\Compiler\Kuroe.Flow.Compilation.csproj" />
         <ProjectReference Include="..\..\Compilation\Json\Shared\Kuroe.Flow.Json.Shared.csproj" />
         <ProjectReference Include="..\..\Compilation\Json\Core\Kuroe.Flow.Json.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
