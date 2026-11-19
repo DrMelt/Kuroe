@@ -81,17 +81,15 @@ public sealed class MafBoundaryTests
         }
     }
 
-    [Fact(DisplayName = "Maf 文档装配只引用流程共享契约")]
-    public void Maf_compilation_references_only_flow_shared_contracts()
+    [Fact(DisplayName = "Maf 文档装配只引用流程描述")]
+    public void Maf_compilation_references_only_flow_description()
     {
         string document = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
-        string flowGraphShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
-        string flowCompilationShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Compilation", "Shared");
         string mafCompilationShared = Path.Combine(SourceRoot, "Kuroe.Maf", "Compilation", "Shared");
         string mafDefinition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-        string executor = Path.Combine(SourceRoot, "Kuroe.Executor", "Shared");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
 
         string shared = Path.Combine(
             SourceRoot,
@@ -109,23 +107,20 @@ public sealed class MafBoundaryTests
         ReferencesStayUnder(
             shared,
             "Kuroe.Maf.Compilation.Shared",
-            "流程共享契约",
+            "流程描述与 MAF 定义",
             document,
-            flowGraphShared,
             mafDefinition,
             tasks);
         ReferencesStayUnder(
             compilation,
             "Kuroe.Maf.Compilation",
-            "流程共享契约与执行器共享层",
+            "流程描述、MAF 定义与 Kernel 契约",
             document,
-            flowGraphShared,
-            flowCompilationShared,
             mafCompilationShared,
             mafDefinition,
             tasks,
-            execution,
-            executor);
+            execution);
+        ReferencesExclude(compilation, "Kuroe.Maf.Compilation", "流程区域", flow);
     }
 
     [Fact(DisplayName = "流程区域不含 Maf")]

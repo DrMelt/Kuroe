@@ -20,6 +20,7 @@ public sealed class RecordPersistenceTests
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string tasksRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
+        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
 
         ReferencesStayUnder(
             project,
@@ -28,7 +29,8 @@ public sealed class RecordPersistenceTests
             nodes,
             tasks,
             tasksRecords,
-            execution);
+            execution,
+            description);
     }
 
     [Fact(DisplayName = "持久化项目只引用共享边界")]

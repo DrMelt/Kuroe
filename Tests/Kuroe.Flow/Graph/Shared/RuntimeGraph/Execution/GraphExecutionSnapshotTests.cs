@@ -1,4 +1,5 @@
-using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using ExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
 using Kuroe.Tasks.Shared;
@@ -49,6 +50,13 @@ public sealed class GraphExecutionSnapshotTests
     {
         Task = new TaskId(1),
         Node = NodePath.Of("制定计划"),
-        Type = new StubNodeType(new NodeKind("Executable")),
+        Type = new StubType(new NodeKind("Executable")),
     };
+
+    private sealed class StubType(NodeKind kind) : INodeType
+    {
+        public NodeKind Kind { get; } = kind;
+
+        public NodeTypeShape Shape { get; } = new();
+    }
 }

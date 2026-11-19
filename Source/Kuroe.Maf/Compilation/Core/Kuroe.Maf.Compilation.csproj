@@ -15,14 +15,11 @@
     <ItemGroup>
         <ProjectReference Include="..\Shared\Kuroe.Maf.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\Definition\Core\Kuroe.Maf.Definition.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Kuroe.Executor\Shared\Kuroe.Executor.Shared.csproj" />
     </ItemGroup>
 </Project>

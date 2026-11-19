@@ -16,7 +16,7 @@ using Kuroe.Node.Approval;
 using Kuroe.Node.Input;
 using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Tasks.Persistence.Saving.Shared;
-using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Assistant;

@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Flow.Compilation.Shared;
+using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared;
 using Kuroe.Flow.Control.Runtime.Catalog;
 using Kuroe.Flow.Records.Shared;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
+using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Shared;
 using Kuroe.Flow.Hosting.Workflows.Flows.Files;
 

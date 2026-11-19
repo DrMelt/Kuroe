@@ -9,7 +9,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
     </ItemGroup>
 
 <ItemGroup>
@@ -20,6 +19,6 @@
         <ProjectReference Include="..\..\..\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\Kuroe.Executor\Shared\Kuroe.Executor.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
     </ItemGroup>
 </Project>

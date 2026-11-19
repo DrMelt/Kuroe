@@ -23,7 +23,7 @@ public sealed class JsonNodeFormatTests
             Format.Read("""{ "Nodes": [ { "Label": "副本", "Use": "计划" } ] }""");
         Assert.True(reference.IsError);
         Assert.Contains(reference.ErrorsOrEmptyList,
-            error => error.Description.Contains("节点库定义不能是引用。"));
+            error => error.Description.Contains("定义条目不能是引用。"));
     }
 
     [Fact(DisplayName = "读取拒绝流程字段")]

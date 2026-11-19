@@ -1,0 +1,281 @@
+using ErrorOr;
+using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
+using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.Tasks.Shared;
+namespace Kuroe.FlowDescription.Compilation;
+/// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的静态绑定与 From 在所在作用域建立绑定域，成员的 From 与 Bindings 引用都在该绑定域里取 @端口。
+/// 节点按作者写下的原文保留，定义条目沿用节点名，引用条目用标签，层级由树给出；引用由编译期按作用域链解析。</summary>
+internal static class NodeExpander
+{
+    /// <summary>展开作用域的一层：容器实例的端口绑定。每层以 parent 串起，从内向外透传端口绑定。</summary>
+    private sealed class Env(
+        Env? parent,
+        IReadOnlyDictionary<PortName, PortRef> bindings)
+    {
+        public Env? Parent { get; } = parent;
+        public IReadOnlyDictionary<PortName, PortRef> Bindings { get; } = bindings;
+    }
+
+    /// <summary>展开流程根节点。流程开始端口构成最外层绑定域，根与成员用 @端口 取用。引用类错误在此一次给全。</summary>
+    public static ErrorOr<NodeSpec> Expand(
+        NodeLibrary library,
+        NodeSpec root,
+        IReadOnlyList<Port> startPorts,
+        NodeScope scope)
+    {
+        List<Error> errors = [];
+        Env? rootEnv = new(null, startPorts.ToDictionary(
+            port => port.Name,
+            port => PortRef.Start(port.Name)));
+        NodeSpec? expanded = ExpandNode(library, root, rootEnv, inInstance: false, scope, errors);
+
+        if (errors.Count > 0)
+        {
+            return errors;
+        }
+
+        return expanded ?? throw new InvalidOperationException($"流程根节点 {root.Label} 展开失败。");
+    }
+
+    /// <summary>展开一个节点：引用按库定义实例化，实例根采用引用处写下的标签，库定义内成员沿用定义里的标签。</summary>
+    private static NodeSpec? ExpandNode(
+        NodeLibrary library,
+        NodeSpec node,
+        Env? env,
+        bool inInstance,
+        NodeScope scope,
+        List<Error> errors)
+    {
+        if (node.Use is { } use)
+        {
+            if (!library.TryFind(use, out NodeSpec? definition))
+            {
+                errors.Add(scope.Node(node.Label.Value, $"引用的节点 {use} 不在节点库。"));
+                return null;
+            }
+
+            if (definition.Nodes is { Count: > 0 })
+            {
+                if (node.Emission is not null)
+                {
+                    errors.Add(scope.Node(node.Label.Value, "容器节点不是执行节点，不支持 Emission。"));
+                }
+
+                node.CheckWiring(NodeRuleContext.Reference, message =>
+                    errors.Add(scope.Node(node.Label.Value, message)), container: true);
+
+                Env childEnv = BuildContainerEnv(env, node);
+                List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, inInstance: true, scope, errors);
+                IReadOnlyList<FromGroup> from = ResolveAll(node.From, env, scope, errors);
+                Dictionary<PortName, PortRef>? bindings = ResolveBindings(node.Bindings, env, scope, errors);
+                return new NodeSpec
+                {
+                    Label = node.Label,
+                    Type = definition.Type,
+                    Inputs = definition.Inputs,
+                    Bindings = bindings,
+                    From = from,
+                    Nodes = members,
+                    Outputs = definition.Outputs,
+                    MaxExecutions = node.MaxExecutions ?? definition.MaxExecutions,
+                };
+            }
+
+            node.CheckWiring(NodeRuleContext.Reference, message =>
+                errors.Add(scope.Node(node.Label.Value, message)), container: false);
+
+            if (definition.Spec is not { } librarySpec)
+            {
+                errors.Add(scope.Node(node.Label.Value, $"引用的节点 {use} 没有执行配置。"));
+                return null;
+            }
+
+            return new NodeSpec
+            {
+                Label = node.Label,
+                Type = definition.Type,
+                Inputs = definition.Inputs,
+                Spec = librarySpec with
+                {
+                    Emission = node.Emission ?? librarySpec.Emission,
+                    MaxExecutions = ResolveMaxExecutions(node.MaxExecutions, librarySpec.MaxExecutions),
+                },
+                Bindings = ResolveBindings(node.Bindings, env, scope, errors),
+                From = ResolveAll(node.From, env, scope, errors),
+                Outputs = definition.Outputs,
+            };
+        }
+
+        if (node.Nodes is { Count: > 0 } children)
+        {
+            if (!inInstance)
+            {
+                ContainerScope.Check(node, children, name => Find(library, name), (member, message) =>
+                    errors.Add(scope.Node(member.Label.Value, message)));
+            }
+
+            Env childEnv = BuildContainerEnv(env, node);
+            List<NodeSpec> expanded = ExpandMembers(library, children, childEnv, inInstance, scope, errors);
+            IReadOnlyList<FromGroup> from = ResolveAll(node.From, env, scope, errors);
+            Dictionary<PortName, PortRef>? bindings = ResolveBindings(node.Bindings, env, scope, errors);
+            return new NodeSpec
+            {
+                Name = node.Name,
+                Label = node.Label,
+                Type = node.Type,
+                Inputs = node.Inputs,
+                Bindings = bindings,
+                From = from,
+                Outputs = node.Outputs,
+                MaxExecutions = node.MaxExecutions,
+                Nodes = expanded,
+            };
+        }
+
+        if (node.Spec is null)
+        {
+            // 结构不完整时保留原节点，由校验给出诊断
+            return node;
+        }
+
+        ExecutableSpec spec = node.Spec;
+
+        return new NodeSpec
+        {
+            Name = node.Name,
+            Label = node.Label,
+            Type = node.Type,
+            Inputs = node.Inputs,
+            Spec = spec with
+            {
+                MaxExecutions = ResolveMaxExecutions(spec.MaxExecutions, null),
+            },
+            Bindings = ResolveBindings(node.Bindings, env, scope, errors),
+            From = ResolveAll(node.From, env, scope, errors),
+            Outputs = node.Outputs,
+        };
+    }
+
+    /// <summary>执行节点的生效执行上限：自身显式、库定义依次取先，都没有时落到默认值。</summary>
+    private static int ResolveMaxExecutions(int? own, int? library) =>
+        own ?? library ?? ExecutableNode.DefaultMaxExecutions;
+
+    private static List<NodeSpec> ExpandMembers(
+        NodeLibrary library,
+        IReadOnlyList<NodeSpec> members,
+        Env? env,
+        bool inInstance,
+        NodeScope scope,
+        List<Error> errors)
+    {
+        List<NodeSpec> expanded = [];
+        foreach (NodeSpec member in members)
+        {
+            NodeSpec? item = ExpandNode(library, member, env, inInstance, scope, errors);
+            if (item is not null)
+            {
+                expanded.Add(item);
+            }
+        }
+
+        return expanded;
+    }
+
+    /// <summary>按名字取库定义，未注册时给空。</summary>
+    private static NodeSpec? Find(NodeLibrary library, NodeName name) =>
+        library.TryFind(name, out NodeSpec? definition) ? definition : null;
+
+    /// <summary>构造容器实例的子作用域：静态绑定与 From 连接都进入绑定域。
+    /// parent 沿当前环境链挂上，便于 @更外层端口 逐层透传。</summary>
+    private static Env BuildContainerEnv(Env? parent, NodeSpec node)
+    {
+        Dictionary<PortName, PortRef> bindings = [];
+        if (node.Bindings is { } declared)
+        {
+            foreach ((PortName port, PortRef reference) in declared)
+            {
+                bindings[port] = reference;
+            }
+        }
+
+        foreach (FromLink link in node.From.SelectMany(group => group.Links))
+        {
+            bindings[link.Input] = link.Ref;
+        }
+
+        return new Env(parent, bindings);
+    }
+
+    /// <summary>解析静态输入绑定：@端口 沿容器的端口绑定链展开，写明来源的引用由编译期按作用域解析。
+    /// 没有绑定域时保留原文，由根绑定规则给出诊断。</summary>
+    private static Dictionary<PortName, PortRef>? ResolveBindings(
+        IReadOnlyDictionary<PortName, PortRef>? bindings,
+        Env? env,
+        NodeScope scope,
+        List<Error> errors) =>
+        bindings is { Count: > 0 }
+            ? bindings.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value.Source is null && env is null
+                    ? pair.Value
+                    : ResolveRef(pair.Value, env, scope, errors))
+            : null;
+
+    /// <summary>逐个解析上游 From 组：来源标签沿实例映射链与端口绑定链解析，输入名、触发条件与类型保留。</summary>
+    private static IReadOnlyList<FromGroup> ResolveAll(
+        IReadOnlyList<FromGroup> from,
+        Env? env,
+        NodeScope scope,
+        List<Error> errors) =>
+        [
+            .. from.Select(group => group with
+            {
+                Links =
+                [
+                    .. group.Links.Select(link => link with
+                    {
+                        Ref = link.Ref.Source is null && env is null
+                            ? link.Ref
+                            : ResolveRef(link.Ref, env, scope, errors),
+                    }),
+                ],
+            }),
+        ];
+
+    /// <summary>解析一个端口引用：来源为空（@端口）在所属容器的绑定域里找实际来源，写明来源的引用原样保留，由编译期按作用域解析。
+    /// 绑定值沿更外层绑定域透传；成员只看自己容器的绑定域，外层容器的端口不可见。</summary>
+    private static PortRef ResolveRef(PortRef reference, Env? env, NodeScope scope, List<Error> errors)
+    {
+        if (reference.Source is not null || reference.IsStart)
+        {
+            return reference;
+        }
+
+        if (env is not null && env.Bindings.TryGetValue(reference.Port, out PortRef bound))
+        {
+            return bound.IsStart || bound.Source is not null
+                ? bound
+                : ResolveBound(bound, env.Parent, scope, errors);
+        }
+
+        errors.Add(scope.Node(reference.Port.Value, $"端口 @{reference.Port.Value} 没有绑定来源。"));
+        return reference;
+    }
+
+    /// <summary>绑定值沿更外层绑定域解析，@更外层端口 因此逐层透传，来源标签保持作者写下的原文。</summary>
+    private static PortRef ResolveBound(PortRef bound, Env? env, NodeScope scope, List<Error> errors)
+    {
+        if (env is not null && env.Bindings.TryGetValue(bound.Port, out PortRef outer))
+        {
+            return outer.IsStart || outer.Source is not null
+                ? outer
+                : ResolveBound(outer, env.Parent, scope, errors);
+        }
+
+        errors.Add(scope.Node(bound.Port.Value, $"端口 @{bound.Port.Value} 没有绑定来源。"));
+        return bound;
+    }
+}

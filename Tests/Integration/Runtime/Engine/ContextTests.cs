@@ -2,7 +2,7 @@ using ApiHub.Shared.Models;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
-using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.TestSupport;
 using Xunit;

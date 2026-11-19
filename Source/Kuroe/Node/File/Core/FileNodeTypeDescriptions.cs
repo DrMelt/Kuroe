@@ -1,4 +1,4 @@
-using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.File;

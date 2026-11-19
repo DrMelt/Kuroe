@@ -4,19 +4,38 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>流程描述边界：流程描述共享层不引用其他工程，JSON 格式层只引用流程描述与契约层。</summary>
+/// <summary>流程描述边界：流程描述共享层只引用任务契约，编译层只引用流程描述与任务契约，JSON 格式层只引用流程描述与契约层。</summary>
 public sealed class FlowDescriptionBoundaryTests
 {
-    [Fact(DisplayName = "流程描述不引用其他工程")]
-    public void Flow_description_references_no_other_project()
+    [Fact(DisplayName = "流程描述共享层只引用任务契约")]
+    public void Flow_description_references_only_task_contracts()
     {
         string project = Path.Combine(
             SourceRoot,
             "Kuroe.FlowDescription",
             "Shared",
             "Kuroe.FlowDescription.Shared.csproj");
+        string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
 
-        Assert.Empty(ProjectReferences(project));
+        ReferencesStayUnder(project, "Kuroe.FlowDescription.Shared", "任务契约", tasks);
+    }
+
+    [Fact(DisplayName = "流程描述编译层只引用流程描述与任务契约")]
+    public void Flow_description_compilation_references_only_description_and_task_contracts()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.FlowDescription",
+            "Compilation",
+            "Core",
+            "Kuroe.FlowDescription.Compilation.csproj");
+        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
+        string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+
+        ReferencesStayUnder(project, "Kuroe.FlowDescription.Compilation", "流程描述与任务契约", description, tasks);
+        ReferencesExclude(project, "Kuroe.FlowDescription.Compilation", "流程与 MAF 区域", flow, maf);
     }
 
     [Fact(DisplayName = "流程描述 JSON 共享层只引用流程描述")]

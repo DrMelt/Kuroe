@@ -16,5 +16,6 @@
 
 <ItemGroup>
         <ProjectReference Include="..\..\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
     </ItemGroup>
 </Project>

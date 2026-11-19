@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.FlowDescription.Shared;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.Maf.Definition;
 
 namespace Kuroe.Maf.Compilation.Shared;

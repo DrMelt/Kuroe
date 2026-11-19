@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
 
 namespace Kuroe.FlowDescription.Json.Files;
 
@@ -16,7 +17,7 @@ static class FlowFileReader
         foreach (NodeDto dto in file.Nodes)
         {
             List<Error> nodeErrors = [];
-            ErrorOr<NodeDefinitionDescription> node = ReadDefinition(dto, DescriptionScope.Library, nodeErrors);
+            ErrorOr<NodeDefinitionDescription> node = ReadDefinition(dto, NodeScope.Library, nodeErrors);
             if (node.IsSuccess && nodeErrors.Count == 0)
             {
                 nodes.Add(node.Value);
@@ -55,7 +56,7 @@ static class FlowFileReader
     private static ErrorOr<FlowEntry> ReadFlow(FlowDto dto, List<Error> errors)
     {
         string name = dto.Name?.Trim() ?? string.Empty;
-        DescriptionScope scope = DescriptionScope.Flow(name);
+        NodeScope scope = NodeScope.Flow(name);
 
         ErrorOr<IReadOnlyList<PortDescription>> ports = ReadPorts(dto.Ports, scope, name, allowDefault: true);
         if (ports.IsError)
@@ -79,7 +80,7 @@ static class FlowFileReader
             : new FlowEntry(name, dto.Description, ports.Value, root);
     }
 
-    private static ErrorOr<NodeDescription> ReadNode(NodeDto dto, DescriptionScope scope, List<Error> errors)
+    private static ErrorOr<NodeDescription> ReadNode(NodeDto dto, NodeScope scope, List<Error> errors)
     {
         if (dto.Use is { Length: > 0 })
         {
@@ -93,13 +94,13 @@ static class FlowFileReader
         return definition.IsError ? definition.ErrorsOrEmptyList : definition.Value;
     }
 
-    private static ErrorOr<NodeDefinitionDescription> ReadDefinition(NodeDto dto, DescriptionScope scope, List<Error> errors)
+    private static ErrorOr<NodeDefinitionDescription> ReadDefinition(NodeDto dto, NodeScope scope, List<Error> errors)
     {
         string label = dto.Name ?? string.Empty;
         List<Error> nodeErrors = [];
         if (dto.Use is { Length: > 0 })
         {
-            nodeErrors.Add(scope.Node(label, "节点库定义不能是引用。"));
+            nodeErrors.Add(scope.Node(label, "定义条目不能是引用。"));
             errors.AddRange(nodeErrors);
 
             return nodeErrors;
@@ -178,7 +179,7 @@ static class FlowFileReader
         };
     }
 
-    private static ErrorOr<NodeReferenceDescription> ReadReference(NodeDto dto, DescriptionScope scope, List<Error> errors)
+    private static ErrorOr<NodeReferenceDescription> ReadReference(NodeDto dto, NodeScope scope, List<Error> errors)
     {
         string label = dto.Label ?? string.Empty;
         List<Error> referenceErrors = [];
@@ -258,7 +259,7 @@ static class FlowFileReader
     }
 
     /// <summary>节点对象上不属于结构字段的键：类型专属字段只能写在参数段里，写在节点对象上是位置错误。</summary>
-    private static void ReportUnrecognized(NodeDto dto, DescriptionScope scope, string label, List<Error> errors)
+    private static void ReportUnrecognized(NodeDto dto, NodeScope scope, string label, List<Error> errors)
     {
         if (dto.Unrecognized is not { Count: > 0 } unrecognized)
         {
@@ -271,14 +272,14 @@ static class FlowFileReader
         }
     }
 
-    private static NodeEmissionDescription? ReadEmission(NodeDto dto, DescriptionScope scope, string label, List<Error> errors)
+    private static NodeEmissionDescription? ReadEmission(NodeDto dto, NodeScope scope, string label, List<Error> errors)
     {
         if (dto.Emission is not { Length: > 0 } text)
         {
             return null;
         }
 
-        if (Enum.TryParse(text, ignoreCase: true, out NodeEmissionDescription emission))
+        if (TryParseName(text, out NodeEmissionDescription emission))
         {
             return emission;
         }
@@ -289,7 +290,7 @@ static class FlowFileReader
 
     private static ErrorOr<IReadOnlyList<PortDescription>> ReadPorts(
         List<JsonElement>? entries,
-        DescriptionScope scope,
+        NodeScope scope,
         string label,
         bool allowDefault = false)
     {
@@ -387,7 +388,7 @@ static class FlowFileReader
                         break;
 
                     case "mode":
-                        if (!TryPortMode(property.Value, out PortModeDescription parsedMode))
+                        if (!TryParseName(property.Value, out PortModeDescription parsedMode))
                         {
                             errors.Add(scope.Node(label, $"{kind}的 Mode 应为 Plain、Trigger 或 Constant。"));
                             invalid = true;
@@ -433,7 +434,7 @@ static class FlowFileReader
 
     private static ErrorOr<IReadOnlyList<InputPortDescription>> ReadInputs(
         List<JsonElement>? entries,
-        DescriptionScope scope,
+        NodeScope scope,
         string label)
     {
         if (entries is not { Count: > 0 })
@@ -515,7 +516,7 @@ static class FlowFileReader
                         break;
 
                     case "mode":
-                        if (!TryPortMode(property.Value, out PortModeDescription parsedMode))
+                        if (!TryParseName(property.Value, out PortModeDescription parsedMode))
                         {
                             errors.Add(scope.Node(label, "输入端口的 Mode 应为 Plain、Trigger 或 Constant。"));
                             invalid = true;
@@ -528,7 +529,7 @@ static class FlowFileReader
                         break;
 
                     case "role":
-                        if (!TryInputRole(property.Value, out InputRoleDescription parsedRole))
+                        if (!TryParseName(property.Value, out InputRoleDescription parsedRole))
                         {
                             errors.Add(scope.Node(label, "输入端口的 Role 应为 Content、Configuration 或 Control。"));
                             invalid = true;
@@ -576,39 +577,24 @@ static class FlowFileReader
         return true;
     }
 
-    private static bool TryPortMode(JsonElement element, out PortModeDescription mode)
+    /// <summary>按名称解析枚举取值：只接受已定义的名称，数字与未定义名称都不接受。</summary>
+    private static bool TryParseName<TEnum>(JsonElement element, out TEnum value) where TEnum : struct, Enum
     {
-        mode = default;
+        value = default;
 
-        return element.ValueKind == JsonValueKind.String
-            && Enum.TryParse(element.GetString(), ignoreCase: true, out mode);
+        return element.ValueKind == JsonValueKind.String && TryParseName(element.GetString(), out value);
     }
 
-    private static bool TryInputRole(JsonElement element, out InputRoleDescription role)
-    {
-        role = default;
-
-        return element.ValueKind == JsonValueKind.String
-            && Enum.TryParse(element.GetString(), ignoreCase: true, out role);
-    }
-
-    private static bool TryTriggerCondition(JsonElement element, out TriggerConditionDescription condition)
-    {
-        condition = default;
-
-        if (element.ValueKind != JsonValueKind.String || element.GetString() is not { } text)
-        {
-            return false;
-        }
-
-        return Enum.TryParse(text, ignoreCase: true, out condition)
-            && Enum.IsDefined(condition)
-            && text.Equals(condition.ToString(), StringComparison.OrdinalIgnoreCase);
-    }
+    /// <summary>按名称解析枚举取值：只接受已定义的名称，数字与未定义名称都不接受。</summary>
+    private static bool TryParseName<TEnum>(string? text, out TEnum value) where TEnum : struct, Enum =>
+        Enum.TryParse(text, ignoreCase: true, out value)
+        && Enum.IsDefined(value)
+        && text is not null
+        && text.Equals(value.ToString(), StringComparison.OrdinalIgnoreCase);
 
     private static ErrorOr<Dictionary<string, string>?> ReadBindings(
         Dictionary<string, JsonElement>? entries,
-        DescriptionScope scope,
+        NodeScope scope,
         string label)
     {
         if (entries is not { Count: > 0 })
@@ -648,7 +634,7 @@ static class FlowFileReader
     /// <summary>读一条 From 来源：字符串即引用文本，对象写 Ref 与可选 Condition。</summary>
     private static ErrorOr<(string Ref, TriggerConditionDescription? Condition)> ReadFromSource(
         JsonElement entry,
-        DescriptionScope scope,
+        NodeScope scope,
         string label)
     {
         if (entry.ValueKind == JsonValueKind.String)
@@ -676,7 +662,7 @@ static class FlowFileReader
 
                 case "condition":
                     {
-                        if (!TryTriggerCondition(property.Value, out TriggerConditionDescription parsed))
+                        if (!TryParseName(property.Value, out TriggerConditionDescription parsed))
                         {
                             return scope.Node(label, "From 连接的 Condition 应为 Positive 或 Negative。");
                         }
@@ -700,7 +686,7 @@ static class FlowFileReader
 
     private static ErrorOr<IReadOnlyList<FromGroupDescription>> ReadFrom(
         List<JsonElement>? entries,
-        DescriptionScope scope,
+        NodeScope scope,
         string label)
     {
         if (entries is not { Count: > 0 })
@@ -747,7 +733,7 @@ static class FlowFileReader
     /// <summary>读参数段：文件层只要求它是对象且键非空，键与取值属于节点类型。</summary>
     private static Dictionary<string, FlowValue>? ReadParameters(
         JsonElement? parameters,
-        DescriptionScope scope,
+        NodeScope scope,
         string label,
         List<Error> errors)
     {

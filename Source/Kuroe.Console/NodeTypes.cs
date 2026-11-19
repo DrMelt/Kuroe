@@ -1,4 +1,4 @@
-using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.Flow.Hosting;
 using Kuroe.Node.Approval;
 using Kuroe.Node.Input;

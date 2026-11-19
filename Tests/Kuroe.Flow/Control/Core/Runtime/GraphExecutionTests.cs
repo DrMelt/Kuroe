@@ -1,5 +1,5 @@
 using Kuroe.Flow.Control.Runtime;
-using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Tasks.Shared;
 using Xunit;
@@ -33,9 +33,9 @@ public sealed class GraphExecutionTests
         {
             OutputPorts =
             [
-                new Kuroe.Flow.Graph.Shared.StaticGraph.Ports.Port(
+                new Kuroe.FlowDescription.Shared.StaticGraph.Ports.Port(
                     new PortName("结论"),
-                    Kuroe.Executor.Shared.Ports.PortTypes.Text,
+                    Kuroe.FlowDescription.Shared.StaticGraph.Ports.PortTypes.Text,
                     description: "结论文本"),
             ],
         };

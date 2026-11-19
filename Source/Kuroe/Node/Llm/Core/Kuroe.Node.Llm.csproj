@@ -13,7 +13,7 @@
         <ProjectReference Include="..\..\..\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\Runner\Shared\Kuroe.Runner.Shared.csproj" />
         <ProjectReference Include="..\..\..\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
-        <ProjectReference Include="..\..\..\..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
         <ProjectReference Include="..\..\..\Shared\Kuroe.Shared.csproj" />
     </ItemGroup>
 
@@ -27,6 +27,5 @@
         <ProjectReference Include="..\..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\Kuroe.Executor\Shared\Kuroe.Executor.Shared.csproj" />
     </ItemGroup>
 </Project>

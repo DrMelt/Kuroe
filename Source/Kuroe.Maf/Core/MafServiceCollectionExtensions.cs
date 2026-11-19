@@ -1,4 +1,9 @@
+using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Shared.Compilation;
+using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.Maf.Compilation;
 using Kuroe.Maf.Definition;
 using Kuroe.Maf.Control;
 using Kuroe.Maf.Persistence;
@@ -16,6 +21,28 @@ public static class MafServiceCollectionExtensions
         IFlowTemplateRegistrar registrar,
         params MafFlowDefinition[] flows) =>
         services.AddKuroeMafFlows(registrar, new MafFlowCatalog(flows));
+
+    /// <summary>按流程描述装配 MAF 流程，装配入口与现成定义使用同一套注册。</summary>
+    public static ErrorOr<Success> AddKuroeMafFlows(
+        this IServiceCollection services,
+        IFlowTemplateRegistrar registrar,
+        IFlowDescriptionCompiler compiler,
+        FlowDescriptionSet document,
+        IReadOnlyList<NodeSpec> builtins)
+    {
+        ErrorOr<MafDocumentFlowSource> source = MafDocumentFlowSource.Create(
+            new MafFlowAssembler(compiler),
+            document,
+            builtins);
+        if (source.IsError)
+        {
+            return source.ErrorsOrEmptyList;
+        }
+
+        services.AddKuroeMafFlows(registrar, source.Value);
+
+        return Result.Success;
+    }
 
     /// <summary>按给定流程定义来源注册 MAF 流程实现、流程记录编解码与流程模板目录登记。</summary>
     public static IServiceCollection AddKuroeMafFlows(

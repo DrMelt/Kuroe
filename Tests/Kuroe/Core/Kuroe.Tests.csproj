@@ -21,14 +21,12 @@
         <ProjectReference Include="..\..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Compiler\Kuroe.Flow.Compilation.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.FlowDescription\Compilation\Core\Kuroe.FlowDescription.Compilation.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.FlowDescription\Json\Core\Kuroe.FlowDescription.Json.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.FlowDescription\Json\Shared\Kuroe.FlowDescription.Json.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.KuroeInfo.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
     </ItemGroup>
 
@@ -44,6 +42,5 @@
     <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Source\Kuroe.Executor\Shared\Kuroe.Executor.Shared.csproj" />
     </ItemGroup>
 </Project>

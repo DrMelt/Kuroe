@@ -31,4 +31,7 @@
     <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
     <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
+    </ItemGroup>
 </Project>

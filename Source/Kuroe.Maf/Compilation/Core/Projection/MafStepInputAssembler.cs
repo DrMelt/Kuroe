@@ -1,5 +1,5 @@
 using Kuroe.Execution.Shared.Ports;
-using Kuroe.Executor.Shared.Ports;
+using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Maf.Definition;
 
 namespace Kuroe.Maf.Compilation.Projection;

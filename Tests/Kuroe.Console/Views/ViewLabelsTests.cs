@@ -2,8 +2,6 @@ using Kuroe.Console.Views;
 using Kuroe.Presentation.Shared;
 using ExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
 using TokenUsage = Kuroe.Execution.Shared.Usage.TokenUsage;
-using Kuroe.Executor.Shared.Ports;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Flow.TestSupport;
 using Spectre.Console;
@@ -23,14 +21,6 @@ public sealed class ViewLabelsTests
         Assert.Equal("已暂停", ViewLabels.Of(TaskState.Paused));
         Assert.Equal("已完成", ViewLabels.Of(TaskState.Done));
         Assert.Equal("已终止", ViewLabels.Of(TaskState.Terminated));
-    }
-
-    [Fact(DisplayName = "输入端口标签显示默认值")]
-    public void Input_port_label_shows_its_default()
-    {
-        InputPort port = new(new PortName("背景"), PortTypes.Text, "可选背景", "固定背景");
-
-        Assert.Equal("背景：可选背景，默认 固定背景", port.Label());
     }
 
     [Fact(DisplayName = "节点状态标签覆盖作用域")]
@@ -127,14 +117,6 @@ public sealed class ViewLabelsTests
     {
         Assert.Equal(("甲 乙", false), ViewLabels.Truncate("甲\n乙", 10));
         Assert.Equal(("甲乙丙", true), ViewLabels.Truncate("甲乙丙丁", 3));
-    }
-
-    [Fact(DisplayName = "开始端口标签包含固定值")]
-    public void Start_port_label_includes_its_fixed_value()
-    {
-        Port port = new(new PortName("风格"), PortTypes.Text, value: "技术文档风格");
-
-        Assert.Equal("风格=技术文档风格", port.StartLabel());
     }
 
     private static FlowExecutionView Execution(string progress) => new(

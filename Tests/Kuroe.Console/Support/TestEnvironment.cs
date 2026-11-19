@@ -10,7 +10,7 @@ using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Hosting;
 using Kuroe.Flow.Hosting.Workflows.Flows;
-using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;

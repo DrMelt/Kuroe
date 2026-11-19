@@ -1,4 +1,4 @@
-using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.FlowDescription.Shared.Model;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 

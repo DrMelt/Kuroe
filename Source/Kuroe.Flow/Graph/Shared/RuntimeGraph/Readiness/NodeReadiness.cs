@@ -1,6 +1,6 @@
-using Kuroe.Executor.Shared.Ports;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Readiness;
 

@@ -6,6 +6,7 @@ MAF 流程装配入口：在核心装配之上注册 MAF 流程实现、存档�
 
 - 装配入口：注册流程实现、存档编解码与模板来源，宿主一次调用即可提交 MAF 流程。
 - 按定义来源登记可供提交的 MAF 流程。
+- 按流程描述装配：接受流程描述、共享描述编译与内置节点，建立 MAF 流程来源。
 
 ## 边界外
 
@@ -16,4 +17,4 @@ MAF 流程装配入口：在核心装配之上注册 MAF 流程实现、存档�
 
 ## 依赖
 
-- Kuroe.Control.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Maf.Definition、Kuroe.Maf.Control、Kuroe.Maf.Persistence。
+- Kuroe.Control.Shared、Kuroe.Tasks.Records.Shared、Kuroe.FlowDescription.Shared、Kuroe.Maf.Compilation、Kuroe.Maf.Definition、Kuroe.Maf.Control、Kuroe.Maf.Persistence。
