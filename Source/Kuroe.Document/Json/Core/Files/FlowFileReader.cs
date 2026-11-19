@@ -1,8 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Document.Shared;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Validation;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Document.Json.Files;
 
@@ -18,7 +16,7 @@ static class FlowFileReader
         foreach (NodeDto dto in file.Nodes)
         {
             List<Error> nodeErrors = [];
-            ErrorOr<NodeDefinitionDocument> node = ReadDefinition(dto, NodeScope.Library, nodeErrors);
+            ErrorOr<NodeDefinitionDocument> node = ReadDefinition(dto, DocumentScope.Library, nodeErrors);
             if (node.IsSuccess && nodeErrors.Count == 0)
             {
                 nodes.Add(node.Value);
@@ -57,7 +55,7 @@ static class FlowFileReader
     private static ErrorOr<FlowDocumentFlow> ReadFlow(FlowDto dto, List<Error> errors)
     {
         string name = dto.Name?.Trim() ?? string.Empty;
-        NodeScope scope = NodeScope.Flow(name);
+        DocumentScope scope = DocumentScope.Flow(name);
 
         ErrorOr<IReadOnlyList<PortDocument>> ports = ReadPorts(dto.Ports, scope, name, allowDefault: true);
         if (ports.IsError)
@@ -81,7 +79,7 @@ static class FlowFileReader
             : new FlowDocumentFlow(name, dto.Description, ports.Value, root);
     }
 
-    private static ErrorOr<NodeDocument> ReadNode(NodeDto dto, NodeScope scope, List<Error> errors)
+    private static ErrorOr<NodeDocument> ReadNode(NodeDto dto, DocumentScope scope, List<Error> errors)
     {
         if (dto.Use is { Length: > 0 })
         {
@@ -95,7 +93,7 @@ static class FlowFileReader
         return definition.IsError ? definition.ErrorsOrEmptyList : definition.Value;
     }
 
-    private static ErrorOr<NodeDefinitionDocument> ReadDefinition(NodeDto dto, NodeScope scope, List<Error> errors)
+    private static ErrorOr<NodeDefinitionDocument> ReadDefinition(NodeDto dto, DocumentScope scope, List<Error> errors)
     {
         string label = dto.Name ?? string.Empty;
         List<Error> nodeErrors = [];
@@ -180,7 +178,7 @@ static class FlowFileReader
         };
     }
 
-    private static ErrorOr<NodeReferenceDocument> ReadReference(NodeDto dto, NodeScope scope, List<Error> errors)
+    private static ErrorOr<NodeReferenceDocument> ReadReference(NodeDto dto, DocumentScope scope, List<Error> errors)
     {
         string label = dto.Label ?? string.Empty;
         List<Error> referenceErrors = [];
@@ -260,7 +258,7 @@ static class FlowFileReader
     }
 
     /// <summary>节点对象上不属于结构字段的键：类型专属字段只能写在参数段里，写在节点对象上是位置错误。</summary>
-    private static void ReportUnrecognized(NodeDto dto, NodeScope scope, string label, List<Error> errors)
+    private static void ReportUnrecognized(NodeDto dto, DocumentScope scope, string label, List<Error> errors)
     {
         if (dto.Unrecognized is not { Count: > 0 } unrecognized)
         {
@@ -273,7 +271,7 @@ static class FlowFileReader
         }
     }
 
-    private static NodeEmissionDocument? ReadEmission(NodeDto dto, NodeScope scope, string label, List<Error> errors)
+    private static NodeEmissionDocument? ReadEmission(NodeDto dto, DocumentScope scope, string label, List<Error> errors)
     {
         if (dto.Emission is not { Length: > 0 } text)
         {
@@ -291,7 +289,7 @@ static class FlowFileReader
 
     private static ErrorOr<IReadOnlyList<PortDocument>> ReadPorts(
         List<JsonElement>? entries,
-        NodeScope scope,
+        DocumentScope scope,
         string label,
         bool allowDefault = false)
     {
@@ -337,14 +335,14 @@ static class FlowFileReader
                         break;
 
                     case "type":
-                        if (!TryPortType(property.Value, out PortType parsedType))
+                        if (!TryPortTypeName(property.Value, out string outputType))
                         {
-                            errors.Add(scope.Node(label, $"{kind}的 Type 应为已注册的端口类型名。"));
+                            errors.Add(scope.Node(label, $"{kind}的 Type 必须是端口类型名。"));
                             invalid = true;
                         }
                         else
                         {
-                            type = parsedType.Name;
+                            type = outputType;
                         }
 
                         break;
@@ -435,7 +433,7 @@ static class FlowFileReader
 
     private static ErrorOr<IReadOnlyList<InputPortDocument>> ReadInputs(
         List<JsonElement>? entries,
-        NodeScope scope,
+        DocumentScope scope,
         string label)
     {
         if (entries is not { Count: > 0 })
@@ -478,14 +476,14 @@ static class FlowFileReader
                         break;
 
                     case "type":
-                        if (!TryPortType(property.Value, out PortType parsedType))
+                        if (!TryPortTypeName(property.Value, out string inputType))
                         {
-                            errors.Add(scope.Node(label, "输入端口的 Type 应为已注册的端口类型名。"));
+                            errors.Add(scope.Node(label, "输入端口的 Type 必须是端口类型名。"));
                             invalid = true;
                         }
                         else
                         {
-                            type = parsedType.Name;
+                            type = inputType;
                         }
 
                         break;
@@ -559,12 +557,23 @@ static class FlowFileReader
         return errors.Count > 0 ? errors : result;
     }
 
-    private static bool TryPortType(JsonElement element, out PortType type)
+    /// <summary>读端口类型名：只要求是非空文本，类型是否可用由各装配器解释。</summary>
+    private static bool TryPortTypeName(JsonElement element, out string type)
     {
-        type = default;
+        type = string.Empty;
+        if (element.ValueKind != JsonValueKind.String || element.GetString() is not { } name)
+        {
+            return false;
+        }
 
-        return element.ValueKind == JsonValueKind.String
-            && PortTypes.TryParse(element.GetString(), out type);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        type = name;
+
+        return true;
     }
 
     private static bool TryPortMode(JsonElement element, out PortModeDocument mode)
@@ -599,7 +608,7 @@ static class FlowFileReader
 
     private static ErrorOr<Dictionary<string, string>?> ReadBindings(
         Dictionary<string, JsonElement>? entries,
-        NodeScope scope,
+        DocumentScope scope,
         string label)
     {
         if (entries is not { Count: > 0 })
@@ -639,7 +648,7 @@ static class FlowFileReader
     /// <summary>读一条 From 来源：字符串即引用文本，对象写 Ref 与可选 Condition。</summary>
     private static ErrorOr<(string Ref, TriggerConditionDocument? Condition)> ReadFromSource(
         JsonElement entry,
-        NodeScope scope,
+        DocumentScope scope,
         string label)
     {
         if (entry.ValueKind == JsonValueKind.String)
@@ -691,7 +700,7 @@ static class FlowFileReader
 
     private static ErrorOr<IReadOnlyList<FromGroupDocument>> ReadFrom(
         List<JsonElement>? entries,
-        NodeScope scope,
+        DocumentScope scope,
         string label)
     {
         if (entries is not { Count: > 0 })
@@ -738,7 +747,7 @@ static class FlowFileReader
     /// <summary>读参数段：文件层只要求它是对象且键非空，键与取值属于节点类型。</summary>
     private static Dictionary<string, FlowValue>? ReadParameters(
         JsonElement? parameters,
-        NodeScope scope,
+        DocumentScope scope,
         string label,
         List<Error> errors)
     {

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Kuroe.Document.Json.Files;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Xunit;
 
 namespace Kuroe.Document.Json.Tests;
@@ -102,7 +101,7 @@ public sealed class FlowJsonTests
     [Fact(DisplayName = "端口条目的端口类型写成枚举名字")]
     public void Port_entry_writes_its_type_by_name()
     {
-        PortEntryDto entry = new() { Name = "目标", Type = PortTypes.Text.Name };
+        PortEntryDto entry = new() { Name = "目标", Type = "Text" };
 
         string text = JsonSerializer.Serialize(entry, FlowJson.WriteOptions.GetTypeInfo(typeof(PortEntryDto)));
 

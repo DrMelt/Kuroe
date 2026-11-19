@@ -45,9 +45,10 @@ public sealed class DocumentBoundaryTests
         string document = Path.Combine(SourceRoot, "Kuroe.Document", "Shared");
         string jsonShared = Path.Combine(SourceRoot, "Kuroe.Document", "Json", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
-        string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
 
-        ReferencesStayUnder(project, "描述文档 JSON 层", "描述文档与契约层", document, jsonShared, tasks, graph);
+        ReferencesStayUnder(project, "描述文档 JSON 层", "描述文档、JSON 共享层与 Kernel 契约", document, jsonShared, tasks);
+        ReferencesExclude(project, "描述文档 JSON 层", "流程区域", flow);
     }
 
     [Fact(DisplayName = "描述文档不含流程实现")]

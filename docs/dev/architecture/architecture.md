@@ -195,7 +195,6 @@ graph TD
     DocumentJson --> DocumentJsonShared
     DocumentJson --> DocumentShared
     DocumentJson --> TasksShared
-    DocumentJson --> FlowGraphShared
     DocumentJsonShared --> DocumentShared
     FlowCompilationShared --> DocumentShared
     FlowCompilationShared --> TasksShared

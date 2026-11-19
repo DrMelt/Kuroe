@@ -13,9 +13,9 @@
 
 - 不含格式端口：读写接口与导入类别在 Kuroe.Document.Json.Shared。
 - 不含描述模型：在 Kuroe.Document.Shared。
-- 不含校验与编译：在 Kuroe.Flow.Graph.Shared 与 Kuroe.Flow.Compilation。
+- 不含校验与编译：端口类型名与节点类型名由各流程实现的装配层解释。
 - 不含流程控制与持久化。
 
 ## 依赖
 
-- Kuroe.Document.Json.Shared、Kuroe.Document.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared。
+- Kuroe.Document.Json.Shared、Kuroe.Document.Shared、Kuroe.Tasks.Shared。

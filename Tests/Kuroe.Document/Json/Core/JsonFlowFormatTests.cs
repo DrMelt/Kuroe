@@ -60,6 +60,23 @@ public sealed class JsonFlowFormatTests
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
+    [Fact(DisplayName = "端口类型名按原样保留，类型注册由装配层判断")]
+    public void Port_type_names_are_kept_as_written()
+    {
+        const string flow = """
+            {
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Unregistered" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标", "Type": "unregistered" }] } } ]
+            }
+            """;
+
+        IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(flow));
+        FlowDocumentFlow documented = Assert.Single(flows);
+        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(documented.Root);
+
+        Assert.Equal("Unregistered", Assert.Single(documented.StartPorts).Type);
+        Assert.Equal("unregistered", Assert.Single(root.Inputs).Type);
+    }
+
     [Fact(DisplayName = "输入角色与显式触发往返")]
     public void Input_role_and_explicit_trigger_round_trip()
     {

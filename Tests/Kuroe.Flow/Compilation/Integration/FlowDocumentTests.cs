@@ -204,11 +204,11 @@ public sealed class FlowDocumentTests
 
     [Fact(DisplayName = "域外输入类型被拒绝")]
     public void Input_type_out_of_domain_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 实施：输入端口的 Type 应为已注册的端口类型名。"], Errors(InputTypeOutOfDomain));
+        Assert.Equal(["流程 默认 的节点 实施：端口类型 Bogus 未注册。"], Errors(InputTypeOutOfDomain));
 
     [Fact(DisplayName = "域外输出类型被拒绝")]
     public void Output_type_out_of_domain_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 准备：输出端口的 Type 应为已注册的端口类型名。"], Errors(OutputTypeOutOfDomain));
+        Assert.Equal(["流程 默认 的节点 准备：端口类型 Bogus 未注册。"], Errors(OutputTypeOutOfDomain));
 
     [Fact(DisplayName = "引用容器缺少端口被拒绝")]
     public void Referenced_container_port_missing_is_rejected() =>
