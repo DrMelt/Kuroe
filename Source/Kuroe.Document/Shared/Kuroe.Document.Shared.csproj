@@ -3,9 +3,4 @@
         <IsAotCompatible>true</IsAotCompatible>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\..\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
-    </ItemGroup>
-
 </Project>

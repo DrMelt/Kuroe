@@ -8,14 +8,15 @@
 - 节点描述：定义节点、引用节点与容器的公共字段与各自差异。
 - 连接描述：目标输入端口、来源引用与触发条件，条件未写时按正向。
 - 参数段：节点类型专属字段的承载值与中立值，不解释字段含义。
+- 端口取值：端口类型只写已注册的类型名；模式、输入角色、触发条件与产出模式按文件取值集合描述，编译时映射到图模型。
 
 ## 边界外
 
-- 不含编译实现与校验规则：在 Kuroe.Flow.Compilation 与 Kuroe.Flow.Graph.Shared。
+- 不含编译实现、校验规则与图模型：在 Kuroe.Flow.Compilation 与 Kuroe.Flow.Graph.Shared。
 - 不含文件格式：在 Kuroe.Document.Json。
 - 不含图运行期与流程控制。
 - 不含 MAF 流程装配与流程定义：在 Kuroe.Maf.Compilation 与 Kuroe.Maf.Definition。
 
 ## 依赖
 
-- Kuroe.Flow.Graph.Shared。
+- 无工程依赖。

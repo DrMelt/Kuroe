@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Document.Shared;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Xunit;
 
 namespace Kuroe.Document.Json.Tests;
@@ -88,10 +87,10 @@ public sealed class JsonFlowFormatTests
         InputPortDocument configured = Assert.Single(source.Inputs, port => port.Name == "配置");
         InputPortDocument signal = Assert.Single(source.Inputs, port => port.Name == "信号");
         Assert.Multiple(
-            () => Assert.Equal(InputRole.Configuration, configured.Role),
-            () => Assert.Equal(PortMode.Constant, configured.Mode),
-            () => Assert.Equal(PortMode.Plain, signal.Mode),
-            () => Assert.Equal(PortMode.Trigger, source.Outputs[0].Mode),
+            () => Assert.Equal(InputRoleDocument.Configuration, configured.Role),
+            () => Assert.Equal(PortModeDocument.Constant, configured.Mode),
+            () => Assert.Equal(PortModeDocument.Plain, signal.Mode),
+            () => Assert.Equal(PortModeDocument.Trigger, source.Outputs[0].Mode),
             () => Assert.Null(source.Outputs[1].Mode));
 
         string text = Ok(Format.Write(flows));
@@ -121,8 +120,8 @@ public sealed class JsonFlowFormatTests
         NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
         PortDocument output = Assert.Single(root.Outputs);
         Assert.Equal("固定", output.Value);
-        Assert.Equal(PortTypes.Text, output.Type);
-        Assert.Equal(PortMode.Constant, output.Mode);
+        Assert.Equal("Text", output.Type);
+        Assert.Equal(PortModeDocument.Constant, output.Mode);
 
         string text = Ok(Format.Write(flows));
         Assert.Contains("\"Value\": \"固定\"", text);
@@ -182,11 +181,11 @@ public sealed class JsonFlowFormatTests
         NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
         FromLinkDocument rootLink = Assert.Single(Assert.Single(root.From).Links);
         Assert.Equal("@目标", rootLink.Ref);
-        Assert.Equal(TriggerCondition.Negative, rootLink.Condition);
+        Assert.Equal(TriggerConditionDocument.Negative, rootLink.Condition);
         NodeDefinitionDocument implement = Assert.IsType<NodeDefinitionDocument>(Assert.Single(root.Nodes ?? []));
         FromLinkDocument link = Assert.Single(Assert.Single(implement.From).Links);
         Assert.Equal("@目标", link.Ref);
-        Assert.Equal(TriggerCondition.Negative, link.Condition);
+        Assert.Equal(TriggerConditionDocument.Negative, link.Condition);
 
         string text = Ok(Format.Write(flows));
         Assert.Contains("\"Condition\": \"Negative\"", text);

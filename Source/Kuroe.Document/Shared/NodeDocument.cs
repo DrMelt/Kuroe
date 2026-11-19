@@ -1,5 +1,3 @@
-using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
-
 namespace Kuroe.Document.Shared;
 
 /// <summary>节点描述：定义与引用共享的公共字段。</summary>
@@ -13,7 +11,7 @@ public abstract record NodeDocument
     public IReadOnlyDictionary<string, string>? Bindings { get; init; }
 
     /// <summary>产出模式：逐次发布或首次发布后冻结。</summary>
-    public NodeEmission? Emission { get; init; }
+    public NodeEmissionDocument? Emission { get; init; }
 
     /// <summary>执行次数上限。</summary>
     public int? MaxExecutions { get; init; }

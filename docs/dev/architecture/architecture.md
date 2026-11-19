@@ -253,7 +253,6 @@ graph TD
     FlowHosting --> PresentationShared
 
     %% document 域：流程文件与流程实现共用的描述文档
-    DocumentShared --> FlowGraphShared
     MafCompilationShared --> DocumentShared
     MafCompilation --> DocumentShared
 

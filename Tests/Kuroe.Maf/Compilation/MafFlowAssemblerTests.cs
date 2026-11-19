@@ -5,8 +5,6 @@ using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Flow.Compilation;
 using Kuroe.Document.Shared;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Maf.Definition;
 using Kuroe.TestSupport;
@@ -155,35 +153,35 @@ public sealed class MafFlowAssemblerTests
                             [Goal.Value] = $"@{Goal.Value}",
                             [MafFlowDefinition.ModelPort.Value] = $"@{MafFlowDefinition.ModelPort.Value}",
                         },
-                        Outputs = [new PortDocument(Output.Value, PortTypes.Text)],
+                        Outputs = [new PortDocument(Output.Value, "Text")],
                     },
                     new NodeDefinitionDocument
                     {
                         Name = "第二步",
                         Kind = "Llm",
-                        Inputs = [new InputPortDocument(Input.Value, PortTypes.Text), ModelInput()],
+                        Inputs = [new InputPortDocument(Input.Value, "Text"), ModelInput()],
                         Bindings = new Dictionary<string, string>
                         {
                             [MafFlowDefinition.ModelPort.Value] = $"@{MafFlowDefinition.ModelPort.Value}",
                         },
                         From = [new FromGroupDocument([new FromLinkDocument(Input.Value, $"第一步@{Output.Value}")])],
-                        Outputs = [new PortDocument(Result.Value, PortTypes.Text)],
+                        Outputs = [new PortDocument(Result.Value, "Text")],
                     },
                 ],
             }),
         ]);
 
     private static PortDocument GoalPort() =>
-        new(Goal.Value, PortTypes.Text, PortMode.Constant);
+        new(Goal.Value, "Text", PortModeDocument.Constant);
 
     private static PortDocument ModelPort() =>
-        new(MafFlowDefinition.ModelPort.Value, PortTypes.Text, PortMode.Constant);
+        new(MafFlowDefinition.ModelPort.Value, "Text", PortModeDocument.Constant);
 
     private static InputPortDocument GoalInput() =>
-        new(Goal.Value, PortTypes.Text, PortMode.Constant, Role: InputRole.Content);
+        new(Goal.Value, "Text", PortModeDocument.Constant, Role: InputRoleDocument.Content);
 
     private static InputPortDocument ModelInput() =>
-        new(MafFlowDefinition.ModelPort.Value, PortTypes.Text, PortMode.Constant);
+        new(MafFlowDefinition.ModelPort.Value, "Text", PortModeDocument.Constant);
 
     private static FlowDocument Merge() => new(
         [],
@@ -207,8 +205,8 @@ public sealed class MafFlowAssemblerTests
                         Kind = "Llm",
                         Inputs =
                         [
-                            new InputPortDocument("甲纲", PortTypes.Text, PortMode.Constant, Role: InputRole.Content),
-                            new InputPortDocument("乙纲", PortTypes.Text, PortMode.Constant, Role: InputRole.Content),
+                            new InputPortDocument("甲纲", "Text", PortModeDocument.Constant, Role: InputRoleDocument.Content),
+                            new InputPortDocument("乙纲", "Text", PortModeDocument.Constant, Role: InputRoleDocument.Content),
                             ModelInput(),
                         ],
                         Bindings = new Dictionary<string, string>
@@ -217,7 +215,7 @@ public sealed class MafFlowAssemblerTests
                             ["乙纲"] = "乙@大纲",
                             [MafFlowDefinition.ModelPort.Value] = $"@{MafFlowDefinition.ModelPort.Value}",
                         },
-                        Outputs = [new PortDocument("选定", PortTypes.Text)],
+                        Outputs = [new PortDocument("选定", "Text")],
                     },
                 ],
             }),
@@ -279,13 +277,13 @@ public sealed class MafFlowAssemblerTests
     {
         Name = name,
         Kind = "Llm",
-        Emission = NodeEmission.Once,
+        Emission = NodeEmissionDocument.Once,
         Inputs = [ModelInput()],
         Bindings = new Dictionary<string, string>
         {
             [MafFlowDefinition.ModelPort.Value] = $"@{MafFlowDefinition.ModelPort.Value}",
         },
-        Outputs = [new PortDocument("大纲", PortTypes.Text, PortMode.Constant)],
+        Outputs = [new PortDocument("大纲", "Text", PortModeDocument.Constant)],
     };
 
     private static Dictionary<string, string> ModelBinding() => new()
@@ -310,16 +308,16 @@ public sealed class MafFlowAssemblerTests
                         Kind = "Llm",
                         Inputs = [ModelInput()],
                         Bindings = ModelBinding(),
-                        Outputs = [new PortDocument("计划", PortTypes.Text)],
+                        Outputs = [new PortDocument("计划", "Text")],
                     },
                     new NodeDefinitionDocument
                     {
                         Name = "放行",
                         Kind = "Llm",
-                        Inputs = [new InputPortDocument("批准", PortTypes.Signal), ModelInput()],
+                        Inputs = [new InputPortDocument("批准", "Signal"), ModelInput()],
                         Bindings = ModelBinding(),
                         From = [new FromGroupDocument([new FromLinkDocument("批准", "产生@计划")])],
-                        Outputs = [new PortDocument(Result.Value, PortTypes.Text)],
+                        Outputs = [new PortDocument(Result.Value, "Text")],
                     },
                 ],
             }),
@@ -329,7 +327,7 @@ public sealed class MafFlowAssemblerTests
         [],
         [
             new FlowDocumentFlow("固定值", null,
-                [new PortDocument(WorkPath.Value, PortTypes.Text, PortMode.Constant, Value: "/tmp/work"), ModelPort()],
+                [new PortDocument(WorkPath.Value, "Text", PortModeDocument.Constant, Value: "/tmp/work"), ModelPort()],
                 new NodeDefinitionDocument
                 {
                     Name = "整体",
@@ -344,14 +342,14 @@ public sealed class MafFlowAssemblerTests
                             Kind = "Llm",
                             Inputs = [WorkPathInput(), ModelInput()],
                             Bindings = WorkPathBinding(),
-                            Outputs = [new PortDocument(Result.Value, PortTypes.Text)],
+                            Outputs = [new PortDocument(Result.Value, "Text")],
                         },
                     ],
                 }),
         ]);
 
     private static InputPortDocument WorkPathInput() =>
-        new(WorkPath.Value, PortTypes.Text, PortMode.Constant, Role: InputRole.Content);
+        new(WorkPath.Value, "Text", PortModeDocument.Constant, Role: InputRoleDocument.Content);
 
     private static Dictionary<string, string> WorkPathBinding() => new()
     {
@@ -365,16 +363,16 @@ public sealed class MafFlowAssemblerTests
             {
                 Name = "撰写正文",
                 Kind = "Llm",
-                Emission = NodeEmission.Once,
+                Emission = NodeEmissionDocument.Once,
                 Inputs = [OutlineInput(), ModelInput()],
-                Outputs = [new PortDocument("正文", PortTypes.Text, PortMode.Constant)],
+                Outputs = [new PortDocument("正文", "Text", PortModeDocument.Constant)],
             },
             new NodeDefinitionDocument
             {
                 Name = "包装",
                 Kind = "Container",
                 Inputs = [OutlineInput(), ModelInput()],
-                Outputs = [new PortDocument("正文", PortTypes.Text, PortMode.Constant, Ref: "撰写@正文")],
+                Outputs = [new PortDocument("正文", "Text", PortModeDocument.Constant, Ref: "撰写@正文")],
                 Nodes =
                 [
                     new NodeReferenceDocument
@@ -388,7 +386,7 @@ public sealed class MafFlowAssemblerTests
         ],
         [
             new FlowDocumentFlow("容器输出", null,
-                [new PortDocument(Outline.Value, PortTypes.Text, PortMode.Constant), ModelPort()],
+                [new PortDocument(Outline.Value, "Text", PortModeDocument.Constant), ModelPort()],
                 new NodeDefinitionDocument
                 {
                     Name = "整体",
@@ -409,7 +407,7 @@ public sealed class MafFlowAssemblerTests
                             Kind = "Llm",
                             Inputs =
                             [
-                                new InputPortDocument("全文", PortTypes.Text, PortMode.Constant, Role: InputRole.Content),
+                                new InputPortDocument("全文", "Text", PortModeDocument.Constant, Role: InputRoleDocument.Content),
                                 ModelInput(),
                             ],
                             Bindings = new Dictionary<string, string>
@@ -417,14 +415,14 @@ public sealed class MafFlowAssemblerTests
                                 ["全文"] = "成稿@正文",
                                 [MafFlowDefinition.ModelPort.Value] = $"@{MafFlowDefinition.ModelPort.Value}",
                             },
-                            Outputs = [new PortDocument(Result.Value, PortTypes.Text)],
+                            Outputs = [new PortDocument(Result.Value, "Text")],
                         },
                     ],
                 }),
         ]);
 
     private static InputPortDocument OutlineInput() =>
-        new(Outline.Value, PortTypes.Text, PortMode.Constant, Role: InputRole.Content);
+        new(Outline.Value, "Text", PortModeDocument.Constant, Role: InputRoleDocument.Content);
 
     private static Dictionary<string, string> OutlineBinding() => new()
     {

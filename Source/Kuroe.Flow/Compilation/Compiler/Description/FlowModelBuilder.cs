@@ -122,7 +122,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         return NodeSpec.Reference(new NodeLabel(label), new NodeName(document.Use)) with
         {
             From = from.Value,
-            Emission = document.Emission,
+            Emission = ToEmission(document.Emission),
             MaxExecutions = document.MaxExecutions,
             Bindings = bindings.Value,
         };
@@ -225,7 +225,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 ? null
                 : new ExecutableSpec
                 {
-                    Emission = document.Emission ?? NodeEmission.Repeated,
+                    Emission = ToEmission(document.Emission) ?? NodeEmission.Repeated,
                     MaxExecutions = document.MaxExecutions,
                 },
         };
@@ -282,13 +282,25 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 continue;
             }
 
+            PortType? type = null;
+            if (entry.Type is { } typeName)
+            {
+                if (!PortTypes.TryParse(typeName, out PortType parsed))
+                {
+                    errors.Add(scope.Node(nodeLabel, $"端口类型 {typeName} 未注册。"));
+                    continue;
+                }
+
+                type = parsed;
+            }
+
             result.Add(new InputPort(
                 name.Value,
-                entry.Type ?? PortTypes.Text,
+                type,
                 ToDescription(entry.Description),
                 entry.Default,
-                entry.Mode,
-                entry.Role));
+                ToPortMode(entry.Mode),
+                ToInputRole(entry.Role)));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -382,13 +394,20 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 reference = parsed.Value;
             }
 
+            PortType type = PortTypes.Text;
+            if (entry.Type is { } typeName && !PortTypes.TryParse(typeName, out type))
+            {
+                errors.Add(scope.Node(nodeLabel, $"端口类型 {typeName} 未注册。"));
+                continue;
+            }
+
             result.Add(new Port(
                 name.Value,
-                entry.Type ?? PortTypes.Text,
+                type,
                 ToDescription(entry.Description),
                 entry.Value,
                 reference,
-                entry.Mode,
+                ToPortMode(entry.Mode),
                 entry.Default));
         }
 
@@ -429,7 +448,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 links.Add(new FromLink(
                     input.Value,
                     reference.Value,
-                    link.Condition ?? TriggerCondition.Positive));
+                    ToTriggerCondition(link.Condition)));
             }
 
             if (links.Count == 0)
@@ -498,6 +517,39 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
 
         return errors.Count > 0 ? errors : result;
     }
+
+    private static PortMode? ToPortMode(PortModeDocument? mode) => mode switch
+    {
+        null => null,
+        PortModeDocument.Plain => PortMode.Plain,
+        PortModeDocument.Trigger => PortMode.Trigger,
+        PortModeDocument.Constant => PortMode.Constant,
+        _ => throw new InvalidOperationException($"不认识的端口模式描述取值 {mode}。"),
+    };
+
+    private static InputRole? ToInputRole(InputRoleDocument? role) => role switch
+    {
+        null => null,
+        InputRoleDocument.Content => InputRole.Content,
+        InputRoleDocument.Configuration => InputRole.Configuration,
+        InputRoleDocument.Control => InputRole.Control,
+        _ => throw new InvalidOperationException($"不认识的输入角色描述取值 {role}。"),
+    };
+
+    private static TriggerCondition ToTriggerCondition(TriggerConditionDocument? condition) => condition switch
+    {
+        null or TriggerConditionDocument.Positive => TriggerCondition.Positive,
+        TriggerConditionDocument.Negative => TriggerCondition.Negative,
+        _ => throw new InvalidOperationException($"不认识的触发条件描述取值 {condition}。"),
+    };
+
+    private static NodeEmission? ToEmission(NodeEmissionDocument? emission) => emission switch
+    {
+        null => null,
+        NodeEmissionDocument.Repeated => NodeEmission.Repeated,
+        NodeEmissionDocument.Once => NodeEmission.Once,
+        _ => throw new InvalidOperationException($"不认识的产出模式描述取值 {emission}。"),
+    };
 
     private static string? ToDescription(string? description) =>
         string.IsNullOrWhiteSpace(description) ? null : description.Trim();

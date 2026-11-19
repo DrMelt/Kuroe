@@ -4,20 +4,19 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>描述文档边界：文档共享层只引用图共享层，JSON 格式层只引用描述文档与契约层，对流程实现保持中立。</summary>
+/// <summary>描述文档边界：文档共享层不引用其他工程，JSON 格式层只引用描述文档与契约层，对流程实现保持中立。</summary>
 public sealed class DocumentBoundaryTests
 {
-    [Fact(DisplayName = "描述文档只引用图共享层")]
-    public void Document_reference_only_graph_shared()
+    [Fact(DisplayName = "描述文档不引用其他工程")]
+    public void Document_references_no_other_project()
     {
         string project = Path.Combine(
             SourceRoot,
             "Kuroe.Document",
             "Shared",
             "Kuroe.Document.Shared.csproj");
-        string graphShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
 
-        ReferencesStayUnder(project, "描述文档", "图共享层", graphShared);
+        Assert.Empty(ProjectReferences(project));
     }
 
     [Fact(DisplayName = "描述文档 JSON 共享层只引用描述文档")]

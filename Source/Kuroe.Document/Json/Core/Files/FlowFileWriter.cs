@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Kuroe.Document.Shared;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Document.Json.Files;
 
@@ -71,7 +70,7 @@ static class FlowFileWriter
                 new PortEntryDto
                 {
                     Name = port.Name,
-                    Type = port.Type?.Name,
+                    Type = port.Type,
                     Mode = port.Mode?.ToString(),
                     Description = port.Description,
                     Value = port.Value,
@@ -95,7 +94,7 @@ static class FlowFileWriter
                 new PortEntryDto
                 {
                     Name = input.Name,
-                    Type = input.Type?.Name,
+                    Type = input.Type,
                     Mode = input.Mode?.ToString(),
                     Description = input.Description,
                     Default = input.Default,
@@ -124,7 +123,7 @@ static class FlowFileWriter
     private static JsonElement WriteFromSource(FromLinkDocument link) =>
         link.Condition switch
         {
-            null or TriggerCondition.Positive => JsonSerializer.SerializeToElement(link.Ref, FlowJson.Default.String),
+            null or TriggerConditionDocument.Positive => JsonSerializer.SerializeToElement(link.Ref, FlowJson.Default.String),
             { } condition => JsonSerializer.SerializeToElement(
                 new BindingEntryDto { Ref = link.Ref, Condition = condition.ToString() },
                 FlowJson.Default.BindingEntryDto),

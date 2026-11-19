@@ -2,7 +2,6 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Document.Shared;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Validation;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Document.Json.Files;
@@ -142,7 +141,7 @@ static class FlowFileReader
             nodeErrors.AddRange(from.ErrorsOrEmptyList);
         }
 
-        NodeEmission? emission = ReadEmission(dto, scope, label, nodeErrors);
+        NodeEmissionDocument? emission = ReadEmission(dto, scope, label, nodeErrors);
         IReadOnlyDictionary<string, FlowValue>? parameters = ReadParameters(dto.Parameters, scope, label, nodeErrors);
 
         List<NodeDocument>? children = null;
@@ -240,7 +239,7 @@ static class FlowFileReader
             referenceErrors.AddRange(from.ErrorsOrEmptyList);
         }
 
-        NodeEmission? emission = ReadEmission(dto, scope, label, referenceErrors);
+        NodeEmissionDocument? emission = ReadEmission(dto, scope, label, referenceErrors);
 
         if (referenceErrors.Count > 0)
         {
@@ -274,14 +273,14 @@ static class FlowFileReader
         }
     }
 
-    private static NodeEmission? ReadEmission(NodeDto dto, NodeScope scope, string label, List<Error> errors)
+    private static NodeEmissionDocument? ReadEmission(NodeDto dto, NodeScope scope, string label, List<Error> errors)
     {
         if (dto.Emission is not { Length: > 0 } text)
         {
             return null;
         }
 
-        if (Enum.TryParse(text, ignoreCase: true, out NodeEmission emission))
+        if (Enum.TryParse(text, ignoreCase: true, out NodeEmissionDocument emission))
         {
             return emission;
         }
@@ -313,8 +312,8 @@ static class FlowFileReader
             }
 
             string? name = null;
-            PortType? type = null;
-            PortMode? mode = null;
+            string? type = null;
+            PortModeDocument? mode = null;
             string? description = null;
             string? value = null;
             string? reference = null;
@@ -345,7 +344,7 @@ static class FlowFileReader
                         }
                         else
                         {
-                            type = parsedType;
+                            type = parsedType.Name;
                         }
 
                         break;
@@ -390,7 +389,7 @@ static class FlowFileReader
                         break;
 
                     case "mode":
-                        if (!TryPortMode(property.Value, out PortMode parsedMode))
+                        if (!TryPortMode(property.Value, out PortModeDocument parsedMode))
                         {
                             errors.Add(scope.Node(label, $"{kind}的 Mode 应为 Plain、Trigger 或 Constant。"));
                             invalid = true;
@@ -455,11 +454,11 @@ static class FlowFileReader
             }
 
             string? name = null;
-            PortType? type = null;
-            PortMode? mode = null;
+            string? type = null;
+            PortModeDocument? mode = null;
             string? description = null;
             string? defaultValue = null;
-            InputRole? role = null;
+            InputRoleDocument? role = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -486,7 +485,7 @@ static class FlowFileReader
                         }
                         else
                         {
-                            type = parsedType;
+                            type = parsedType.Name;
                         }
 
                         break;
@@ -518,7 +517,7 @@ static class FlowFileReader
                         break;
 
                     case "mode":
-                        if (!TryPortMode(property.Value, out PortMode parsedMode))
+                        if (!TryPortMode(property.Value, out PortModeDocument parsedMode))
                         {
                             errors.Add(scope.Node(label, "输入端口的 Mode 应为 Plain、Trigger 或 Constant。"));
                             invalid = true;
@@ -531,7 +530,7 @@ static class FlowFileReader
                         break;
 
                     case "role":
-                        if (!TryInputRole(property.Value, out InputRole parsedRole))
+                        if (!TryInputRole(property.Value, out InputRoleDocument parsedRole))
                         {
                             errors.Add(scope.Node(label, "输入端口的 Role 应为 Content、Configuration 或 Control。"));
                             invalid = true;
@@ -568,7 +567,7 @@ static class FlowFileReader
             && PortTypes.TryParse(element.GetString(), out type);
     }
 
-    private static bool TryPortMode(JsonElement element, out PortMode mode)
+    private static bool TryPortMode(JsonElement element, out PortModeDocument mode)
     {
         mode = default;
 
@@ -576,7 +575,7 @@ static class FlowFileReader
             && Enum.TryParse(element.GetString(), ignoreCase: true, out mode);
     }
 
-    private static bool TryInputRole(JsonElement element, out InputRole role)
+    private static bool TryInputRole(JsonElement element, out InputRoleDocument role)
     {
         role = default;
 
@@ -584,7 +583,7 @@ static class FlowFileReader
             && Enum.TryParse(element.GetString(), ignoreCase: true, out role);
     }
 
-    private static bool TryTriggerCondition(JsonElement element, out TriggerCondition condition)
+    private static bool TryTriggerCondition(JsonElement element, out TriggerConditionDocument condition)
     {
         condition = default;
 
@@ -638,7 +637,7 @@ static class FlowFileReader
     }
 
     /// <summary>读一条 From 来源：字符串即引用文本，对象写 Ref 与可选 Condition。</summary>
-    private static ErrorOr<(string Ref, TriggerCondition? Condition)> ReadFromSource(
+    private static ErrorOr<(string Ref, TriggerConditionDocument? Condition)> ReadFromSource(
         JsonElement entry,
         NodeScope scope,
         string label)
@@ -654,7 +653,7 @@ static class FlowFileReader
         }
 
         string? reference = null;
-        TriggerCondition? condition = null;
+        TriggerConditionDocument? condition = null;
         foreach (JsonProperty property in entry.EnumerateObject())
         {
             switch (property.Name.ToLowerInvariant())
@@ -668,7 +667,7 @@ static class FlowFileReader
 
                 case "condition":
                     {
-                        if (!TryTriggerCondition(property.Value, out TriggerCondition parsed))
+                        if (!TryTriggerCondition(property.Value, out TriggerConditionDocument parsed))
                         {
                             return scope.Node(label, "From 连接的 Condition 应为 Positive 或 Negative。");
                         }
@@ -713,7 +712,7 @@ static class FlowFileReader
             List<FromLinkDocument> links = [];
             foreach (JsonProperty property in entry.EnumerateObject())
             {
-                ErrorOr<(string Ref, TriggerCondition? Condition)> source =
+                ErrorOr<(string Ref, TriggerConditionDocument? Condition)> source =
                     ReadFromSource(property.Value, scope, label);
                 if (source.IsError)
                 {
