@@ -13,6 +13,7 @@
 ## 边界外
 
 - 不含描述模型：在 Kuroe.Document.Shared。不含规则定义：在 Kuroe.Flow.Graph.Shared。
+- 不含执行器契约与端口词汇：在 Kuroe.Executor.Shared。
 - 不含图运行期、流程控制与持久化。
 - 不含文件读写：在 Kuroe.Document.Json。
 

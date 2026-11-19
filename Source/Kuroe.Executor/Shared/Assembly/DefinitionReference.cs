@@ -1,4 +1,3 @@
-using Kuroe.Executor.Shared.Ports;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Executor.Shared.Assembly;

@@ -12,7 +12,7 @@
 
 - 不含执行器契约与端口词汇：在 Kuroe.Executor.Shared。
 - 不含描述文档模型：在 Kuroe.Document.Shared。
-- 不含文档构造、库展开与接线解析。
+- 不含文档构造、库展开与接线解析：在 Kuroe.Flow.Compilation 与 Kuroe.Flow.NodeLibrary。
 - 不含图结构、图校验与运行期。
 
 ## 依赖
