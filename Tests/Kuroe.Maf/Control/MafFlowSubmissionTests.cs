@@ -143,7 +143,8 @@ public sealed class MafFlowSubmissionTests
             new MafStepId("步骤"),
             "步骤",
             [new PortName("输出")],
-            new FailingInvocationFactory());
+            new FailingInvocationFactory(),
+            MafUpstreamInputs.Instance);
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition([step], []),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
@@ -158,7 +159,8 @@ public sealed class MafFlowSubmissionTests
             new MafStepId("步骤"),
             "步骤",
             [new PortName("输出")],
-            new MismatchedInvocationFactory());
+            new MismatchedInvocationFactory(),
+            MafUpstreamInputs.Instance);
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition([step], []),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
@@ -272,7 +274,7 @@ public sealed class MafFlowSubmissionTests
         [Edge("第一步", "第二步")]);
 
     private static MafStep Step(string id, string? label = null) =>
-        new(new MafStepId(id), label ?? id, [new PortName("输出")], Invocation());
+        new(new MafStepId(id), label ?? id, [new PortName("输出")], Invocation(), MafUpstreamInputs.Instance);
 
     private static MafEdge Edge(string from, string to) =>
         new(new MafStepId(from), new MafStepId(to));

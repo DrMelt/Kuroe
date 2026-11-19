@@ -44,6 +44,8 @@
     <Project Path="Source/Kuroe.CodeFlow/Records/Shared/Kuroe.CodeFlow.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Maf/Records/Shared/Kuroe.Maf.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Maf/Definition/Core/Kuroe.Maf.Definition.csproj" />
+    <Project Path="Source/Kuroe.Maf/Compilation/Shared/Kuroe.Maf.Compilation.Shared.csproj" />
+    <Project Path="Source/Kuroe.Maf/Compilation/Core/Kuroe.Maf.Compilation.csproj" />
     <Project Path="Source/Kuroe.Flow/NodeLibrary/Core/Kuroe.Flow.NodeLibrary.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Json/Shared/Kuroe.Flow.Json.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Json/Core/Kuroe.Flow.Json.csproj" />
@@ -111,6 +113,7 @@
     <Project Path="Tests/Kuroe.Kernel/Input/Runtime/Kuroe.Input.Runtime.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Control/Core/Kuroe.Flow.Control.Tests.csproj" />
     <Project Path="Tests/Kuroe.Maf/Control/Kuroe.Maf.Control.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Maf/Compilation/Kuroe.Maf.Compilation.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Compilation/Compiler/Kuroe.Flow.Compilation.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Node/Shared/Kuroe.Flow.Node.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Compilation/Json/Core/Kuroe.Flow.Json.Tests.csproj" />

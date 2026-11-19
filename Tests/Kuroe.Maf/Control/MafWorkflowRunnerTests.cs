@@ -43,8 +43,8 @@ public sealed class MafWorkflowRunnerTests
             new FlowName("测试"),
             [new MafStartPort(new PortName("目标")), new MafStartPort(MafFlowDefinition.ModelPort)],
             [
-                new MafStep(new MafStepId("第一步"), "第一步", [new PortName("输出")], Invocation()),
-                new MafStep(new MafStepId("第二步"), "第二步", [new PortName("输出")], Invocation()),
+                new MafStep(new MafStepId("第一步"), "第一步", [new PortName("输出")], Invocation(), MafUpstreamInputs.Instance),
+                new MafStep(new MafStepId("第二步"), "第二步", [new PortName("输出")], Invocation(), MafUpstreamInputs.Instance),
             ],
             [new MafEdge(new MafStepId("第一步"), new MafStepId("第二步"))]);
 

@@ -1,3 +1,5 @@
+using Kuroe.Maf.Definition;
+
 namespace Kuroe.Maf.Control;
 
 /// <summary>步骤产出与执行记录来源标识之间的转换。标识由本类解释。</summary>
