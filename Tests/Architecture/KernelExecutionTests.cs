@@ -34,7 +34,7 @@ public sealed class KernelExecutionTests
                 System.Text.RegularExpressions.Regex.IsMatch(text, pattern),
                 $"{Path.GetFileName(file)} 使用了流程控制词汇。");
             Assert.DoesNotContain("Kuroe.Tasks", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("Kuroe.Flow.Node", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Kuroe.Flow.Graph", text, StringComparison.Ordinal);
             Assert.DoesNotContain("Kuroe.Flow.Control", text, StringComparison.Ordinal);
             Assert.DoesNotContain("Kuroe.Control", text, StringComparison.Ordinal);
         }

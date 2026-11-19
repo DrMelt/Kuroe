@@ -3,8 +3,8 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Documents.Shared;
 using Kuroe.Flow.Control.Runtime.Catalog;
 using Kuroe.Flow.Records.Shared;
-using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Shared;
 using Kuroe.Flow.Hosting.Workflows.Flows.Files;
 

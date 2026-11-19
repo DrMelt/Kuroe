@@ -2,9 +2,9 @@ using Kuroe.Tasks.Shared;
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Hosting.Workflows.Flows;
 using Xunit;
 

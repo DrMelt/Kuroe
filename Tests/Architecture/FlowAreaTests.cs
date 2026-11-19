@@ -42,37 +42,37 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact(DisplayName = "节点项目引用节点共享层")]
-    public void Node_projects_reference_node_shared()
+    [Fact(DisplayName = "节点项目引用图共享层")]
+    public void Node_projects_reference_graph_shared()
     {
         string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
-        string nodeShared = Path.Combine(
+        string graphShared = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
-            "Node",
+            "Graph",
             "Shared",
-            "Kuroe.Flow.Node.Shared.csproj");
+            "Kuroe.Flow.Graph.Shared.csproj");
 
         Assert.NotEmpty(ProjectFiles(nodes));
         foreach (string project in ProjectFiles(nodes))
         {
-            Assert.Contains(nodeShared, ProjectReferences(project));
+            Assert.Contains(graphShared, ProjectReferences(project));
         }
     }
 
-    [Fact(DisplayName = "节点共享层只引用契约层")]
-    public void Node_shared_project_references_only_contract_layers()
+    [Fact(DisplayName = "图共享层只引用契约层")]
+    public void Graph_shared_project_references_only_contract_layers()
     {
         string project = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
-            "Node",
+            "Graph",
             "Shared",
-            "Kuroe.Flow.Node.Shared.csproj");
+            "Kuroe.Flow.Graph.Shared.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
 
-        ReferencesStayUnder(project, "Kuroe.Flow.Node.Shared", "契约层", tasks, execution);
+        ReferencesStayUnder(project, "Kuroe.Flow.Graph.Shared", "契约层", tasks, execution);
     }
 
     [Fact(DisplayName = "流程 JSON 共享层只引用描述文档")]
@@ -90,8 +90,8 @@ public sealed class FlowAreaTests
         ReferencesStayUnder(project, "Kuroe.Flow.Json.Shared", "描述文档", documents);
     }
 
-    [Fact(DisplayName = "描述文档只引用节点共享层")]
-    public void Description_documents_reference_only_node_shared()
+    [Fact(DisplayName = "描述文档只引用图共享层")]
+    public void Description_documents_reference_only_graph_shared()
     {
         string project = Path.Combine(
             SourceRoot,
@@ -100,9 +100,9 @@ public sealed class FlowAreaTests
             "Documents",
             "Shared",
             "Kuroe.Flow.Compilation.Documents.Shared.csproj");
-        string nodeShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
+        string graphShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
 
-        ReferencesStayUnder(project, "描述文档", "节点共享层", nodeShared);
+        ReferencesStayUnder(project, "描述文档", "图共享层", graphShared);
     }
 
     [Fact(DisplayName = "流程区域不含任务与表现项目")]
@@ -157,7 +157,7 @@ public sealed class FlowAreaTests
         string execution = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
-            "Node",
+            "Graph",
             "Shared",
             "RuntimeGraph",
             "Execution");
@@ -176,7 +176,7 @@ public sealed class FlowAreaTests
         string execution = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
-            "Node",
+            "Graph",
             "Shared",
             "RuntimeGraph",
             "Execution");
@@ -208,7 +208,7 @@ public sealed class FlowAreaTests
         ];
         string[] directories =
         [
-            Path.Combine(SourceRoot, "Kuroe.Flow", "Node"),
+            Path.Combine(SourceRoot, "Kuroe.Flow", "Graph"),
             Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core"),
         ];
 
@@ -231,7 +231,7 @@ public sealed class FlowAreaTests
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
-        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
+        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
@@ -312,7 +312,7 @@ public sealed class FlowAreaTests
         {
             string text = File.ReadAllText(file);
 
-            Assert.DoesNotContain("Kuroe.Flow.Node", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Kuroe.Flow.Graph", text, StringComparison.Ordinal);
             Assert.DoesNotContain("Kuroe.Flow.Records", text, StringComparison.Ordinal);
             Assert.DoesNotContain("Kuroe.Flow.Control", text, StringComparison.Ordinal);
         }

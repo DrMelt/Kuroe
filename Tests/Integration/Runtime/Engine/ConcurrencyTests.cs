@@ -1,4 +1,4 @@
-using Kuroe.Flow.Node.Shared.Model;
+using Kuroe.Flow.Graph.Shared.Model;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;

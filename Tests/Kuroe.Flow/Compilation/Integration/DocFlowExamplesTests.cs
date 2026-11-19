@@ -3,7 +3,7 @@ using ErrorOr;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Documents.Shared;
-using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Node.Approval;

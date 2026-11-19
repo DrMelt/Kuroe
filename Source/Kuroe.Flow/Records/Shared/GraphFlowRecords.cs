@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Node.Shared.Graph.Records;
-using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Graph.Shared.Graph.Records;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 

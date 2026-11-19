@@ -36,7 +36,7 @@ graph TD
     end
 
     subgraph DFlow["flow：图流程模型、编译、控制与装配"]
-        FlowNodeShared["Flow.Node.Shared<br>标识模型 / 图结构 / 运行期节点 / 节点规则"]
+        FlowGraphShared["Flow.Graph.Shared<br>标识模型 / 图结构 / 运行期节点 / 节点规则"]
         FlowRecordsShared["Flow.Records.Shared<br>图流程记录与种类"]
         FlowCompilationDocumentsShared["Flow.Compilation.Documents.Shared<br>流程描述 / 参数段"]
         FlowCompilationShared["Flow.Compilation.Shared<br>编译契约 / 类型描述 / 参数读侧"]
@@ -184,34 +184,34 @@ graph TD
     FlowCompilation --> FlowCompilationShared
     FlowCompilation --> FlowCompilationDocumentsShared
     FlowCompilation --> TasksShared
-    FlowCompilation --> FlowNodeShared
+    FlowCompilation --> FlowGraphShared
     FlowJson --> FlowJsonShared
     FlowJson --> FlowCompilationShared
     FlowJson --> FlowCompilationDocumentsShared
     FlowJson --> TasksShared
-    FlowJson --> FlowNodeShared
+    FlowJson --> FlowGraphShared
     FlowJsonShared --> FlowCompilationDocumentsShared
     FlowCompilationShared --> FlowCompilationDocumentsShared
     FlowCompilationShared --> TasksShared
-    FlowCompilationShared --> FlowNodeShared
-    FlowCompilationDocumentsShared --> FlowNodeShared
+    FlowCompilationShared --> FlowGraphShared
+    FlowCompilationDocumentsShared --> FlowGraphShared
     FlowControl --> ControlShared
     FlowControl --> ExecutionShared
     FlowControl --> ExecutionRecordsShared
     FlowControl --> FlowRecordsShared
-    FlowControl --> FlowNodeShared
+    FlowControl --> FlowGraphShared
     FlowControl --> PresentationShared
     FlowControl --> TasksShared
     FlowControl --> TasksRecordsShared
     FlowRecordsShared --> TasksShared
     FlowRecordsShared --> TasksRecordsShared
     FlowRecordsShared --> ExecutionShared
-    FlowRecordsShared --> FlowNodeShared
+    FlowRecordsShared --> FlowGraphShared
     FlowHosting --> Core
     FlowHosting --> Shared
     FlowHosting --> FilesShared
     FlowHosting --> Process
-    FlowHosting --> FlowNodeShared
+    FlowHosting --> FlowGraphShared
     FlowHosting --> FlowRecordsShared
     FlowHosting --> FlowCompilationShared
     FlowHosting --> FlowCompilationDocumentsShared
@@ -246,16 +246,16 @@ graph TD
     FlowHosting --> TasksPersistenceFilesShared
     FlowHosting --> TasksPersistenceFiles
     FlowHosting --> PresentationShared
-    FlowNodeShared --> TasksShared
-    FlowNodeShared --> ExecutionShared
+    FlowGraphShared --> TasksShared
+    FlowGraphShared --> ExecutionShared
     FlowNodeLibrary --> FlowCompilationShared
     FlowNodeLibrary --> TasksShared
-    FlowNodeLibrary --> FlowNodeShared
+    FlowNodeLibrary --> FlowGraphShared
     FlowNodeTypeContainer --> FlowCompilationShared
     FlowNodeTypeContainer --> TasksShared
-    FlowNodeTypeContainer --> FlowNodeShared
+    FlowNodeTypeContainer --> FlowGraphShared
     FlowPersistenceGraph --> FlowRecordsShared
-    FlowPersistenceGraph --> FlowNodeShared
+    FlowPersistenceGraph --> FlowGraphShared
     FlowPersistenceGraph --> ExecutionShared
     FlowPersistenceGraph --> ExecutionRecordsShared
     FlowPersistenceGraph --> TasksShared
@@ -307,24 +307,24 @@ graph TD
     NodeApproval --> FlowCompilationShared
     NodeApproval --> RunnerApproval
     NodeApproval --> TasksShared
-    NodeApproval --> FlowNodeShared
+    NodeApproval --> FlowGraphShared
     NodeApproval --> ExecutionShared
     NodeCommand --> FlowCompilationShared
     NodeCommand --> Shared
     NodeCommand --> RunnerCommand
     NodeCommand --> TasksShared
-    NodeCommand --> FlowNodeShared
+    NodeCommand --> FlowGraphShared
     NodeCommand --> ExecutionShared
     NodeFile --> FlowCompilationShared
     NodeFile --> Shared
     NodeFile --> RunnerFile
     NodeFile --> TasksShared
-    NodeFile --> FlowNodeShared
+    NodeFile --> FlowGraphShared
     NodeFile --> ExecutionShared
     NodeInput --> FlowCompilationShared
     NodeInput --> RunnerInput
     NodeInput --> TasksShared
-    NodeInput --> FlowNodeShared
+    NodeInput --> FlowGraphShared
     NodeInput --> ExecutionShared
     NodeLlm --> Tool
     NodeLlm --> RunnerShared
@@ -332,7 +332,7 @@ graph TD
     NodeLlm --> FlowCompilationShared
     NodeLlm --> Shared
     NodeLlm --> TasksShared
-    NodeLlm --> FlowNodeShared
+    NodeLlm --> FlowGraphShared
     NodeLlm --> ExecutionShared
 
     %% tool 域：载体在最上，工具组按下层能力组装
@@ -509,7 +509,7 @@ graph TD
 | `Kuroe.Tasks.Persistence.Restoring` | kernel | [kuroe-tasks-persistence-restoring](functional_boundary/kernel/kuroe-tasks-persistence-restoring.md) |
 | `Kuroe.Tasks.Persistence.Serialization.Shared` | kernel | [kuroe-tasks-persistence-serialization-shared](functional_boundary/kernel/kuroe-tasks-persistence-serialization-shared.md) |
 | `Kuroe.Tasks.Persistence.Json` | kernel | [kuroe-tasks-persistence-json](functional_boundary/kernel/kuroe-tasks-persistence-json.md) |
-| `Kuroe.Flow.Node.Shared` | flow | [kuroe-flow-node-shared](functional_boundary/flow/kuroe-flow-node-shared.md) |
+| `Kuroe.Flow.Graph.Shared` | flow | [kuroe-flow-graph-shared](functional_boundary/flow/kuroe-flow-graph-shared.md) |
 | `Kuroe.Flow.Records.Shared` | flow | [kuroe-flow-records-shared](functional_boundary/flow/kuroe-flow-records-shared.md) |
 | `Kuroe.Flow.Compilation.Shared` | flow | [kuroe-flow-compilation-shared](functional_boundary/flow/kuroe-flow-compilation-shared.md) |
 | `Kuroe.Flow.Compilation` | flow | [kuroe-flow-compilation](functional_boundary/flow/kuroe-flow-compilation.md) |
@@ -563,7 +563,7 @@ graph TD
 
 ## 命名空间与路径
 
-命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Node.Shared` 的分段固定为 `Model`、`StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records`，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
+命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 的分段固定为 `Model`、`StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records`，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
 
 `Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
 

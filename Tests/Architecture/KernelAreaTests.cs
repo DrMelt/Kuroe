@@ -116,10 +116,10 @@ public sealed class KernelAreaTests
         ];
         string[] forbidden =
         [
-            "Kuroe.Flow.Node.RuntimeGraph",
-            "Kuroe.Flow.Node.StaticGraph",
+            "Kuroe.Flow.Graph.RuntimeGraph",
+            "Kuroe.Flow.Graph.StaticGraph",
             "Kuroe.Flow.Control",
-            "Kuroe.Flow.Node.Shared",
+            "Kuroe.Flow.Graph.Shared",
         ];
 
         foreach (string directory in directories)

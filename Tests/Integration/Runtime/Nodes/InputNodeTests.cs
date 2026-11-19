@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Node.Shared.Model;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Graph;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Pending;

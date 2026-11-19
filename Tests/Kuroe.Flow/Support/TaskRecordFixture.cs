@@ -1,10 +1,10 @@
 using Kuroe.Flow.Records.Shared;
-using Kuroe.Flow.Node.Shared.Graph.Records;
-using Kuroe.Flow.Node.Shared.Model;
+using Kuroe.Flow.Graph.Shared.Graph.Records;
+using Kuroe.Flow.Graph.Shared.Model;
 using Kuroe.Execution.Records.Shared;
 using Kuroe.Tasks.Records.Shared;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Journal;

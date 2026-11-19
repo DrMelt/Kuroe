@@ -1,6 +1,6 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
-using Kuroe.Flow.Node.Shared.Model;
-using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 using Xunit;

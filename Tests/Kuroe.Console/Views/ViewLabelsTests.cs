@@ -2,7 +2,7 @@ using Kuroe.Console.Views;
 using Kuroe.Presentation.Shared;
 using ExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
 using TokenUsage = Kuroe.Execution.Shared.Usage.TokenUsage;
-using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Flow.TestSupport;
 using Spectre.Console;

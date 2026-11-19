@@ -70,7 +70,7 @@
     </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\..\Source\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Control\Runtime\Kuroe.Control.Runtime.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />

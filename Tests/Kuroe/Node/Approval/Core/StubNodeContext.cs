@@ -1,8 +1,8 @@
-using Kuroe.Flow.Node.Shared.Model;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
-using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Readiness;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Graph;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Node.Approval.Tests;

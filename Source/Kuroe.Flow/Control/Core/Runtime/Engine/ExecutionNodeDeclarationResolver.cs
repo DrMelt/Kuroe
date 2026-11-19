@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
-using ExecutableNode = Kuroe.Flow.Node.Shared.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
+using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.Graph.ExecutableNode;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Control.Runtime.Engine;

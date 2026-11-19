@@ -47,7 +47,7 @@ public sealed class KernelControlTests
         Assert.DoesNotContain(references, reference =>
             IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core")));
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Node")));
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Graph")));
     }
 
     [Fact(DisplayName = "控制共享层不含图运行期")]

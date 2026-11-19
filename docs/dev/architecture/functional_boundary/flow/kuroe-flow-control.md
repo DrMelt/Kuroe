@@ -18,11 +18,11 @@
 
 ## 边界外
 
-- 不含图模型与运行期节点形状：在 Kuroe.Flow.Node.Shared。
+- 不含图模型与运行期节点形状：在 Kuroe.Flow.Graph.Shared。
 - 不含编译与库展开：在 Kuroe.Flow.Compilation 与 Kuroe.Flow.NodeLibrary。
 - 不含执行实现：执行状态机在 Kuroe.Execution。
 - 不含任务域、输入通道与持久化实现。
 
 ## 依赖
 
-- Kuroe.Control.Shared、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Flow.Records.Shared、Kuroe.Flow.Node.Shared、Kuroe.Presentation.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。
+- Kuroe.Control.Shared、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Flow.Records.Shared、Kuroe.Flow.Graph.Shared、Kuroe.Presentation.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。

@@ -10,6 +10,6 @@ global using ExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
 global using ExecutionState = Kuroe.Execution.Shared.State.ExecutionState;
 global using Kuroe.Integration.Tests.Support;
 global using Kuroe.TestSupport;
-global using ExecutionSnapshot = Kuroe.Flow.Node.Shared.RuntimeGraph.Execution.GraphExecutionSnapshot;
+global using ExecutionSnapshot = Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution.GraphExecutionSnapshot;
 global using JournalEntry = Kuroe.Execution.Shared.Journal.JournalEntry;
 global using JournalLevel = Kuroe.Execution.Shared.Journal.JournalLevel;

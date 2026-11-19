@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
     </ItemGroup>
 
 </Project>

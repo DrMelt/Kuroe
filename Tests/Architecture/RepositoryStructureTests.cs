@@ -65,6 +65,7 @@ public sealed class RepositoryStructureTests
         string[] forbidden =
         [
             "Kuroe.Flow.Shared",
+            "Kuroe.Flow.Node.",
             "Kuroe.Control.Runtime.Graph",
             "Kuroe.Control.Runtime.Engine",
             "Kuroe.Control.Runtime.Contract",

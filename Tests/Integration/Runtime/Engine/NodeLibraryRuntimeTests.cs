@@ -1,8 +1,8 @@
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Compilation.Documents.Shared;
 using Kuroe.Flow.Json;
-using Kuroe.Flow.Node.Shared.Model;
-using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.Model;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;

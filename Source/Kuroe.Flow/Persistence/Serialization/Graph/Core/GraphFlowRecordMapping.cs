@@ -1,7 +1,7 @@
 using Kuroe.Flow.Records.Shared;
-using Kuroe.Flow.Node.Shared.Graph.Records;
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.Shared.Model;
+using Kuroe.Flow.Graph.Shared.Graph.Records;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.Model;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Persistence.Graph;

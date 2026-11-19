@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Kuroe.Flow.Json.Files;
-using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Xunit;
 
 namespace Kuroe.Flow.Json.Tests;

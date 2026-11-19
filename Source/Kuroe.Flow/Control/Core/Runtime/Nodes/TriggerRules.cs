@@ -1,5 +1,5 @@
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Control.Runtime.Nodes;
 

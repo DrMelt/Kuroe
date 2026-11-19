@@ -3,7 +3,7 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>节点与运行器边界：节点项目引用各自运行器实现，运行器与节点共享层不反向依赖。</summary>
+/// <summary>节点与运行器边界：节点项目引用各自运行器实现，运行器与图共享层不反向依赖。</summary>
 public sealed class NodeRunnerTests
 {
     [Fact(DisplayName = "节点项目引用各自运行器实现")]

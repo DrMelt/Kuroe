@@ -1,5 +1,5 @@
-using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.Shared.Model;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.Model;
 using Kuroe.Tasks.Shared;
 using Xunit;
 

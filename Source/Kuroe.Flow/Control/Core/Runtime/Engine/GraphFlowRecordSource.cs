@@ -1,7 +1,7 @@
 using Kuroe.Flow.Control.Runtime.Graph;
 using Kuroe.Control.Shared;
 using Kuroe.Flow.Records.Shared;
-using Kuroe.Flow.Node.Shared.Graph.Records;
+using Kuroe.Flow.Graph.Shared.Graph.Records;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 
