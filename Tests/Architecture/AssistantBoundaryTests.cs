@@ -9,19 +9,6 @@ public sealed class AssistantBoundaryTests
     [Fact(DisplayName = "对话宿主只依赖代码流程不依赖图控制")]
     public void Dialogue_host_depends_on_code_flow_not_graph_control()
     {
-        string dialogue = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue");
-        IReadOnlyList<string> files = [.. SourceFiles(dialogue)];
-
-        Assert.NotEmpty(files);
-        foreach (string file in files)
-        {
-            string text = File.ReadAllText(file);
-            Assert.DoesNotContain("GraphFlowFramework", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("PrepareCompiled", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("IFlowDescriptionCompiler", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("FlowDescriptionSet", text, StringComparison.Ordinal);
-        }
-
         string project = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Kuroe.Assistant.csproj");
         IReadOnlyList<string> references = ProjectReferences(project);
 

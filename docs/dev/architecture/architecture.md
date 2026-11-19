@@ -612,4 +612,4 @@ graph TD
 
 `Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.FlowDescription`、`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
 
-引用约束与图命名空间禁用项由架构测试固定，见[架构测试](../架构测试.md)。
+引用约束由架构测试固定，见[架构测试](../架构测试.md)。

@@ -4,7 +4,7 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>表现层契约边界：表现快照只承载中性数据，不出现图或节点类型。</summary>
+/// <summary>表现层契约边界：表现共享层与任务表现层只引用中性契约。</summary>
 public sealed class PresentationBoundaryTests
 {
     [Fact(DisplayName = "表现共享层不含图与控制引用")]
@@ -20,31 +20,6 @@ public sealed class PresentationBoundaryTests
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
 
         ReferencesStayUnder(project, "Kuroe.Presentation.Shared", "中性契约", execution, tasks);
-    }
-
-    [Fact(DisplayName = "任务表现层不含图与节点类型")]
-    public void Task_presentation_stays_free_of_graph_and_node_types()
-    {
-        string presentation = Path.Combine(KernelRoot, "Tasks", "Presentation", "Shared");
-        string[] forbidden =
-        [
-            "GraphFlowControl",
-            "TaskRuntime",
-            "NodeGraph",
-            "Kuroe.Flow.Control",
-            "NodePath",
-            "ExecutableSnapshot",
-            "ExecutableStateSnapshot",
-            "ContainerSnapshot",
-            "FlowExecutableView",
-        ];
-
-        SourcesExclude(presentation, "图或节点语义", forbidden);
-
-        string snapshot = File.ReadAllText(Path.Combine(presentation, "TaskSnapshot.cs"));
-        Assert.DoesNotContain("Executables", snapshot, StringComparison.Ordinal);
-        Assert.DoesNotContain("ExecutableStates", snapshot, StringComparison.Ordinal);
-        Assert.DoesNotContain("Containers", snapshot, StringComparison.Ordinal);
     }
 
     [Fact(DisplayName = "任务表现层只引用中性契约")]

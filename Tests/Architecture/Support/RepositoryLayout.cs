@@ -34,10 +34,6 @@ internal static class RepositoryLayout
         Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
             .Where(path => !IsBuildOutput(path));
 
-    internal static IEnumerable<string> SourceFiles(string root) =>
-        Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsBuildOutput(path));
-
     internal static bool IsUnder(string path, string directory)
     {
         string relative = Path.GetRelativePath(directory, path);

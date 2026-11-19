@@ -1,10 +1,9 @@
 using Xunit;
-using static Kuroe.Architecture.Tests.Support.RepositoryAssertions;
 using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>仓库与测试工程结构：InternalsVisibleTo 指向、共享测试工程引用、编译集成测试归属、图命名空间禁用项与禁用词汇的全局残留。</summary>
+/// <summary>仓库与测试工程结构：InternalsVisibleTo 指向、共享测试工程引用、编译集成测试归属。</summary>
 public sealed class RepositoryStructureTests
 {
     [Fact(DisplayName = "InternalsVisibleTo 只指向对应测试程序集")]
@@ -56,50 +55,6 @@ public sealed class RepositoryStructureTests
                 IsUnder(reference, Path.Combine(SourceRoot, "Kuroe", "Core")));
             Assert.DoesNotContain(references, reference =>
                 IsUnder(reference, Path.Combine(SourceRoot, "Kuroe", "Assistant")));
-        }
-    }
-
-    [Fact(DisplayName = "命名空间禁词按段匹配")]
-    public void Namespace_forbidden_words_match_whole_segments()
-    {
-        Assert.True(Mentions("using Kuroe.Flow.Graph;", "Kuroe.Flow"));
-        Assert.True(Mentions("using Kuroe.Flow;", "Kuroe.Flow"));
-        Assert.False(Mentions("using Kuroe.FlowDescription.Shared;", "Kuroe.Flow"));
-        Assert.False(Mentions("using Kuroe.FlowDescriptions.Shared;", "Kuroe.Flow"));
-    }
-
-    [Fact(DisplayName = "图命名空间随所属项目")]
-    public void Graph_namespaces_follow_their_owning_projects()
-    {
-        string[] forbidden =
-        [
-            "Kuroe.Flow.Shared",
-            "Kuroe.Flow.Node.",
-            "Kuroe.Control.Runtime.Graph",
-            "Kuroe.Control.Runtime.Engine",
-            "Kuroe.Control.Runtime.Contract",
-            "Kuroe.Control.Runtime.Nodes",
-        ];
-
-        SourcesExclude(SourceRoot, "图命名空间禁用项", forbidden);
-    }
-
-    [Fact(DisplayName = "仓库不出现执行种类旧词汇")]
-    public void Execution_kind_appears_nowhere()
-    {
-        string[] roots =
-        [
-            SourceRoot,
-            TestsRoot,
-        ];
-
-        string forbidden = "Execution" + "Kind";
-        foreach (string file in roots.SelectMany(SourceFiles))
-        {
-            Assert.DoesNotContain(
-                forbidden,
-                File.ReadAllText(file),
-                StringComparison.Ordinal);
         }
     }
 

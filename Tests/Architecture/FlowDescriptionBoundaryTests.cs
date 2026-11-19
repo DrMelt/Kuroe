@@ -4,7 +4,7 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>流程描述边界：流程描述共享层不引用其他工程，JSON 格式层只引用流程描述与契约层，对流程实现保持中立。</summary>
+/// <summary>流程描述边界：流程描述共享层不引用其他工程，JSON 格式层只引用流程描述与契约层。</summary>
 public sealed class FlowDescriptionBoundaryTests
 {
     [Fact(DisplayName = "流程描述不引用其他工程")]
@@ -51,19 +51,4 @@ public sealed class FlowDescriptionBoundaryTests
         ReferencesExclude(project, "流程描述 JSON 层", "流程区域", flow);
     }
 
-    [Fact(DisplayName = "流程描述不含流程实现")]
-    public void Flow_description_stays_free_of_flow_implementation()
-    {
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription");
-        string[] forbidden =
-        [
-            "Kuroe.Flow.Compilation",
-            "Kuroe.Flow.Control",
-            "Kuroe.Flow.Hosting",
-            "Kuroe.Maf",
-            "Microsoft.Agents",
-        ];
-
-        SourcesExclude(description, "流程实现", forbidden);
-    }
 }

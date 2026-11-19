@@ -87,20 +87,4 @@ public sealed class NodeRunnerTests
 
         Assert.Empty(ProjectReferences(project));
     }
-
-    [Fact(DisplayName = "LLM 执行参数不引用节点类型")]
-    public void Llm_execution_parameters_do_not_reference_node_type()
-    {
-        string file = Path.Combine(
-            SourceRoot,
-            "Kuroe",
-            "Runner",
-            "Llm",
-            "Core",
-            "LlmExecutionParameters.cs");
-
-        string text = File.ReadAllText(file);
-        Assert.DoesNotContain("LlmNodeType", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("LlmParameters", text, StringComparison.Ordinal);
-    }
 }

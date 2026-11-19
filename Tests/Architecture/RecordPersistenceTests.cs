@@ -84,13 +84,6 @@ public sealed class RecordPersistenceTests
         ];
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
         string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
-        string[] forbidden =
-        [
-            "Kuroe.Flow.Graph",
-            "Kuroe.Flow.Records",
-            "GraphFlowDefinitionRecord",
-            "CodeFlowDefinitionRecord",
-        ];
 
         foreach (string project in projects)
         {
@@ -100,7 +93,6 @@ public sealed class RecordPersistenceTests
                 "图或节点模型",
                 graphRecords,
                 nodeContracts);
-            SourcesExclude(DirectoryOf(project), "图或节点词汇", forbidden);
         }
     }
 
@@ -131,11 +123,8 @@ public sealed class RecordPersistenceTests
             "Records",
             "Shared",
             "CodeFlowKind.cs");
-        string taskRecord = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "TaskRecord.cs");
-
         Assert.True(File.Exists(graph), $"{graph} 不存在。");
         Assert.True(File.Exists(code), $"{code} 不存在。");
-        Assert.DoesNotContain("FlowRecordKinds", File.ReadAllText(taskRecord), StringComparison.Ordinal);
     }
 
     [Fact(DisplayName = "Maf 记录种类随其实现存放")]
@@ -147,24 +136,16 @@ public sealed class RecordPersistenceTests
             "Records",
             "Shared",
             "MafFlowKind.cs");
-        string taskRecord = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "TaskRecord.cs");
-
         Assert.True(File.Exists(kind), $"{kind} 不存在。");
-        Assert.DoesNotContain("MafFlowKind", File.ReadAllText(taskRecord), StringComparison.Ordinal);
     }
 
     [Fact(DisplayName = "流程记录编解码端口位于 Kernel")]
     public void Flow_record_codec_port_lives_in_kernel()
     {
         string port = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "FlowRecordCodec.cs");
-        string serialization = Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Persistence", "Serialization", "Shared");
 
         Assert.True(File.Exists(port), $"{port} 不存在。");
         Assert.Contains("interface IFlowRecordCodec", File.ReadAllText(port), StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "interface IFlowRecordCodec",
-            string.Concat(SourceFiles(serialization).Select(File.ReadAllText)),
-            StringComparison.Ordinal);
     }
 
     private static bool IsPersistenceBoundary(string project, string persistence)

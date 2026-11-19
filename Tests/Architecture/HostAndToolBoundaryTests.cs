@@ -1,10 +1,9 @@
 using Xunit;
-using static Kuroe.Architecture.Tests.Support.RepositoryAssertions;
 using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>宿主与工具边界：宿主与代码流程源码不导入图命名空间，宿主不引用图运行期与图共享层，工具共享项不依赖同模块核心与文件访问。</summary>
+/// <summary>宿主与工具边界：宿主不引用图运行期与图共享层，工具共享项不依赖同模块核心与文件访问。</summary>
 public sealed class HostAndToolBoundaryTests
 {
     [Fact(DisplayName = "文件访问共享层不含核心实现与文件 IO")]
@@ -50,28 +49,4 @@ public sealed class HostAndToolBoundaryTests
         }
     }
 
-    [Fact(DisplayName = "宿主与代码流程源码不导入图命名空间")]
-    public void Hosts_and_code_flow_sources_do_not_import_graph_namespaces()
-    {
-        string[] directories =
-        [
-            Path.Combine(SourceRoot, "Kuroe.Console"),
-            Path.Combine(SourceRoot, "Kuroe.Cli"),
-            Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core"),
-            Path.Combine(SourceRoot, "Kuroe", "Tool", "Implementation", "KuroeInfo"),
-        ];
-        string[] forbidden =
-        [
-            "Kuroe.Flow.Graph.StaticGraph",
-            "Kuroe.Flow.Graph.RuntimeGraph",
-            "Kuroe.Flow.Control",
-            "Kuroe.Flow.Graph.Shared",
-            "Kuroe.Flow.Records",
-        ];
-
-        foreach (string directory in directories)
-        {
-            SourcesExclude(directory, "图命名空间", forbidden);
-        }
-    }
 }

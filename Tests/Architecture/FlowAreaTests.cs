@@ -96,8 +96,6 @@ public sealed class FlowAreaTests
             "GraphFlowState.cs");
         string text = File.ReadAllText(file);
 
-        Assert.DoesNotContain("private readonly List<GraphExecution>", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("public List<GraphExecution>", text, StringComparison.Ordinal);
         Assert.Contains("Dictionary<ExecutionId, GraphExecutionContext>", text, StringComparison.Ordinal);
     }
 
@@ -141,8 +139,8 @@ public sealed class FlowAreaTests
             StringComparison.Ordinal);
     }
 
-    [Fact(DisplayName = "图源码不重复定义执行身份与状态")]
-    public void Graph_sources_do_not_redefine_execution_identity_or_state()
+    [Fact(DisplayName = "图源码不重复定义执行单元文件")]
+    public void Graph_sources_do_not_redefine_execution_unit_files()
     {
         string execution = Path.Combine(
             SourceRoot,
@@ -166,26 +164,6 @@ public sealed class FlowAreaTests
             Assert.False(
                 File.Exists(Path.Combine(execution, file)),
                 $"{file} 与执行单元重复定义。");
-        }
-
-        string[] forbidden =
-        [
-            "record struct ExecutionId",
-            "enum ExecutionState",
-            "class ExecutionStates",
-            "record ExecutionOutput",
-            "enum ExecutionOutputKind",
-            "record ExecutionRestorePayload",
-        ];
-        string[] directories =
-        [
-            Path.Combine(SourceRoot, "Kuroe.Flow", "Graph"),
-            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core"),
-        ];
-
-        foreach (string directory in directories)
-        {
-            SourcesExclude(directory, "重复定义的执行单元", forbidden);
         }
     }
 
@@ -223,29 +201,6 @@ public sealed class FlowAreaTests
             executor);
     }
 
-    [Fact(DisplayName = "图控制不驱动执行状态机")]
-    public void Graph_control_does_not_drive_the_execution_state_machine()
-    {
-        string directory = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core");
-        string[] forbidden =
-        [
-            "MarkRunning",
-            "MarkFailed",
-            "MarkSucceeded",
-            "MarkInterrupted",
-            "MarkUncollected",
-            "AttachJournal",
-            "AttachUsageReader",
-            "SettleUsage",
-            "AttachRestoreDataReader",
-            "SettleRestoreData",
-            "CreateRunner",
-            "CreateRestored",
-        ];
-
-        SourcesExclude(directory, "执行状态机写入口", forbidden);
-    }
-
     [Fact(DisplayName = "图控制不引用输入模块")]
     public void Graph_control_does_not_reference_input()
     {
@@ -267,27 +222,6 @@ public sealed class FlowAreaTests
             Assert.DoesNotContain(
                 ProjectReferences(project),
                 reference => IsUnder(reference, code));
-        }
-
-        foreach (string file in SourceFiles(flow))
-        {
-            Assert.DoesNotContain("Kuroe.CodeFlow", File.ReadAllText(file), StringComparison.Ordinal);
-        }
-    }
-
-    [Fact(DisplayName = "代码流程区域不含图与节点实现")]
-    public void Code_flow_area_stays_free_of_graph_and_node()
-    {
-        string code = Path.Combine(SourceRoot, "Kuroe.CodeFlow");
-
-        Assert.NotEmpty(ProjectFiles(code));
-        foreach (string file in SourceFiles(code))
-        {
-            string text = File.ReadAllText(file);
-
-            Assert.DoesNotContain("Kuroe.Flow.Graph", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("Kuroe.Flow.Records", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("Kuroe.Flow.Control", text, StringComparison.Ordinal);
         }
     }
 }

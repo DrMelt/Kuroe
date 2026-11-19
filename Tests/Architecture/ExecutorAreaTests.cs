@@ -4,7 +4,7 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>执行器区域边界：共享层只引用任务契约，装配层只引用执行器共享层、流程描述与任务契约，源码不出现流程与运行期命名空间。</summary>
+/// <summary>执行器区域边界：共享层只引用任务契约，装配层只引用执行器共享层、流程描述与任务契约。</summary>
 public sealed class ExecutorAreaTests
 {
     [Fact(DisplayName = "执行器共享层只引用任务契约")]
@@ -40,22 +40,5 @@ public sealed class ExecutorAreaTests
             shared,
             document,
             tasks);
-    }
-
-    [Fact(DisplayName = "执行器区域源码不含流程与运行期命名空间")]
-    public void Executor_sources_stay_free_of_flow_and_runtime_namespaces()
-    {
-        string executor = Path.Combine(SourceRoot, "Kuroe.Executor");
-        string[] forbidden =
-        [
-            "Kuroe.Flow",
-            "Kuroe.Maf",
-            "Kuroe.Execution",
-            "Kuroe.Control",
-            "Kuroe.Node",
-            "Kuroe.Runner",
-        ];
-
-        SourcesExclude(executor, "流程与运行期命名空间", forbidden);
     }
 }

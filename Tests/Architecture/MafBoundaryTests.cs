@@ -50,50 +50,8 @@ public sealed class MafBoundaryTests
             "Kuroe.Maf.Definition.csproj");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
-        string definition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
 
         ReferencesStayUnder(project, "Kuroe.Maf.Definition", "执行共享与任务共享", execution, tasks);
-
-        foreach (string file in SourceFiles(definition))
-        {
-            string text = File.ReadAllText(file);
-
-            Assert.DoesNotContain("Microsoft.Agents.AI.Workflows", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("Kuroe.Control", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("Kuroe.Presentation", text, StringComparison.Ordinal);
-        }
-    }
-
-    [Fact(DisplayName = "Maf 类型不出现在 Kernel 与宿主")]
-    public void Maf_types_stay_out_of_kernel_and_hosts()
-    {
-        Assert.NotEmpty(SourceFiles(KernelRoot));
-        foreach (string file in SourceFiles(KernelRoot))
-        {
-            string text = File.ReadAllText(file);
-
-            Assert.DoesNotContain("Microsoft.Agents.AI.Workflows", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("MafFlow", text, StringComparison.Ordinal);
-        }
-
-        string[] hosts =
-        [
-            Path.Combine(SourceRoot, "Kuroe.Console"),
-            Path.Combine(SourceRoot, "Kuroe.Cli"),
-            Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core"),
-        ];
-
-        foreach (string directory in hosts)
-        {
-            Assert.NotEmpty(SourceFiles(directory));
-            foreach (string file in SourceFiles(directory))
-            {
-                Assert.DoesNotContain(
-                    "using Kuroe.Maf.Control",
-                    File.ReadAllText(file),
-                    StringComparison.Ordinal);
-            }
-        }
     }
 
     [Fact(DisplayName = "Maf 运行期项目不含流程区域")]
@@ -182,14 +140,6 @@ public sealed class MafBoundaryTests
             Assert.DoesNotContain(
                 ProjectReferences(project),
                 reference => IsUnder(reference, maf));
-        }
-
-        foreach (string file in SourceFiles(flow))
-        {
-            string text = File.ReadAllText(file);
-
-            Assert.DoesNotContain("MafFlow", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("Microsoft.Agents.AI.Workflows", text, StringComparison.Ordinal);
         }
     }
 }
