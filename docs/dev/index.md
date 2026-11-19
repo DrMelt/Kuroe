@@ -6,20 +6,22 @@
 
 ## 域索引
 
-| 域 | 内容 | 进入 |
-| --- | --- | --- |
-| kernel | 执行单元、任务域、流程控制、输入通道、表现与任务持久化 | [kuroe-execution-shared](architecture/functional_boundary/kernel/kuroe-execution-shared.md)、[kuroe-tasks-runtime](architecture/functional_boundary/kernel/kuroe-tasks-runtime.md)、[kuroe-control-runtime](architecture/functional_boundary/kernel/kuroe-control-runtime.md) |
-| flow | 图流程模型、编译、运行期与宿主流程库 | [kuroe-flow-graph-shared](architecture/functional_boundary/flow/kuroe-flow-graph-shared.md)、[kuroe-flow-control](architecture/functional_boundary/flow/kuroe-flow-control.md)、[kuroe-flow-hosting](architecture/functional_boundary/flow/kuroe-flow-hosting.md) |
-| document | 流程描述文档契约 | [kuroe-document-shared](architecture/functional_boundary/document/kuroe-document-shared.md) |
-| executor | 执行器契约、端口词汇与装配 | [kuroe-executor-shared](architecture/functional_boundary/executor/kuroe-executor-shared.md)、[kuroe-executor-compilation](architecture/functional_boundary/executor/kuroe-executor-compilation.md) |
-| codeflow | 代码定义流程的记录与编解码 | [kuroe-codeflow-records-shared](architecture/functional_boundary/codeflow/kuroe-codeflow-records-shared.md) |
-| maf | MAF 流程定义、控制、记录与装配 | [kuroe-maf-definition](architecture/functional_boundary/maf/kuroe-maf-definition.md)、[kuroe-maf-control](architecture/functional_boundary/maf/kuroe-maf-control.md)、[kuroe-maf-compilation](architecture/functional_boundary/maf/kuroe-maf-compilation.md) |
-| runner | Llm、命令、文件、输入与审批执行运行器 | [kuroe-runner-llm](architecture/functional_boundary/runner/kuroe-runner-llm.md)、[kuroe-runner-command](architecture/functional_boundary/runner/kuroe-runner-command.md) |
-| node | 图流程的节点类型 | [kuroe-node-llm](architecture/functional_boundary/node/kuroe-node-llm.md)、[kuroe-node-command](architecture/functional_boundary/node/kuroe-node-command.md) |
-| tool | 工具载体、工具组与工具文件 | [kuroe-tool](architecture/functional_boundary/tool/kuroe-tool.md)、[kuroe-tool-contract](architecture/functional_boundary/tool/kuroe-tool-contract.md) |
-| assistant | 内置助手会话域 | [kuroe-assistant](architecture/functional_boundary/assistant/kuroe-assistant.md) |
-| host | 核心装配、终端入口与命令行入口 | [kuroe](architecture/functional_boundary/host/kuroe.md)、[kuroe-console](architecture/functional_boundary/host/kuroe-console.md)、[kuroe-cli](architecture/functional_boundary/host/kuroe-cli.md) |
-| platform | 路径与配置视图、工作区文件、进程执行 | [kuroe-shared](architecture/functional_boundary/platform/kuroe-shared.md)、[kuroe-files](architecture/functional_boundary/platform/kuroe-files.md)、[kuroe-process](architecture/functional_boundary/platform/kuroe-process.md) |
+模块与边界文档的完整索引见 [architecture](architecture/architecture.md#项目文档索引)。
+
+| 域 | 内容 |
+| --- | --- |
+| kernel | 执行单元、任务域、流程控制、输入通道、表现与任务持久化 |
+| flow | 图流程模型、编译、运行期与宿主流程库 |
+| document | 流程描述文档契约 |
+| executor | 执行器契约、端口词汇与装配 |
+| codeflow | 代码定义流程的记录与编解码 |
+| maf | MAF 流程定义、控制、记录与装配 |
+| runner | Llm、命令、文件、输入与审批执行运行器 |
+| node | 图流程的节点类型 |
+| tool | 工具载体、工具组与工具文件 |
+| assistant | 内置助手会话域 |
+| host | 核心装配、终端入口与命令行入口 |
+| platform | 路径与配置视图、工作区文件、进程执行 |
 
 ## 跨模块机制
 

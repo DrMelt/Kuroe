@@ -4,8 +4,8 @@
 
 ## 端口
 
-- 必须声明静态输入端口 `MODEL_NAME`，类型 `Text`，模式 `Constant`，角色 `Configuration`。标准写法是由开始端口取模型，并在宿主开始输入表里把该端口绑定到 `MODEL`，见[模型接入](../../usage/模型接入.md)。
-- 输入与输出端口取 `Text`、`Context` 与 `Signal`。所有类型未写 `Mode` 时默认 `Plain`，需要门控时显式写 `Trigger`。
+- 必须声明静态输入端口 `MODEL_NAME`，类型 `Text`，模式 `Constant`，角色 `Configuration`。开始端口与宿主绑定的写法见[模型接入](../../usage/模型接入.md)。
+- 输入与输出端口取 `Text`、`Context` 与 `Signal`，模式取值与默认值见[端口与模式](../流程定义.md#端口与模式)。
 - `Context` 输入置于目标输入最前。`Context` 输出由来源透传，不需要交回。
 - `Llm` 接受 `From` 引入的未声明 `Text` 输入。
 
@@ -26,7 +26,7 @@
 
 每次请求都带完整工具面。模型请求工具时，节点在同一执行内执行工具并把结果交回模型，直到模型不再请求工具。工具调用轮次不设上限，终止、停止与暂停仍会中断执行。
 
-节点结束时经契约工具 `SubmitPortValues` 交回动态端口与由执行产出的常量端口。未交回时同一执行内追问最多两次，仍缺则停在阻塞等待重新执行。`GetStatus` 与 `ReportCannotComplete` 始终可用，见[契约工具](../tools/contract.md)。
+节点结束时经契约工具 `SubmitPortValues` 交回动态端口与由执行产出的常量端口。未交回全部端口时的处理与 `GetStatus`、`ReportCannotComplete` 见[契约工具](../tools/contract.md)。
 
 ## 中断与恢复
 
