@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Flow.Compilation.Documents.Shared;
+using Kuroe.Document.Shared;
 using Kuroe.Flow.Compilation.Shared.Flow;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Validation;

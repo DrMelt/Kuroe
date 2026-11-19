@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Compilation.Documents.Shared;
+using Kuroe.Document.Shared;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;

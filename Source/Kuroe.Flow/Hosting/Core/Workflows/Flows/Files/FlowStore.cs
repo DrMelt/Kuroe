@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Compilation.Documents.Shared;
-using Kuroe.Flow.Json.Shared;
+using Kuroe.Document.Shared;
+using Kuroe.Document.Json.Shared;
 using Kuroe.Tasks.Persistence.Files;
 
 namespace Kuroe.Flow.Hosting.Workflows.Flows.Files;

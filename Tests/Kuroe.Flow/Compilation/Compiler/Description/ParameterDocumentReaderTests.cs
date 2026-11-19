@@ -1,5 +1,5 @@
 using Kuroe.Flow.Compilation.Description;
-using Kuroe.Flow.Compilation.Documents.Shared;
+using Kuroe.Document.Shared;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Graph.Shared.Model;

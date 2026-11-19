@@ -4,7 +4,7 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>Maf 边界：Maf 项目只依赖契约层与自己的记录定义，与流程区域互不引用。</summary>
+/// <summary>MAF 边界：运行期层只依赖契约层与自己的记录定义，文档装配层只引用流程共享契约与描述文档。</summary>
 public sealed class MafBoundaryTests
 {
     [Fact(DisplayName = "Maf 控制层只引用 Kernel 与 Maf 记录")]
@@ -96,19 +96,76 @@ public sealed class MafBoundaryTests
         }
     }
 
-    [Fact(DisplayName = "Maf 项目不含流程区域")]
-    public void Maf_projects_stay_free_of_flow_area()
+    [Fact(DisplayName = "Maf 运行期项目不含流程区域")]
+    public void Maf_runtime_projects_stay_free_of_flow_area()
     {
-        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+        string[] runtime =
+        [
+            Path.Combine(SourceRoot, "Kuroe.Maf", "Core"),
+            Path.Combine(SourceRoot, "Kuroe.Maf", "Control", "Core"),
+            Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core"),
+            Path.Combine(SourceRoot, "Kuroe.Maf", "Persistence", "Core"),
+            Path.Combine(SourceRoot, "Kuroe.Maf", "Records", "Shared"),
+        ];
         string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
 
-        Assert.NotEmpty(ProjectFiles(maf));
-        foreach (string project in ProjectFiles(maf))
+        foreach (string directory in runtime)
         {
-            Assert.DoesNotContain(
-                ProjectReferences(project),
-                reference => IsUnder(reference, flow));
+            IReadOnlyList<string> projects = [.. ProjectFiles(directory)];
+
+            Assert.NotEmpty(projects);
+            foreach (string project in projects)
+            {
+                Assert.DoesNotContain(
+                    ProjectReferences(project),
+                    reference => IsUnder(reference, flow));
+            }
         }
+    }
+
+    [Fact(DisplayName = "Maf 文档装配只引用流程共享契约")]
+    public void Maf_compilation_references_only_flow_shared_contracts()
+    {
+        string document = Path.Combine(SourceRoot, "Kuroe.Document", "Shared");
+        string flowGraphShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
+        string flowCompilationShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Compilation", "Shared");
+        string mafCompilationShared = Path.Combine(SourceRoot, "Kuroe.Maf", "Compilation", "Shared");
+        string mafDefinition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
+        string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
+        string execution = Path.Combine(KernelRoot, "Execution", "Shared");
+
+        string shared = Path.Combine(
+            SourceRoot,
+            "Kuroe.Maf",
+            "Compilation",
+            "Shared",
+            "Kuroe.Maf.Compilation.Shared.csproj");
+        string compilation = Path.Combine(
+            SourceRoot,
+            "Kuroe.Maf",
+            "Compilation",
+            "Core",
+            "Kuroe.Maf.Compilation.csproj");
+
+        ReferencesStayUnder(
+            shared,
+            "Kuroe.Maf.Compilation.Shared",
+            "流程共享契约",
+            document,
+            flowGraphShared,
+            mafDefinition,
+            tasks);
+        ReferencesStayUnder(
+            compilation,
+            "Kuroe.Maf.Compilation",
+            "流程共享契约",
+            document,
+            flowGraphShared,
+            flowCompilationShared,
+            mafCompilationShared,
+            mafDefinition,
+            tasks,
+            execution);
     }
 
     [Fact(DisplayName = "流程区域不含 Maf")]

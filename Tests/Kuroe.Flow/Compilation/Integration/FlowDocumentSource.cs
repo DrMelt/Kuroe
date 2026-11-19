@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Flow.Compilation.Documents.Shared;
-using Kuroe.Flow.Json;
+using Kuroe.Document.Shared;
+using Kuroe.Document.Json;
 
 namespace Kuroe.Flow.Compilation.Integration.Tests;
 

@@ -2,6 +2,8 @@
 
 Kuroe 把用户定义的流程交给模型执行。内核提供任务、执行与流程控制的中性机制，流程实现按图、代码与 MAF 三种形态各自落位，节点与工具把执行接到具体能力上，宿主负责装配。
 
+流程描述文档契约位于 `Source/Kuroe.Document`，由图流程与 MAF 流程共同使用。
+
 本文档给出项目划分与依赖关系。
 
 ## 解决方案划分
@@ -38,16 +40,19 @@ graph TD
     subgraph DFlow["flow：图流程模型、编译、控制与装配"]
         FlowGraphShared["Flow.Graph.Shared<br>标识模型 / 图结构 / 运行期节点 / 节点规则"]
         FlowRecordsShared["Flow.Records.Shared<br>图流程记录与种类"]
-        FlowCompilationDocumentsShared["Flow.Compilation.Documents.Shared<br>流程描述 / 参数段"]
         FlowCompilationShared["Flow.Compilation.Shared<br>编译契约 / 类型描述 / 参数读侧"]
         FlowCompilation["Flow.Compilation<br>流程描述编译与图编译"]
-        FlowJsonShared["Flow.Json.Shared<br>流程文件格式端口"]
-        FlowJson["Flow.Json<br>流程文件 JSON 读写"]
         FlowNodeLibrary["Flow.NodeLibrary<br>节点库展开与作用域"]
         FlowNodeTypeContainer["Flow.NodeType.Container<br>容器节点类型"]
         FlowControl["Flow.Control<br>图流程控制与运行期"]
         FlowHosting["Flow.Hosting<br>图流程注册与流程库装配"]
         FlowPersistenceGraph["Flow.Persistence.Graph<br>图流程记录编解码"]
+    end
+
+    subgraph DDocument["document：流程描述文档契约"]
+        DocumentShared["Document.Shared<br>流程描述 / 参数段"]
+        DocumentJsonShared["Document.Json.Shared<br>流程文件格式端口"]
+        DocumentJson["Document.Json<br>流程文件 JSON 读写"]
     end
 
     subgraph DCodeFlow["codeflow：代码流程"]
@@ -58,6 +63,8 @@ graph TD
     subgraph DMaf["maf：Microsoft Agent Framework 流程"]
         MafRecordsShared["Maf.Records.Shared<br>MAF 流程记录与种类"]
         MafDefinition["Maf.Definition<br>MAF 流程定义与步骤"]
+        MafCompilationShared["Maf.Compilation.Shared<br>文档装配契约"]
+        MafCompilation["Maf.Compilation<br>文档装配与投影"]
         MafControl["Maf.Control<br>MAF 流程控制与步骤桥接"]
         MafPersistence["Maf.Persistence<br>MAF 流程记录编解码"]
         Maf["Maf<br>MAF 流程装配入口"]
@@ -182,19 +189,17 @@ graph TD
 
     %% flow 域：模型、编译、控制与装配分层，装配根向下接节点与运行器
     FlowCompilation --> FlowCompilationShared
-    FlowCompilation --> FlowCompilationDocumentsShared
+    FlowCompilation --> DocumentShared
     FlowCompilation --> TasksShared
     FlowCompilation --> FlowGraphShared
-    FlowJson --> FlowJsonShared
-    FlowJson --> FlowCompilationShared
-    FlowJson --> FlowCompilationDocumentsShared
-    FlowJson --> TasksShared
-    FlowJson --> FlowGraphShared
-    FlowJsonShared --> FlowCompilationDocumentsShared
-    FlowCompilationShared --> FlowCompilationDocumentsShared
+    DocumentJson --> DocumentJsonShared
+    DocumentJson --> DocumentShared
+    DocumentJson --> TasksShared
+    DocumentJson --> FlowGraphShared
+    DocumentJsonShared --> DocumentShared
+    FlowCompilationShared --> DocumentShared
     FlowCompilationShared --> TasksShared
     FlowCompilationShared --> FlowGraphShared
-    FlowCompilationDocumentsShared --> FlowGraphShared
     FlowControl --> ControlShared
     FlowControl --> ExecutionShared
     FlowControl --> ExecutionRecordsShared
@@ -214,10 +219,10 @@ graph TD
     FlowHosting --> FlowGraphShared
     FlowHosting --> FlowRecordsShared
     FlowHosting --> FlowCompilationShared
-    FlowHosting --> FlowCompilationDocumentsShared
+    FlowHosting --> DocumentShared
     FlowHosting --> FlowCompilation
-    FlowHosting --> FlowJsonShared
-    FlowHosting --> FlowJson
+    FlowHosting --> DocumentJsonShared
+    FlowHosting --> DocumentJson
     FlowHosting --> InputShared
     FlowHosting --> FlowNodeLibrary
     FlowHosting --> FlowNodeTypeContainer
@@ -246,6 +251,12 @@ graph TD
     FlowHosting --> TasksPersistenceFilesShared
     FlowHosting --> TasksPersistenceFiles
     FlowHosting --> PresentationShared
+
+    %% document 域：流程文件与流程实现共用的描述文档
+    DocumentShared --> FlowGraphShared
+    MafCompilationShared --> DocumentShared
+    MafCompilation --> DocumentShared
+
     FlowGraphShared --> TasksShared
     FlowGraphShared --> ExecutionShared
     FlowNodeLibrary --> FlowCompilationShared
@@ -261,7 +272,7 @@ graph TD
     FlowPersistenceGraph --> TasksShared
     FlowPersistenceGraph --> TasksRecordsShared
 
-    %% codeflow 与 maf 域：各自持有记录与编解码，对 flow 无引用
+    %% codeflow 域对 flow 无引用；maf 运行期对 flow 无引用，文档装配只引用共享契约
     CodeFlowPersistence --> CodeFlowRecordsShared
     CodeFlowPersistence --> TasksShared
     CodeFlowPersistence --> TasksRecordsShared
@@ -275,6 +286,15 @@ graph TD
     MafControl --> TasksRecordsShared
     MafControl --> MafRecordsShared
     MafControl --> MafDefinition
+    MafCompilationShared --> MafDefinition
+    MafCompilationShared --> FlowGraphShared
+    MafCompilationShared --> TasksShared
+    MafCompilation --> MafCompilationShared
+    MafCompilation --> MafDefinition
+    MafCompilation --> FlowGraphShared
+    MafCompilation --> FlowCompilationShared
+    MafCompilation --> TasksShared
+    MafCompilation --> ExecutionShared
     Maf --> ControlShared
     Maf --> TasksRecordsShared
     Maf --> MafDefinition
@@ -513,17 +533,20 @@ graph TD
 | `Kuroe.Flow.Records.Shared` | flow | [kuroe-flow-records-shared](functional_boundary/flow/kuroe-flow-records-shared.md) |
 | `Kuroe.Flow.Compilation.Shared` | flow | [kuroe-flow-compilation-shared](functional_boundary/flow/kuroe-flow-compilation-shared.md) |
 | `Kuroe.Flow.Compilation` | flow | [kuroe-flow-compilation](functional_boundary/flow/kuroe-flow-compilation.md) |
-| `Kuroe.Flow.Json.Shared` | flow | [kuroe-flow-json-shared](functional_boundary/flow/kuroe-flow-json-shared.md) |
-| `Kuroe.Flow.Json` | flow | [kuroe-flow-json](functional_boundary/flow/kuroe-flow-json.md) |
 | `Kuroe.Flow.NodeLibrary` | flow | [kuroe-flow-nodelibrary](functional_boundary/flow/kuroe-flow-nodelibrary.md) |
 | `Kuroe.Flow.NodeType.Container` | flow | [kuroe-flow-nodetype-container](functional_boundary/flow/kuroe-flow-nodetype-container.md) |
 | `Kuroe.Flow.Control` | flow | [kuroe-flow-control](functional_boundary/flow/kuroe-flow-control.md) |
 | `Kuroe.Flow.Hosting` | flow | [kuroe-flow-hosting](functional_boundary/flow/kuroe-flow-hosting.md) |
 | `Kuroe.Flow.Persistence.Graph` | flow | [kuroe-flow-persistence-graph](functional_boundary/flow/kuroe-flow-persistence-graph.md) |
+| `Kuroe.Document.Shared` | document | [kuroe-document-shared](functional_boundary/document/kuroe-document-shared.md) |
+| `Kuroe.Document.Json.Shared` | document | [kuroe-document-json-shared](functional_boundary/document/kuroe-document-json-shared.md) |
+| `Kuroe.Document.Json` | document | [kuroe-document-json](functional_boundary/document/kuroe-document-json.md) |
 | `Kuroe.CodeFlow.Records.Shared` | codeflow | [kuroe-codeflow-records-shared](functional_boundary/codeflow/kuroe-codeflow-records-shared.md) |
 | `Kuroe.CodeFlow.Persistence` | codeflow | [kuroe-codeflow-persistence](functional_boundary/codeflow/kuroe-codeflow-persistence.md) |
 | `Kuroe.Maf.Records.Shared` | maf | [kuroe-maf-records-shared](functional_boundary/maf/kuroe-maf-records-shared.md) |
 | `Kuroe.Maf.Definition` | maf | [kuroe-maf-definition](functional_boundary/maf/kuroe-maf-definition.md) |
+| `Kuroe.Maf.Compilation.Shared` | maf | [kuroe-maf-compilation-shared](functional_boundary/maf/kuroe-maf-compilation-shared.md) |
+| `Kuroe.Maf.Compilation` | maf | [kuroe-maf-compilation](functional_boundary/maf/kuroe-maf-compilation.md) |
 | `Kuroe.Maf.Control` | maf | [kuroe-maf-control](functional_boundary/maf/kuroe-maf-control.md) |
 | `Kuroe.Maf.Persistence` | maf | [kuroe-maf-persistence](functional_boundary/maf/kuroe-maf-persistence.md) |
 | `Kuroe.Maf` | maf | [kuroe-maf](functional_boundary/maf/kuroe-maf.md) |
@@ -565,6 +588,6 @@ graph TD
 
 命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 的分段固定为 `Model`、`StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records`，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
 
-`Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
+`Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.Document`、`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
 
 命名空间归属与引用约束由架构测试固定，见[架构测试](../架构测试.md)。

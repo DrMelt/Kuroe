@@ -4,7 +4,7 @@ using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Flow.Compilation;
-using Kuroe.Flow.Compilation.Documents.Shared;
+using Kuroe.Document.Shared;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Kuroe.Flow.NodeLibrary;

@@ -75,36 +75,6 @@ public sealed class FlowAreaTests
         ReferencesStayUnder(project, "Kuroe.Flow.Graph.Shared", "契约层", tasks, execution);
     }
 
-    [Fact(DisplayName = "流程 JSON 共享层只引用描述文档")]
-    public void Flow_json_shared_references_only_description_documents()
-    {
-        string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
-            "Compilation",
-            "Json",
-            "Shared",
-            "Kuroe.Flow.Json.Shared.csproj");
-        string documents = Path.Combine(SourceRoot, "Kuroe.Flow", "Compilation", "Documents", "Shared");
-
-        ReferencesStayUnder(project, "Kuroe.Flow.Json.Shared", "描述文档", documents);
-    }
-
-    [Fact(DisplayName = "描述文档只引用图共享层")]
-    public void Description_documents_reference_only_graph_shared()
-    {
-        string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
-            "Compilation",
-            "Documents",
-            "Shared",
-            "Kuroe.Flow.Compilation.Documents.Shared.csproj");
-        string graphShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
-
-        ReferencesStayUnder(project, "描述文档", "图共享层", graphShared);
-    }
-
     [Fact(DisplayName = "流程区域不含任务与表现项目")]
     public void Flow_area_stays_free_of_task_and_presentation_projects()
     {

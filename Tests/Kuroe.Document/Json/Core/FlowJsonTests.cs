@@ -1,0 +1,151 @@
+using System.Text.Json;
+using Kuroe.Document.Json.Files;
+using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
+using Xunit;
+
+namespace Kuroe.Document.Json.Tests;
+
+/// <summary>流程文件的 JSON 绑定：读侧的宽容与缺键默认、枚举与原始形状，写侧的排版与转义。</summary>
+public sealed class FlowJsonTests
+{
+    [Fact(DisplayName = "读侧忽略键名大小写、跳过注释、允许尾随逗号")]
+    public void Read_tolerates_case_comments_and_trailing_commas()
+    {
+        const string json = """
+            {
+              // 顶层节点库与流程
+              "flows": [
+                {
+                  "name": "默认",
+                  "ports": [{ "name": "目标", "type": "Text" }],
+                  "root": null,
+                },
+              ],
+            }
+            """;
+
+        FlowFileDto file = Assert.IsType<FlowFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto));
+
+        FlowDto flow = Assert.Single(file.Flows);
+        Assert.Equal("默认", flow.Name);
+        Assert.NotNull(flow.Ports);
+        Assert.Equal(JsonValueKind.Object, Assert.Single(flow.Ports).ValueKind);
+    }
+
+    [Fact(DisplayName = "缺键的属性取 null")]
+    public void Missing_keys_fall_back_to_declared_defaults()
+    {
+        const string json = """{ "Flows": [ { "Name": "默认" } ] }""";
+
+        FlowFileDto file = Assert.IsType<FlowFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto));
+
+        FlowDto flow = Assert.Single(file.Flows);
+        Assert.Null(flow.Root);
+        Assert.Null(flow.Description);
+        Assert.Null(flow.Ports);
+    }
+
+    [Fact(DisplayName = "流程文件里不认宿主输入绑定，写 HostStartInputs 即不是合法流程文件")]
+    public void Host_start_inputs_are_not_part_of_the_flow_file()
+    {
+        const string json = """
+            {
+              "Flows": [
+                {
+                  "Name": "默认",
+                  "HostStartInputs": { "启动路径": "WORKSPACE_PATH" }
+                }
+              ]
+            }
+            """;
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto));
+    }
+
+    [Fact(DisplayName = "节点类型名按文件里写的原样保留，大小写不敏感的比较在装配层")]
+    public void Node_kind_is_kept_as_written()
+    {
+        const string json = """{ "Nodes": [ { "Name": "整体", "Kind": "container" } ] }""";
+
+        NodeFileDto file = Assert.IsType<NodeFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto));
+
+        NodeDto node = Assert.Single(file.Nodes);
+        Assert.Equal("container", node.Kind);
+        Assert.Null(node.Use);
+    }
+
+    [Fact(DisplayName = "节点输入绑定按字符串映射读入，端口条目保留原始对象形状")]
+    public void Input_bindings_are_read_as_a_string_map()
+    {
+        const string json = """
+            {
+              "Nodes": [
+                { "Name": "整体", "Kind": "Container", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Ref": "分析@结论" }] },
+                { "Label": "组实例", "Use": "整体", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } }
+              ]
+            }
+            """;
+
+        NodeFileDto file = Assert.IsType<NodeFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto));
+
+        Dictionary<string, JsonElement>? startBindings = file.Nodes[0].Bindings;
+        Assert.NotNull(startBindings);
+        Assert.Equal("@MODEL_NAME", startBindings["MODEL_NAME"].GetString());
+        Dictionary<string, JsonElement>? groupBindings = file.Nodes[1].Bindings;
+        Assert.NotNull(groupBindings);
+        Assert.Equal("@MODEL_NAME", groupBindings["MODEL_NAME"].GetString());
+        List<JsonElement>? outputs = file.Nodes[0].Outputs;
+        Assert.NotNull(outputs);
+        Assert.Equal(JsonValueKind.Object, Assert.Single(outputs).ValueKind);
+    }
+
+    [Fact(DisplayName = "端口条目的端口类型写成枚举名字")]
+    public void Port_entry_writes_its_type_by_name()
+    {
+        PortEntryDto entry = new() { Name = "目标", Type = PortTypes.Text.Name };
+
+        string text = JsonSerializer.Serialize(entry, FlowJson.WriteOptions.GetTypeInfo(typeof(PortEntryDto)));
+
+        Assert.Contains("\"Type\": \"Text\"", text);
+    }
+
+    [Fact(DisplayName = "端口条目未写的可选字段不写出")]
+    public void Port_entry_omits_unwritten_optional_fields()
+    {
+        PortEntryDto entry = new() { Name = "结论", Ref = "分析@结论" };
+
+        string text = JsonSerializer.Serialize(entry, FlowJson.WriteOptions.GetTypeInfo(typeof(PortEntryDto)));
+
+        Assert.Contains("\"Ref\": \"分析@结论\"", text);
+        Assert.DoesNotContain("\"Type\"", text);
+        Assert.DoesNotContain("\"Description\"", text);
+        Assert.DoesNotContain("\"Value\"", text);
+        Assert.DoesNotContain("\"Default\"", text);
+    }
+
+    [Fact(DisplayName = "端口条目写了 Default 时按原样写出")]
+    public void Port_entry_writes_default_when_set()
+    {
+        PortEntryDto entry = new() { Name = "分支", Default = "main" };
+
+        string text = JsonSerializer.Serialize(entry, FlowJson.WriteOptions.GetTypeInfo(typeof(PortEntryDto)));
+
+        Assert.Contains("\"Default\": \"main\"", text);
+    }
+
+    [Fact(DisplayName = "写侧缩进输出，非 ASCII 字符不转义，节点类型写成枚举名字")]
+    public void Write_keeps_indentation_and_readable_text()
+    {
+        FlowFileDto file = new()
+        {
+            Flows = [new FlowDto { Name = "默认" }],
+        };
+
+        string text = JsonSerializer.Serialize(file, FlowJson.WriteOptions.GetTypeInfo(typeof(FlowFileDto)));
+
+        Assert.Contains("\"Flows\"", text);
+        Assert.Contains("默认", text);
+        Assert.Contains("\n", text);
+        Assert.Contains("  ", text);
+    }
+}
