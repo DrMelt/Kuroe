@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Document.Shared;
+using Kuroe.FlowDescription.Shared;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
@@ -14,7 +14,7 @@ public sealed class MafFlowAssembler(IFlowDescriptionCompiler compiler) : IMafFl
 {
     /// <inheritdoc/>
     public ErrorOr<IReadOnlyList<MafFlowDefinition>> Assemble(
-        FlowDocument document,
+        FlowDescriptionSet document,
         IReadOnlyList<NodeSpec> builtins)
     {
         ErrorOr<IReadOnlyList<FlowGraph>> compiled = compiler.Compile(document, builtins);

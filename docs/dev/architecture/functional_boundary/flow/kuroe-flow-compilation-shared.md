@@ -11,12 +11,12 @@
 
 ## 边界外
 
-- 不含描述文档模型：在 Kuroe.Document.Shared。
+- 不含流程描述模型：在 Kuroe.FlowDescription.Shared。
 - 不含节点规则：在 Kuroe.Flow.Graph.Shared。
 - 不含编译实现：文档构造、模型校验与图编译在 Kuroe.Flow.Compilation。
 - 不含图运行期与流程控制。
-- 不含文件格式：在 Kuroe.Document.Json。
+- 不含文件格式：在 Kuroe.FlowDescription.Json。
 
 ## 依赖
 
-- Kuroe.Document.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared、Kuroe.Executor.Shared。
+- Kuroe.FlowDescription.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared、Kuroe.Executor.Shared。

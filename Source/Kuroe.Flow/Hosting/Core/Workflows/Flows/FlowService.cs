@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Document.Shared;
+using Kuroe.FlowDescription.Shared;
 using Kuroe.Flow.Control.Runtime.Catalog;
 using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
@@ -10,7 +10,7 @@ using Kuroe.Flow.Hosting.Workflows.Flows.Files;
 
 namespace Kuroe.Flow.Hosting.Workflows.Flows;
 
-/// <summary>运行期的流程模板集合。描述文档是授权来源，编译结果是运行期来源，落盘交给 FlowStore。</summary>
+/// <summary>运行期的流程模板集合。流程描述是授权来源，编译结果是运行期来源，落盘交给 FlowStore。</summary>
 public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapshotSource, IFlowSnapshotCompiler, IFlowLibrary
 {
     private readonly FlowStore _store;
@@ -18,7 +18,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     private readonly IFlowDescriptionCompiler _compiler;
     private readonly bool _tolerateFailures;
     private readonly Lock _gate = new();
-    private FlowDocument _document;
+    private FlowDescriptionSet _document;
     private IReadOnlyList<FlowGraph> _compiled;
     private IReadOnlyList<FlowFailure> _failures;
 
@@ -27,7 +27,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         IReadOnlyList<NodeSpec> builtins,
         IFlowDescriptionCompiler compiler,
         bool tolerateFailures,
-        FlowDocument document,
+        FlowDescriptionSet document,
         IReadOnlyList<FlowGraph> compiled,
         IReadOnlyList<FlowFailure> failures)
     {
@@ -47,13 +47,13 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         IFlowDescriptionCompiler compiler,
         bool tolerateFailures)
     {
-        ErrorOr<FlowDocument?> loaded = store.Load();
+        ErrorOr<FlowDescriptionSet?> loaded = store.Load();
         if (loaded.IsError)
         {
             return loaded.ErrorsOrEmptyList;
         }
 
-        FlowDocument document = loaded.Value ?? new FlowDocument([], []);
+        FlowDescriptionSet document = loaded.Value ?? new FlowDescriptionSet([], []);
         ErrorOr<CompileResult> compiled = Compile(document, builtinNodes, compiler);
         if (compiled.IsError)
         {
@@ -125,7 +125,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     {
         lock (_gate)
         {
-            FlowDocumentFlow? flow = _document.Flows.FirstOrDefault(candidate => candidate.Name == name.Value);
+            FlowEntry? flow = _document.Flows.FirstOrDefault(candidate => candidate.Name == name.Value);
             if (flow is null)
             {
                 return [FlowErrors.FlowNotFound(name.Value)];
@@ -145,7 +145,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
 
     ErrorOr<FlowGraph> IFlowSnapshotCompiler.Compile(GraphFlowDefinitionRecord snapshot)
     {
-        ErrorOr<IReadOnlyList<NodeDefinitionDocument>> nodes = _store.ReadNodesText(snapshot.Nodes);
+        ErrorOr<IReadOnlyList<NodeDefinitionDescription>> nodes = _store.ReadNodesText(snapshot.Nodes);
         if (nodes.IsError)
         {
             return [Error.Failure(
@@ -153,7 +153,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 $"流程快照的节点库不合法：{nodes.FirstError.Description}")];
         }
 
-        ErrorOr<IReadOnlyList<FlowDocumentFlow>> flows = _store.ReadFlowsText(snapshot.Flow);
+        ErrorOr<IReadOnlyList<FlowEntry>> flows = _store.ReadFlowsText(snapshot.Flow);
         if (flows.IsError)
         {
             return [Error.Failure(
@@ -161,7 +161,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 $"流程快照的流程不合法：{flows.FirstError.Description}")];
         }
 
-        ErrorOr<CompileResult> compiled = Compile(new FlowDocument(nodes.Value, flows.Value), _builtins, _compiler);
+        ErrorOr<CompileResult> compiled = Compile(new FlowDescriptionSet(nodes.Value, flows.Value), _builtins, _compiler);
         if (compiled.IsError)
         {
             return compiled.ErrorsOrEmptyList;
@@ -217,14 +217,14 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 return duplicates;
             }
 
-            List<NodeDefinitionDocument> nodes = MergeByName(_document.Nodes, file.Nodes, node => node.Name);
-            ErrorOr<IReadOnlyList<FlowGraph>> library = _compiler.Compile(new FlowDocument(nodes, []), _builtins);
+            List<NodeDefinitionDescription> nodes = MergeByName(_document.Nodes, file.Nodes, node => node.Name);
+            ErrorOr<IReadOnlyList<FlowGraph>> library = _compiler.Compile(new FlowDescriptionSet(nodes, []), _builtins);
             if (library.IsError)
             {
                 return library.ErrorsOrEmptyList;
             }
 
-            ErrorOr<CompileResult> compiled = Compile(new FlowDocument(nodes, _document.Flows), _builtins, _compiler);
+            ErrorOr<CompileResult> compiled = Compile(new FlowDescriptionSet(nodes, _document.Flows), _builtins, _compiler);
             if (compiled.IsError)
             {
                 return compiled.ErrorsOrEmptyList;
@@ -259,7 +259,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 return saved.ErrorsOrEmptyList;
             }
 
-            _document = new FlowDocument(nodes, _document.Flows);
+            _document = new FlowDescriptionSet(nodes, _document.Flows);
             _compiled = compiled.Value.Flows;
             _failures = compiled.Value.Failures;
 
@@ -278,9 +278,9 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
 
         lock (_gate)
         {
-            List<FlowDocumentFlow> flows = MergeByName(_document.Flows, file.Flows, flow => flow.Name);
+            List<FlowEntry> flows = MergeByName(_document.Flows, file.Flows, flow => flow.Name);
             ErrorOr<IReadOnlyList<FlowGraph>> compiled =
-                _compiler.Compile(new FlowDocument(_document.Nodes, flows), _builtins);
+                _compiler.Compile(new FlowDescriptionSet(_document.Nodes, flows), _builtins);
             if (compiled.IsError)
             {
                 return compiled.ErrorsOrEmptyList;
@@ -299,7 +299,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 return saved.ErrorsOrEmptyList;
             }
 
-            _document = new FlowDocument(_document.Nodes, flows);
+            _document = new FlowDescriptionSet(_document.Nodes, flows);
             _compiled = compiled.Value;
             _failures = [];
 
@@ -317,19 +317,19 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         lock (_gate)
         {
             ErrorOr<CompileResult> checkedIncoming =
-                Compile(new FlowDocument(_document.Nodes, file.Flows), _builtins, _compiler);
+                Compile(new FlowDescriptionSet(_document.Nodes, file.Flows), _builtins, _compiler);
             if (checkedIncoming.IsError)
             {
                 return checkedIncoming.ErrorsOrEmptyList;
             }
 
             HashSet<FlowName> accepted = [.. checkedIncoming.Value.Flows.Select(flow => flow.Definition.Name)];
-            List<FlowDocumentFlow> acceptedFlows =
+            List<FlowEntry> acceptedFlows =
                 [.. file.Flows.Where(flow => accepted.Contains(new FlowName(flow.Name.Trim())))];
 
-            List<FlowDocumentFlow> flows = MergeByName(_document.Flows, acceptedFlows, flow => flow.Name);
+            List<FlowEntry> flows = MergeByName(_document.Flows, acceptedFlows, flow => flow.Name);
             ErrorOr<CompileResult> compiled =
-                Compile(new FlowDocument(_document.Nodes, flows), _builtins, _compiler);
+                Compile(new FlowDescriptionSet(_document.Nodes, flows), _builtins, _compiler);
             if (compiled.IsError)
             {
                 return compiled.ErrorsOrEmptyList;
@@ -363,7 +363,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 return saved.ErrorsOrEmptyList;
             }
 
-            _document = new FlowDocument(_document.Nodes, flows);
+            _document = new FlowDescriptionSet(_document.Nodes, flows);
             _compiled = compiled.Value.Flows;
             _failures = compiled.Value.Failures;
 
@@ -382,7 +382,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
 
     /// <summary>按流程隔离编译：整体成功直接用结果，整体失败时逐条流程编译。</summary>
     private static ErrorOr<CompileResult> Compile(
-        FlowDocument document,
+        FlowDescriptionSet document,
         IReadOnlyList<NodeSpec> builtins,
         IFlowDescriptionCompiler compiler)
     {
@@ -405,10 +405,10 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
 
         List<FlowGraph> flows = [];
         List<FlowFailure> failures = [];
-        foreach (FlowDocumentFlow flow in document.Flows)
+        foreach (FlowEntry flow in document.Flows)
         {
             ErrorOr<IReadOnlyList<FlowGraph>> single = compiler.Compile(
-                new FlowDocument(document.Nodes, [flow]),
+                new FlowDescriptionSet(document.Nodes, [flow]),
                 builtins);
             if (single.IsError)
             {
@@ -427,7 +427,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     }
 
     /// <summary>流程名重复：同一文档内名字是流程的唯一标识。</summary>
-    private static IEnumerable<Error> Duplicated(IReadOnlyList<FlowDocumentFlow> flows) =>
+    private static IEnumerable<Error> Duplicated(IReadOnlyList<FlowEntry> flows) =>
         flows
             .Select(flow => (Flow: flow, Name: FlowName.Create(flow.Name)))
             .Where(entry => !entry.Name.IsError)

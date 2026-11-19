@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Document.Shared;
+using Kuroe.FlowDescription.Shared;
 using Kuroe.Flow.Compilation.Shared.Flow;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Validation;
@@ -17,9 +17,9 @@ public sealed class FlowDescriptionCompiler(
     INodeTypeDescriptionRegistry types,
     IFlowExpander expander) : IFlowDescriptionCompiler
 {
-    /// <summary>编译一份描述文档。任一条流程失败时返回全部错误。</summary>
+    /// <summary>编译一份流程描述。任一条流程失败时返回全部错误。</summary>
     ErrorOr<IReadOnlyList<FlowGraph>> IFlowDescriptionCompiler.Compile(
-        FlowDocument document,
+        FlowDescriptionSet document,
         IReadOnlyList<NodeSpec> builtins)
     {
         FlowModelBuilder builder = new(types);

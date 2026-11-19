@@ -4,7 +4,7 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>执行器区域边界：共享层只引用任务契约，装配层只引用执行器共享层、描述文档与任务契约，源码不出现流程与运行期命名空间。</summary>
+/// <summary>执行器区域边界：共享层只引用任务契约，装配层只引用执行器共享层、流程描述与任务契约，源码不出现流程与运行期命名空间。</summary>
 public sealed class ExecutorAreaTests
 {
     [Fact(DisplayName = "执行器共享层只引用任务契约")]
@@ -20,7 +20,7 @@ public sealed class ExecutorAreaTests
         ReferencesStayUnder(project, "Kuroe.Executor.Shared", "任务契约", tasks);
     }
 
-    [Fact(DisplayName = "执行器装配层只引用执行器共享、描述文档与任务契约")]
+    [Fact(DisplayName = "执行器装配层只引用执行器共享、流程描述与任务契约")]
     public void Executor_compilation_references_only_shared_description_and_task_contracts()
     {
         string project = Path.Combine(
@@ -30,13 +30,13 @@ public sealed class ExecutorAreaTests
             "Core",
             "Kuroe.Executor.Compilation.csproj");
         string shared = Path.Combine(SourceRoot, "Kuroe.Executor", "Shared");
-        string document = Path.Combine(SourceRoot, "Kuroe.Document", "Shared");
+        string document = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
 
         ReferencesStayUnder(
             project,
             "Kuroe.Executor.Compilation",
-            "执行器共享层、描述文档与任务契约",
+            "执行器共享层、流程描述与任务契约",
             shared,
             document,
             tasks);

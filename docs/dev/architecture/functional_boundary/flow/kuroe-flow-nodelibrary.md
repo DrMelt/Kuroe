@@ -10,7 +10,7 @@
 
 ## 边界外
 
-- 不含描述模型与连接模型：在 Kuroe.Document.Shared。
+- 不含描述模型与连接模型：在 Kuroe.FlowDescription.Shared。
 - 不含图运行期、流程控制与文件格式。
 - 不含容器节点类型的运行语义：在 Kuroe.Flow.NodeType.Container。
 

@@ -1,7 +1,7 @@
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Document.Json;
+using Kuroe.FlowDescription.Json;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 

@@ -59,6 +59,15 @@ public sealed class RepositoryStructureTests
         }
     }
 
+    [Fact(DisplayName = "命名空间禁词按段匹配")]
+    public void Namespace_forbidden_words_match_whole_segments()
+    {
+        Assert.True(Mentions("using Kuroe.Flow.Graph;", "Kuroe.Flow"));
+        Assert.True(Mentions("using Kuroe.Flow;", "Kuroe.Flow"));
+        Assert.False(Mentions("using Kuroe.FlowDescription.Shared;", "Kuroe.Flow"));
+        Assert.False(Mentions("using Kuroe.FlowDescriptions.Shared;", "Kuroe.Flow"));
+    }
+
     [Fact(DisplayName = "图命名空间随所属项目")]
     public void Graph_namespaces_follow_their_owning_projects()
     {

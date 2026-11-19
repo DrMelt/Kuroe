@@ -4,7 +4,7 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>MAF 边界：运行期层只依赖契约层与自己的记录定义，文档装配层只引用流程共享契约与描述文档。</summary>
+/// <summary>MAF 边界：运行期层只依赖契约层与自己的记录定义，文档装配层只引用流程共享契约与流程描述。</summary>
 public sealed class MafBoundaryTests
 {
     [Fact(DisplayName = "Maf 控制层只引用 Kernel 与 Maf 记录")]
@@ -126,7 +126,7 @@ public sealed class MafBoundaryTests
     [Fact(DisplayName = "Maf 文档装配只引用流程共享契约")]
     public void Maf_compilation_references_only_flow_shared_contracts()
     {
-        string document = Path.Combine(SourceRoot, "Kuroe.Document", "Shared");
+        string document = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
         string flowGraphShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
         string flowCompilationShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Compilation", "Shared");
         string mafCompilationShared = Path.Combine(SourceRoot, "Kuroe.Maf", "Compilation", "Shared");

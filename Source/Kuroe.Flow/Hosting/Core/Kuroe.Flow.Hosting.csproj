@@ -17,10 +17,10 @@
         <ProjectReference Include="..\..\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
         <ProjectReference Include="..\..\Records\Shared\Kuroe.Flow.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Document\Shared\Kuroe.Document.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
         <ProjectReference Include="..\..\Compilation\Compiler\Kuroe.Flow.Compilation.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Document\Json\Shared\Kuroe.Document.Json.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Document\Json\Core\Kuroe.Document.Json.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Json\Shared\Kuroe.FlowDescription.Json.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Json\Core\Kuroe.FlowDescription.Json.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
         <ProjectReference Include="..\..\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />
         <ProjectReference Include="..\..\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />

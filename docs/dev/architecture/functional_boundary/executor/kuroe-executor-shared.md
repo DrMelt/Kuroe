@@ -14,7 +14,7 @@
 ## 边界外
 
 - 不含节点形状的校验规则与图结构：在 Kuroe.Flow.Graph.Shared 与 Kuroe.Flow.Compilation。
-- 不含描述文档模型：在 Kuroe.Document.Shared。
+- 不含流程描述模型：在 Kuroe.FlowDescription.Shared。
 - 不含装配行为：在 Kuroe.Executor.Compilation、Kuroe.Flow.Compilation、Kuroe.Flow.NodeLibrary。
 - 不含执行运行期与运行器：在 Kuroe.Execution.Shared 与 Kuroe.Runner。
 

@@ -2,7 +2,7 @@
 
 Kuroe 把用户定义的流程交给模型执行。内核提供任务、执行与流程控制的中性机制，流程实现按图、代码与 MAF 三种形态各自落位，节点与工具把执行接到具体能力上，宿主负责装配。
 
-流程描述文档契约位于 `Source/Kuroe.Document`，执行器与端口词汇契约位于 `Source/Kuroe.Executor`，由图流程与 MAF 流程共同使用。
+流程描述契约位于 `Source/Kuroe.FlowDescription`，执行器与端口词汇契约位于 `Source/Kuroe.Executor`，由图流程与 MAF 流程共同使用。
 
 本文档给出项目划分与依赖关系。
 
@@ -49,10 +49,10 @@ graph TD
         FlowPersistenceGraph["Flow.Persistence.Graph<br>图流程记录编解码"]
     end
 
-    subgraph DDocument["document：流程描述文档契约"]
-        DocumentShared["Document.Shared<br>流程描述 / 参数段"]
-        DocumentJsonShared["Document.Json.Shared<br>流程文件格式端口"]
-        DocumentJson["Document.Json<br>流程文件 JSON 读写"]
+    subgraph DFlowDescription["flow-description：流程描述契约"]
+        FlowDescriptionShared["FlowDescription.Shared<br>流程描述 / 参数段"]
+        FlowDescriptionJsonShared["FlowDescription.Json.Shared<br>流程文件格式端口"]
+        FlowDescriptionJson["FlowDescription.Json<br>流程文件 JSON 读写"]
     end
 
     subgraph DExecutor["executor：执行器契约与装配"]
@@ -194,14 +194,14 @@ graph TD
 
     %% flow 域：模型、编译、控制与装配分层，装配根向下接节点与运行器
     FlowCompilation --> FlowCompilationShared
-    FlowCompilation --> DocumentShared
+    FlowCompilation --> FlowDescriptionShared
     FlowCompilation --> TasksShared
     FlowCompilation --> FlowGraphShared
-    DocumentJson --> DocumentJsonShared
-    DocumentJson --> DocumentShared
-    DocumentJson --> TasksShared
-    DocumentJsonShared --> DocumentShared
-    FlowCompilationShared --> DocumentShared
+    FlowDescriptionJson --> FlowDescriptionJsonShared
+    FlowDescriptionJson --> FlowDescriptionShared
+    FlowDescriptionJson --> TasksShared
+    FlowDescriptionJsonShared --> FlowDescriptionShared
+    FlowCompilationShared --> FlowDescriptionShared
     FlowCompilationShared --> TasksShared
     FlowCompilationShared --> FlowGraphShared
     FlowCompilation --> ExecutorShared
@@ -226,11 +226,11 @@ graph TD
     FlowHosting --> FlowGraphShared
     FlowHosting --> FlowRecordsShared
     FlowHosting --> FlowCompilationShared
-    FlowHosting --> DocumentShared
+    FlowHosting --> FlowDescriptionShared
     FlowHosting --> ExecutorShared
     FlowHosting --> FlowCompilation
-    FlowHosting --> DocumentJsonShared
-    FlowHosting --> DocumentJson
+    FlowHosting --> FlowDescriptionJsonShared
+    FlowHosting --> FlowDescriptionJson
     FlowHosting --> InputShared
     FlowHosting --> FlowNodeLibrary
     FlowHosting --> FlowNodeTypeContainer
@@ -260,13 +260,13 @@ graph TD
     FlowHosting --> TasksPersistenceFiles
     FlowHosting --> PresentationShared
 
-    %% document 域：流程文件与流程实现共用的描述文档
+    %% flow-description 域：流程文件与流程实现共用的流程描述
     ExecutorCompilation --> ExecutorShared
-    ExecutorCompilation --> DocumentShared
+    ExecutorCompilation --> FlowDescriptionShared
     ExecutorCompilation --> TasksShared
     ExecutorShared --> TasksShared
-    MafCompilationShared --> DocumentShared
-    MafCompilation --> DocumentShared
+    MafCompilationShared --> FlowDescriptionShared
+    MafCompilation --> FlowDescriptionShared
 
     FlowGraphShared --> TasksShared
     FlowGraphShared --> ExecutionShared
@@ -558,9 +558,9 @@ graph TD
 | `Kuroe.Flow.Control` | flow | [kuroe-flow-control](functional_boundary/flow/kuroe-flow-control.md) |
 | `Kuroe.Flow.Hosting` | flow | [kuroe-flow-hosting](functional_boundary/flow/kuroe-flow-hosting.md) |
 | `Kuroe.Flow.Persistence.Graph` | flow | [kuroe-flow-persistence-graph](functional_boundary/flow/kuroe-flow-persistence-graph.md) |
-| `Kuroe.Document.Shared` | document | [kuroe-document-shared](functional_boundary/document/kuroe-document-shared.md) |
-| `Kuroe.Document.Json.Shared` | document | [kuroe-document-json-shared](functional_boundary/document/kuroe-document-json-shared.md) |
-| `Kuroe.Document.Json` | document | [kuroe-document-json](functional_boundary/document/kuroe-document-json.md) |
+| `Kuroe.FlowDescription.Shared` | flow-description | [kuroe-flow-description-shared](functional_boundary/flow-description/kuroe-flow-description-shared.md) |
+| `Kuroe.FlowDescription.Json.Shared` | flow-description | [kuroe-flow-description-json-shared](functional_boundary/flow-description/kuroe-flow-description-json-shared.md) |
+| `Kuroe.FlowDescription.Json` | flow-description | [kuroe-flow-description-json](functional_boundary/flow-description/kuroe-flow-description-json.md) |
 | `Kuroe.Executor.Shared` | executor | [kuroe-executor-shared](functional_boundary/executor/kuroe-executor-shared.md) |
 | `Kuroe.Executor.Compilation` | executor | [kuroe-executor-compilation](functional_boundary/executor/kuroe-executor-compilation.md) |
 | `Kuroe.CodeFlow.Records.Shared` | codeflow | [kuroe-codeflow-records-shared](functional_boundary/codeflow/kuroe-codeflow-records-shared.md) |
@@ -610,6 +610,6 @@ graph TD
 
 命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 分为 `Model`、`StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records` 五支，各支再按职责细分，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
 
-`Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.Document`、`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
+`Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.FlowDescription`、`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
 
 引用约束与图命名空间禁用项由架构测试固定，见[架构测试](../架构测试.md)。

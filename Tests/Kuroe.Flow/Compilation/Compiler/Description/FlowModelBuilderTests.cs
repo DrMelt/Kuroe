@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Document.Shared;
+using Kuroe.FlowDescription.Shared;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Flow;
@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Compilation.Tests.Description;
 
-/// <summary>描述文档到图模型的构造：端口类型名按注册表解析。</summary>
+/// <summary>流程描述到图模型的构造：端口类型名按注册表解析。</summary>
 public sealed class FlowModelBuilderTests
 {
     [Fact(DisplayName = "未注册的端口类型在编译时被拒绝")]
@@ -18,13 +18,13 @@ public sealed class FlowModelBuilderTests
         NodeTypeDescriptionRegistry types = new();
         ContainerNodeTypeDescriptions.RegisterInto(types);
         IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(types, new NodeLibraryExpander());
-        FlowDocument document = new(
+        FlowDescriptionSet document = new(
             [],
             [
-                new FlowDocumentFlow(
+                new FlowEntry(
                     "默认",
                     null,
-                    [new PortDocument("目标", "Bogus")],
+                    [new PortDescription("目标", "Bogus")],
                     null),
             ]);
 

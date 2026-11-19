@@ -39,8 +39,8 @@
         <ProjectReference Include="..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Input\Runtime\Kuroe.Input.Runtime.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Document\Json\Shared\Kuroe.Document.Json.Shared.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Document\Json\Core\Kuroe.Document.Json.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.FlowDescription\Json\Shared\Kuroe.FlowDescription.Json.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.FlowDescription\Json\Core\Kuroe.FlowDescription.Json.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />
@@ -54,7 +54,7 @@
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Tasks\Persistence\Files\Core\Kuroe.Tasks.Persistence.Files.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Tasks\Persistence\Serialization\Json\Core\Kuroe.Tasks.Persistence.Json.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Document\Shared\Kuroe.Document.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Control\Core\Kuroe.Flow.Control.csproj" />

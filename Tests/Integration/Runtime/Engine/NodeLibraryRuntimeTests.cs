@@ -1,6 +1,6 @@
 using Kuroe.Configuration.Files;
-using Kuroe.Document.Shared;
-using Kuroe.Document.Json;
+using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Json;
 using Kuroe.Flow.Graph.Shared.Model;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Presentation.Shared;
@@ -33,7 +33,7 @@ public sealed class NodeLibraryRuntimeTests
         Assert.NotNull(container.Nodes);
         Assert.Single(container.Nodes, node => node.Label == new NodeLabel("实施"));
 
-        IReadOnlyList<NodeDefinitionDocument> nodes = new JsonNodeFormat()
+        IReadOnlyList<NodeDefinitionDescription> nodes = new JsonNodeFormat()
             .Read(File.ReadAllText(KuroePaths.At(environment.Root).NodesFile)).ThrowIfError();
         IReadOnlyList<NodeLabel> savedNodes = [.. nodes.Select(node => new NodeLabel(node.Name))];
         Assert.Equal([new NodeLabel("准备")], savedNodes);

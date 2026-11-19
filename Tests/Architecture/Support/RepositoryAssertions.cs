@@ -17,7 +17,7 @@ internal static class RepositoryAssertions
             foreach (string word in forbidden)
             {
                 Assert.False(
-                    text.Contains(word, StringComparison.Ordinal),
+                    Mentions(text, word),
                     $"{Path.GetFileName(file)} 出现{category} {word}。");
             }
         }
@@ -48,4 +48,31 @@ internal static class RepositoryAssertions
                 excluded.Any(directory => IsUnder(reference, directory)),
                 $"{subject} 引用了{boundary} {reference}。"));
     }
+
+    /// <summary>文本是否出现禁词：禁词末字符属于标识符时要求后继不是标识符字符，命名空间前缀按段匹配。</summary>
+    internal static bool Mentions(string text, string word)
+    {
+        bool bounded = IsIdentifierPart(word[^1]);
+        int index = 0;
+        while (index < text.Length)
+        {
+            int found = text.IndexOf(word, index, StringComparison.Ordinal);
+            if (found < 0)
+            {
+                return false;
+            }
+
+            int end = found + word.Length;
+            if (!bounded || end == text.Length || !IsIdentifierPart(text[end]))
+            {
+                return true;
+            }
+
+            index = end;
+        }
+
+        return false;
+    }
+
+    private static bool IsIdentifierPart(char value) => char.IsLetterOrDigit(value) || value == '_';
 }

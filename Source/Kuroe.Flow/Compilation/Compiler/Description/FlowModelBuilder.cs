@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Document.Shared;
+using Kuroe.FlowDescription.Shared;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Validation;
 using Kuroe.Flow.Graph.Shared.Model;
@@ -11,16 +11,16 @@ using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Compilation.Description;
 
-/// <summary>描述文档到授权模型的构造：字段映射、缺省值与形状驱动的结构，不判断模型不变量。</summary>
+/// <summary>流程描述到授权模型的构造：字段映射、缺省值与形状驱动的结构，不判断模型不变量。</summary>
 internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
 {
     /// <summary>把文档里的流程逐条构造成授权模型，错误一次给全。</summary>
-    public ErrorOr<IReadOnlyList<FlowDefinition>> Build(FlowDocument document)
+    public ErrorOr<IReadOnlyList<FlowDefinition>> Build(FlowDescriptionSet document)
     {
         List<FlowDefinition> flows = [];
         List<Error> errors = [];
 
-        foreach (FlowDocumentFlow flow in document.Flows)
+        foreach (FlowEntry flow in document.Flows)
         {
             ErrorOr<FlowName> name = FlowName.Create(flow.Name);
             if (name.IsError)
@@ -45,11 +45,11 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     }
 
     /// <summary>把文档顶层的节点库定义构造成模型定义，错误一次给全。</summary>
-    public ErrorOr<IReadOnlyList<NodeSpec>> BuildLibrary(IReadOnlyList<NodeDefinitionDocument> nodes)
+    public ErrorOr<IReadOnlyList<NodeSpec>> BuildLibrary(IReadOnlyList<NodeDefinitionDescription> nodes)
     {
         List<NodeSpec> definitions = [];
         List<Error> errors = [];
-        foreach (NodeDefinitionDocument node in nodes)
+        foreach (NodeDefinitionDescription node in nodes)
         {
             List<Error> nodeErrors = [];
             ErrorOr<NodeSpec> built = ToDefinition(node, NodeScope.Library, nodeErrors);
@@ -66,7 +66,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         return errors.Count > 0 ? errors : definitions;
     }
 
-    private ErrorOr<FlowDefinition> BuildFlow(FlowName name, FlowDocumentFlow flow, List<Error> errors)
+    private ErrorOr<FlowDefinition> BuildFlow(FlowName name, FlowEntry flow, List<Error> errors)
     {
         NodeScope scope = NodeScope.Flow(name.Value);
 
@@ -93,14 +93,14 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         return new FlowDefinition(name, flow.Description, ports.Value, root.Value);
     }
 
-    private ErrorOr<NodeSpec> ToNode(NodeDocument document, NodeScope scope, List<Error> errors) => document switch
+    private ErrorOr<NodeSpec> ToNode(NodeDescription document, NodeScope scope, List<Error> errors) => document switch
     {
-        NodeReferenceDocument reference => ToReference(reference, scope, errors),
-        NodeDefinitionDocument definition => ToDefinition(definition, scope, errors),
+        NodeReferenceDescription reference => ToReference(reference, scope, errors),
+        NodeDefinitionDescription definition => ToDefinition(definition, scope, errors),
         _ => scope.Node(string.Empty, "不认识的节点描述。"),
     };
 
-    private static ErrorOr<NodeSpec> ToReference(NodeReferenceDocument document, NodeScope scope, List<Error> errors)
+    private static ErrorOr<NodeSpec> ToReference(NodeReferenceDescription document, NodeScope scope, List<Error> errors)
     {
         string label = document.Label;
         ErrorOr<IReadOnlyList<FromGroup>> from = ToFrom(document.From, scope, label);
@@ -129,7 +129,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         };
     }
 
-    private ErrorOr<NodeSpec> ToDefinition(NodeDefinitionDocument document, NodeScope scope, List<Error> errors)
+    private ErrorOr<NodeSpec> ToDefinition(NodeDefinitionDescription document, NodeScope scope, List<Error> errors)
     {
         string label = document.Name;
         if (string.IsNullOrWhiteSpace(document.Kind))
@@ -149,7 +149,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         }
 
         NodeTypeShape shape = description.Shape;
-        CheckDocumentShape(document, shape, scope, errors);
+        CheckDescriptionShape(document, shape, scope, errors);
 
         ErrorOr<IReadOnlyList<InputPort>> inputs = ToInputs(document.Inputs, scope, label);
         if (inputs.IsError)
@@ -196,7 +196,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         if (document.Nodes is { Count: > 0 } nodes)
         {
             children = [];
-            foreach (NodeDocument child in nodes)
+            foreach (NodeDescription child in nodes)
             {
                 ErrorOr<NodeSpec> built = ToNode(child, scope, errors);
                 if (built.IsSuccess)
@@ -233,8 +233,8 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     }
 
     /// <summary>检查文档字段与节点形状的互斥：库定义不写输入绑定，容器不写执行字段。</summary>
-    private static void CheckDocumentShape(
-        NodeDefinitionDocument document,
+    private static void CheckDescriptionShape(
+        NodeDefinitionDescription document,
         NodeTypeShape shape,
         NodeScope scope,
         List<Error> errors)
@@ -268,13 +268,13 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     }
 
     private static ErrorOr<IReadOnlyList<InputPort>> ToInputs(
-        IReadOnlyList<InputPortDocument> entries,
+        IReadOnlyList<InputPortDescription> entries,
         NodeScope scope,
         string nodeLabel)
     {
         List<InputPort> result = [];
         List<Error> errors = [];
-        foreach (InputPortDocument entry in entries)
+        foreach (InputPortDescription entry in entries)
         {
             ErrorOr<PortName> name = PortName.Create(entry.Name);
             if (name.IsError)
@@ -308,7 +308,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     }
 
     private static IReadOnlyList<Port> ToOutputs(
-        NodeDefinitionDocument document,
+        NodeDefinitionDescription document,
         NodeTypeShape shape,
         IReadOnlyList<InputPort> inputs,
         NodeScope scope,
@@ -361,13 +361,13 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 mode: PortMode.Plain))];
 
     private static ErrorOr<IReadOnlyList<Port>> ToPorts(
-        IReadOnlyList<PortDocument> entries,
+        IReadOnlyList<PortDescription> entries,
         NodeScope scope,
         string nodeLabel)
     {
         List<Port> result = [];
         List<Error> errors = [];
-        foreach (PortDocument entry in entries)
+        foreach (PortDescription entry in entries)
         {
             ErrorOr<PortName> name = PortName.Create(entry.Name);
             if (name.IsError)
@@ -416,7 +416,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     }
 
     private static ErrorOr<IReadOnlyList<FromGroup>> ToFrom(
-        IReadOnlyList<FromGroupDocument> entries,
+        IReadOnlyList<FromGroupDescription> entries,
         NodeScope scope,
         string nodeLabel)
     {
@@ -427,10 +427,10 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
 
         List<FromGroup> result = [];
         List<Error> errors = [];
-        foreach (FromGroupDocument entry in entries)
+        foreach (FromGroupDescription entry in entries)
         {
             List<FromLink> links = [];
-            foreach (FromLinkDocument link in entry.Links)
+            foreach (FromLinkDescription link in entry.Links)
             {
                 ErrorOr<PortName> input = PortName.Create(link.Input);
                 if (input.IsError)
@@ -519,36 +519,36 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         return errors.Count > 0 ? errors : result;
     }
 
-    private static PortMode? ToPortMode(PortModeDocument? mode) => mode switch
+    private static PortMode? ToPortMode(PortModeDescription? mode) => mode switch
     {
         null => null,
-        PortModeDocument.Plain => PortMode.Plain,
-        PortModeDocument.Trigger => PortMode.Trigger,
-        PortModeDocument.Constant => PortMode.Constant,
+        PortModeDescription.Plain => PortMode.Plain,
+        PortModeDescription.Trigger => PortMode.Trigger,
+        PortModeDescription.Constant => PortMode.Constant,
         _ => throw new InvalidOperationException($"不认识的端口模式描述取值 {mode}。"),
     };
 
-    private static InputRole? ToInputRole(InputRoleDocument? role) => role switch
+    private static InputRole? ToInputRole(InputRoleDescription? role) => role switch
     {
         null => null,
-        InputRoleDocument.Content => InputRole.Content,
-        InputRoleDocument.Configuration => InputRole.Configuration,
-        InputRoleDocument.Control => InputRole.Control,
+        InputRoleDescription.Content => InputRole.Content,
+        InputRoleDescription.Configuration => InputRole.Configuration,
+        InputRoleDescription.Control => InputRole.Control,
         _ => throw new InvalidOperationException($"不认识的输入角色描述取值 {role}。"),
     };
 
-    private static TriggerCondition ToTriggerCondition(TriggerConditionDocument? condition) => condition switch
+    private static TriggerCondition ToTriggerCondition(TriggerConditionDescription? condition) => condition switch
     {
-        null or TriggerConditionDocument.Positive => TriggerCondition.Positive,
-        TriggerConditionDocument.Negative => TriggerCondition.Negative,
+        null or TriggerConditionDescription.Positive => TriggerCondition.Positive,
+        TriggerConditionDescription.Negative => TriggerCondition.Negative,
         _ => throw new InvalidOperationException($"不认识的触发条件描述取值 {condition}。"),
     };
 
-    private static NodeEmission? ToEmission(NodeEmissionDocument? emission) => emission switch
+    private static NodeEmission? ToEmission(NodeEmissionDescription? emission) => emission switch
     {
         null => null,
-        NodeEmissionDocument.Repeated => NodeEmission.Repeated,
-        NodeEmissionDocument.Once => NodeEmission.Once,
+        NodeEmissionDescription.Repeated => NodeEmission.Repeated,
+        NodeEmissionDescription.Once => NodeEmission.Once,
         _ => throw new InvalidOperationException($"不认识的产出模式描述取值 {emission}。"),
     };
 

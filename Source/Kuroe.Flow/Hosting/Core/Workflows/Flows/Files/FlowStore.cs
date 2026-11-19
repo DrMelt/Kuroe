@@ -1,11 +1,11 @@
 using ErrorOr;
-using Kuroe.Document.Shared;
-using Kuroe.Document.Json.Shared;
+using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Json.Shared;
 using Kuroe.Tasks.Persistence.Files;
 
 namespace Kuroe.Flow.Hosting.Workflows.Flows.Files;
 
-/// <summary>nodes.json 与 flows.json 的文件存取：路径解析、读取与原子写入。文本与描述文档的转换由格式实现承担。</summary>
+/// <summary>nodes.json 与 flows.json 的文件存取：路径解析、读取与原子写入。文本与流程描述的转换由格式实现承担。</summary>
 public sealed class FlowStore(
     string nodesFile,
     string flowsFile,
@@ -37,16 +37,16 @@ public sealed class FlowStore(
     }
 
     /// <summary>读取节点库与流程文件，两个文件都不存在时为空。</summary>
-    public ErrorOr<FlowDocument?> Load()
+    public ErrorOr<FlowDescriptionSet?> Load()
     {
         bool hasNodes = File.Exists(_nodesFile);
         bool hasFlows = File.Exists(_flowsFile);
         if (!hasNodes && !hasFlows)
         {
-            return (FlowDocument?)null;
+            return (FlowDescriptionSet?)null;
         }
 
-        List<NodeDefinitionDocument> nodes = [];
+        List<NodeDefinitionDescription> nodes = [];
         if (hasNodes)
         {
             ErrorOr<string> text = ReadText(_nodesFile);
@@ -55,7 +55,7 @@ public sealed class FlowStore(
                 return text.ErrorsOrEmptyList;
             }
 
-            ErrorOr<IReadOnlyList<NodeDefinitionDocument>> read = ReadNodesText(text.Value);
+            ErrorOr<IReadOnlyList<NodeDefinitionDescription>> read = ReadNodesText(text.Value);
             if (read.IsError)
             {
                 return InFile(_nodesFile, read.ErrorsOrEmptyList);
@@ -64,7 +64,7 @@ public sealed class FlowStore(
             nodes.AddRange(read.Value);
         }
 
-        List<FlowDocumentFlow> flows = [];
+        List<FlowEntry> flows = [];
         if (hasFlows)
         {
             ErrorOr<string> text = ReadText(_flowsFile);
@@ -73,7 +73,7 @@ public sealed class FlowStore(
                 return text.ErrorsOrEmptyList;
             }
 
-            ErrorOr<IReadOnlyList<FlowDocumentFlow>> read = ReadFlowsText(text.Value);
+            ErrorOr<IReadOnlyList<FlowEntry>> read = ReadFlowsText(text.Value);
             if (read.IsError)
             {
                 return InFile(_flowsFile, read.ErrorsOrEmptyList);
@@ -82,28 +82,28 @@ public sealed class FlowStore(
             flows.AddRange(read.Value);
         }
 
-        return new FlowDocument(nodes, flows);
+        return new FlowDescriptionSet(nodes, flows);
     }
 
     /// <summary>把节点库写回 nodes.json。</summary>
-    public ErrorOr<Success> SaveNodes(IReadOnlyList<NodeDefinitionDocument> nodes) =>
+    public ErrorOr<Success> SaveNodes(IReadOnlyList<NodeDefinitionDescription> nodes) =>
         Save(_nodesFile, nodeWriter.Write(nodes));
 
     /// <summary>把流程写回 flows.json。</summary>
-    public ErrorOr<Success> SaveFlows(IReadOnlyList<FlowDocumentFlow> flows) =>
+    public ErrorOr<Success> SaveFlows(IReadOnlyList<FlowEntry> flows) =>
         Save(_flowsFile, flowWriter.Write(flows));
 
     /// <summary>把节点库写成文本，不落盘。存档快照使用。</summary>
-    public ErrorOr<string> RenderNodes(IReadOnlyList<NodeDefinitionDocument> nodes) => nodeWriter.Write(nodes);
+    public ErrorOr<string> RenderNodes(IReadOnlyList<NodeDefinitionDescription> nodes) => nodeWriter.Write(nodes);
 
     /// <summary>把流程写成文本，不落盘。存档快照使用。</summary>
-    public ErrorOr<string> RenderFlows(IReadOnlyList<FlowDocumentFlow> flows) => flowWriter.Write(flows);
+    public ErrorOr<string> RenderFlows(IReadOnlyList<FlowEntry> flows) => flowWriter.Write(flows);
 
     /// <summary>从文本读出节点库，不落盘。存档编译使用。</summary>
-    public ErrorOr<IReadOnlyList<NodeDefinitionDocument>> ReadNodesText(string text) => nodeReader.Read(text);
+    public ErrorOr<IReadOnlyList<NodeDefinitionDescription>> ReadNodesText(string text) => nodeReader.Read(text);
 
     /// <summary>从文本读出流程，不落盘。存档编译使用。</summary>
-    public ErrorOr<IReadOnlyList<FlowDocumentFlow>> ReadFlowsText(string text) => flowReader.Read(text);
+    public ErrorOr<IReadOnlyList<FlowEntry>> ReadFlowsText(string text) => flowReader.Read(text);
 
     /// <summary>读取导入文件，按顶层字段判定节点库文件或流程文件。</summary>
     public ErrorOr<FlowImportFile> ReadFile(string path)

@@ -19,7 +19,7 @@ public sealed class AssistantBoundaryTests
             Assert.DoesNotContain("GraphFlowFramework", text, StringComparison.Ordinal);
             Assert.DoesNotContain("PrepareCompiled", text, StringComparison.Ordinal);
             Assert.DoesNotContain("IFlowDescriptionCompiler", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("FlowDocument", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("FlowDescriptionSet", text, StringComparison.Ordinal);
         }
 
         string project = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Kuroe.Assistant.csproj");
@@ -30,7 +30,7 @@ public sealed class AssistantBoundaryTests
         Assert.DoesNotContain(references, reference =>
             IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Compilation", "Shared")));
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Document", "Shared")));
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared")));
     }
 
     [Fact(DisplayName = "助手把对话宿主与其代码流程分开")]
