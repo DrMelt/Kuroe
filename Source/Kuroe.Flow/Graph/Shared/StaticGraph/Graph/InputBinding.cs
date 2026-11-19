@@ -1,6 +1,5 @@
 using Kuroe.Flow.Graph.Shared.Model;
 using Kuroe.Executor.Shared.Ports;
-using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Graph.Shared.StaticGraph.Graph;
