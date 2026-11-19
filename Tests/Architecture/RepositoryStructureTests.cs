@@ -126,6 +126,12 @@ public sealed class RepositoryStructureTests
             }
         }
 
+        string executorContracts = Path.Combine(SourceRoot, "Kuroe.Executor", "Shared");
+        if (Directory.Exists(executorContracts))
+        {
+            directories.Add(executorContracts);
+        }
+
         string sourceDirectory = Path.Combine([SourceRoot, .. segments]);
         if (!directories.Contains(sourceDirectory, StringComparer.Ordinal))
         {

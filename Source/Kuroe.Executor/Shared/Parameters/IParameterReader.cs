@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Compilation.Shared.NodeTypes;
+namespace Kuroe.Executor.Shared.Parameters;
 
 /// <summary>参数段取值的读侧：按字段名取本轮取值，形状不符经 fail 报出，缺失取安全默认。</summary>
 public interface IParameterReader

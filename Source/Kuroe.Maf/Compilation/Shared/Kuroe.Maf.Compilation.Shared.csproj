@@ -14,5 +14,4 @@
         <ProjectReference Include="..\..\..\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
     </ItemGroup>
-
 </Project>

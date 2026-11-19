@@ -6,6 +6,7 @@ using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Graph;
+using Kuroe.Executor.Shared.Ports;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.Graph.ExecutableNode;
 

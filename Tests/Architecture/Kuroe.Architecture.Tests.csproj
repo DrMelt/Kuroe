@@ -10,4 +10,7 @@
         <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Kuroe.Executor\Shared\Kuroe.Executor.Shared.csproj" />
+    </ItemGroup>
 </Project>

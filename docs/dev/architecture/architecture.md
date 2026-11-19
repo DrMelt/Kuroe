@@ -2,7 +2,7 @@
 
 Kuroe 把用户定义的流程交给模型执行。内核提供任务、执行与流程控制的中性机制，流程实现按图、代码与 MAF 三种形态各自落位，节点与工具把执行接到具体能力上，宿主负责装配。
 
-流程描述文档契约位于 `Source/Kuroe.Document`，由图流程与 MAF 流程共同使用。
+流程描述文档契约位于 `Source/Kuroe.Document`，执行器与端口词汇契约位于 `Source/Kuroe.Executor`，由图流程与 MAF 流程共同使用。
 
 本文档给出项目划分与依赖关系。
 
@@ -40,7 +40,7 @@ graph TD
     subgraph DFlow["flow：图流程模型、编译、控制与装配"]
         FlowGraphShared["Flow.Graph.Shared<br>标识模型 / 图结构 / 运行期节点 / 节点规则"]
         FlowRecordsShared["Flow.Records.Shared<br>图流程记录与种类"]
-        FlowCompilationShared["Flow.Compilation.Shared<br>编译契约 / 类型描述 / 参数读侧"]
+        FlowCompilationShared["Flow.Compilation.Shared<br>编译契约 / 类型描述"]
         FlowCompilation["Flow.Compilation<br>流程描述编译与图编译"]
         FlowNodeLibrary["Flow.NodeLibrary<br>节点库展开与作用域"]
         FlowNodeTypeContainer["Flow.NodeType.Container<br>容器节点类型"]
@@ -53,6 +53,10 @@ graph TD
         DocumentShared["Document.Shared<br>流程描述 / 参数段"]
         DocumentJsonShared["Document.Json.Shared<br>流程文件格式端口"]
         DocumentJson["Document.Json<br>流程文件 JSON 读写"]
+    end
+
+    subgraph DExecutor["executor：执行器与端口词汇"]
+        ExecutorShared["Executor.Shared<br>端口词汇 / 参数读取契约"]
     end
 
     subgraph DCodeFlow["codeflow：代码流程"]
@@ -199,6 +203,9 @@ graph TD
     FlowCompilationShared --> DocumentShared
     FlowCompilationShared --> TasksShared
     FlowCompilationShared --> FlowGraphShared
+    FlowCompilation --> ExecutorShared
+    FlowCompilationShared --> ExecutorShared
+    FlowControl --> ExecutorShared
     FlowControl --> ControlShared
     FlowControl --> ExecutionShared
     FlowControl --> ExecutionRecordsShared
@@ -219,6 +226,7 @@ graph TD
     FlowHosting --> FlowRecordsShared
     FlowHosting --> FlowCompilationShared
     FlowHosting --> DocumentShared
+    FlowHosting --> ExecutorShared
     FlowHosting --> FlowCompilation
     FlowHosting --> DocumentJsonShared
     FlowHosting --> DocumentJson
@@ -257,12 +265,14 @@ graph TD
 
     FlowGraphShared --> TasksShared
     FlowGraphShared --> ExecutionShared
+    FlowGraphShared --> ExecutorShared
     FlowNodeLibrary --> FlowCompilationShared
     FlowNodeLibrary --> TasksShared
     FlowNodeLibrary --> FlowGraphShared
     FlowNodeTypeContainer --> FlowCompilationShared
     FlowNodeTypeContainer --> TasksShared
     FlowNodeTypeContainer --> FlowGraphShared
+    FlowNodeTypeContainer --> ExecutorShared
     FlowPersistenceGraph --> FlowRecordsShared
     FlowPersistenceGraph --> FlowGraphShared
     FlowPersistenceGraph --> ExecutionShared
@@ -292,6 +302,7 @@ graph TD
     MafCompilation --> FlowGraphShared
     MafCompilation --> FlowCompilationShared
     MafCompilation --> TasksShared
+    MafCompilation --> ExecutorShared
     MafCompilation --> ExecutionShared
     Maf --> ControlShared
     Maf --> TasksRecordsShared
@@ -326,23 +337,27 @@ graph TD
     NodeApproval --> RunnerApproval
     NodeApproval --> TasksShared
     NodeApproval --> FlowGraphShared
+    NodeApproval --> ExecutorShared
     NodeApproval --> ExecutionShared
     NodeCommand --> FlowCompilationShared
     NodeCommand --> Shared
     NodeCommand --> RunnerCommand
     NodeCommand --> TasksShared
     NodeCommand --> FlowGraphShared
+    NodeCommand --> ExecutorShared
     NodeCommand --> ExecutionShared
     NodeFile --> FlowCompilationShared
     NodeFile --> Shared
     NodeFile --> RunnerFile
     NodeFile --> TasksShared
     NodeFile --> FlowGraphShared
+    NodeFile --> ExecutorShared
     NodeFile --> ExecutionShared
     NodeInput --> FlowCompilationShared
     NodeInput --> RunnerInput
     NodeInput --> TasksShared
     NodeInput --> FlowGraphShared
+    NodeInput --> ExecutorShared
     NodeInput --> ExecutionShared
     NodeLlm --> Tool
     NodeLlm --> RunnerShared
@@ -351,6 +366,7 @@ graph TD
     NodeLlm --> Shared
     NodeLlm --> TasksShared
     NodeLlm --> FlowGraphShared
+    NodeLlm --> ExecutorShared
     NodeLlm --> ExecutionShared
 
     %% tool 域：载体在最上，工具组按下层能力组装
@@ -539,6 +555,7 @@ graph TD
 | `Kuroe.Document.Shared` | document | [kuroe-document-shared](functional_boundary/document/kuroe-document-shared.md) |
 | `Kuroe.Document.Json.Shared` | document | [kuroe-document-json-shared](functional_boundary/document/kuroe-document-json-shared.md) |
 | `Kuroe.Document.Json` | document | [kuroe-document-json](functional_boundary/document/kuroe-document-json.md) |
+| `Kuroe.Executor.Shared` | executor | [kuroe-executor-shared](functional_boundary/executor/kuroe-executor-shared.md) |
 | `Kuroe.CodeFlow.Records.Shared` | codeflow | [kuroe-codeflow-records-shared](functional_boundary/codeflow/kuroe-codeflow-records-shared.md) |
 | `Kuroe.CodeFlow.Persistence` | codeflow | [kuroe-codeflow-persistence](functional_boundary/codeflow/kuroe-codeflow-persistence.md) |
 | `Kuroe.Maf.Records.Shared` | maf | [kuroe-maf-records-shared](functional_boundary/maf/kuroe-maf-records-shared.md) |

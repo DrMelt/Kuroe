@@ -16,4 +16,4 @@
 
 ## 依赖
 
-- Kuroe.Flow.Compilation.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared。
+- Kuroe.Flow.Compilation.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared、Kuroe.Executor.Shared。

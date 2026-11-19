@@ -51,4 +51,7 @@
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
     </ItemGroup>
 
-    </Project>
+        <ItemGroup>
+        <ProjectReference Include="..\..\..\Kuroe.Executor\Shared\Kuroe.Executor.Shared.csproj" />
+    </ItemGroup>
+</Project>

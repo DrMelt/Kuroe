@@ -1,6 +1,7 @@
 using Kuroe.Flow.Graph.Shared.Model;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Nodes;
+using Kuroe.Executor.Shared.Ports;
 using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Xunit;
@@ -20,6 +21,18 @@ public sealed class PortDeclarationTests
         Assert.Equal(PortTypes.Signal, Assert.NotNull(inputs.Find(new PortName("催办"))).Type);
         Assert.Null(outputs.Find(new PortName("检查")));
         Assert.Null(inputs.Find(new PortName("检查")));
+    }
+
+    [Fact(DisplayName = "常量模式端口是静态且不触发")]
+    public void Constant_mode_ports_are_static_and_do_not_trigger()
+    {
+        Port output = new(new PortName("常量"), PortTypes.Text, mode: PortMode.Constant);
+        InputPort input = new(new PortName("配置"), PortTypes.Context, mode: PortMode.Constant);
+
+        Assert.True(output.IsConstant);
+        Assert.False(output.Trigger);
+        Assert.True(input.IsStatic);
+        Assert.False(input.Trigger);
     }
 
     [Fact(DisplayName = "端口把名称渲染为文本")]

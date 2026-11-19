@@ -1,12 +1,12 @@
 # Kuroe.Flow.Compilation.Shared
 
-流程编译的共享契约：编译入口、库展开、节点类型描述与参数读侧。编译管道只按这些形状工作。
+流程编译的共享契约：编译入口、库展开与节点类型描述。编译管道只按这些形状工作。
 
 ## 职责
 
 - 节点类型描述注册表：类型名到描述的唯一入口，描述给出形状、字段表与参数段读取方式。
 - 编译入口与库展开：构造、展开、校验与图编译的固定顺序，库装配把授权流程与节点库定义展开为具体流程。
-- 参数段读侧：字段声明、取值形态与读侧，形状不符报错，缺失取安全默认。
+- 参数段契约：字段表与描述到类型实例的转换由执行器契约给出，读侧接口在 Kuroe.Executor.Shared。
 - 编译结果：按文档声明序返回全部流程图。
 
 ## 边界外
@@ -19,4 +19,4 @@
 
 ## 依赖
 
-- Kuroe.Document.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared。
+- Kuroe.Document.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared、Kuroe.Executor.Shared。

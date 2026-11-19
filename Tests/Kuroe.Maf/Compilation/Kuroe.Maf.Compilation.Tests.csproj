@@ -23,4 +23,7 @@
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe\Support\Kuroe.TestSupport.csproj" />
     </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Source\Kuroe.Executor\Shared\Kuroe.Executor.Shared.csproj" />
+    </ItemGroup>
 </Project>

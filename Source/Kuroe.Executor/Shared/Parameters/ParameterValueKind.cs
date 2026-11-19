@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Compilation.Shared.NodeTypes;
+namespace Kuroe.Executor.Shared.Parameters;
 
 /// <summary>参数段取值的形态：一个字段承载的值种类。</summary>
 public enum ParameterValueKind

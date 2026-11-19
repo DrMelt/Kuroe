@@ -60,7 +60,7 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact(DisplayName = "图共享层只引用契约层")]
+    [Fact(DisplayName = "图共享层只引用契约层与执行器共享层")]
     public void Graph_shared_project_references_only_contract_layers()
     {
         string project = Path.Combine(
@@ -71,8 +71,9 @@ public sealed class FlowAreaTests
             "Kuroe.Flow.Graph.Shared.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
+        string executor = Path.Combine(SourceRoot, "Kuroe.Executor", "Shared");
 
-        ReferencesStayUnder(project, "Kuroe.Flow.Graph.Shared", "契约层", tasks, execution);
+        ReferencesStayUnder(project, "Kuroe.Flow.Graph.Shared", "契约层与执行器共享层", tasks, execution, executor);
     }
 
     [Fact(DisplayName = "流程区域不含任务与表现项目")]
@@ -205,11 +206,12 @@ public sealed class FlowAreaTests
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
+        string executor = Path.Combine(SourceRoot, "Kuroe.Executor", "Shared");
 
         ReferencesStayUnder(
             project,
             "Kuroe.Flow.Control",
-            "契约层与图记录",
+            "契约层、执行器共享层与图记录",
             control,
             execution,
             executionRecords,
@@ -217,7 +219,8 @@ public sealed class FlowAreaTests
             nodes,
             presentation,
             tasks,
-            taskRecords);
+            taskRecords,
+            executor);
     }
 
     [Fact(DisplayName = "图控制不驱动执行状态机")]

@@ -1,11 +1,10 @@
-using Kuroe.Flow.Graph.Shared.StaticGraph.Ports;
-using Kuroe.Tasks.Shared;
+using Kuroe.Executor.Shared.Ports;
 using Xunit;
 
-namespace Kuroe.Flow.Graph.Shared.Tests.StaticGraph.Ports;
+namespace Kuroe.Executor.Shared.Tests.Ports;
 
 /// <summary>端口类型注册：类型只表达名字与语义，模式由类型注册声明支持范围。</summary>
-public sealed class PortTypeTests
+public sealed class PortTypesTests
 {
     [Fact(DisplayName = "内置类型声明支持模式与默认值")]
     public void Built_in_types_declare_supported_modes_and_defaults()
@@ -33,18 +32,6 @@ public sealed class PortTypeTests
             () => Assert.True(PortTypes.Supports(PortTypes.Signal, PortMode.Plain)),
             () => Assert.True(PortTypes.Supports(PortTypes.Signal, PortMode.Trigger)),
             () => Assert.True(PortTypes.Supports(PortTypes.Signal, PortMode.Constant)));
-    }
-
-    [Fact(DisplayName = "常量模式端口是静态且不触发")]
-    public void Constant_mode_ports_are_static_and_do_not_trigger()
-    {
-        Port output = new(new PortName("常量"), PortTypes.Text, mode: PortMode.Constant);
-        InputPort input = new(new PortName("配置"), PortTypes.Context, mode: PortMode.Constant);
-
-        Assert.True(output.IsConstant);
-        Assert.False(output.Trigger);
-        Assert.True(input.IsStatic);
-        Assert.False(input.Trigger);
     }
 
     [Fact(DisplayName = "解析不区分大小写且类型不带模式后缀")]

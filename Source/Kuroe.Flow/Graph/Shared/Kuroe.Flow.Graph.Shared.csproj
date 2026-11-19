@@ -12,4 +12,7 @@
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
     </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Kuroe.Executor\Shared\Kuroe.Executor.Shared.csproj" />
+    </ItemGroup>
 </Project>

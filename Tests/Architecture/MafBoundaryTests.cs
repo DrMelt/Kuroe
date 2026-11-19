@@ -133,6 +133,7 @@ public sealed class MafBoundaryTests
         string mafDefinition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
+        string executor = Path.Combine(SourceRoot, "Kuroe.Executor", "Shared");
 
         string shared = Path.Combine(
             SourceRoot,
@@ -158,14 +159,15 @@ public sealed class MafBoundaryTests
         ReferencesStayUnder(
             compilation,
             "Kuroe.Maf.Compilation",
-            "流程共享契约",
+            "流程共享契约与执行器共享层",
             document,
             flowGraphShared,
             flowCompilationShared,
             mafCompilationShared,
             mafDefinition,
             tasks,
-            execution);
+            execution,
+            executor);
     }
 
     [Fact(DisplayName = "流程区域不含 Maf")]
