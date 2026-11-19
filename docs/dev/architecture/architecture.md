@@ -57,6 +57,7 @@ graph TD
 
     subgraph DExecutor["executor：执行器与端口词汇"]
         ExecutorShared["Executor.Shared<br>端口词汇 / 参数读取契约"]
+        ExecutorCompilation["Executor.Compilation<br>文档展开与参数读取"]
     end
 
     subgraph DCodeFlow["codeflow：代码流程"]
@@ -260,6 +261,9 @@ graph TD
     FlowHosting --> PresentationShared
 
     %% document 域：流程文件与流程实现共用的描述文档
+    ExecutorCompilation --> ExecutorShared
+    ExecutorCompilation --> DocumentShared
+    ExecutorCompilation --> TasksShared
     MafCompilationShared --> DocumentShared
     MafCompilation --> DocumentShared
 
@@ -556,6 +560,7 @@ graph TD
 | `Kuroe.Document.Json.Shared` | document | [kuroe-document-json-shared](functional_boundary/document/kuroe-document-json-shared.md) |
 | `Kuroe.Document.Json` | document | [kuroe-document-json](functional_boundary/document/kuroe-document-json.md) |
 | `Kuroe.Executor.Shared` | executor | [kuroe-executor-shared](functional_boundary/executor/kuroe-executor-shared.md) |
+| `Kuroe.Executor.Compilation` | executor | [kuroe-executor-compilation](functional_boundary/executor/kuroe-executor-compilation.md) |
 | `Kuroe.CodeFlow.Records.Shared` | codeflow | [kuroe-codeflow-records-shared](functional_boundary/codeflow/kuroe-codeflow-records-shared.md) |
 | `Kuroe.CodeFlow.Persistence` | codeflow | [kuroe-codeflow-persistence](functional_boundary/codeflow/kuroe-codeflow-persistence.md) |
 | `Kuroe.Maf.Records.Shared` | maf | [kuroe-maf-records-shared](functional_boundary/maf/kuroe-maf-records-shared.md) |

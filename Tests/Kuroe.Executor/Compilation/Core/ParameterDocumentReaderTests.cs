@@ -1,0 +1,134 @@
+using Kuroe.Document.Shared;
+using Kuroe.Executor.Compilation;
+using Kuroe.Executor.Shared.Nodes;
+using Kuroe.Executor.Shared.Parameters;
+using Xunit;
+
+namespace Kuroe.Executor.Compilation.Tests;
+
+/// <summary>参数字段的描述读取：按字段表转换取值、未知字段与形状不符的报出。</summary>
+public sealed class ParameterDocumentReaderTests
+{
+    private static readonly TestDescription Description = new();
+
+    [Fact(DisplayName = "读取按声明形状转换值")]
+    public void Read_converts_values_by_the_declared_shape()
+    {
+        List<string> errors = [];
+
+        ParameterExecutor executor = Assert.IsType<ParameterExecutor>(ReadParameters(
+            [
+                ("Text", new FlowValue.Text("展开")),
+                ("Texts", new FlowValue.Array([new FlowValue.Text("甲"), new FlowValue.Text("乙")])),
+                ("Number", new FlowValue.Number("5")),
+                ("Flag", new FlowValue.Boolean(true)),
+            ],
+            errors));
+
+        Assert.Empty(errors);
+        TestParameters parameters = Assert.IsType<TestParameters>(executor.Parameters);
+        Assert.Equal("展开", parameters.Text);
+        Assert.Equal(["甲", "乙"], parameters.Texts);
+        Assert.Equal(5, parameters.Number);
+        Assert.True(parameters.Flag);
+    }
+
+    [Fact(DisplayName = "读取对缺失字段采用安全默认值")]
+    public void Read_takes_safe_defaults_for_missing_fields()
+    {
+        List<string> errors = [];
+
+        ParameterExecutor executor = Assert.IsType<ParameterExecutor>(ReadParameters([], errors));
+
+        Assert.Empty(errors);
+        TestParameters parameters = Assert.IsType<TestParameters>(executor.Parameters);
+        Assert.Null(parameters.Text);
+        Assert.Empty(parameters.Texts);
+        Assert.Null(parameters.Number);
+        Assert.Null(parameters.Flag);
+    }
+
+    [Fact(DisplayName = "读取报告未知字段")]
+    public void Read_reports_unknown_fields() =>
+        Assert.Equal(
+            ["流程 测试 的节点 干活：字段 Extra 不属于 Test 节点。"],
+            Errors([("Text", new FlowValue.Text("展开")), ("Extra", new FlowValue.Text("多余"))]));
+
+    [Fact(DisplayName = "读取报告形状错误的值")]
+    public void Read_reports_values_of_the_wrong_shape() =>
+        Assert.Equal(
+            [
+                "流程 测试 的节点 干活：字段 Text 必须是文本。",
+                "流程 测试 的节点 干活：字段 Texts 必须是文本数组。",
+                "流程 测试 的节点 干活：字段 Number 必须是整数。",
+                "流程 测试 的节点 干活：字段 Flag 必须是布尔值。",
+            ],
+            Errors(
+                [
+                    ("Text", new FlowValue.Number("5")),
+                    ("Texts", new FlowValue.Text("甲")),
+                    ("Number", new FlowValue.Text("五")),
+                    ("Flag", new FlowValue.Text("真")),
+                ]));
+
+    [Fact(DisplayName = "读取报告非整数的数字")]
+    public void Read_reports_numbers_that_are_not_integers() =>
+        Assert.Equal(
+            ["流程 测试 的节点 干活：字段 Number 必须是整数。"],
+            Errors([("Number", new FlowValue.Number("1.5"))]));
+
+    [Fact(DisplayName = "读取报告形状错误的数组项")]
+    public void Read_reports_array_items_of_the_wrong_shape() =>
+        Assert.Equal(
+            ["流程 测试 的节点 干活：字段 Texts 的元素必须是文本。"],
+            Errors([("Texts", new FlowValue.Array([new FlowValue.Number("1"), new FlowValue.Text("甲")]))]));
+
+    private static IExecutor? ReadParameters((string Name, FlowValue Value)[] entries, List<string> errors) =>
+        ParameterDocumentReader.Read(
+            Description,
+            new NodeParameters(entries.ToDictionary(entry => entry.Name, entry => entry.Value)),
+            AssemblyScope.Flow("测试"),
+            "干活",
+            error => errors.Add(error.Description));
+
+    private static List<string> Errors((string Name, FlowValue Value)[] entries)
+    {
+        List<string> errors = [];
+        ReadParameters(entries, errors);
+
+        return errors;
+    }
+
+    private sealed class TestDescription : IExecutorDescription
+    {
+        public ExecutorKind Kind { get; } = new("Test");
+
+        public ExecutorShape Shape { get; } = new();
+
+        public IReadOnlyList<ParameterField> Fields { get; } =
+        [
+            new("Text", ParameterValueKind.Text),
+            new("Texts", ParameterValueKind.Texts),
+            new("Number", ParameterValueKind.Integer),
+            new("Flag", ParameterValueKind.Boolean),
+        ];
+
+        public IExecutor Read(IParameterReader values, ExecutorMessageHandler fail) =>
+            new ParameterExecutor(new TestParameters(
+                values.Text("Text"),
+                values.Texts("Texts"),
+                values.Integer("Number"),
+                values.Boolean("Flag")));
+    }
+
+    private sealed class ParameterExecutor(TestParameters? parameters) : IExecutor
+    {
+        public ExecutorKind Kind { get; } = new("Test");
+
+        public ExecutorShape Shape { get; } = new();
+
+        public TestParameters? Parameters { get; } = parameters;
+    }
+
+    private sealed record TestParameters(string? Text, IReadOnlyList<string> Texts, int? Number, bool? Flag);
+}

@@ -11,7 +11,7 @@
 | kernel | 执行单元、任务域、流程控制、输入通道、表现与任务持久化 | [kuroe-execution-shared](architecture/functional_boundary/kernel/kuroe-execution-shared.md)、[kuroe-tasks-runtime](architecture/functional_boundary/kernel/kuroe-tasks-runtime.md)、[kuroe-control-runtime](architecture/functional_boundary/kernel/kuroe-control-runtime.md) |
 | flow | 图流程模型、编译、运行期与宿主流程库 | [kuroe-flow-graph-shared](architecture/functional_boundary/flow/kuroe-flow-graph-shared.md)、[kuroe-flow-control](architecture/functional_boundary/flow/kuroe-flow-control.md)、[kuroe-flow-hosting](architecture/functional_boundary/flow/kuroe-flow-hosting.md) |
 | document | 流程描述文档契约 | [kuroe-document-shared](architecture/functional_boundary/document/kuroe-document-shared.md) |
-| executor | 执行器与端口词汇契约 | [kuroe-executor-shared](architecture/functional_boundary/executor/kuroe-executor-shared.md) |
+| executor | 执行器与端口词汇契约 | [kuroe-executor-shared](architecture/functional_boundary/executor/kuroe-executor-shared.md)、[kuroe-executor-compilation](architecture/functional_boundary/executor/kuroe-executor-compilation.md) |
 | codeflow | 代码定义流程的记录与编解码 | [kuroe-codeflow-records-shared](architecture/functional_boundary/codeflow/kuroe-codeflow-records-shared.md) |
 | maf | MAF 流程定义、控制、记录与装配 | [kuroe-maf-definition](architecture/functional_boundary/maf/kuroe-maf-definition.md)、[kuroe-maf-control](architecture/functional_boundary/maf/kuroe-maf-control.md)、[kuroe-maf-compilation](architecture/functional_boundary/maf/kuroe-maf-compilation.md) |
 | runner | Llm、命令、文件、输入与审批执行运行器 | [kuroe-runner-llm](architecture/functional_boundary/runner/kuroe-runner-llm.md)、[kuroe-runner-command](architecture/functional_boundary/runner/kuroe-runner-command.md) |
