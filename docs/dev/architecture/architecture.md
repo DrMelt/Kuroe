@@ -55,7 +55,7 @@ graph TD
         DocumentJson["Document.Json<br>流程文件 JSON 读写"]
     end
 
-    subgraph DExecutor["executor：执行器与端口词汇"]
+    subgraph DExecutor["executor：执行器契约与装配"]
         ExecutorShared["Executor.Shared<br>执行器契约与装配形状"]
         ExecutorCompilation["Executor.Compilation<br>注册表与参数读取"]
     end
