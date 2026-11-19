@@ -56,8 +56,8 @@ graph TD
     end
 
     subgraph DExecutor["executor：执行器与端口词汇"]
-        ExecutorShared["Executor.Shared<br>端口词汇 / 执行器条目 / 装配形状"]
-        ExecutorCompilation["Executor.Compilation<br>执行器注册表 / 参数读取"]
+        ExecutorShared["Executor.Shared<br>执行器契约与装配形状"]
+        ExecutorCompilation["Executor.Compilation<br>注册表与参数读取"]
     end
 
     subgraph DCodeFlow["codeflow：代码流程"]
