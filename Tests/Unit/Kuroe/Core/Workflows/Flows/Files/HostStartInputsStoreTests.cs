@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Tests.Support;
-using Kuroe.Flow.Hosting.Workflows.Flows.Files;
+using Kuroe.GraphFlow.HostInputs;
 using Xunit;
 
 namespace Kuroe.Tests.Workflows.Flows.Files;

@@ -16,7 +16,8 @@
         <ProjectReference Include="..\Kuroe\Core\Kuroe.csproj" />
         <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe.Flow\Hosting\Core\Kuroe.Flow.Hosting.csproj" />
+        <ProjectReference Include="..\Kuroe\GraphFlow\Core\Kuroe.GraphFlow.csproj" />
+        <ProjectReference Include="..\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
     </ItemGroup>

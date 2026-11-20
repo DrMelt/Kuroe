@@ -44,10 +44,10 @@ public sealed class NodeRunnerTests
     public void Node_execution_projects_reference_their_runner_implementations()
     {
         string runnerRoot = Path.Combine(SourceRoot, "Kuroe", "Runner");
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow", "NodeExecution", "Core", "Kuroe.Flow.NodeExecution.csproj");
+        string graphFlow = Path.Combine(SourceRoot, "Kuroe", "GraphFlow", "Core", "Kuroe.GraphFlow.csproj");
         string maf = Path.Combine(SourceRoot, "Kuroe.Maf", "NodeExecution", "Core", "Kuroe.Maf.NodeExecution.csproj");
 
-        IReadOnlyList<string> flowReferences = ProjectReferences(flow);
+        IReadOnlyList<string> flowReferences = ProjectReferences(graphFlow);
         foreach (string runner in new[] { "Input", "Approval" })
         {
             Assert.Contains(Path.Combine(runnerRoot, runner, "Core", $"Kuroe.Runner.{runner}.csproj"), flowReferences);

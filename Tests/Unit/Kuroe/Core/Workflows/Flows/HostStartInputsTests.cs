@@ -5,8 +5,7 @@ using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Shared;
-using Kuroe.Flow.Hosting.Workflows.Flows;
-using Kuroe.Flow.Hosting.Workflows.Tasks;
+using Kuroe.GraphFlow.HostInputs;
 using Xunit;
 
 namespace Kuroe.Tests.Workflows.Flows;

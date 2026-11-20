@@ -14,11 +14,11 @@
 
 ## 边界外
 
-- 不含核心装配与任务域：在 Kuroe 与 Kuroe.Flow.Hosting。
+- 不含核心装配与任务域：在 Kuroe 与 Kuroe.GraphFlow。
 - 不含图运行期、图控制与图共享层。
 - 不含交互界面与等待型节点交付。
 - 不含执行实现与流程推进。
 
 ## 依赖
 
-- Kuroe、Kuroe.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Flow.Hosting、Kuroe.Kernel.Tasks.Runtime、Kuroe.Node.Llm、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。
+- Kuroe、Kuroe.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.GraphFlow、Kuroe.Flow.Library、Kuroe.Kernel.Tasks.Runtime、Kuroe.Node.Llm、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

@@ -37,14 +37,13 @@ graph TD
         TasksPersistenceJson["Tasks.Persistence.Serialization.Json<br>存档 JSON 编解码"]
     end
 
-    subgraph DFlow["flow：图流程运行期、控制与装配"]
+    subgraph DFlow["flow：图流程运行期、控制与流程库"]
         FlowGraphShared["Flow.Graph.Shared<br>静态图 / 运行期图状态 / 图节点能力"]
         FlowCompilation["Flow.Compilation<br>图编译与图规则"]
-        FlowNodeExecution["Flow.NodeExecution<br>图节点执行装配"]
         FlowRecordsShared["Flow.Records.Shared<br>图流程记录与种类"]
         FlowNodeTypeContainer["Flow.NodeType.Container<br>容器节点类型"]
         FlowControl["Flow.Control<br>图流程控制与运行期"]
-        FlowHosting["Flow.Hosting<br>图流程注册与流程库装配"]
+        FlowLibrary["Flow.Library<br>流程库、文件存取与导入"]
         FlowPersistenceGraph["Flow.Persistence.Serialization.Graph<br>图流程记录编解码"]
     end
 
@@ -113,6 +112,7 @@ graph TD
 
     subgraph DHost["host：宿主装配与入口"]
         Core["Kuroe<br>核心装配与任务域组合"]
+        GraphFlow["GraphFlow<br>图流程装配与宿主输入"]
         Console["Console<br>交互终端入口"]
         Cli["Cli<br>命令行入口"]
     end
@@ -200,18 +200,16 @@ graph TD
     FlowCompilation --> FlowDescriptionCompilation
     FlowCompilation --> FlowGraphShared
     FlowCompilation --> TasksShared
-    FlowNodeExecution --> FlowGraphShared
-    FlowNodeExecution --> FlowDescriptionDefinitionShared
-    FlowNodeExecution --> ExecutionShared
-    FlowNodeExecution --> TasksShared
-    FlowNodeExecution --> NodeLlm
-    FlowNodeExecution --> NodeFile
-    FlowNodeExecution --> NodeCommand
-    FlowNodeExecution --> NodeInput
-    FlowNodeExecution --> NodeApproval
-    FlowNodeExecution --> RunnerShared
-    FlowNodeExecution --> RunnerInput
-    FlowNodeExecution --> RunnerApproval
+    FlowLibrary --> FlowDescriptionDescriptionShared
+    FlowLibrary --> FlowDescriptionDefinitionShared
+    FlowLibrary --> FlowDescriptionCompilationShared
+    FlowLibrary --> FlowCompilation
+    FlowLibrary --> FlowControl
+    FlowLibrary --> FlowGraphShared
+    FlowLibrary --> FlowRecordsShared
+    FlowLibrary --> FlowDescriptionJsonShared
+    FlowLibrary --> TasksShared
+    FlowLibrary --> TasksPersistenceFiles
     FlowDescriptionJson --> FlowDescriptionJsonShared
     FlowDescriptionJson --> FlowDescriptionDescriptionShared
     FlowDescriptionJson --> TasksShared
@@ -236,45 +234,47 @@ graph TD
     FlowRecordsShared --> TasksRecordsShared
     FlowRecordsShared --> ExecutionShared
     FlowRecordsShared --> FlowGraphShared
-    FlowHosting --> Core
-    FlowHosting --> Shared
-    FlowHosting --> FilesShared
-    FlowHosting --> Process
-    FlowHosting --> FlowGraphShared
-    FlowHosting --> FlowRecordsShared
-    FlowHosting --> FlowDescriptionCompilation
-    FlowHosting --> FlowCompilation
-    FlowHosting --> FlowNodeExecution
-    FlowHosting --> FlowDescriptionDescriptionShared
-    FlowHosting --> FlowDescriptionDefinitionShared
-    FlowHosting --> FlowDescriptionCompilationShared
-    FlowHosting --> FlowDescriptionJsonShared
-    FlowHosting --> FlowDescriptionJson
-    FlowHosting --> InputShared
-    FlowHosting --> FlowNodeTypeContainer
-    FlowHosting --> FlowControl
-    FlowHosting --> FlowPersistenceGraph
-    FlowHosting --> NodeLlm
-    FlowHosting --> NodeFile
-    FlowHosting --> NodeCommand
-    FlowHosting --> RunnerShared
-    FlowHosting --> RunnerCommand
-    FlowHosting --> RunnerFile
-    FlowHosting --> RunnerInput
-    FlowHosting --> RunnerApproval
-    FlowHosting --> Tool
-    FlowHosting --> ToolJson
-    FlowHosting --> ToolContract
-    FlowHosting --> ExecutionShared
-    FlowHosting --> ExecutionRecordsShared
-    FlowHosting --> TasksShared
-    FlowHosting --> TasksPresentationShared
-    FlowHosting --> TasksRecordsShared
-    FlowHosting --> ControlShared
-    FlowHosting --> ControlRuntime
-    FlowHosting --> TasksPersistenceFilesShared
-    FlowHosting --> TasksPersistenceFiles
-    FlowHosting --> PresentationShared
+    GraphFlow --> Core
+    GraphFlow --> Shared
+    GraphFlow --> FilesShared
+    GraphFlow --> Process
+    GraphFlow --> FlowLibrary
+    GraphFlow --> FlowGraphShared
+    GraphFlow --> FlowRecordsShared
+    GraphFlow --> FlowDescriptionCompilation
+    GraphFlow --> FlowCompilation
+    GraphFlow --> FlowDescriptionDescriptionShared
+    GraphFlow --> FlowDescriptionDefinitionShared
+    GraphFlow --> FlowDescriptionCompilationShared
+    GraphFlow --> FlowDescriptionJsonShared
+    GraphFlow --> FlowDescriptionJson
+    GraphFlow --> InputShared
+    GraphFlow --> FlowNodeTypeContainer
+    GraphFlow --> FlowControl
+    GraphFlow --> FlowPersistenceGraph
+    GraphFlow --> NodeLlm
+    GraphFlow --> NodeFile
+    GraphFlow --> NodeCommand
+    GraphFlow --> NodeInput
+    GraphFlow --> NodeApproval
+    GraphFlow --> RunnerShared
+    GraphFlow --> RunnerCommand
+    GraphFlow --> RunnerFile
+    GraphFlow --> RunnerInput
+    GraphFlow --> RunnerApproval
+    GraphFlow --> Tool
+    GraphFlow --> ToolJson
+    GraphFlow --> ToolContract
+    GraphFlow --> ExecutionShared
+    GraphFlow --> ExecutionRecordsShared
+    GraphFlow --> TasksShared
+    GraphFlow --> TasksPresentationShared
+    GraphFlow --> TasksRecordsShared
+    GraphFlow --> ControlShared
+    GraphFlow --> ControlRuntime
+    GraphFlow --> TasksPersistenceFilesShared
+    GraphFlow --> TasksPersistenceFiles
+    GraphFlow --> PresentationShared
 
     FlowGraphShared --> FlowDescriptionDefinitionShared
     FlowGraphShared --> TasksShared
@@ -470,7 +470,8 @@ graph TD
     Cli --> Core
     Cli --> Shared
     Cli --> ExecutionShared
-    Cli --> FlowHosting
+    Cli --> GraphFlow
+    Cli --> FlowLibrary
     Cli --> TasksRuntime
     Cli --> NodeLlm
     Cli --> TasksShared
@@ -486,9 +487,11 @@ graph TD
     Console --> InputShared
     Console --> Tool
     Console --> ToolJson
-    Console --> FlowHosting
-    Console --> FlowNodeExecution
+    Console --> GraphFlow
+    Console --> FlowLibrary
     Console --> FlowGraphShared
+    Console --> FlowControl
+    Console --> FlowRecordsShared
     Console --> TasksRuntime
     Console --> TasksPersistenceRestoringShared
     Console --> ExecutionShared
@@ -566,12 +569,11 @@ graph TD
 | `Kuroe.Kernel.Tasks.Persistence.Serialization.Shared` | kernel | [kuroe-kernel-tasks-persistence-serialization-shared](functional_boundary/kernel/kuroe-kernel-tasks-persistence-serialization-shared.md) |
 | `Kuroe.Kernel.Tasks.Persistence.Serialization.Json` | kernel | [kuroe-kernel-tasks-persistence-serialization-json](functional_boundary/kernel/kuroe-kernel-tasks-persistence-serialization-json.md) |
 | `Kuroe.Flow.Compilation` | flow | [kuroe-flow-compilation](functional_boundary/flow/kuroe-flow-compilation.md) |
-| `Kuroe.Flow.NodeExecution` | flow | [kuroe-flow-node-execution](functional_boundary/flow/kuroe-flow-node-execution.md) |
 | `Kuroe.Flow.Graph.Shared` | flow | [kuroe-flow-graph-shared](functional_boundary/flow/kuroe-flow-graph-shared.md) |
 | `Kuroe.Flow.Records.Shared` | flow | [kuroe-flow-records-shared](functional_boundary/flow/kuroe-flow-records-shared.md) |
 | `Kuroe.Flow.NodeType.Container` | flow | [kuroe-flow-nodetype-container](functional_boundary/flow/kuroe-flow-nodetype-container.md) |
 | `Kuroe.Flow.Control` | flow | [kuroe-flow-control](functional_boundary/flow/kuroe-flow-control.md) |
-| `Kuroe.Flow.Hosting` | flow | [kuroe-flow-hosting](functional_boundary/flow/kuroe-flow-hosting.md) |
+| `Kuroe.Flow.Library` | flow | [kuroe-flow-library](functional_boundary/flow/kuroe-flow-library.md) |
 | `Kuroe.Flow.Persistence.Serialization.Graph` | flow | [kuroe-flow-persistence-serialization-graph](functional_boundary/flow/kuroe-flow-persistence-serialization-graph.md) |
 | `Kuroe.FlowDescription.Description.Shared` | flow-description | [kuroe-flow-description-description-shared](functional_boundary/flow-description/kuroe-flow-description-description-shared.md) |
 | `Kuroe.FlowDescription.Definition.Shared` | flow-description | [kuroe-flow-description-definition-shared](functional_boundary/flow-description/kuroe-flow-description-definition-shared.md) |
@@ -616,6 +618,7 @@ graph TD
 | `Kuroe.Tool.Implementation.Time` | tool | [kuroe-tool-implementation-time](functional_boundary/tool/kuroe-tool-implementation-time.md) |
 | `Kuroe.Assistant` | assistant | [kuroe-assistant](functional_boundary/assistant/kuroe-assistant.md) |
 | `Kuroe` | host | [kuroe](functional_boundary/host/kuroe.md) |
+| `Kuroe.GraphFlow` | host | [kuroe-graph-flow](functional_boundary/host/kuroe-graph-flow.md) |
 | `Kuroe.Console` | host | [kuroe-console](functional_boundary/host/kuroe-console.md) |
 | `Kuroe.Cli` | host | [kuroe-cli](functional_boundary/host/kuroe-cli.md) |
 | `Kuroe.Shared` | platform | [kuroe-shared](functional_boundary/platform/kuroe-shared.md) |
@@ -625,7 +628,7 @@ graph TD
 
 ## 命名空间与路径
 
-命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 分为 `StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records` 四支，`RuntimeGraph` 之下按执行、节点、端口、就绪与任务分段，`Kuroe.FlowDescription.Description.Shared` 分为项目根与 `Reporting`，`Kuroe.FlowDescription.Definition.Shared` 分为 `Model`、`Flow`、`Nodes`、`Ports` 与 `Validation`，`Kuroe.FlowDescription.Compilation.Shared` 分为项目根、`Flow` 与 `NodeTypes`，`Kuroe.FlowDescription.Compilation` 的命名空间在项目根之下按目录分段，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
+命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.GraphFlow` 分为 `BuiltinNodes`、`HostInputs` 与 `NodeExecution` 三支，`Kuroe.Flow.Library` 分为项目根与 `Files`。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 分为 `StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records` 四支，`RuntimeGraph` 之下按执行、节点、端口、就绪与任务分段，`Kuroe.FlowDescription.Description.Shared` 分为项目根与 `Reporting`，`Kuroe.FlowDescription.Definition.Shared` 分为 `Model`、`Flow`、`Nodes`、`Ports` 与 `Validation`，`Kuroe.FlowDescription.Compilation.Shared` 分为项目根、`Flow` 与 `NodeTypes`，`Kuroe.FlowDescription.Compilation` 的命名空间在项目根之下按目录分段，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
 
 `Source/Kuroe.Kernel` 下的项目以 `Kuroe.Kernel` 为前缀，`Source/Kuroe/Tool/Implementation` 下的项目以 `Kuroe.Tool.Implementation` 为前缀，其余项目以 `Source` 下的目录段为项目名前缀。项目名与目录的完整推导规则见[架构测试](../架构测试.md#项目与目录约束)。`Kuroe.FlowDescription`、`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
 

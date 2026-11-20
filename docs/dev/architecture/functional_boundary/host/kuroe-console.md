@@ -15,10 +15,10 @@
 
 ## 边界外
 
-- 不含核心装配与任务域：在 Kuroe 与 Kuroe.Flow.Hosting。
+- 不含核心装配与任务域：在 Kuroe 与 Kuroe.GraphFlow。
 - 不含图流程实现、图运行期与节点类型实现。
 - 不含执行与流程推进：只提交、交付输入与读取快照。
 
 ## 依赖
 
-- Kuroe、Kuroe.Assistant、Kuroe.Node.Llm、Kuroe.Runner.Llm、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Kernel.Input.Shared、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Flow.Hosting、Kuroe.Flow.NodeExecution、Kuroe.Flow.Graph.Shared、Kuroe.Kernel.Tasks.Runtime、Kuroe.Kernel.Tasks.Persistence.Restoring.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。
+- Kuroe、Kuroe.Assistant、Kuroe.Node.Llm、Kuroe.Runner.Llm、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Kernel.Input.Shared、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.GraphFlow、Kuroe.Flow.Library、Kuroe.Flow.Graph.Shared、Kuroe.Flow.Control、Kuroe.Flow.Records.Shared、Kuroe.Kernel.Tasks.Runtime、Kuroe.Kernel.Tasks.Persistence.Restoring.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

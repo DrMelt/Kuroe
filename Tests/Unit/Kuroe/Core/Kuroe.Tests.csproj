@@ -17,8 +17,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\Source\Kuroe\Core\Kuroe.csproj" />
-        <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Hosting\Core\Kuroe.Flow.Hosting.csproj" />
-        <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\NodeExecution\Core\Kuroe.Flow.NodeExecution.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe\GraphFlow\Core\Kuroe.GraphFlow.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />

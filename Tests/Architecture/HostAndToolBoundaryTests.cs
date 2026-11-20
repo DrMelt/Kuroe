@@ -49,24 +49,27 @@ public sealed class HostAndToolBoundaryTests
         }
     }
 
-    [Fact(DisplayName = "Console 只额外引用图共享层与节点执行装配")]
-    public void Console_references_only_graph_shared_and_node_execution_from_flow()
+    [Fact(DisplayName = "Console 只额外引用图共享层与图契约层")]
+    public void Console_references_only_graph_shared_and_graph_contracts_from_flow()
     {
         string project = Path.Combine(SourceRoot, "Kuroe.Console", "Kuroe.Console.csproj");
         string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
         string graphShared = Path.Combine(flow, "Graph", "Shared", "Kuroe.Flow.Graph.Shared.csproj");
-        string nodeExecution = Path.Combine(flow, "NodeExecution", "Core", "Kuroe.Flow.NodeExecution.csproj");
-        string hosting = Path.Combine(flow, "Hosting", "Core", "Kuroe.Flow.Hosting.csproj");
+        string control = Path.Combine(flow, "Control", "Core", "Kuroe.Flow.Control.csproj");
+        string records = Path.Combine(flow, "Records", "Shared", "Kuroe.Flow.Records.Shared.csproj");
+        string library = Path.Combine(flow, "Library", "Core", "Kuroe.Flow.Library.csproj");
+        string graphFlow = Path.Combine(SourceRoot, "Kuroe", "GraphFlow", "Core", "Kuroe.GraphFlow.csproj");
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.Contains(graphShared, references);
-        Assert.Contains(nodeExecution, references);
+        Assert.Contains(graphFlow, references);
         Assert.All(
             references.Where(reference => IsUnder(reference, flow)),
             reference => Assert.True(
                 string.Equals(reference, graphShared, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(reference, nodeExecution, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(reference, hosting, StringComparison.OrdinalIgnoreCase),
+                    || string.Equals(reference, control, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(reference, records, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(reference, library, StringComparison.OrdinalIgnoreCase),
                 $"Console 引用了图区域的 {reference}。"));
     }
 }

@@ -7,8 +7,8 @@ using Kuroe.Flow.NodeType.Container;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Tests.Support;
-using Kuroe.Flow.Hosting.Workflows.Flows;
-using Kuroe.Flow.Hosting.Workflows.Flows.Files;
+using Kuroe.Flow.Library;
+using Kuroe.Flow.Library.Files;
 using Xunit;
 using Kuroe.FlowDescription.Compilation.Library;
 
@@ -56,7 +56,7 @@ public sealed class FlowServiceTests
             NodeTypeDescriptionRegistry types = new();
             ContainerNodeTypeDescriptions.RegisterInto(types);
             LlmNodeTypeDescriptions.RegisterInto(types);
-            Kuroe.Flow.Hosting.Workflows.Flows.FlowCompilation compiler = new(
+            Kuroe.Flow.Library.FlowCompilation compiler = new(
                 new FlowDescriptionCompiler(types, new NodeLibraryExpander()),
                 new FlowGraphCompiler());
             JsonNodeFormat nodeFormat = new();

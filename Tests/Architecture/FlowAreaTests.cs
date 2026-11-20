@@ -7,15 +7,15 @@ namespace Kuroe.Architecture.Tests;
 /// <summary>流程区域边界：共享层是纯模型，节点与图各自持有实现，流程区域与代码流程互不引用。</summary>
 public sealed class FlowAreaTests
 {
-    [Fact(DisplayName = "流程宿主不引用执行核")]
-    public void Flow_hosting_does_not_reference_execution_core()
+    [Fact(DisplayName = "图流程装配不引用执行核")]
+    public void Graph_flow_does_not_reference_execution_core()
     {
         string project = Path.Combine(
             SourceRoot,
-            "Kuroe.Flow",
-            "Hosting",
+            "Kuroe",
+            "GraphFlow",
             "Core",
-            "Kuroe.Flow.Hosting.csproj");
+            "Kuroe.GraphFlow.csproj");
         string execution = Path.Combine(KernelRoot, "Execution", "Core");
 
         Assert.DoesNotContain(
@@ -42,15 +42,15 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact(DisplayName = "图节点执行装配引用图共享层")]
-    public void Flow_node_execution_references_graph_shared()
+    [Fact(DisplayName = "图流程装配引用图共享层")]
+    public void Graph_flow_references_graph_shared()
     {
         string project = Path.Combine(
             SourceRoot,
-            "Kuroe.Flow",
-            "NodeExecution",
+            "Kuroe",
+            "GraphFlow",
             "Core",
-            "Kuroe.Flow.NodeExecution.csproj");
+            "Kuroe.GraphFlow.csproj");
         string graphShared = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
@@ -75,6 +75,42 @@ public sealed class FlowAreaTests
         string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
 
         ReferencesStayUnder(project, "Kuroe.Flow.Graph.Shared", "描述、契约层与执行共享层", tasks, execution, description);
+    }
+
+    [Fact(DisplayName = "流程项目不引用宿主目录")]
+    public void Flow_projects_do_not_reference_host_root()
+    {
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string host = Path.Combine(SourceRoot, "Kuroe");
+
+        Assert.NotEmpty(ProjectFiles(flow));
+        foreach (string project in ProjectFiles(flow))
+        {
+            Assert.DoesNotContain(
+                ProjectReferences(project),
+                reference => IsUnder(reference, host));
+        }
+    }
+
+    [Fact(DisplayName = "流程库只引用流程与内核契约")]
+    public void Flow_library_references_only_flow_and_kernel_contracts()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Library",
+            "Core",
+            "Kuroe.Flow.Library.csproj");
+        string host = Path.Combine(SourceRoot, "Kuroe");
+        string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
+        string runners = Path.Combine(SourceRoot, "Kuroe", "Runner");
+        string tools = Path.Combine(SourceRoot, "Kuroe", "Tool");
+        IReadOnlyList<string> references = ProjectReferences(project);
+
+        Assert.DoesNotContain(references, reference => IsUnder(reference, host));
+        Assert.DoesNotContain(references, reference => IsUnder(reference, nodes));
+        Assert.DoesNotContain(references, reference => IsUnder(reference, runners));
+        Assert.DoesNotContain(references, reference => IsUnder(reference, tools));
     }
 
     [Fact(DisplayName = "流程区域不含任务与表现项目")]

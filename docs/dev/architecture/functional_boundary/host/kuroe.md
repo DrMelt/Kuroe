@@ -15,7 +15,7 @@
 
 ## 边界外
 
-- 不含图运行期、图控制与 Kuroe.Flow 下任何项目。
+- 不含图运行期、图控制与 Kuroe.Flow 下任何项目；图流程装配在 Kuroe.GraphFlow。
 - 不含 MAF 流程：在 Kuroe.Maf，由宿主另行注册。
 - 不含入口与界面：在 Kuroe.Console 与 Kuroe.Cli。
 - 不含节点与运行器实现：只做装配接线。
