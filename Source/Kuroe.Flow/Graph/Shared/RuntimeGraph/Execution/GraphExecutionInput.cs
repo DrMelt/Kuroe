@@ -1,5 +1,4 @@
 using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
@@ -26,7 +25,7 @@ public sealed record GraphExecutionInput : IPortTexts
     public int ExecutionCount { get; init; } = 1;
 
     /// <summary>该节点的执行轮次上限。</summary>
-    public int MaxAttempts { get; init; } = ExecutableNode.DefaultMaxExecutions;
+    public int MaxAttempts { get; init; } = ExecutableSpec.DefaultMaxExecutions;
 
     /// <summary>本轮各输入端口取到的内容：Context 输入端口的取值在最前，其余按生效组内连接序，
     /// 未连接的默认值按输入声明序追加，信号输入不取内容。文本经 <see cref="Texts"/> 读取。</summary>

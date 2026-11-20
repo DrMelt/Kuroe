@@ -2,8 +2,6 @@ using Kuroe.FlowDescription.Shared.Parameters;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Command.Tests;
@@ -11,14 +9,12 @@ namespace Kuroe.Node.Command.Tests;
 /// <summary>命令节点的描述契约：字段表与参数读取。</summary>
 public sealed class CommandNodeTypeDescriptionTests
 {
-    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
-
     private static readonly string Root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "kuroe-command-description-tests"));
 
     [Fact(DisplayName = "描述声明种类形状与字段")]
     public void Description_declares_the_kind_shape_and_fields()
     {
-        CommandNodeTypeDescription description = new(Root, RunnerFactory);
+        CommandNodeTypeDescription description = new(Root);
 
         Assert.Equal(CommandNodeTypes.Name, description.Kind);
         Assert.Equal(CommandNodeTypes.Shape, description.Shape);
@@ -39,7 +35,7 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Read_keeps_program_arguments_directory_and_limits()
     {
         List<string> failures = [];
-        INodeType type = new CommandNodeTypeDescription(Root, RunnerFactory)
+        INodeType type = new CommandNodeTypeDescription(Root)
             .Read(new Reader("dotnet", ["build", "--no-restore"], "{root}/src", 30, 1200,
                 new Dictionary<string, string> { ["root"] = "任务路径" }, failOnNonZeroExitCode: true), failures.Add);
 
@@ -61,7 +57,7 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Missing_program_is_reported()
     {
         List<string> failures = [];
-        _ = new CommandNodeTypeDescription(Root, RunnerFactory).Read(new Reader(), failures.Add);
+        _ = new CommandNodeTypeDescription(Root).Read(new Reader(), failures.Add);
 
         Assert.Equal(["命令执行节点必须声明 Program。"], failures);
     }
@@ -70,7 +66,7 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Non_positive_timeout_is_reported()
     {
         List<string> failures = [];
-        _ = new CommandNodeTypeDescription(Root, RunnerFactory)
+        _ = new CommandNodeTypeDescription(Root)
             .Read(new Reader("dotnet", timeoutSeconds: 0), failures.Add);
 
         Assert.Equal(["TimeoutSeconds 必须是正整数。"], failures);
@@ -80,7 +76,7 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Negative_max_chars_is_reported()
     {
         List<string> failures = [];
-        _ = new CommandNodeTypeDescription(Root, RunnerFactory)
+        _ = new CommandNodeTypeDescription(Root)
             .Read(new Reader("dotnet", maxChars: -1), failures.Add);
 
         Assert.Equal(["MaxChars 不能是负数。"], failures);
@@ -90,7 +86,7 @@ public sealed class CommandNodeTypeDescriptionTests
     public void Defaults_use_the_workspace_root_and_declared_limits()
     {
         List<string> failures = [];
-        INodeType type = new CommandNodeTypeDescription(Root, RunnerFactory)
+        INodeType type = new CommandNodeTypeDescription(Root)
             .Read(new Reader("dotnet"), failures.Add);
 
         CommandExecutionParameters parameters =
@@ -109,7 +105,7 @@ public sealed class CommandNodeTypeDescriptionTests
     {
         RecordingRegistry registry = new();
 
-        CommandNodeTypeDescriptions.RegisterInto(registry, Root, RunnerFactory);
+        CommandNodeTypeDescriptions.RegisterInto(registry, Root);
 
         Assert.Equal([CommandNodeTypes.Name], registry.Kinds);
     }
@@ -166,11 +162,5 @@ public sealed class CommandNodeTypeDescriptionTests
         public IReadOnlyList<NodeKind> Kinds => [.. _descriptions.Select(description => description.Kind)];
     }
 
-    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
-    {
-        public IExecutionRunner Create(
-            IExecutionParameters parameters,
-            IExecutionRequestEntry requests) =>
-            throw new InvalidOperationException("测试节点类型不建立运行器。");
-    }
+
 }

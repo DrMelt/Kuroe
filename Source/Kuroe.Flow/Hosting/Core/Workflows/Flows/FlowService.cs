@@ -1,5 +1,5 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
-using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared;
 using Kuroe.Flow.Control.Runtime.Catalog;
 using Kuroe.Flow.Records.Shared;
@@ -15,7 +15,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
 {
     private readonly FlowStore _store;
     private readonly IReadOnlyList<NodeSpec> _builtins;
-    private readonly IFlowDescriptionCompiler _compiler;
+    private readonly IFlowCompiler _compiler;
     private readonly bool _tolerateFailures;
     private readonly Lock _gate = new();
     private FlowDescriptionSet _document;
@@ -25,7 +25,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     private FlowService(
         FlowStore store,
         IReadOnlyList<NodeSpec> builtins,
-        IFlowDescriptionCompiler compiler,
+        IFlowCompiler compiler,
         bool tolerateFailures,
         FlowDescriptionSet document,
         IReadOnlyList<FlowGraph> compiled,
@@ -44,7 +44,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     public static ErrorOr<FlowService> Create(
         FlowStore store,
         IReadOnlyList<NodeSpec> builtinNodes,
-        IFlowDescriptionCompiler compiler,
+        IFlowCompiler compiler,
         bool tolerateFailures)
     {
         ErrorOr<FlowDescriptionSet?> loaded = store.Load();
@@ -384,7 +384,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     private static ErrorOr<CompileResult> Compile(
         FlowDescriptionSet document,
         IReadOnlyList<NodeSpec> builtins,
-        IFlowDescriptionCompiler compiler)
+        IFlowCompiler compiler)
     {
         List<Error> duplicates = [.. Duplicated(document.Flows)];
         if (duplicates.Count > 0)

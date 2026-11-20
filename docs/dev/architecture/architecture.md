@@ -2,7 +2,7 @@
 
 Kuroe 把用户定义的流程交给模型执行。内核提供任务、执行与流程控制的中性机制，流程实现按图、代码与 MAF 三种形态各自落位，节点与工具把执行接到具体能力上，宿主负责装配。
 
-流程描述、端口词汇与共享描述编译位于 `Source/Kuroe.FlowDescription`，由图流程与 MAF 流程共同使用。图流程与 MAF 流程各自把共享编译结果装配成自己的运行期模型。
+流程描述、端口词汇与共享描述编译位于 `Source/Kuroe.FlowDescription`，由图流程与 MAF 流程共同使用。图编译位于 `Kuroe.Flow.Compilation`，MAF 从展开后的描述装配步骤。
 
 本文档给出项目划分与依赖关系。
 
@@ -38,7 +38,9 @@ graph TD
     end
 
     subgraph DFlow["flow：图流程运行期、控制与装配"]
-        FlowGraphShared["Flow.Graph.Shared<br>运行期图状态与执行视图"]
+        FlowGraphShared["Flow.Graph.Shared<br>静态图 / 运行期图状态 / 图节点能力"]
+        FlowCompilation["Flow.Compilation<br>图编译与图规则"]
+        FlowNodeExecution["Flow.NodeExecution<br>图节点执行装配"]
         FlowRecordsShared["Flow.Records.Shared<br>图流程记录与种类"]
         FlowNodeTypeContainer["Flow.NodeType.Container<br>容器节点类型"]
         FlowControl["Flow.Control<br>图流程控制与运行期"]
@@ -47,8 +49,8 @@ graph TD
     end
 
     subgraph DFlowDescription["flow-description：流程描述与共享编译"]
-        FlowDescriptionShared["FlowDescription.Shared<br>描述模型 / 端口词汇 / 静态图 / 校验"]
-        FlowDescriptionCompilation["FlowDescription.Compilation<br>描述构造 / 库展开 / 图编译"]
+        FlowDescriptionShared["FlowDescription.Shared<br>描述模型 / 端口词汇 / 节点类型规格 / 校验"]
+        FlowDescriptionCompilation["FlowDescription.Compilation<br>描述构造 / 库展开 / 语言校验"]
         FlowDescriptionJsonShared["FlowDescription.Json.Shared<br>流程文件格式端口"]
         FlowDescriptionJson["FlowDescription.Json<br>流程文件 JSON 读写"]
     end
@@ -65,6 +67,7 @@ graph TD
         MafCompilation["Maf.Compilation<br>文档装配与投影"]
         MafControl["Maf.Control<br>MAF 流程控制与步骤桥接"]
         MafPersistence["Maf.Persistence<br>MAF 流程记录编解码"]
+        MafNodeExecution["Maf.NodeExecution<br>MAF 节点执行装配"]
         Maf["Maf<br>MAF 流程装配入口"]
     end
 
@@ -188,6 +191,22 @@ graph TD
     %% flow 域：描述编译在 FlowDescription，流程区域负责运行期与装配
     FlowDescriptionCompilation --> FlowDescriptionShared
     FlowDescriptionCompilation --> TasksShared
+    FlowCompilation --> FlowDescriptionShared
+    FlowCompilation --> FlowDescriptionCompilation
+    FlowCompilation --> FlowGraphShared
+    FlowCompilation --> TasksShared
+    FlowNodeExecution --> FlowGraphShared
+    FlowNodeExecution --> FlowDescriptionShared
+    FlowNodeExecution --> ExecutionShared
+    FlowNodeExecution --> TasksShared
+    FlowNodeExecution --> NodeLlm
+    FlowNodeExecution --> NodeFile
+    FlowNodeExecution --> NodeCommand
+    FlowNodeExecution --> NodeInput
+    FlowNodeExecution --> NodeApproval
+    FlowNodeExecution --> RunnerShared
+    FlowNodeExecution --> RunnerInput
+    FlowNodeExecution --> RunnerApproval
     FlowDescriptionJson --> FlowDescriptionJsonShared
     FlowDescriptionJson --> FlowDescriptionShared
     FlowDescriptionJson --> TasksShared
@@ -214,6 +233,8 @@ graph TD
     FlowHosting --> FlowGraphShared
     FlowHosting --> FlowRecordsShared
     FlowHosting --> FlowDescriptionCompilation
+    FlowHosting --> FlowCompilation
+    FlowHosting --> FlowNodeExecution
     FlowHosting --> FlowDescriptionShared
     FlowHosting --> FlowDescriptionJsonShared
     FlowHosting --> FlowDescriptionJson
@@ -224,8 +245,6 @@ graph TD
     FlowHosting --> NodeLlm
     FlowHosting --> NodeFile
     FlowHosting --> NodeCommand
-    FlowHosting --> NodeInput
-    FlowHosting --> NodeApproval
     FlowHosting --> RunnerShared
     FlowHosting --> RunnerCommand
     FlowHosting --> RunnerFile
@@ -281,6 +300,13 @@ graph TD
     MafCompilation --> FlowDescriptionShared
     MafCompilation --> TasksShared
     MafCompilation --> ExecutionShared
+    MafNodeExecution --> MafCompilationShared
+    MafNodeExecution --> MafCompilation
+    MafNodeExecution --> FlowDescriptionShared
+    MafNodeExecution --> NodeLlm
+    MafNodeExecution --> NodeFile
+    MafNodeExecution --> NodeCommand
+    MafNodeExecution --> ExecutionShared
     Maf --> ControlShared
     Maf --> TasksRecordsShared
     Maf --> FlowDescriptionShared
@@ -313,34 +339,23 @@ graph TD
     RunnerLlm --> ExecutionShared
     RunnerLlm --> Tool
     NodeApproval --> FlowDescriptionShared
-    NodeApproval --> RunnerApproval
-    NodeApproval --> TasksShared
-    NodeApproval --> FlowGraphShared
-    NodeApproval --> ExecutionShared
     NodeCommand --> FlowDescriptionShared
     NodeCommand --> Shared
     NodeCommand --> RunnerCommand
     NodeCommand --> TasksShared
-    NodeCommand --> FlowGraphShared
     NodeCommand --> ExecutionShared
     NodeFile --> FlowDescriptionShared
     NodeFile --> Shared
     NodeFile --> RunnerFile
     NodeFile --> TasksShared
-    NodeFile --> FlowGraphShared
     NodeFile --> ExecutionShared
     NodeInput --> FlowDescriptionShared
-    NodeInput --> RunnerInput
-    NodeInput --> TasksShared
-    NodeInput --> FlowGraphShared
-    NodeInput --> ExecutionShared
     NodeLlm --> Tool
     NodeLlm --> RunnerShared
     NodeLlm --> RunnerLlm
     NodeLlm --> FlowDescriptionShared
     NodeLlm --> Shared
     NodeLlm --> TasksShared
-    NodeLlm --> FlowGraphShared
     NodeLlm --> ExecutionShared
 
     %% tool 域：载体在最上，工具组按下层能力组装
@@ -517,6 +532,8 @@ graph TD
 | `Kuroe.Tasks.Persistence.Restoring` | kernel | [kuroe-tasks-persistence-restoring](functional_boundary/kernel/kuroe-tasks-persistence-restoring.md) |
 | `Kuroe.Tasks.Persistence.Serialization.Shared` | kernel | [kuroe-tasks-persistence-serialization-shared](functional_boundary/kernel/kuroe-tasks-persistence-serialization-shared.md) |
 | `Kuroe.Tasks.Persistence.Json` | kernel | [kuroe-tasks-persistence-json](functional_boundary/kernel/kuroe-tasks-persistence-json.md) |
+| `Kuroe.Flow.Compilation` | flow | [kuroe-flow-compilation](functional_boundary/flow/kuroe-flow-compilation.md) |
+| `Kuroe.Flow.NodeExecution` | flow | [kuroe-flow-node-execution](functional_boundary/flow/kuroe-flow-node-execution.md) |
 | `Kuroe.Flow.Graph.Shared` | flow | [kuroe-flow-graph-shared](functional_boundary/flow/kuroe-flow-graph-shared.md) |
 | `Kuroe.Flow.Records.Shared` | flow | [kuroe-flow-records-shared](functional_boundary/flow/kuroe-flow-records-shared.md) |
 | `Kuroe.Flow.NodeType.Container` | flow | [kuroe-flow-nodetype-container](functional_boundary/flow/kuroe-flow-nodetype-container.md) |
@@ -533,6 +550,7 @@ graph TD
 | `Kuroe.Maf.Definition` | maf | [kuroe-maf-definition](functional_boundary/maf/kuroe-maf-definition.md) |
 | `Kuroe.Maf.Compilation.Shared` | maf | [kuroe-maf-compilation-shared](functional_boundary/maf/kuroe-maf-compilation-shared.md) |
 | `Kuroe.Maf.Compilation` | maf | [kuroe-maf-compilation](functional_boundary/maf/kuroe-maf-compilation.md) |
+| `Kuroe.Maf.NodeExecution` | maf | [kuroe-maf-node-execution](functional_boundary/maf/kuroe-maf-node-execution.md) |
 | `Kuroe.Maf.Control` | maf | [kuroe-maf-control](functional_boundary/maf/kuroe-maf-control.md) |
 | `Kuroe.Maf.Persistence` | maf | [kuroe-maf-persistence](functional_boundary/maf/kuroe-maf-persistence.md) |
 | `Kuroe.Maf` | maf | [kuroe-maf](functional_boundary/maf/kuroe-maf.md) |

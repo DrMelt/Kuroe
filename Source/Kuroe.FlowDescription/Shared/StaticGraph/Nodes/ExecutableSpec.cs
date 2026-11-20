@@ -3,6 +3,9 @@ namespace Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 /// <summary>执行配置：执行节点的产出模式与执行上限声明。能力与措辞等类型专属声明由节点类型与参数承载。</summary>
 public sealed record ExecutableSpec
 {
+    /// <summary>执行次数上限的默认值。</summary>
+    public const int DefaultMaxExecutions = 100;
+
     /// <summary>产出模式：逐次发布或首次发布后冻结。未写时逐次发布。</summary>
     public NodeEmission Emission { get; init; } = NodeEmission.Repeated;
 

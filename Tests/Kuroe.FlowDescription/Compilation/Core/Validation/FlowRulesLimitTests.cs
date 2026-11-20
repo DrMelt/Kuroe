@@ -1,8 +1,9 @@
+using Kuroe.Flow.Compilation;
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
@@ -21,7 +22,7 @@ public sealed class FlowRulesLimitTests
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: null, source: null, Exec("干活"))));
 
-        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "干活").MaxExecutions);
+        Assert.Equal(ExecutableSpec.DefaultMaxExecutions, Executable(graph, "干活").MaxExecutions);
     }
 
     [Fact(DisplayName = "显式成员上限保留")]
@@ -39,7 +40,7 @@ public sealed class FlowRulesLimitTests
 
         Assert.Equal(2, ContainerOf(graph, "整体").MaxExecutions);
         Assert.Equal(2, Assert.IsType<NodeInputPlan>(graph.PlanOf(NodePath.Of("整体"))).MaxExecutions);
-        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
+        Assert.Equal(ExecutableSpec.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
     }
 
     [Fact(DisplayName = "成员上限独立于容器")]
@@ -48,7 +49,7 @@ public sealed class FlowRulesLimitTests
         NodeGraph graph = Compile(Flow(Container("整体", max: 2, source: null, Exec("重点", max: 5), Exec("普通"))));
 
         Assert.Equal(5, Executable(graph, "重点").MaxExecutions);
-        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
+        Assert.Equal(ExecutableSpec.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
     }
 
     [Fact(DisplayName = "嵌套容器上限保留")]
@@ -61,8 +62,8 @@ public sealed class FlowRulesLimitTests
         Assert.Equal(5, ContainerOf(graph, "内部").MaxExecutions);
         Assert.Equal(2, ContainerOf(graph, "整体").MaxExecutions);
         Assert.Equal(2, Assert.IsType<NodeInputPlan>(graph.PlanOf(NodePath.Of("整体"))).MaxExecutions);
-        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "内层干活").MaxExecutions);
-        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "外层干活").MaxExecutions);
+        Assert.Equal(ExecutableSpec.DefaultMaxExecutions, Executable(graph, "内层干活").MaxExecutions);
+        Assert.Equal(ExecutableSpec.DefaultMaxExecutions, Executable(graph, "外层干活").MaxExecutions);
     }
 
     private static ContainerNode ContainerOf(NodeGraph graph, string label) =>

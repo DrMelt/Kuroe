@@ -4,8 +4,6 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Command.Tests;
@@ -13,8 +11,6 @@ namespace Kuroe.Node.Command.Tests;
 /// <summary>命令节点类型的形状与类型规则：派发执行，不调用模型，按版本执行工作目录内的命令。</summary>
 public sealed class CommandNodeTypeTests
 {
-    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
-
     private static readonly CommandExecutionParameters Parameters = new()
     {
         Program = "dotnet",
@@ -25,7 +21,7 @@ public sealed class CommandNodeTypeTests
         MaxChars = CommandNodeTypes.DefaultMaxChars,
     };
 
-    private static readonly CommandNodeType Type = new(Parameters, RunnerFactory);
+    private static readonly CommandNodeType Type = new(Parameters);
 
     [Fact(DisplayName = "命令节点名称是文件书写的种类")]
     public void Name_is_the_kind_written_in_files()
@@ -53,7 +49,7 @@ public sealed class CommandNodeTypeTests
     [Fact(DisplayName = "命令类型创建把声明保留在实例上")]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType type = CommandNodeTypes.Create(Parameters, RunnerFactory);
+        INodeType type = CommandNodeTypes.Create(Parameters);
 
         CommandNodeType command = Assert.IsType<CommandNodeType>(type);
         Assert.Same(Parameters, command.Parameters);
@@ -91,7 +87,7 @@ public sealed class CommandNodeTypeTests
             Directory = "{root}/src",
             Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
         };
-        CommandNodeType type = new(parameters, RunnerFactory);
+        CommandNodeType type = new(parameters);
         InputPort[] inputs =
         [
             new(new PortName("任务路径"), PortTypes.Signal),
@@ -109,7 +105,7 @@ public sealed class CommandNodeTypeTests
         {
             Arguments = ["clone", "--branch", "{branch}"],
         };
-        CommandNodeType type = new(parameters, RunnerFactory);
+        CommandNodeType type = new(parameters);
 
         Assert.Contains(Failures(type, Node(type: type)),
             error => error.EndsWith("命令占位符 {branch} 没有对应的命令变量映射。"));
@@ -123,7 +119,7 @@ public sealed class CommandNodeTypeTests
             Arguments = ["clone", "{url}"],
             Variables = new Dictionary<string, string> { ["url"] = "仓库地址" },
         };
-        CommandNodeType type = new(parameters, RunnerFactory);
+        CommandNodeType type = new(parameters);
         InputPort[] inputs =
         [
             new(new PortName("仓库地址"), PortTypes.Text),
@@ -141,7 +137,7 @@ public sealed class CommandNodeTypeTests
             Arguments = ["clone"],
             Variables = new Dictionary<string, string> { ["url"] = "仓库地址" },
         };
-        CommandNodeType type = new(parameters, RunnerFactory);
+        CommandNodeType type = new(parameters);
         InputPort[] inputs =
         [
             new(new PortName("仓库地址"), PortTypes.Text),
@@ -160,7 +156,7 @@ public sealed class CommandNodeTypeTests
             Arguments = ["build", "{bad name}"],
             Variables = new Dictionary<string, string> { ["bad name"] = "任务路径" },
         };
-        CommandNodeType type = new(parameters, RunnerFactory);
+        CommandNodeType type = new(parameters);
         InputPort[] inputs =
         [
             new(new PortName("任务路径"), PortTypes.Text),
@@ -198,11 +194,5 @@ public sealed class CommandNodeTypeTests
             Outputs = [.. Assert.IsType<OutputDeclaration.Given>(CommandNodeTypes.Shape.Outputs).Ports],
         };
 
-    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
-    {
-        public IExecutionRunner Create(
-            IExecutionParameters parameters,
-            IExecutionRequestEntry requests) =>
-            throw new InvalidOperationException("测试节点类型不建立运行器。");
-    }
+
 }

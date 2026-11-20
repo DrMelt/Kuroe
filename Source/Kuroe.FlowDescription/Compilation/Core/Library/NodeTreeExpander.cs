@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
 using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
@@ -161,7 +160,7 @@ internal static class NodeTreeExpander
 
     /// <summary>执行节点的生效执行上限：自身显式、库定义依次取先，都没有时落到默认值。</summary>
     private static int ResolveMaxExecutions(int? own, int? library) =>
-        own ?? library ?? ExecutableNode.DefaultMaxExecutions;
+        own ?? library ?? ExecutableSpec.DefaultMaxExecutions;
 
     private static List<NodeSpec> ExpandMembers(
         NodeLibrary library,

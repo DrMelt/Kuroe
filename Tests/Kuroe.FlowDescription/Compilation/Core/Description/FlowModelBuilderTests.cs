@@ -28,7 +28,7 @@ public sealed class FlowModelBuilderTests
                     null),
             ]);
 
-        ErrorOr<IReadOnlyList<FlowGraph>> compiled = compiler.Compile(document, []);
+        ErrorOr<IReadOnlyList<FlowDefinition>> compiled = compiler.Compile(document, []);
 
         Assert.True(compiled.IsError);
         Assert.Contains(

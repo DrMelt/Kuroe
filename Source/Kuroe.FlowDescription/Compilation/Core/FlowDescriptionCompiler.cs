@@ -1,11 +1,11 @@
 using ErrorOr;
 using Kuroe.FlowDescription.Compilation.Description;
+using Kuroe.FlowDescription.Compilation.Validation;
 using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared.Compilation.Flow;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Shared;
 
@@ -17,7 +17,7 @@ public sealed class FlowDescriptionCompiler(
     IFlowExpander expander) : IFlowDescriptionCompiler
 {
     /// <summary>编译一份流程描述。任一条流程失败时返回全部错误。</summary>
-    ErrorOr<IReadOnlyList<FlowGraph>> IFlowDescriptionCompiler.Compile(
+    ErrorOr<IReadOnlyList<FlowDefinition>> IFlowDescriptionCompiler.Compile(
         FlowDescriptionSet descriptionSet,
         IReadOnlyList<NodeSpec> builtins)
     {
@@ -52,23 +52,17 @@ public sealed class FlowDescriptionCompiler(
             return expanded.ErrorsOrEmptyList;
         }
 
-        List<FlowGraph> flows = [];
         foreach (FlowDefinition flow in expanded.Value)
         {
-            ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
-            if (compiled.IsError)
-            {
-                errors.AddRange(compiled.ErrorsOrEmptyList);
-                continue;
-            }
-
-            flows.Add(new FlowGraph(flow, compiled.Value));
+            FlowRules.Validate(flow, errors);
         }
 
         if (errors.Count > 0)
         {
             return errors;
         }
+
+        List<FlowDefinition> flows = [.. expanded.Value];
 
         return flows;
     }

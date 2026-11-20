@@ -11,6 +11,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Hosting;
+using Kuroe.Flow.NodeExecution;
 using Kuroe.Flow.Hosting.Workflows.Flows;
 using Kuroe.Node.Approval;
 using Kuroe.Node.Input;
@@ -216,10 +217,11 @@ public sealed class TestEnvironment : IDisposable
         IProcessRunner? process,
         IExecutionRunnerFactory runner) => new()
         {
-            RegisterNodeTypes = (types, runners) =>
+            RegisterNodeTypes = (types, capabilities, runners) =>
             {
-                InputNodeTypeDescriptions.RegisterInto(types, runners.Input);
-                ApprovalNodeTypeDescriptions.RegisterInto(types, runners.Approval);
+                InputNodeTypeDescriptions.RegisterInto(types);
+                ApprovalNodeTypeDescriptions.RegisterInto(types);
+                FlowNodeExecution.RegisterInteractive(capabilities, runners.Input, runners.Approval);
             },
             CommandNodeProcessRunner = process,
             LlmRunnerFactory = runner,

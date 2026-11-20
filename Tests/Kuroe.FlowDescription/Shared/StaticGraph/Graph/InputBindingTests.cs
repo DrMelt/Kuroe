@@ -1,5 +1,6 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
@@ -20,7 +21,7 @@ public sealed class InputBindingTests
         Assert.Null(binding.SourcePort);
         Assert.True(binding.Drives);
         Assert.False(binding.CarriesTrigger);
-        Assert.Equal(new ConsumptionKey(NodePath.Of("成员"), null), binding.Key);
+        Assert.Equal(new ConsumptionKey(NodePath.Of("成员"), null), binding.Key());
     }
 
     [Fact(DisplayName = "门控绑定参与就绪但不推动版本")]

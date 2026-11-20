@@ -1,4 +1,5 @@
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
@@ -71,7 +72,7 @@ public sealed class ExecutionLimitTests
             .Single(node => node.Path.Value == "整体/较重").MaxExecutions);
         Assert.Equal(3, graph.Containers
             .Single(node => node.Path.Value == "整体/较轻").MaxExecutions);
-        Assert.Equal(ExecutableNode.DefaultMaxExecutions, graph.ExecutableNodes
+        Assert.Equal(ExecutableSpec.DefaultMaxExecutions, graph.ExecutableNodes
             .Single(node => node.Path.Value == "整体/较重/干活").MaxExecutions);
     }
 

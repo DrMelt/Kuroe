@@ -19,14 +19,14 @@ namespace Kuroe.FlowDescription.Compilation.Integration.Tests;
 public sealed class DocFlowExamplesTests
 {
     /// <summary>按当前注册的节点类型编译一份文档。</summary>
-    private static ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDescriptionSet document)
+    private static ErrorOr<IReadOnlyList<FlowDefinition>> Compile(FlowDescriptionSet document)
     {
         NodeTypeDescriptionRegistry files = new();
         ContainerNodeTypeDescriptions.RegisterInto(files);
-        LlmNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Runners, TestTypeFiles.Contracts);
-        InputNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Runners);
-        ApprovalNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Runners);
-        FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath(), TestTypeFiles.Runners, TestTypeFiles.Runners);
+        LlmNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Contracts);
+        InputNodeTypeDescriptions.RegisterInto(files);
+        ApprovalNodeTypeDescriptions.RegisterInto(files);
+        FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath());
 
         IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
         return compiler.Compile(document, []);
@@ -46,7 +46,7 @@ public sealed class DocFlowExamplesTests
         ErrorOr<FlowDescriptionSet> read = FlowDescriptionSetSource.Read(json);
         Assert.False(read.IsError, $"{Page} 的「{heading}」读取失败：{Describe(read.ErrorsOrEmptyList)}");
 
-        ErrorOr<IReadOnlyList<FlowGraph>> compiled = Compile(read.Value);
+        ErrorOr<IReadOnlyList<FlowDefinition>> compiled = Compile(read.Value);
         Assert.False(compiled.IsError, $"{Page} 的「{heading}」编译失败：{Describe(compiled.ErrorsOrEmptyList)}");
     }
 

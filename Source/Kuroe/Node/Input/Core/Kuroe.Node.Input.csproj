@@ -6,19 +6,9 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Runner\Input\Core\Kuroe.Runner.Input.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="Kuroe.Node.Input.Tests" />
-    </ItemGroup>
-
-<ItemGroup>
-        <ProjectReference Include="..\..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
     </ItemGroup>
 </Project>

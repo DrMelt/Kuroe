@@ -1,5 +1,5 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.Tasks.Presentation.Shared;
 using Kuroe.Tasks.Shared;
 using Xunit;

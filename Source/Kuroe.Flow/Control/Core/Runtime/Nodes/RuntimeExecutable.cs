@@ -1,3 +1,4 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.Flow.Graph.Shared.Graph.Records;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph;
@@ -5,9 +6,9 @@ using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Readiness;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
-using ExecutableNode = Kuroe.FlowDescription.Shared.StaticGraph.Graph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 
 using Kuroe.Flow.Graph.Shared.Runtime.Nodes;
 using Kuroe.Tasks.Shared;
@@ -17,10 +18,15 @@ namespace Kuroe.Flow.Control.Runtime.Nodes;
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体，交回与产出也记在它上面。
 /// 待收口的交回按执行记，发布后只保留已发布那次，产出锚指向已发布的那次执行。
 /// 节点状态只经推进方法改动，读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode(executable)
+internal sealed class RuntimeExecutable(
+    ExecutableNode executable,
+    IGraphNodeCapabilities capabilities) : RuntimeNode(executable)
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
+
+    /// <summary>该节点使用的输出投影，未注册时为空。</summary>
+    private readonly INodeOutputProjection? _projection = capabilities.Projection(executable.Type);
 
     /// <summary>停在本节点时记下的重新执行目标，全部处理后解除阻塞。</summary>
     private readonly List<NodePath> _rerunTargets = [];
@@ -126,7 +132,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// 版本单调递增，下游据此重新评估。</summary>
     public void Publish(GraphExecution execution, ExecutionOutput output)
     {
-        if (Executable.Type is INodeOutputProjection projection)
+        if (_projection is { } projection)
         {
             Progress.Publish(projection.Project(execution.Id, execution.Input, output) with
             {
@@ -151,7 +157,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>该节点是否自带输出投影，产出完整性由投影负责。</summary>
-    public bool HasOutputProjection => Executable.Type is INodeOutputProjection;
+    public bool HasOutputProjection => _projection is not null;
 
     /// <summary>端口产出的发布：按这次执行的契约构造发布。</summary>
     private void PublishPorts(GraphExecution execution) =>

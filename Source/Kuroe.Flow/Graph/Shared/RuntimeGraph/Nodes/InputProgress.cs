@@ -1,6 +1,7 @@
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Readiness;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Graph.Shared.StaticGraph;
+
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
@@ -70,7 +71,7 @@ public sealed class InputProgress : IInputProgress
     {
         foreach (InputBinding binding in group.Bindings)
         {
-            _consumed[binding.Key] = sources.Source(binding.Source).Revision;
+            _consumed[binding.Key()] = sources.Source(binding.Source).Revision;
         }
     }
 

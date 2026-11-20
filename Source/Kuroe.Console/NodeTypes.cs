@@ -1,5 +1,6 @@
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.NodeExecution;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
-using Kuroe.Flow.Hosting;
 using Kuroe.Node.Approval;
 using Kuroe.Node.Input;
 
@@ -8,12 +9,14 @@ namespace Kuroe.Console;
 /// <summary>Console 追加的等待型节点类型。</summary>
 internal static class NodeTypes
 {
-    /// <summary>把输入与审批节点描述注册进流程编译层。</summary>
+    /// <summary>把输入与审批节点描述与图能力注册进流程装配。</summary>
     public static void Register(
         INodeTypeDescriptionRegistry types,
-        GraphExecutionRunners runners)
+        GraphNodeCapabilities capabilities,
+        FlowNodeExecutionRunners runners)
     {
-        InputNodeTypeDescriptions.RegisterInto(types, runners.Input);
-        ApprovalNodeTypeDescriptions.RegisterInto(types, runners.Approval);
+        InputNodeTypeDescriptions.RegisterInto(types);
+        ApprovalNodeTypeDescriptions.RegisterInto(types);
+        FlowNodeExecution.RegisterInteractive(capabilities, runners);
     }
 }

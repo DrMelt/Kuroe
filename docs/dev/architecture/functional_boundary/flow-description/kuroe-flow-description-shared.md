@@ -1,6 +1,6 @@
 # Kuroe.FlowDescription.Shared
 
-流程语言的共享契约与静态模型：流程描述、端口词汇、参数读取契约、节点类型契约、静态节点与图结构、语言校验规则。图流程与 MAF 流程按同一套模型与规则解释描述。
+流程语言的共享契约与描述模型：流程描述、端口词汇、参数读取契约、节点类型契约、静态节点与接线、语言校验规则。图流程与 MAF 流程按同一套模型与规则解释描述。
 
 ## 职责
 
@@ -11,16 +11,16 @@
 - 端口词汇：端口类型、语义、模式、输入角色与触发条件，解析不区分大小写；类型集合在装配前确定，运行期只读。
 - 参数读取契约：按字段名取本轮取值，形状不符经报出接口交给调用方。
 - 节点类型契约：类型名、静态形状、字段表与描述到类型实例的转换。
-- 静态模型：节点、端口、连接、开始端口、流程定义与编译期派生的静态图。
+- 静态模型：节点、端口、连接、开始端口与流程定义。
 - 状态边界：只承载描述与编译期派生，不保存运行状态；编译结果跨任务共享，运行期只读。
 - 语言校验：标识、结构、接线、绑定覆盖与端口规则的统一入口。
-- 编译入口：`IFlowDescriptionCompiler` 把流程描述编译为流程图列表。
+- 编译入口：`IFlowDescriptionCompiler` 把流程描述编译为展开后的流程定义列表。
 
 ## 边界外
 
 - 不含描述编译实现：在 Kuroe.FlowDescription.Compilation。
 - 不含文件格式：在 Kuroe.FlowDescription.Json。
-- 不含运行状态、就绪判定与流程控制：在 Kuroe.Flow.Graph.Shared 与 Kuroe.Flow.Control。
+- 不含图静态视图、就绪判定与流程控制：在 Kuroe.Flow.Compilation、Kuroe.Flow.Graph.Shared 与 Kuroe.Flow.Control。
 - 不含 MAF 投影与流程定义：在 Kuroe.Maf.Compilation 与 Kuroe.Maf.Definition。
 
 ## 依赖

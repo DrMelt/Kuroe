@@ -1,7 +1,6 @@
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Input;
 
@@ -23,8 +22,6 @@ public static class InputNodeTypes
     };
 
     /// <summary>按类型专属声明建出类型实例，未声明时取默认声明。</summary>
-    public static INodeType Create(
-        InputParameters? parameters,
-        IExecutionRunnerFactory runnerFactory) =>
-        new InputNodeType(parameters, runnerFactory);
+    public static INodeType Create(InputParameters? parameters) =>
+        new InputNodeType(parameters);
 }

@@ -27,7 +27,8 @@ public sealed class GraphFlowPresentation : IFlowPresentation
         [.. task.Executions.Select(execution => new GraphExecution(
             state.Context(execution.Id).Input,
             execution,
-            state.Context(execution.Id).ControlVersion).Snapshot())];
+            state.Context(execution.Id).ControlVersion,
+            state.Capabilities).Snapshot())];
 
     private static GraphFlowState State(ITaskFlowView task)
     {

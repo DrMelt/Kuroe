@@ -9,10 +9,10 @@ using Kuroe.Tasks.Shared;
 namespace Kuroe.FlowDescription.Compilation.Validation;
 
 /// <summary>流程层校验规则：开始端口与节点树。引用解析、输入绑定与图规则在编译后的图上判定。</summary>
-internal static class FlowRules
+public static class FlowRules
 {
     /// <summary>校验一条流程的定义结构。类型规则由节点持有的类型描述承担。</summary>
-    internal static void Validate(FlowDefinition flow, List<Error> errors)
+    public static void Validate(FlowDefinition flow, List<Error> errors)
     {
         CheckStart(flow, errors);
         CheckTree(flow.RootNode, NodeScope.Flow(flow.Name.Value), errors);

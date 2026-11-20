@@ -12,11 +12,13 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\Source\Kuroe.Maf\Compilation\Core\Kuroe.Maf.Compilation.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Maf\NodeExecution\Core\Kuroe.Maf.NodeExecution.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Maf\Compilation\Shared\Kuroe.Maf.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Maf\Definition\Core\Kuroe.Maf.Definition.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.FlowDescription\Compilation\Core\Kuroe.FlowDescription.Compilation.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe\Support\Kuroe.TestSupport.csproj" />

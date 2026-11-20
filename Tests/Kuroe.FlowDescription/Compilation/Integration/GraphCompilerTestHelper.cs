@@ -1,0 +1,45 @@
+using ErrorOr;
+using Kuroe.Flow.Compilation;
+using Kuroe.Flow.Graph.Shared.StaticGraph;
+using Kuroe.FlowDescription.Compilation.Library;
+using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Shared.Compilation;
+using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
+using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
+using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+
+namespace Kuroe.FlowDescription.Compilation.Integration.Tests;
+
+/// <summary>测试用的描述编译加图编译组合。</summary>
+internal static class GraphCompilerTestHelper
+{
+    /// <summary>按类型注册表编译文档并建立图执行视图。</summary>
+    public static ErrorOr<IReadOnlyList<FlowGraph>> Compile(
+        INodeTypeDescriptionRegistry types,
+        FlowDescriptionSet document,
+        IReadOnlyList<NodeSpec> builtins)
+    {
+        IFlowDescriptionCompiler descriptions = new FlowDescriptionCompiler(types, new NodeLibraryExpander());
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = descriptions.Compile(document, builtins);
+        if (expanded.IsError)
+        {
+            return expanded.ErrorsOrEmptyList;
+        }
+
+        List<FlowGraph> flows = [];
+        List<Error> errors = [];
+        foreach (FlowDefinition flow in expanded.Value)
+        {
+            ErrorOr<FlowGraph> compiled = new FlowGraphCompiler().Compile(flow);
+            if (compiled.IsError)
+            {
+                errors.AddRange(compiled.ErrorsOrEmptyList);
+                continue;
+            }
+
+            flows.Add(compiled.Value);
+        }
+
+        return errors.Count > 0 ? errors : flows;
+    }
+}

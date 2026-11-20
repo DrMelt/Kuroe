@@ -3,7 +3,6 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Runner.Command;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Command;
 
@@ -32,8 +31,6 @@ public static class CommandNodeTypes
     };
 
     /// <summary>按类型专属声明建出类型实例。</summary>
-    public static INodeType Create(
-        CommandExecutionParameters parameters,
-        IExecutionRunnerFactory runnerFactory) =>
-        new CommandNodeType(parameters, runnerFactory);
+    public static INodeType Create(CommandExecutionParameters parameters) =>
+        new CommandNodeType(parameters);
 }

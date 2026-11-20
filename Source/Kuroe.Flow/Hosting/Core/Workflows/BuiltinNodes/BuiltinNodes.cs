@@ -5,7 +5,6 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Tool;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Flow.Hosting.Workflows.BuiltinNodes;
 
@@ -22,7 +21,7 @@ internal static class BuiltinNodes
     internal static PortName TaskPort { get; } = new("任务");
 
     /// <summary>建立内置节点定义集合。Llm 节点使用给定的执行运行器工厂。</summary>
-    internal static IReadOnlyList<NodeSpec> Create(IExecutionRunnerFactory llmRunner)
+    internal static IReadOnlyList<NodeSpec> Create()
     {
         NodeSpec plan = NodeSpec.Define(new NodeName("规划")) with
         {
@@ -30,8 +29,7 @@ internal static class BuiltinNodes
                 new LlmParameters
                 {
                     Prompt = "把目标写成可实施的计划，逐项给出要做什么与验收标准。",
-                },
-                llmRunner),
+                }),
             Inputs =
             [
                 new InputPort(GoalPort, PortTypes.Text, "要规划的任务目标。"),
@@ -47,8 +45,7 @@ internal static class BuiltinNodes
                 new LlmParameters
                 {
                     Tools = [new ToolPath("GetLocalTime")],
-                },
-                llmRunner),
+                }),
             Inputs =
             [
                 new InputPort(TaskPort, PortTypes.Text, "待实施的计划，来自规划节点。"),

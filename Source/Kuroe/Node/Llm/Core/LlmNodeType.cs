@@ -4,17 +4,14 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Tool;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Llm;
 
 /// <summary>Llm 类型：由模型执行并交回端口产出。运行期对象由引擎按形状建立，类型专属声明封在实例里。</summary>
 public sealed class LlmNodeType(
     LlmParameters? parameters,
-    IExecutionRunnerFactory runnerFactory,
     IToolContractCatalog? contracts = null)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
+    : INodeType, INodeTypeValidation
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public LlmParameters? Parameters { get; } = parameters;
@@ -24,9 +21,6 @@ public sealed class LlmNodeType(
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => LlmNodeTypes.Name;
-
-    /// <summary>本节点使用的执行运行器工厂。</summary>
-    public IExecutionRunnerFactory RunnerFactory { get; } = runnerFactory;
 
     /// <summary>Llm 类型的静态形状。</summary>
     public NodeTypeShape Shape => LlmNodeTypes.Shape;
@@ -54,7 +48,7 @@ public sealed class LlmNodeType(
         }
     }
 
-    /// <summary>Llm 类型的规则：执行上限约束。</summary>
+    /// <summary>Llm 类型的规则：执行上限与模型端口约束。</summary>
     public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         if (node.Spec?.MaxExecutions is { } limit && limit < 1)
@@ -75,11 +69,4 @@ public sealed class LlmNodeType(
 
         ToolPortRules.Validate(Parameters, node, Contracts, scope, fail);
     }
-
-    /// <summary>按本次执行建立 Llm 参数。</summary>
-    public IExecutionParameters Create(ExecutionParameterContext context) =>
-        (Parameters ?? new LlmParameters()).ToExecutionParameters(
-            context.Model,
-            attempt: context.Attempt,
-            maxAttempts: context.MaxAttempts);
 }

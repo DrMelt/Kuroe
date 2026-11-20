@@ -1,10 +1,11 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.Flow.Control.Runtime.Graph;
 using Kuroe.Flow.Control.Runtime.Nodes;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
@@ -71,7 +72,7 @@ public sealed class GraphExecutionInputBuilderTests
             Type = TestNodeTypes.Executable,
             Spec = new ExecutableSpec(),
             Outputs = [new Port(output, PortTypes.Text, mode: PortMode.Constant, value: "固定值")],
-            MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+            MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
         };
         ExecutableNode executable = StaticExecutable(
             new InputPort(target, PortTypes.Text, mode: PortMode.Constant, role: InputRole.Content),
@@ -102,7 +103,7 @@ public sealed class GraphExecutionInputBuilderTests
 
     private static InputValue Build(ExecutableNode executable, NodeGraph graph, PortName port, string text)
     {
-        RuntimeExecutable node = new(executable);
+        RuntimeExecutable node = new(executable, TestNodeCapabilities.Build());
         NodeInputValues inputs = new(
             [],
             new HashSet<PortName>(),
@@ -121,7 +122,7 @@ public sealed class GraphExecutionInputBuilderTests
         Inputs = [input],
         InputBindings = binding is { } value ? new Dictionary<PortName, InputBinding> { [input.Name] = value } : null,
         Outputs = [],
-        MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+        MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
     };
 
     private static RuntimeExecutable Executable(string fallback) => new(new ExecutableNode
@@ -136,6 +137,6 @@ public sealed class GraphExecutionInputBuilderTests
             new InputPort(Static, PortTypes.Text, mode: PortMode.Constant),
         ],
         Outputs = [],
-        MaxExecutions = ExecutableNode.DefaultMaxExecutions,
-    });
+        MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
+    }, TestNodeCapabilities.Build());
 }

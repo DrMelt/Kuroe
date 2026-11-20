@@ -3,16 +3,12 @@ using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Command;
 
 /// <summary>命令节点的描述契约：声明程序、参数、执行目录、超时与输出上限，未知字段与形状由构造层报出。</summary>
-internal sealed class CommandNodeTypeDescription(
-    string rootDirectory,
-    IExecutionRunnerFactory runnerFactory) : INodeTypeDescription
+internal sealed class CommandNodeTypeDescription(string rootDirectory) : INodeTypeDescription
 {
-    private readonly IExecutionRunnerFactory _runnerFactory = runnerFactory;
     /// <summary>形状所属的节点类型名。</summary>
     public NodeKind Kind => CommandNodeTypes.Name;
 
@@ -33,5 +29,5 @@ internal sealed class CommandNodeTypeDescription(
 
     /// <summary>读出参数段并建出类型实例。</summary>
     public INodeType Read(IParameterReader values, ValidationMessageHandler fail) =>
-        CommandNodeTypes.Create(CommandParameterReader.Read(values, fail, rootDirectory), _runnerFactory);
+        CommandNodeTypes.Create(CommandParameterReader.Read(values, fail, rootDirectory));
 }

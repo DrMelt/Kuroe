@@ -1,13 +1,11 @@
+using Kuroe.Flow.Compilation;
 using Kuroe.FlowDescription.Compilation;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Json;
 using Kuroe.Flow.NodeType.Container;
 
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Tests.Support;
 using Kuroe.Flow.Hosting.Workflows.Flows;
 using Kuroe.Flow.Hosting.Workflows.Flows.Files;
@@ -19,8 +17,6 @@ namespace Kuroe.Tests.Workflows.Flows;
 /// <summary>流程服务按流程隔离编译：不支持的节点只让所在流程不可用。</summary>
 public sealed class FlowServiceTests
 {
-    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
-
     [Fact(DisplayName = "宽容加载保留可编译流程并报告不可用")]
     public void Tolerant_load_keeps_compilable_flows_and_reports_unavailable()
     {
@@ -48,7 +44,7 @@ public sealed class FlowServiceTests
         });
     }
 
-    private static void WithLibrary(Action<FlowStore, IFlowDescriptionCompiler> check)
+    private static void WithLibrary(Action<FlowStore, IFlowCompiler> check)
     {
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-isolation-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
@@ -59,8 +55,10 @@ public sealed class FlowServiceTests
         {
             NodeTypeDescriptionRegistry types = new();
             ContainerNodeTypeDescriptions.RegisterInto(types);
-            LlmNodeTypeDescriptions.RegisterInto(types, RunnerFactory);
-            FlowDescriptionCompiler compiler = new(types, new NodeLibraryExpander());
+            LlmNodeTypeDescriptions.RegisterInto(types);
+            Kuroe.Flow.Hosting.Workflows.Flows.FlowCompilation compiler = new(
+                new FlowDescriptionCompiler(types, new NodeLibraryExpander()),
+                new FlowGraphCompiler());
             JsonNodeFormat nodeFormat = new();
             JsonFlowFormat flowFormat = new();
             JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
@@ -105,11 +103,5 @@ public sealed class FlowServiceTests
         }
         """;
 
-    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
-    {
-        public IExecutionRunner Create(
-            IExecutionParameters parameters,
-            IExecutionRequestEntry requests) =>
-            throw new InvalidOperationException("测试节点类型不建立运行器。");
-    }
+
 }

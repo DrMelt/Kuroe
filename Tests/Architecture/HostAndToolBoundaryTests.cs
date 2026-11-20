@@ -3,7 +3,8 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>宿主与工具边界：宿主不引用图运行期与图共享层，工具共享项不依赖同模块核心与文件访问。</summary>
+/// <summary>宿主与工具边界：宿主不引用图运行期与图共享层，工具共享项不依赖同模块核心与文件访问。
+/// Console 注册图节点能力，因此作为装配入口单独允许引用图共享层。</summary>
 public sealed class HostAndToolBoundaryTests
 {
     [Fact(DisplayName = "文件访问共享层不含核心实现与文件 IO")]
@@ -20,12 +21,11 @@ public sealed class HostAndToolBoundaryTests
         Assert.Contains(shared, ProjectReferences(core));
     }
 
-    [Fact(DisplayName = "宿主不引用图运行期与图共享层")]
+    [Fact(DisplayName = "宿主不引用图运行期，入口不引用图共享层")]
     public void Hosts_do_not_reference_graph_runtime_or_node_shared()
     {
         string[] projects =
         [
-            Path.Combine(SourceRoot, "Kuroe.Console", "Kuroe.Console.csproj"),
             Path.Combine(SourceRoot, "Kuroe.Cli", "Kuroe.Cli.csproj"),
             Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Kuroe.Assistant.csproj"),
             Path.Combine(

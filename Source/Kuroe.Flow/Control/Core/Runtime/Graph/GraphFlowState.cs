@@ -1,9 +1,9 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.Control.Shared;
 using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Graph.Shared.Graph.Records;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.State;
@@ -17,7 +17,8 @@ internal sealed class GraphFlowState(
     IPortTexts startTexts,
     StartPortValues startPorts,
     GraphFlowDefinitionRecord? definition,
-    ITaskExecutionGateway executions) : IGraphFlowState
+    ITaskExecutionGateway executions,
+    IGraphNodeCapabilities capabilities) : IGraphFlowState
 {
     private readonly Dictionary<ExecutionId, GraphExecutionContext> _executions = [];
     private ITaskFlowContext? _task;
@@ -37,6 +38,9 @@ internal sealed class GraphFlowState(
 
     /// <summary>提交时锁定的流程定义记录。</summary>
     public GraphFlowDefinitionRecord? Definition { get; set; } = definition;
+
+    /// <summary>图节点能力映射。</summary>
+    public IGraphNodeCapabilities Capabilities { get; } = capabilities;
 
     /// <summary>图运行期的执行，按提交顺序从任务的中性执行列表投影。</summary>
     internal IReadOnlyList<GraphExecution> Executions => Project();
@@ -73,7 +77,8 @@ internal sealed class GraphFlowState(
             projected.Add(new GraphExecution(
                 context.Input,
                 unit,
-                context.ControlVersion));
+                context.ControlVersion,
+                Capabilities));
         }
 
         return projected;

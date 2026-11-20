@@ -42,10 +42,15 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact(DisplayName = "节点项目引用图共享层")]
-    public void Node_projects_reference_graph_shared()
+    [Fact(DisplayName = "图节点执行装配引用图共享层")]
+    public void Flow_node_execution_references_graph_shared()
     {
-        string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "NodeExecution",
+            "Core",
+            "Kuroe.Flow.NodeExecution.csproj");
         string graphShared = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
@@ -53,11 +58,7 @@ public sealed class FlowAreaTests
             "Shared",
             "Kuroe.Flow.Graph.Shared.csproj");
 
-        Assert.NotEmpty(ProjectFiles(nodes));
-        foreach (string project in ProjectFiles(nodes))
-        {
-            Assert.Contains(graphShared, ProjectReferences(project));
-        }
+        Assert.Contains(graphShared, ProjectReferences(project));
     }
 
     [Fact(DisplayName = "图共享层只引用描述与契约层")]

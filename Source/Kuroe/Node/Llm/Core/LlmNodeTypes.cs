@@ -3,7 +3,6 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Tool;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Llm;
 
@@ -36,7 +35,6 @@ public static class LlmNodeTypes
     /// <summary>按类型专属声明与工具契约建出类型实例，未声明时取默认声明。</summary>
     public static INodeType Create(
         LlmParameters? parameters,
-        IExecutionRunnerFactory runnerFactory,
         IToolContractCatalog? contracts = null) =>
-        new LlmNodeType(parameters, runnerFactory, contracts);
+        new LlmNodeType(parameters, contracts);
 }

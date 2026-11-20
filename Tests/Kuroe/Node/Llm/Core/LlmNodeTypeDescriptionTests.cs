@@ -1,7 +1,5 @@
 using Kuroe.FlowDescription.Shared.Parameters;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Llm.Tests;
@@ -13,9 +11,7 @@ public sealed class LlmNodeTypeDescriptionTests
     private const string ToolsName = "Tools";
     private const string SystemPromptName = "SystemPrompt";
 
-    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
-
-    private static readonly LlmNodeTypeDescription File = new(RunnerFactory);
+    private static readonly LlmNodeTypeDescription File = new();
 
     [Fact(DisplayName = "种类是 LLM 节点类型")]
     public void Kind_is_the_llm_node_type() =>
@@ -104,11 +100,5 @@ public sealed class LlmNodeTypeDescriptionTests
             new Dictionary<string, IReadOnlyDictionary<string, string>>();
     }
 
-    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
-    {
-        public IExecutionRunner Create(
-            IExecutionParameters parameters,
-            IExecutionRequestEntry requests) =>
-            throw new InvalidOperationException("测试节点类型不建立运行器。");
-    }
+
 }

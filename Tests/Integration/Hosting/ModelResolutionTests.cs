@@ -1,8 +1,10 @@
+using Kuroe.Flow.NodeExecution;
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
@@ -91,7 +93,7 @@ public sealed class ModelResolutionTests
         new ExecutableNode
         {
             Path = NodePath.Of("干活"),
-            Type = LlmNodeTypes.Create(null, TestTypeFiles.Runners),
+            Type = LlmNodeTypes.Create(null),
             Spec = new ExecutableSpec(),
             Inputs = declare ? [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, mode: PortMode.Constant)] : [],
             InputBindings = bind
@@ -106,7 +108,7 @@ public sealed class ModelResolutionTests
                 }
                 : null,
             Outputs = [],
-            MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+            MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
         },
     ], []);
 }

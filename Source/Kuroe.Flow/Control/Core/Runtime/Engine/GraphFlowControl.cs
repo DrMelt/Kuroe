@@ -6,7 +6,7 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Control.Runtime.Nodes;
-using ExecutableNode = Kuroe.FlowDescription.Shared.StaticGraph.Graph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Notice;
 using Kuroe.Execution.Shared.State;
@@ -160,7 +160,7 @@ internal sealed class GraphFlowControl(
             return true;
         });
 
-        return new GraphExecution(input, unit, task.ControlVersion);
+        return new GraphExecution(input, unit, task.ControlVersion, state.Capabilities);
     }
 
     /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>

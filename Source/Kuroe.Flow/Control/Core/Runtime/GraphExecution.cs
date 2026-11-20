@@ -1,3 +1,4 @@
+using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Records.Shared;
 using Kuroe.Flow.Records.Shared;
@@ -34,12 +35,13 @@ public sealed class GraphExecution : IGraphExecution
     internal GraphExecution(
         GraphExecutionInput input,
         IExecution unit,
-        int controlVersion)
+        int controlVersion,
+        IGraphNodeCapabilities capabilities)
     {
         Input = input;
         ControlVersion = controlVersion;
         Request = unit.Request;
-        Invocation = BuildInvocation(input, Request);
+        Invocation = BuildInvocation(input, Request, capabilities);
         _unit = unit;
     }
 
@@ -47,7 +49,8 @@ public sealed class GraphExecution : IGraphExecution
     internal static GraphExecution Restore(
         ExecutionRecord record,
         GraphExecutionInput input,
-        ITaskExecutionGateway executions)
+        ITaskExecutionGateway executions,
+        IGraphNodeCapabilities capabilities)
     {
         ExecutionRequest request = BuildRequest(input);
         IExecution unit = executions.Restore(
@@ -65,7 +68,7 @@ public sealed class GraphExecution : IGraphExecution
                 NeutralContract(record.Contract),
                 record.ContinuedFrom));
 
-        return new GraphExecution(input, unit, 0);
+        return new GraphExecution(input, unit, 0, capabilities);
     }
 
     /// <summary>执行标识。</summary>
@@ -188,7 +191,10 @@ public sealed class GraphExecution : IGraphExecution
                 }),
             ]);
 
-    internal static ExecutionInvocation BuildInvocation(GraphExecutionInput input, ExecutionRequest request)
+    internal static ExecutionInvocation BuildInvocation(
+        GraphExecutionInput input,
+        ExecutionRequest request,
+        IGraphNodeCapabilities capabilities)
     {
         ExecutionParameterContext context = new(
             request.Owner,
@@ -201,17 +207,18 @@ public sealed class GraphExecution : IGraphExecution
             request.OutputPorts,
             input.Declaration?.Model);
 
-        IExecutionRunnerFactory runnerFactory = input.Type is IExecutionRunnerFactoryProvider factoryProvider
-            ? factoryProvider.RunnerFactory
-            : throw new InvalidOperationException($"节点类型 {input.Type.Kind.Value} 没有提供执行运行器工厂。");
-        IExecutionParameters parameters = input.Type is IExecutionParameterProvider parameterProvider
-            ? parameterProvider.Create(context)
-            : EmptyExecutionParameters.Instance;
+        IExecutionBinder binder = capabilities.Execution(input.Type)
+            ?? throw new InvalidOperationException($"节点类型 {input.Type.Kind.Value} 没有执行器绑定。");
+        ErrorOr<IExecutionParameters> parameters = binder.Parameters(context);
+        if (parameters.IsError)
+        {
+            throw new InvalidOperationException(parameters.FirstError.Description);
+        }
 
         return new ExecutionInvocation(
             GraphRecordSteps.Format(input.Node),
-            runnerFactory,
-            parameters);
+            binder.RunnerFactory,
+            parameters.Value);
     }
 
     private static ExecutionPortRole RoleOf(InputRole role) => role switch

@@ -1,12 +1,13 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.TestSupport;
 using Xunit;
-using ExecutableNode = Kuroe.FlowDescription.Shared.StaticGraph.Graph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
@@ -20,8 +21,6 @@ public sealed class FileExecutionRunnerTests
 {
     private static readonly NodePath TargetPath = NodePath.Of("整体", "节点");
     private static readonly PortName ContentPort = new("正文");
-
-    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
     private readonly InMemoryWorkspaceFiles _files = new();
@@ -229,7 +228,7 @@ public sealed class FileExecutionRunnerTests
         int maxChars = FileReadNodeTypes.DefaultMaxChars) => new()
         {
             Path = TargetPath,
-            Type = FileReadNodeTypes.Create(Parameters(relative, maxChars), RunnerFactory),
+            Type = FileReadNodeTypes.Create(Parameters(relative, maxChars)),
             Spec = new ExecutableSpec(),
             Inputs =
         [
@@ -237,7 +236,7 @@ public sealed class FileExecutionRunnerTests
             new InputPort(new PortName("触发"), PortTypes.Signal),
         ],
             Outputs = [new Port(ContentPort, PortTypes.Text)],
-            MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+            MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
             Incoming =
         [
             new InputBinding(
@@ -260,7 +259,7 @@ public sealed class FileExecutionRunnerTests
         int maxChars = FileWriteNodeTypes.DefaultMaxChars) => new()
         {
             Path = TargetPath,
-            Type = FileWriteNodeTypes.Create(Parameters(relative, maxChars), RunnerFactory),
+            Type = FileWriteNodeTypes.Create(Parameters(relative, maxChars)),
             Spec = new ExecutableSpec(),
             Inputs =
             [
@@ -268,7 +267,7 @@ public sealed class FileExecutionRunnerTests
                 new InputPort(new PortName("任务路径"), PortTypes.Text),
             ],
             Outputs = outputs ?? [],
-            MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+            MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
             Incoming =
             [
                 new InputBinding(
@@ -304,13 +303,7 @@ public sealed class FileExecutionRunnerTests
             throw new NotSupportedException();
     }
 
-    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
-    {
-        public IExecutionRunner Create(
-            IExecutionParameters parameters,
-            IExecutionRequestEntry requests) =>
-            throw new InvalidOperationException("测试节点类型不建立运行器。");
-    }
+
 
     private FileExecutionParameters Parameters(string relative, int maxChars) => new()
     {

@@ -1,5 +1,4 @@
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Input;
 
@@ -7,8 +6,6 @@ namespace Kuroe.Node.Input;
 public static class InputNodeTypeDescriptions
 {
     /// <summary>把输入节点的描述注册进注册表。</summary>
-    public static void RegisterInto(
-        INodeTypeDescriptionRegistry files,
-        IExecutionRunnerFactory runnerFactory) =>
-        files.Register(new InputNodeTypeDescription(runnerFactory));
+    public static void RegisterInto(INodeTypeDescriptionRegistry files) =>
+        files.Register(new InputNodeTypeDescription());
 }

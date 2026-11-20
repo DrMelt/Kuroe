@@ -1,7 +1,8 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.Flow.Control.Runtime.Nodes;
 using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Control.Runtime.Graph;
@@ -10,7 +11,8 @@ namespace Kuroe.Flow.Control.Runtime.Graph;
 /// 容器的直接子节点登记在容器上，根级节点由这里持有。取消后迟实例化的节点创建即取消。</summary>
 internal sealed class NodeMaterializer(
     NodeGraph graph,
-    INodeContext context)
+    INodeContext context,
+    IGraphNodeCapabilities capabilities)
 {
     /// <summary>已实例化的根级节点，流程根节点由这里持有。容器的直接子节点由容器自己持有。</summary>
     private readonly List<NodeRuntime> _roots = [];
@@ -97,7 +99,7 @@ internal sealed class NodeMaterializer(
         graph[path] switch
         {
             ExecutableNode executable when executable.Type.Shape.DispatchesExecutions =>
-                new RuntimeExecutable(executable),
+                new RuntimeExecutable(executable, capabilities),
             ContainerNode container when container.Type.Shape.Organizes =>
                 new RuntimeContainer(container, context),
             ContainerNode container => Factory(container.Type, container.Path).Create(container, context),
@@ -107,8 +109,8 @@ internal sealed class NodeMaterializer(
 
 
     /// <summary>取节点类型的运行期工厂，类型没有提供时给出错误。</summary>
-    private static INodeRuntimeFactory Factory(INodeType type, NodePath path) =>
-        type as INodeRuntimeFactory
+    private INodeRuntimeFactory Factory(INodeType type, NodePath path) =>
+        capabilities.Runtime(type)
         ?? throw new InvalidOperationException($"节点 {path} 的类型 {type.Kind.Value} 没有提供运行期对象。");
 
     private static IEnumerable<NodeRuntime> Subtree(NodeRuntime node) =>

@@ -8,7 +8,7 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Xunit;
-using ExecutableNode = Kuroe.FlowDescription.Shared.StaticGraph.Graph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Journal;
 using Kuroe.Execution.Shared.Ports;
@@ -79,7 +79,7 @@ public sealed class RuntimeExecutableTests
             Spec = new ExecutableSpec(),
             Inputs = [],
             Outputs = [new Port(Conclusion, PortTypes.Text, mode: PortMode.Trigger)],
-            MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+            MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
         };
         GraphExecutionInput input = new()
         {
@@ -92,9 +92,9 @@ public sealed class RuntimeExecutableTests
         Kuroe.Execution.Shared.State.IExecution unit = runtime.Create(
             new Kuroe.Execution.Shared.Identity.ExecutionId(1),
             RuntimeExecution.BuildRequest(input));
-        RuntimeExecution execution = new(input, unit, 0);
+        RuntimeExecution execution = new(input, unit, 0, TestNodeCapabilities.Build());
 
-        return (new RuntimeExecutable(executable), execution);
+        return (new RuntimeExecutable(executable, TestNodeCapabilities.Build()), execution);
     }
 
     private static Task<ErrorOr<Success>> SubmitAsync(

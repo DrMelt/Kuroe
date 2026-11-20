@@ -1,9 +1,9 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.Flow.Control.Runtime.Engine;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Shared;
 using Xunit;
@@ -23,7 +23,7 @@ public sealed class ExecutionNodeDeclarationResolverTests
             Spec = new ExecutableSpec(),
             Inputs = [],
             Outputs = [],
-            MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+            MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
         };
         ExecutionNodeDeclarationResolver resolver = new(new ThrowingResolver());
 

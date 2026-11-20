@@ -11,15 +11,16 @@
 - 导入：从文件导入节点库或流程，逐条给出说明与不可用流程，同名处理见[同名覆盖与重名](../../mechanism/overrides.md)。
 - 宿主开始输入表：按流程的开始端口给出可绑定的输入名，表与流程不一致时在提交阶段报出。
 - 任务工作目录：以任务键命名，在启动目录下建立。
-- 内置节点使用的执行运行器工厂接线。
+- 描述编译器与图编译器接线。
+- 图节点能力注册与内置节点能力接线。
 
 ## 边界外
 
-- 不含图编译与描述模型：在 Kuroe.FlowDescription.Compilation 与 Kuroe.FlowDescription.Shared。
+- 不含描述编译与图编译：在 Kuroe.FlowDescription.Compilation 与 Kuroe.Flow.Compilation。
 - 不含图运行期与流程控制：在 Kuroe.Flow.Control。
 - 不含节点与运行器实现。
 - 不含核心装配与入口：在 Kuroe 与宿主项目。
 
 ## 依赖
 
-- Kuroe、Kuroe.Shared、Kuroe.Files.Shared、Kuroe.Process、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Shared、Kuroe.FlowDescription.Compilation、Kuroe.Flow.Records.Shared、Kuroe.FlowDescription.Json.Shared、Kuroe.FlowDescription.Json、Kuroe.Input.Shared、Kuroe.Flow.NodeType.Container、Kuroe.Flow.Control、Kuroe.Flow.Persistence.Graph、Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Runner.Shared、Kuroe.Runner.Command、Kuroe.Runner.File、Kuroe.Runner.Input、Kuroe.Runner.Approval、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Tool.Contract、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Presentation.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Control.Shared、Kuroe.Control.Runtime、Kuroe.Tasks.Persistence.Files.Shared、Kuroe.Tasks.Persistence.Files、Kuroe.Presentation.Shared。
+- Kuroe、Kuroe.Shared、Kuroe.Files.Shared、Kuroe.Process、Kuroe.Flow.Compilation、Kuroe.Flow.NodeExecution、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Shared、Kuroe.FlowDescription.Compilation、Kuroe.Flow.Records.Shared、Kuroe.FlowDescription.Json.Shared、Kuroe.FlowDescription.Json、Kuroe.Input.Shared、Kuroe.Flow.NodeType.Container、Kuroe.Flow.Control、Kuroe.Flow.Persistence.Graph、Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Runner.Shared、Kuroe.Runner.Command、Kuroe.Runner.File、Kuroe.Runner.Input、Kuroe.Runner.Approval、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Tool.Contract、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Presentation.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Control.Shared、Kuroe.Control.Runtime、Kuroe.Tasks.Persistence.Files.Shared、Kuroe.Tasks.Persistence.Files、Kuroe.Presentation.Shared。

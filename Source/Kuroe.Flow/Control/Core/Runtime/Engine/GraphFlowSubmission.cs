@@ -1,3 +1,4 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.Flow.Control.Runtime.Catalog;
 using Kuroe.Flow.Control.Runtime.Graph;
@@ -8,11 +9,10 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Tasks;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Records.Shared;
-using ExecutableNode = Kuroe.FlowDescription.Shared.StaticGraph.Graph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.State;
 
@@ -26,6 +26,7 @@ public sealed class GraphFlowSubmission(
     IHostTaskStart host,
     IExecutionNodeDeclarationResolver declarations,
     ITaskExecutionGateway executions,
+    IGraphNodeCapabilities capabilities,
     IFlowSnapshotSource? snapshots = null) : IFlowSubmission
 {
     /// <inheritdoc/>
@@ -108,7 +109,7 @@ public sealed class GraphFlowSubmission(
             }
         }
 
-        GraphFlowState state = new(flow, effectiveInputs, start.Value, startPorts, definition, executions);
+        GraphFlowState state = new(flow, effectiveInputs, start.Value, startPorts, definition, executions, capabilities);
 
         return new FlowSubmission(
             state,
@@ -134,7 +135,7 @@ public sealed class GraphFlowSubmission(
         FlowGraph flow = compiled.Value;
         PortTexts startTexts = new(saved.Start.StartTexts);
         StartPortValues startPorts = new(flow.Graph.StartPorts, startTexts, saved.Start.Inputs);
-        GraphFlowState state = new(flow, saved.Start.Inputs, startTexts, startPorts, definition, executions)
+        GraphFlowState state = new(flow, saved.Start.Inputs, startTexts, startPorts, definition, executions, capabilities)
         {
             RestoreNodes = saved.Nodes,
             RestorePorts = saved.Ports,
@@ -159,7 +160,7 @@ public sealed class GraphFlowSubmission(
                 int attempt = rounds.GetValueOrDefault(executionRecord.Step.Value) + 1;
                 rounds[executionRecord.Step.Value] = attempt;
                 GraphExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord, flow.Graph, attempt);
-                GraphExecution execution = GraphExecution.Restore(executionRecord, input, executions);
+                GraphExecution execution = GraphExecution.Restore(executionRecord, input, executions, capabilities);
                 state.Bind(execution.Unit.Id, input, execution.ControlVersion);
                 units.Add(execution.Unit);
             }

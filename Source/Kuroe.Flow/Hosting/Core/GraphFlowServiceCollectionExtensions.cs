@@ -7,6 +7,7 @@ using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared.Compilation.Flow;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
+using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Control.Runtime.Catalog;
 using Kuroe.Flow.Control.Runtime.Engine;
 using Kuroe.Flow.Records.Shared;
@@ -16,6 +17,7 @@ using Kuroe.Flow.Hosting.Workflows.Flows.Files;
 using Kuroe.Flow.Hosting.Workflows.Tasks;
 using Kuroe.FlowDescription.Json;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.NodeExecution;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Persistence.Graph;
 using Kuroe.Node.Command;
@@ -39,7 +41,7 @@ namespace Kuroe.Flow.Hosting;
 public sealed record GraphFlowOptions
 {
     /// <summary>追加节点类型描述。图流程固定注册 Container、Llm、FileRead、FileWrite 与 Command。</summary>
-    public Action<INodeTypeDescriptionRegistry, GraphExecutionRunners>? RegisterNodeTypes { get; init; }
+    public Action<INodeTypeDescriptionRegistry, GraphNodeCapabilities, FlowNodeExecutionRunners>? RegisterNodeTypes { get; init; }
 
     /// <summary>流程库个别流程编译失败时是否继续装配。为 false 时按启动错误返回。</summary>
     public bool AllowFlowFailures { get; init; }
@@ -51,7 +53,7 @@ public sealed record GraphFlowOptions
     public IExecutionRunnerFactory? LlmRunnerFactory { get; init; }
 
     /// <summary>其余内置节点使用的执行运行器工厂，未给出时按组合结果建立。</summary>
-    public GraphExecutionRunners? ExecutionRunners { get; init; }
+    public FlowNodeExecutionRunners? ExecutionRunners { get; init; }
 }
 
 /// <summary>图流程装配入口：注册流程库、节点类型、图流程实现与图记录编解码。</summary>
@@ -88,7 +90,8 @@ public static class GraphFlowServiceCollectionExtensions
         ToolContractCatalog contracts = new(composition.ToolDefinitions);
         IProcessRunner process = graphOptions.CommandNodeProcessRunner ?? new ProcessRunner();
         IExecutionRunnerFactory llmRunner = graphOptions.LlmRunnerFactory ?? composition.LlmRunner;
-        GraphExecutionRunners runners = graphOptions.ExecutionRunners ?? new(
+        FlowNodeExecutionRunners runners = graphOptions.ExecutionRunners ?? new(
+            llmRunner,
             new CommandExecutionRunnerFactory(process),
             new FileReadExecutionRunnerFactory(composition.Files),
             new FileWriteExecutionRunnerFactory(composition.Files),
@@ -100,15 +103,14 @@ public static class GraphFlowServiceCollectionExtensions
         JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
         IFlowExpander expander = new NodeLibraryExpander();
         IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
+        IFlowCompiler flowCompiler = new FlowCompilation(descriptionCompiler, new FlowGraphCompiler());
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
-        LlmNodeTypeDescriptions.RegisterInto(typeFiles, llmRunner, contracts);
-        FileNodeTypeDescriptions.RegisterInto(
-            typeFiles,
-            paths.WorkingDirectory,
-            runners.FileRead,
-            runners.FileWrite);
-        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, runners.Command);
-        graphOptions.RegisterNodeTypes?.Invoke(typeFiles, runners);
+        LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
+        FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
+        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
+        GraphNodeCapabilities capabilities = new();
+        FlowNodeExecution.Register(capabilities, runners);
+        graphOptions.RegisterNodeTypes?.Invoke(typeFiles, capabilities, runners);
 
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(
@@ -120,8 +122,8 @@ public static class GraphFlowServiceCollectionExtensions
                 flowFormat,
                 flowFormat,
                 importFormat),
-            BuiltinNodeCatalog.Create(llmRunner),
-            descriptionCompiler,
+            BuiltinNodeCatalog.Create(),
+            flowCompiler,
             graphOptions.AllowFlowFailures);
         if (flows.IsError)
         {
@@ -138,6 +140,8 @@ public static class GraphFlowServiceCollectionExtensions
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
+        services.AddSingleton<IFlowDescriptionCompiler>(descriptionCompiler);
+        services.AddSingleton<IFlowGraphCompiler>(new FlowGraphCompiler());
         services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
         services.AddSingleton<IExecutionNodeDeclarationResolver>(sp => new ExecutionNodeDeclarationResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
@@ -153,6 +157,7 @@ public static class GraphFlowServiceCollectionExtensions
                 sp.GetRequiredService<IHostTaskStart>(),
                 sp.GetRequiredService<IExecutionNodeDeclarationResolver>(),
                 sp.GetRequiredService<ITaskExecutionGateway>(),
+                capabilities,
                 composition.PersistTasks ? flows.Value : null),
             new GraphFlowStateBinder(),
             new GraphFlowControlFactory(

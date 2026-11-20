@@ -1,3 +1,4 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Flow.Graph.Shared.Graph.Records;
@@ -7,12 +8,12 @@ using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Readiness;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 
 using Kuroe.Flow.Control.Runtime.Nodes;
-using ExecutableNode = Kuroe.FlowDescription.Shared.StaticGraph.Graph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Notice;
@@ -61,7 +62,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         _task = task;
         _state = state;
         _executions = executions;
-        _materializer = new NodeMaterializer(state.Flow.Graph, this);
+        _materializer = new NodeMaterializer(state.Flow.Graph, this, state.Capabilities);
         _staticPorts = new StaticPortValues(state.Flow.Graph, state.StartPorts, this);
         _startSource = new RuntimeStartSource(state.Flow.Graph.StartPorts, state.StartPorts);
     }
@@ -838,7 +839,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 ExecutionRestoreContext context = new(
                     candidate.Id,
                     request,
-                    GraphExecution.BuildInvocation(input, request),
+                    GraphExecution.BuildInvocation(input, request, _state.Capabilities),
                     data,
                     GraphExecution.ToNeutralContract(candidate.Contract));
                 ErrorOr<PreparedExecutionRestore> prepared;

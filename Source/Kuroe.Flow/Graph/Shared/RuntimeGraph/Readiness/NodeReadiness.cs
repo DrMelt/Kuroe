@@ -1,5 +1,6 @@
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Graph.Shared.StaticGraph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Readiness;
@@ -77,6 +78,6 @@ public static class NodeReadiness
     {
         ISourceState source = sources.Source(binding.Source);
 
-        return source.Released && source.Revision > progress.ConsumedRevision(binding.Key);
+        return source.Released && source.Revision > progress.ConsumedRevision(binding.Key());
     }
 }

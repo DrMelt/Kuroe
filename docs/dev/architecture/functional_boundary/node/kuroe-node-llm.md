@@ -15,8 +15,9 @@ Llm 节点类型：由模型执行并交回端口产出。类型声明对本次�
 
 - 不含执行实现与会话：在 Kuroe.Runner.Llm 与 Kuroe.Runner.Shared。
 - 不含工具实现与工具装配：在 Kuroe.Tool 与宿主。
+- 不含图模型声明与图执行装配：在 Kuroe.Flow.NodeExecution。
 - 不含图运行期与流程控制。
 
 ## 依赖
 
-- Kuroe.Tool、Kuroe.Runner.Shared、Kuroe.Runner.Llm、Kuroe.FlowDescription.Shared、Kuroe.Shared、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared、Kuroe.Execution.Shared。
+- Kuroe.Tool、Kuroe.Runner.Shared、Kuroe.Runner.Llm、Kuroe.FlowDescription.Shared、Kuroe.Shared、Kuroe.Tasks.Shared、Kuroe.Execution.Shared。

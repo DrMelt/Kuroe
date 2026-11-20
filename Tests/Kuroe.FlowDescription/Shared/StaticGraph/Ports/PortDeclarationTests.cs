@@ -1,5 +1,5 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.FlowDescription.Shared.Tests.Support;
@@ -62,7 +62,7 @@ public sealed class PortDeclarationTests
         Assert.Equal([new PortName("结论")], executable.RequiredPorts.Select(port => port.Name));
         Assert.Equal(PortTypes.Text, Assert.NotNull(executable.FindPort(new PortName("结论"))).Type);
         Assert.Null(executable.FindPort(new PortName("任务")));
-        Assert.Equal(100, ExecutableNode.DefaultMaxExecutions);
+        Assert.Equal(100, ExecutableSpec.DefaultMaxExecutions);
     }
 
     [Fact(DisplayName = "执行节点保留声明的输入默认值")]
@@ -106,6 +106,6 @@ public sealed class PortDeclarationTests
         Spec = new ExecutableSpec(),
         Inputs = [],
         Outputs = outputs,
-        MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+        MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
     };
 }

@@ -13,9 +13,10 @@
 ## 边界外
 
 - 不含等待登记与产出：在 Kuroe.Runner.Approval 与 Kuroe.Input.Runtime。
+- 不含执行装配与输出投影：在 Kuroe.Flow.NodeExecution。
 - 不含图运行期与流程推进。
 - 不含其他节点类型。
 
 ## 依赖
 
-- Kuroe.FlowDescription.Shared、Kuroe.Runner.Approval、Kuroe.Tasks.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Shared、Kuroe.Execution.Shared。
+- Kuroe.FlowDescription.Shared。

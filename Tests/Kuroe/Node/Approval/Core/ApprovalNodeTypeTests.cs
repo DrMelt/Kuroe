@@ -4,8 +4,6 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Approval.Tests;
@@ -13,9 +11,7 @@ namespace Kuroe.Node.Approval.Tests;
 /// <summary>审批节点类型的形状与类型规则：启动执行后等待批准，对外端口由输入端口派生，放行后放出停驻时的取值。</summary>
 public sealed class ApprovalNodeTypeTests
 {
-    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
-
-    private static readonly ApprovalNodeType NodeType = new(null, RunnerFactory);
+    private static readonly ApprovalNodeType NodeType = new(null);
 
     [Fact(DisplayName = "审批节点名称是文件书写的种类")]
     public void Name_is_the_kind_written_in_files()
@@ -27,7 +23,7 @@ public sealed class ApprovalNodeTypeTests
     [Fact(DisplayName = "审批类型创建把声明保留在实例上")]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType type = ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" }, RunnerFactory);
+        INodeType type = ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" });
 
         Assert.Equal(ApprovalNodeTypes.Name, type.Kind);
         Assert.Equal("确认计划", Assert.IsType<ApprovalNodeType>(type).Parameters?.Question);
@@ -90,16 +86,10 @@ public sealed class ApprovalNodeTypeTests
     private static NodeSpec Node(IReadOnlyList<InputPort>? inputs = null) => new()
     {
         Label = new NodeLabel("把关"),
-        Type = ApprovalNodeTypes.Create(null, RunnerFactory),
+        Type = ApprovalNodeTypes.Create(null),
         Inputs = inputs ?? [],
         Spec = new ExecutableSpec(),
     };
 
-    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
-    {
-        public IExecutionRunner Create(
-            IExecutionParameters parameters,
-            IExecutionRequestEntry requests) =>
-            throw new InvalidOperationException("测试节点类型不建立运行器。");
-    }
+
 }

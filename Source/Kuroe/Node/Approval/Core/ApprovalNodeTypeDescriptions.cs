@@ -1,5 +1,4 @@
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Approval;
 
@@ -7,8 +6,6 @@ namespace Kuroe.Node.Approval;
 public static class ApprovalNodeTypeDescriptions
 {
     /// <summary>把审批节点的描述注册进注册表。</summary>
-    public static void RegisterInto(
-        INodeTypeDescriptionRegistry files,
-        IExecutionRunnerFactory runnerFactory) =>
-        files.Register(new ApprovalNodeTypeDescription(runnerFactory));
+    public static void RegisterInto(INodeTypeDescriptionRegistry files) =>
+        files.Register(new ApprovalNodeTypeDescription());
 }

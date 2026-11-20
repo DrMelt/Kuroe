@@ -24,10 +24,12 @@
         <ProjectReference Include="..\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Hosting\Core\Kuroe.Flow.Hosting.csproj" />
+        <ProjectReference Include="..\Kuroe.Flow\NodeExecution\Core\Kuroe.Flow.NodeExecution.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Persistence\Restoring\Shared\Kuroe.Tasks.Persistence.Restoring.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
         <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
     </ItemGroup>
 

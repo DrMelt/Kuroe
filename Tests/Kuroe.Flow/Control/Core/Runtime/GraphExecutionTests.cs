@@ -56,7 +56,7 @@ public sealed class GraphExecutionTests
             new Kuroe.Execution.Shared.Identity.ExecutionId(1),
             request);
 
-        return new GraphExecution(input, unit, 0);
+        return new GraphExecution(input, unit, 0, TestNodeCapabilities.Build());
     }
 
     private static GraphExecutionInput Input() => new()

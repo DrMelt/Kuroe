@@ -1,5 +1,6 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
+
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
@@ -15,7 +16,7 @@ public sealed class NodeInputPlanTests
     {
         NodeInputPlan plan = new();
 
-        Assert.Equal(ExecutableNode.DefaultMaxExecutions, plan.MaxExecutions);
+        Assert.Equal(ExecutableSpec.DefaultMaxExecutions, plan.MaxExecutions);
         Assert.Empty(plan.Groups);
     }
 

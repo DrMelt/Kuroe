@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Maf.NodeExecution;
 using Kuroe.Execution.Shared.Identity;
 using Kuroe.Execution.Shared.Ports;
 using Kuroe.Execution.Shared.Request;
@@ -59,7 +60,7 @@ public sealed class MafFlowAssemblerTests
     [Fact(DisplayName = "文档来源按名提供装配结果")]
     public void Document_source_finds_assembled_flows()
     {
-        MafFlowAssembler assembler = new(new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander()));
+        MafFlowAssembler assembler = new(new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander()), Executions());
         ErrorOr<MafDocumentFlowSource> created = MafDocumentFlowSource.Create(assembler, Chain(), []);
 
         Assert.False(created.IsError, Describe(created.ErrorsOrEmptyList));
@@ -122,7 +123,21 @@ public sealed class MafFlowAssemblerTests
     {
         FlowDescriptionCompiler compiler = new(TestTypeFiles.Registry(), new NodeLibraryExpander());
 
-        return new MafFlowAssembler(compiler).Assemble(document, []);
+        return new MafFlowAssembler(compiler, Executions()).Assemble(document, []);
+    }
+
+    private static MafNodeExecutions Executions()
+    {
+        MafNodeExecutions executions = new();
+        MafNodeExecution.Register(
+            executions,
+            new MafNodeExecutionRunners(
+                TestTypeFiles.Runners,
+                TestTypeFiles.Runners,
+                TestTypeFiles.Runners,
+                TestTypeFiles.Runners));
+
+        return executions;
     }
 
     private static string Describe(IReadOnlyList<Error> errors) =>

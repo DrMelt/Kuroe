@@ -1,5 +1,7 @@
+using Kuroe.Flow.NodeExecution;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Node.Approval;
 using Kuroe.Node.Input;
@@ -34,7 +36,7 @@ public static class TestTypeFiles
     {
         NodeTypeDescriptionRegistry files = new();
         ContainerNodeTypeDescriptions.RegisterInto(files);
-        LlmNodeTypeDescriptions.RegisterInto(files, Runners, Contracts);
+        LlmNodeTypeDescriptions.RegisterInto(files, Contracts);
         RegisterAll(files);
 
         return files;
@@ -43,8 +45,19 @@ public static class TestTypeFiles
     /// <summary>把输入与审批节点描述注册进注册表。</summary>
     public static void RegisterAll(INodeTypeDescriptionRegistry files)
     {
-        InputNodeTypeDescriptions.RegisterInto(files, Runners);
-        ApprovalNodeTypeDescriptions.RegisterInto(files, Runners);
+        InputNodeTypeDescriptions.RegisterInto(files);
+        ApprovalNodeTypeDescriptions.RegisterInto(files);
+    }
+
+    /// <summary>建出含测试节点能力的图能力映射。</summary>
+    public static GraphNodeCapabilities GraphCapabilities(IExecutionRunnerFactory? runner = null)
+    {
+        IExecutionRunnerFactory runners = runner ?? Runners;
+        GraphNodeCapabilities capabilities = new();
+        capabilities.Register(LlmNodeTypes.Name, type => LlmNodeExecution.Bind(type, runners));
+        FlowNodeExecution.RegisterInteractive(capabilities, runners, runners);
+
+        return capabilities;
     }
 
     private sealed class UnusedRunnerFactory : IExecutionRunnerFactory

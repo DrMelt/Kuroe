@@ -23,7 +23,9 @@
 | 流程实现 | `IFlowControl`、`IFlowControlFactory`、`IFlowIdentity`、`IFlowProviderSource`、`FlowProvider`、`FlowIdentity` |
 | 流程推进 | `IFlowRuntime.Rerun`、等待执行重新派发 |
 | 输入通道 | `IInputChannel`、`IInputDelivery`、`InputReceiver` |
-| 执行运行器 | `IExecutionRunner`、`IExecutionRunnerFactory`、`IExecutionRunnerFactoryProvider`、`IExecutionRestorer`、`ExecutionInvocation`、`IExecutionRequestEntry` |
+| 执行运行器 | `IExecutionRunner`、`IExecutionRunnerFactory`、`IExecutionBinder`、`IExecutionRestorer`、`ExecutionInvocation`、`IExecutionRequestEntry` |
+| 图节点能力 | `IGraphNodeCapabilities`、`INodeOutputProjection`、`INodeRuntimeFactory` |
+| MAF 步骤能力 | `IMafNodeExecutions`、`IMafStepInvocationFactory` |
 | MAF 步骤执行装配 | `IMafStepInvocationFactory`、`MafStepInvocationFactory` |
 | 任务表现 | `IFlowPresentation`、`IFlowView`、`ITaskFlowView`、`TaskSnapshotFactory` |
 | 流程记录 | `IFlowRecordSource`、`IFlowDefinitionRecord`、`IFlowStateRecord` |
@@ -36,6 +38,6 @@
 
 ## 节点与工具的接入
 
-节点类型提供类型名、静态形状与实例建立，参数段按字段声明读取，节点规则由模型层给出并在流程编译时校验。节点项目引用自身运行器实现项目，执行装配结果由节点在执行函数里建立。
+节点类型只提供类型名、静态形状与实例建立，参数段按字段声明读取，节点规则由模型层给出并在流程编译时校验。执行器绑定与图节点能力由节点项目按类型提供，图流程与 MAF 各自注册所需能力。
 
 工具以 `ITool` 给出函数声明，以 `IToolSource` 在装配期提供定义并在运行期按执行上下文创建载体。文件配置的工具经 `IToolFile` 注册到工具文件注册表，注册必须显式，同名处理见[同名覆盖与重名](overrides.md)。

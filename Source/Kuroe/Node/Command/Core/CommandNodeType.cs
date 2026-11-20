@@ -3,25 +3,18 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Runner.Command;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 
 namespace Kuroe.Node.Command;
 
 /// <summary>命令节点类型：按命令变量展开执行目录与参数并执行一次命令，把合并输出按内容产出发布到文本端口。</summary>
-public sealed class CommandNodeType(
-    CommandExecutionParameters? parameters,
-    IExecutionRunnerFactory runnerFactory)
-    : INodeType, INodeTypeValidation, IExecutionParameterProvider, IExecutionRunnerFactoryProvider
+public sealed class CommandNodeType(CommandExecutionParameters? parameters)
+    : INodeType, INodeTypeValidation
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public CommandExecutionParameters? Parameters { get; } = parameters;
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => CommandNodeTypes.Name;
-
-    /// <summary>本节点使用的执行运行器工厂。</summary>
-    public IExecutionRunnerFactory RunnerFactory { get; } = runnerFactory;
 
     /// <summary>命令节点类型的静态形状。</summary>
     public NodeTypeShape Shape => CommandNodeTypes.Shape;
@@ -47,8 +40,4 @@ public sealed class CommandNodeType(
 
         Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
-
-    /// <summary>按本次执行建立命令参数。</summary>
-    public IExecutionParameters Create(ExecutionParameterContext context) =>
-        Parameters ?? throw new InvalidOperationException("命令执行节点缺少 Program 声明，无法建立执行器。");
 }

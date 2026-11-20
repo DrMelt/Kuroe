@@ -1,26 +1,27 @@
+using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared;
 using Kuroe.FlowDescription.Shared.Parameters;
 using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
 using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.TestSupport;
 using Xunit;
-using Kuroe.FlowDescription.Compilation.Library;
 
 namespace Kuroe.FlowDescription.Compilation.Integration.Tests;
 
 /// <summary>流程文档的转换、编译规则与读写往返。</summary>
 public sealed class FlowDescriptionSetTests
 {
-    private static IFlowDescriptionCompiler Compiler =>
-        new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander());
+    private static class GraphTestCompiler
+    {
+        public static ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDescriptionSet document, IReadOnlyList<NodeSpec> builtins) =>
+            GraphCompilerTestHelper.Compile(TestTypeFiles.Registry(), document, builtins);
+    }
 
     [Fact(DisplayName = "没有根节点的流程被拒绝")]
     public void Flow_without_root_node_is_rejected() =>
@@ -65,13 +66,13 @@ public sealed class FlowDescriptionSetTests
             FlowDescriptionSetSource.Read(StartDefaultFlow).ThrowIfError()).ThrowIfError();
 
         Assert.Contains("\"Default\": \"main\"", written);
-        Assert.Empty(Compiler.Compile(FlowDescriptionSetSource.Read(written).ThrowIfError(), []).ErrorsOrEmptyList);
+        Assert.Empty(GraphTestCompiler.Compile(FlowDescriptionSetSource.Read(written).ThrowIfError(), []).ErrorsOrEmptyList);
     }
 
     [Fact(DisplayName = "审批节点派生的输出端口只转发内容，不声明触发模式")]
     public void Approval_output_port_is_plain()
     {
-        ErrorOr<IReadOnlyList<FlowGraph>> compiled = Compiler.Compile(FlowDescriptionSetSource.Read("""
+        ErrorOr<IReadOnlyList<FlowGraph>> compiled = GraphTestCompiler.Compile(FlowDescriptionSetSource.Read("""
             { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Signal", "Mode": "Plain" }], "Root": { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "@目标" } ] } } ] }
             """).Value, []);
 
@@ -242,7 +243,7 @@ public sealed class FlowDescriptionSetTests
         try
         {
             FlowDescriptionSet document = FlowDescriptionSetSource.Read(File.ReadAllText(file)).ThrowIfError();
-            Compiler.Compile(document, []).ThrowIfError();
+            GraphTestCompiler.Compile(document, []).ThrowIfError();
             File.WriteAllText(file, FlowDescriptionSetSource.WriteFlows(document).ThrowIfError());
             string once = File.ReadAllText(file);
 
@@ -270,7 +271,7 @@ public sealed class FlowDescriptionSetTests
         try
         {
             FlowDescriptionSet document = FlowDescriptionSetSource.Read(File.ReadAllText(file)).ThrowIfError();
-            Compiler.Compile(document, []).ThrowIfError();
+            GraphTestCompiler.Compile(document, []).ThrowIfError();
             File.WriteAllText(file, FlowDescriptionSetSource.WriteFlows(document).ThrowIfError());
             string text = File.ReadAllText(file);
 
@@ -1001,14 +1002,13 @@ public sealed class FlowDescriptionSetTests
     {
         NodeTypeDescriptionRegistry files = TestTypeFiles.Registry();
         files.Register(description);
-        IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
         ErrorOr<FlowDescriptionSet> document = FlowDescriptionSetSource.Read(json);
         if (document.IsError)
         {
             return document.ErrorsOrEmptyList;
         }
 
-        return compiler.Compile(document.Value, []);
+        return GraphCompilerTestHelper.Compile(files, document.Value, []);
     }
 
     /// <summary>类型给出输出端口的测试类型：Output 承载文本，Completed 表示完成。</summary>
@@ -1053,6 +1053,6 @@ public sealed class FlowDescriptionSetTests
             return [.. content.ErrorsOrEmptyList.Select(error => error.Description)];
         }
 
-        return [.. Compiler.Compile(content.Value, []).ErrorsOrEmptyList.Select(error => error.Description)];
+        return [.. GraphTestCompiler.Compile(content.Value, []).ErrorsOrEmptyList.Select(error => error.Description)];
     }
 }

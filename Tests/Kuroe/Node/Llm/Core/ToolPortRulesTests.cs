@@ -5,8 +5,6 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Tool;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
 using Xunit;
 
 namespace Kuroe.Node.Llm.Tests;
@@ -14,7 +12,6 @@ namespace Kuroe.Node.Llm.Tests;
 /// <summary>工具路径与路径变量的装载期规则：映射落在白名单内并覆盖每个可用工具的全部变量。</summary>
 public sealed class ToolPortRulesTests
 {
-    private static readonly IExecutionRunnerFactory RunnerFactory = new UnusedRunnerFactory();
     private static readonly ToolContract Build = new("build/Build", ["root"]);
     private static readonly ToolContract Read = new("file/read/ReadFile", ["root"]);
     private static readonly ToolContract Write = new("file/write/WriteFile", ["project"]);
@@ -190,7 +187,7 @@ public sealed class ToolPortRulesTests
         LlmParameters parameters,
         params InputPort[] inputs)
     {
-        LlmNodeType type = new(parameters, RunnerFactory, Catalog);
+        LlmNodeType type = new(parameters, Catalog);
         NodeSpec node = new()
         {
             Label = new NodeLabel("干活"),
@@ -222,11 +219,5 @@ public sealed class ToolPortRulesTests
         public IReadOnlyList<ToolContract> Contracts { get; } = contracts;
     }
 
-    private sealed class UnusedRunnerFactory : IExecutionRunnerFactory
-    {
-        public IExecutionRunner Create(
-            IExecutionParameters parameters,
-            IExecutionRequestEntry requests) =>
-            throw new InvalidOperationException("测试节点类型不建立运行器。");
-    }
+
 }

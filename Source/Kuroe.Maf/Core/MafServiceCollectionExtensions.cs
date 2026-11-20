@@ -4,6 +4,7 @@ using Kuroe.FlowDescription.Shared;
 using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.Maf.Compilation;
+using Kuroe.Maf.Compilation.Shared;
 using Kuroe.Maf.Definition;
 using Kuroe.Maf.Control;
 using Kuroe.Maf.Persistence;
@@ -27,11 +28,12 @@ public static class MafServiceCollectionExtensions
         this IServiceCollection services,
         IFlowTemplateRegistrar registrar,
         IFlowDescriptionCompiler compiler,
+        IMafNodeExecutions executions,
         FlowDescriptionSet document,
         IReadOnlyList<NodeSpec> builtins)
     {
         ErrorOr<MafDocumentFlowSource> source = MafDocumentFlowSource.Create(
-            new MafFlowAssembler(compiler),
+            new MafFlowAssembler(compiler, executions),
             document,
             builtins);
         if (source.IsError)

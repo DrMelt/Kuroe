@@ -107,10 +107,11 @@ public sealed class MafBoundaryTests
         ReferencesStayUnder(
             shared,
             "Kuroe.Maf.Compilation.Shared",
-            "流程描述与 MAF 定义",
+            "流程描述、MAF 定义与执行契约",
             document,
             mafDefinition,
-            tasks);
+            tasks,
+            execution);
         ReferencesStayUnder(
             compilation,
             "Kuroe.Maf.Compilation",

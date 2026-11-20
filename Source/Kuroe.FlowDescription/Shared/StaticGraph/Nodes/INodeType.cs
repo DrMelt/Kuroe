@@ -5,7 +5,7 @@ namespace Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 
 /// <summary>一个节点类型：类型名与静态形状，由实现方建出实例挂在节点上。
 /// 引擎按形状解析声明与推进执行，类型专属声明封在实例里，引擎只透传不解释。
-/// 非派发类型需要自行建立运行期对象时实现运行期工厂接口，派发类型需要自带执行器时实现节点执行器工厂接口，需要校验规则的类型另实现编译期校验契约。</summary>
+/// 类型只描述节点形式，不承载执行器装配、输出投影与运行期对象。需要校验规则的类型另实现编译期校验契约。</summary>
 public interface INodeType
 {
     /// <summary>类型名，与文件里 Kind 的取值对应。</summary>

@@ -15,14 +15,6 @@ public sealed class NodeRunnerTests
         (string Project, string Runner, bool AllowsRunnerShared)[] projects =
         [
             (
-                Path.Combine(SourceRoot, "Kuroe", "Node", "Input", "Core", "Kuroe.Node.Input.csproj"),
-                Path.Combine(runnerRoot, "Input", "Core", "Kuroe.Runner.Input.csproj"),
-                false),
-            (
-                Path.Combine(SourceRoot, "Kuroe", "Node", "Approval", "Core", "Kuroe.Node.Approval.csproj"),
-                Path.Combine(runnerRoot, "Approval", "Core", "Kuroe.Runner.Approval.csproj"),
-                false),
-            (
                 Path.Combine(SourceRoot, "Kuroe", "Node", "Command", "Core", "Kuroe.Node.Command.csproj"),
                 Path.Combine(runnerRoot, "Command", "Core", "Kuroe.Runner.Command.csproj"),
                 false),
@@ -45,6 +37,40 @@ public sealed class NodeRunnerTests
                 IsUnder(reference, runnerRoot)
                 && !string.Equals(reference, runner, StringComparison.OrdinalIgnoreCase)
                 && !(allowsRunnerShared && string.Equals(reference, runnerShared, StringComparison.OrdinalIgnoreCase)));
+        }
+    }
+
+    [Fact(DisplayName = "流程节点执行装配引用对应运行器")]
+    public void Node_execution_projects_reference_their_runner_implementations()
+    {
+        string runnerRoot = Path.Combine(SourceRoot, "Kuroe", "Runner");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow", "NodeExecution", "Core", "Kuroe.Flow.NodeExecution.csproj");
+        string maf = Path.Combine(SourceRoot, "Kuroe.Maf", "NodeExecution", "Core", "Kuroe.Maf.NodeExecution.csproj");
+
+        IReadOnlyList<string> flowReferences = ProjectReferences(flow);
+        foreach (string runner in new[] { "Input", "Approval" })
+        {
+            Assert.Contains(Path.Combine(runnerRoot, runner, "Core", $"Kuroe.Runner.{runner}.csproj"), flowReferences);
+        }
+
+        IReadOnlyList<string> mafReferences = ProjectReferences(maf);
+        Assert.DoesNotContain(mafReferences, reference => IsUnder(reference, runnerRoot));
+    }
+
+    [Fact(DisplayName = "共享节点项目不引用流程实现")]
+    public void Shared_node_projects_stay_out_of_flow_implementations()
+    {
+        string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+
+        Assert.NotEmpty(ProjectFiles(nodes));
+        foreach (string project in ProjectFiles(nodes))
+        {
+            IReadOnlyList<string> references = ProjectReferences(project);
+
+            Assert.DoesNotContain(references, reference => IsUnder(reference, flow));
+            Assert.DoesNotContain(references, reference => IsUnder(reference, maf));
         }
     }
 
