@@ -1,9 +1,9 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Kuroe.Tasks.Persistence.Serialization.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
 
-namespace Kuroe.Tasks.Persistence.Json;
+namespace Kuroe.Kernel.Tasks.Persistence.Serialization.Json;
 
 /// <summary>存档文件的 JSON 绑定。读取拒绝未定义字段，写出省略 null 字段并保留非 ASCII 字符。</summary>
 [JsonSourceGenerationOptions(

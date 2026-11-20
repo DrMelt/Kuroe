@@ -1,8 +1,8 @@
 using ErrorOr;
 using Kuroe.Runner.Llm.Sessions;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm.Executions;
 

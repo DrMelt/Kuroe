@@ -1,11 +1,11 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Execution;
+namespace Kuroe.Kernel.Execution;
 
 /// <summary>执行单元的控制面：按装配结果派发执行、等待收口与退出收口。执行状态迁移不出执行单元。</summary>
 public sealed class ExecutionRuntime(

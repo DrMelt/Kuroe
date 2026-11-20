@@ -24,4 +24,4 @@ MAF 流程控制：把流程定义构造成工作流运行，由 MAF 运行期�
 
 ## 依赖
 
-- Kuroe.Control.Shared、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Presentation.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Maf.Records.Shared、Kuroe.Maf.Definition。
+- Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Maf.Records.Shared、Kuroe.Maf.Definition。

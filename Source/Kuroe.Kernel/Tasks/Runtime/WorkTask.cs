@@ -1,14 +1,14 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Execution.Records.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Notice;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Execution.Records.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Notice;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Tasks.Runtime;
+namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>任务 = 一条长期执行线程：控制状态、开始输入、过程记录与全部执行。
 /// 流程语义由 <see cref="FlowProvider"/> 的端口提供，宿主读 <see cref="Snapshot"/>。</summary>

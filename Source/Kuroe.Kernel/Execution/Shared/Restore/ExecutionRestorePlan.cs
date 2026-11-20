@@ -1,10 +1,10 @@
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.State;
-using Kuroe.Execution.Shared.Usage;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Usage;
 
-namespace Kuroe.Execution.Shared.Restore;
+namespace Kuroe.Kernel.Execution.Shared.Restore;
 
 /// <summary>从存档重建一次执行所需的中性数据。</summary>
 public sealed record ExecutionRestorePlan(

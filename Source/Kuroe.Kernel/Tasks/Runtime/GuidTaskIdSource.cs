@@ -1,6 +1,6 @@
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Runtime;
+namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>按时间有序的唯一键生成任务标识，进程间不重复。</summary>
 public sealed class GuidTaskIdSource : ITaskIdSource

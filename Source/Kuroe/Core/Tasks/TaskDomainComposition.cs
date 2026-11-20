@@ -1,16 +1,16 @@
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.Pending;
-using Kuroe.Tasks.Persistence.Files;
-using Kuroe.Tasks.Persistence.Files.Shared;
-using Kuroe.Tasks.Persistence.Restoring;
-using Kuroe.Tasks.Persistence.Restoring.Shared;
-using Kuroe.Tasks.Persistence.Saving;
-using Kuroe.Tasks.Persistence.Saving.Shared;
-using Kuroe.Tasks.Persistence.Serialization.Shared;
-using Kuroe.Tasks.Runtime;
-using Kuroe.Tasks.Runtime.Persistence;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Tasks.Persistence.Files;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Restoring;
+using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Saving;
+using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
+using Kuroe.Kernel.Tasks.Runtime;
+using Kuroe.Kernel.Tasks.Runtime.Persistence;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Tasks;
 

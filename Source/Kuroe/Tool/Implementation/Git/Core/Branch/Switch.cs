@@ -1,6 +1,6 @@
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Git.Branch;
+namespace Kuroe.Tool.Implementation.Git.Branch;
 
 /// <summary>切换分支的命令定义。</summary>
 internal static class Switch

@@ -4,7 +4,7 @@ using Kuroe.Tool.FileAccess;
 using Kuroe.Tool.FileAccess.Output;
 using Kuroe.Tool.FileAccess.Shared;
 
-namespace Kuroe.Tool.Source;
+namespace Kuroe.Tool.Implementation.Source;
 
 /// <summary>导出资料的查阅工具：按目录列出程序随附的源码与文档路径，按行号范围读取原文。
 /// 只读，路径解析后必须落回导出目录内。</summary>

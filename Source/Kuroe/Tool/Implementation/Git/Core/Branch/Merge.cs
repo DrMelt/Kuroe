@@ -1,6 +1,6 @@
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Git.Branch;
+namespace Kuroe.Tool.Implementation.Git.Branch;
 
 /// <summary>合并修订的命令定义。</summary>
 internal static class Merge

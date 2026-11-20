@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Identity;
+namespace Kuroe.Kernel.Execution.Shared.Identity;
 
 /// <summary>执行标识，跨任务全局递增，按号即可定位。</summary>
 public readonly record struct ExecutionId(int Value)

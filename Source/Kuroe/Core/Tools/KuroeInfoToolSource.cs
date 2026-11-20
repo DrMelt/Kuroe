@@ -1,9 +1,9 @@
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Shared.Catalogs;
 using Kuroe.Shared.Configuration;
 using Kuroe.Tool;
-using Kuroe.Tool.KuroeInfo;
+using Kuroe.Tool.Implementation.KuroeInfo;
 
 namespace Kuroe.Tools;
 

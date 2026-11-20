@@ -8,7 +8,7 @@ Kuroe 把用户定义的流程交给模型执行。内核提供任务、执行�
 
 ## 解决方案划分
 
-`A --> B` 表示 A 依赖 B，边与实际项目引用一一对应。分组维度是域，与项目名前缀无关：`Kuroe.Tool.*` 归 tool，`Kuroe.Tasks.*` 归 kernel，`Kuroe.Flow.*` 归 flow。
+`A --> B` 表示 A 依赖 B，边与实际项目引用一一对应。分组维度是域，项目名带域与功能路径：`Kuroe.Tool.*` 归 tool，`Kuroe.Kernel.*` 归 kernel，`Kuroe.Flow.*` 归 flow。
 
 Kernel 只提供中性机制，不出现图与节点词汇，不定义具体流程种类。流程种类常量与流程记录由流程实现拥有。
 
@@ -34,7 +34,7 @@ graph TD
         TasksPersistenceRestoringShared["Tasks.Persistence.Restoring.Shared<br>启动恢复契约"]
         TasksPersistenceRestoring["Tasks.Persistence.Restoring<br>启动恢复服务"]
         TasksPersistenceSerializationShared["Tasks.Persistence.Serialization.Shared<br>存档文档与映射"]
-        TasksPersistenceJson["Tasks.Persistence.Json<br>存档 JSON 编解码"]
+        TasksPersistenceJson["Tasks.Persistence.Serialization.Json<br>存档 JSON 编解码"]
     end
 
     subgraph DFlow["flow：图流程运行期、控制与装配"]
@@ -45,7 +45,7 @@ graph TD
         FlowNodeTypeContainer["Flow.NodeType.Container<br>容器节点类型"]
         FlowControl["Flow.Control<br>图流程控制与运行期"]
         FlowHosting["Flow.Hosting<br>图流程注册与流程库装配"]
-        FlowPersistenceGraph["Flow.Persistence.Graph<br>图流程记录编解码"]
+        FlowPersistenceGraph["Flow.Persistence.Serialization.Graph<br>图流程记录编解码"]
     end
 
     subgraph DFlowDescription["flow-description：流程描述与共享编译"]
@@ -95,16 +95,16 @@ graph TD
         ToolJson["Tool.Json<br>工具文件注册"]
         ToolFileAccessShared["Tool.FileAccess.Shared<br>文件访问契约"]
         ToolFileAccess["Tool.FileAccess<br>文件访问实现"]
-        ToolCommandShared["Tool.Command.Shared<br>命令模板工具契约"]
-        ToolCommand["Tool.Command<br>命令模板工具执行"]
-        ToolCommandJson["Tool.Command.Json<br>命令工具文件读写"]
-        ToolContract["Tool.Contract<br>执行契约工具"]
-        ToolDotnet["Tool.Dotnet<br>dotnet 工具组"]
-        ToolGit["Tool.Git<br>git 工具组"]
-        ToolFile["Tool.File<br>file 工具组"]
-        ToolKuroeInfo["Tool.KuroeInfo<br>KuroeInfo 工具组"]
-        ToolSource["Tool.Source<br>source 工具组"]
-        ToolTime["Tool.Time<br>时间工具"]
+        ToolCommandShared["Tool.Implementation.Command.Shared<br>命令模板工具契约"]
+        ToolCommand["Tool.Implementation.Command<br>命令模板工具执行"]
+        ToolCommandJson["Tool.Implementation.Command.Json<br>命令工具文件读写"]
+        ToolContract["Tool.Implementation.Contract<br>执行契约工具"]
+        ToolDotnet["Tool.Implementation.Dotnet<br>dotnet 工具组"]
+        ToolGit["Tool.Implementation.Git<br>git 工具组"]
+        ToolFile["Tool.Implementation.File<br>file 工具组"]
+        ToolKuroeInfo["Tool.Implementation.KuroeInfo<br>KuroeInfo 工具组"]
+        ToolSource["Tool.Implementation.Source<br>source 工具组"]
+        ToolTime["Tool.Implementation.Time<br>时间工具"]
     end
 
     subgraph DAssistant["assistant：内置助手"]
@@ -276,7 +276,7 @@ graph TD
     FlowHosting --> TasksPersistenceFiles
     FlowHosting --> PresentationShared
 
-    FlowGraphShared --> FlowDescriptionShared
+    FlowGraphShared --> FlowDescriptionDefinitionShared
     FlowGraphShared --> TasksShared
     FlowGraphShared --> ExecutionShared
     FlowNodeTypeContainer --> FlowDescriptionDescriptionShared
@@ -309,6 +309,7 @@ graph TD
     MafCompilationShared --> FlowDescriptionDescriptionShared
     MafCompilationShared --> FlowDescriptionDefinitionShared
     MafCompilationShared --> MafDefinition
+    MafCompilationShared --> ExecutionShared
     MafCompilationShared --> TasksShared
     MafCompilation --> MafCompilationShared
     MafCompilation --> MafDefinition
@@ -330,6 +331,7 @@ graph TD
     Maf --> FlowDescriptionDefinitionShared
     Maf --> FlowDescriptionCompilationShared
     Maf --> MafCompilation
+    Maf --> MafCompilationShared
     Maf --> MafDefinition
     Maf --> MafControl
     Maf --> MafPersistence
@@ -485,6 +487,8 @@ graph TD
     Console --> Tool
     Console --> ToolJson
     Console --> FlowHosting
+    Console --> FlowNodeExecution
+    Console --> FlowGraphShared
     Console --> TasksRuntime
     Console --> TasksPersistenceRestoringShared
     Console --> ExecutionShared
@@ -541,26 +545,26 @@ graph TD
 
 | 模块 | 域 | 边界文档 |
 | --- | --- | --- |
-| `Kuroe.Execution.Shared` | kernel | [kuroe-execution-shared](functional_boundary/kernel/kuroe-execution-shared.md) |
-| `Kuroe.Execution` | kernel | [kuroe-execution](functional_boundary/kernel/kuroe-execution.md) |
-| `Kuroe.Execution.Records.Shared` | kernel | [kuroe-execution-records-shared](functional_boundary/kernel/kuroe-execution-records-shared.md) |
-| `Kuroe.Input.Shared` | kernel | [kuroe-input-shared](functional_boundary/kernel/kuroe-input-shared.md) |
-| `Kuroe.Input.Runtime` | kernel | [kuroe-input-runtime](functional_boundary/kernel/kuroe-input-runtime.md) |
-| `Kuroe.Control.Shared` | kernel | [kuroe-control-shared](functional_boundary/kernel/kuroe-control-shared.md) |
-| `Kuroe.Control.Runtime` | kernel | [kuroe-control-runtime](functional_boundary/kernel/kuroe-control-runtime.md) |
-| `Kuroe.Tasks.Shared` | kernel | [kuroe-tasks-shared](functional_boundary/kernel/kuroe-tasks-shared.md) |
-| `Kuroe.Tasks.Runtime` | kernel | [kuroe-tasks-runtime](functional_boundary/kernel/kuroe-tasks-runtime.md) |
-| `Kuroe.Tasks.Presentation.Shared` | kernel | [kuroe-tasks-presentation-shared](functional_boundary/kernel/kuroe-tasks-presentation-shared.md) |
-| `Kuroe.Tasks.Records.Shared` | kernel | [kuroe-tasks-records-shared](functional_boundary/kernel/kuroe-tasks-records-shared.md) |
-| `Kuroe.Presentation.Shared` | kernel | [kuroe-presentation-shared](functional_boundary/kernel/kuroe-presentation-shared.md) |
-| `Kuroe.Tasks.Persistence.Files.Shared` | kernel | [kuroe-tasks-persistence-files-shared](functional_boundary/kernel/kuroe-tasks-persistence-files-shared.md) |
-| `Kuroe.Tasks.Persistence.Files` | kernel | [kuroe-tasks-persistence-files](functional_boundary/kernel/kuroe-tasks-persistence-files.md) |
-| `Kuroe.Tasks.Persistence.Saving.Shared` | kernel | [kuroe-tasks-persistence-saving-shared](functional_boundary/kernel/kuroe-tasks-persistence-saving-shared.md) |
-| `Kuroe.Tasks.Persistence.Saving` | kernel | [kuroe-tasks-persistence-saving](functional_boundary/kernel/kuroe-tasks-persistence-saving.md) |
-| `Kuroe.Tasks.Persistence.Restoring.Shared` | kernel | [kuroe-tasks-persistence-restoring-shared](functional_boundary/kernel/kuroe-tasks-persistence-restoring-shared.md) |
-| `Kuroe.Tasks.Persistence.Restoring` | kernel | [kuroe-tasks-persistence-restoring](functional_boundary/kernel/kuroe-tasks-persistence-restoring.md) |
-| `Kuroe.Tasks.Persistence.Serialization.Shared` | kernel | [kuroe-tasks-persistence-serialization-shared](functional_boundary/kernel/kuroe-tasks-persistence-serialization-shared.md) |
-| `Kuroe.Tasks.Persistence.Json` | kernel | [kuroe-tasks-persistence-json](functional_boundary/kernel/kuroe-tasks-persistence-json.md) |
+| `Kuroe.Kernel.Execution.Shared` | kernel | [kuroe-kernel-execution-shared](functional_boundary/kernel/kuroe-kernel-execution-shared.md) |
+| `Kuroe.Kernel.Execution` | kernel | [kuroe-kernel-execution](functional_boundary/kernel/kuroe-kernel-execution.md) |
+| `Kuroe.Kernel.Execution.Records.Shared` | kernel | [kuroe-kernel-execution-records-shared](functional_boundary/kernel/kuroe-kernel-execution-records-shared.md) |
+| `Kuroe.Kernel.Input.Shared` | kernel | [kuroe-kernel-input-shared](functional_boundary/kernel/kuroe-kernel-input-shared.md) |
+| `Kuroe.Kernel.Input.Runtime` | kernel | [kuroe-kernel-input-runtime](functional_boundary/kernel/kuroe-kernel-input-runtime.md) |
+| `Kuroe.Kernel.Control.Shared` | kernel | [kuroe-kernel-control-shared](functional_boundary/kernel/kuroe-kernel-control-shared.md) |
+| `Kuroe.Kernel.Control.Runtime` | kernel | [kuroe-kernel-control-runtime](functional_boundary/kernel/kuroe-kernel-control-runtime.md) |
+| `Kuroe.Kernel.Tasks.Shared` | kernel | [kuroe-kernel-tasks-shared](functional_boundary/kernel/kuroe-kernel-tasks-shared.md) |
+| `Kuroe.Kernel.Tasks.Runtime` | kernel | [kuroe-kernel-tasks-runtime](functional_boundary/kernel/kuroe-kernel-tasks-runtime.md) |
+| `Kuroe.Kernel.Tasks.Presentation.Shared` | kernel | [kuroe-kernel-tasks-presentation-shared](functional_boundary/kernel/kuroe-kernel-tasks-presentation-shared.md) |
+| `Kuroe.Kernel.Tasks.Records.Shared` | kernel | [kuroe-kernel-tasks-records-shared](functional_boundary/kernel/kuroe-kernel-tasks-records-shared.md) |
+| `Kuroe.Kernel.Presentation.Shared` | kernel | [kuroe-kernel-presentation-shared](functional_boundary/kernel/kuroe-kernel-presentation-shared.md) |
+| `Kuroe.Kernel.Tasks.Persistence.Files.Shared` | kernel | [kuroe-kernel-tasks-persistence-files-shared](functional_boundary/kernel/kuroe-kernel-tasks-persistence-files-shared.md) |
+| `Kuroe.Kernel.Tasks.Persistence.Files` | kernel | [kuroe-kernel-tasks-persistence-files](functional_boundary/kernel/kuroe-kernel-tasks-persistence-files.md) |
+| `Kuroe.Kernel.Tasks.Persistence.Saving.Shared` | kernel | [kuroe-kernel-tasks-persistence-saving-shared](functional_boundary/kernel/kuroe-kernel-tasks-persistence-saving-shared.md) |
+| `Kuroe.Kernel.Tasks.Persistence.Saving` | kernel | [kuroe-kernel-tasks-persistence-saving](functional_boundary/kernel/kuroe-kernel-tasks-persistence-saving.md) |
+| `Kuroe.Kernel.Tasks.Persistence.Restoring.Shared` | kernel | [kuroe-kernel-tasks-persistence-restoring-shared](functional_boundary/kernel/kuroe-kernel-tasks-persistence-restoring-shared.md) |
+| `Kuroe.Kernel.Tasks.Persistence.Restoring` | kernel | [kuroe-kernel-tasks-persistence-restoring](functional_boundary/kernel/kuroe-kernel-tasks-persistence-restoring.md) |
+| `Kuroe.Kernel.Tasks.Persistence.Serialization.Shared` | kernel | [kuroe-kernel-tasks-persistence-serialization-shared](functional_boundary/kernel/kuroe-kernel-tasks-persistence-serialization-shared.md) |
+| `Kuroe.Kernel.Tasks.Persistence.Serialization.Json` | kernel | [kuroe-kernel-tasks-persistence-serialization-json](functional_boundary/kernel/kuroe-kernel-tasks-persistence-serialization-json.md) |
 | `Kuroe.Flow.Compilation` | flow | [kuroe-flow-compilation](functional_boundary/flow/kuroe-flow-compilation.md) |
 | `Kuroe.Flow.NodeExecution` | flow | [kuroe-flow-node-execution](functional_boundary/flow/kuroe-flow-node-execution.md) |
 | `Kuroe.Flow.Graph.Shared` | flow | [kuroe-flow-graph-shared](functional_boundary/flow/kuroe-flow-graph-shared.md) |
@@ -568,7 +572,7 @@ graph TD
 | `Kuroe.Flow.NodeType.Container` | flow | [kuroe-flow-nodetype-container](functional_boundary/flow/kuroe-flow-nodetype-container.md) |
 | `Kuroe.Flow.Control` | flow | [kuroe-flow-control](functional_boundary/flow/kuroe-flow-control.md) |
 | `Kuroe.Flow.Hosting` | flow | [kuroe-flow-hosting](functional_boundary/flow/kuroe-flow-hosting.md) |
-| `Kuroe.Flow.Persistence.Graph` | flow | [kuroe-flow-persistence-graph](functional_boundary/flow/kuroe-flow-persistence-graph.md) |
+| `Kuroe.Flow.Persistence.Serialization.Graph` | flow | [kuroe-flow-persistence-serialization-graph](functional_boundary/flow/kuroe-flow-persistence-serialization-graph.md) |
 | `Kuroe.FlowDescription.Description.Shared` | flow-description | [kuroe-flow-description-description-shared](functional_boundary/flow-description/kuroe-flow-description-description-shared.md) |
 | `Kuroe.FlowDescription.Definition.Shared` | flow-description | [kuroe-flow-description-definition-shared](functional_boundary/flow-description/kuroe-flow-description-definition-shared.md) |
 | `Kuroe.FlowDescription.Compilation.Shared` | flow-description | [kuroe-flow-description-compilation-shared](functional_boundary/flow-description/kuroe-flow-description-compilation-shared.md) |
@@ -600,16 +604,16 @@ graph TD
 | `Kuroe.Tool.Json` | tool | [kuroe-tool-json](functional_boundary/tool/kuroe-tool-json.md) |
 | `Kuroe.Tool.FileAccess.Shared` | tool | [kuroe-tool-fileaccess-shared](functional_boundary/tool/kuroe-tool-fileaccess-shared.md) |
 | `Kuroe.Tool.FileAccess` | tool | [kuroe-tool-fileaccess](functional_boundary/tool/kuroe-tool-fileaccess.md) |
-| `Kuroe.Tool.Command.Shared` | tool | [kuroe-tool-command-shared](functional_boundary/tool/kuroe-tool-command-shared.md) |
-| `Kuroe.Tool.Command` | tool | [kuroe-tool-command](functional_boundary/tool/kuroe-tool-command.md) |
-| `Kuroe.Tool.Command.Json` | tool | [kuroe-tool-command-json](functional_boundary/tool/kuroe-tool-command-json.md) |
-| `Kuroe.Tool.Contract` | tool | [kuroe-tool-contract](functional_boundary/tool/kuroe-tool-contract.md) |
-| `Kuroe.Tool.Dotnet` | tool | [kuroe-tool-dotnet](functional_boundary/tool/kuroe-tool-dotnet.md) |
-| `Kuroe.Tool.Git` | tool | [kuroe-tool-git](functional_boundary/tool/kuroe-tool-git.md) |
-| `Kuroe.Tool.File` | tool | [kuroe-tool-file](functional_boundary/tool/kuroe-tool-file.md) |
-| `Kuroe.Tool.KuroeInfo` | tool | [kuroe-tool-kuroeinfo](functional_boundary/tool/kuroe-tool-kuroeinfo.md) |
-| `Kuroe.Tool.Source` | tool | [kuroe-tool-source](functional_boundary/tool/kuroe-tool-source.md) |
-| `Kuroe.Tool.Time` | tool | [kuroe-tool-time](functional_boundary/tool/kuroe-tool-time.md) |
+| `Kuroe.Tool.Implementation.Command.Shared` | tool | [kuroe-tool-implementation-command-shared](functional_boundary/tool/kuroe-tool-implementation-command-shared.md) |
+| `Kuroe.Tool.Implementation.Command` | tool | [kuroe-tool-implementation-command](functional_boundary/tool/kuroe-tool-implementation-command.md) |
+| `Kuroe.Tool.Implementation.Command.Json` | tool | [kuroe-tool-implementation-command-json](functional_boundary/tool/kuroe-tool-implementation-command-json.md) |
+| `Kuroe.Tool.Implementation.Contract` | tool | [kuroe-tool-implementation-contract](functional_boundary/tool/kuroe-tool-implementation-contract.md) |
+| `Kuroe.Tool.Implementation.Dotnet` | tool | [kuroe-tool-implementation-dotnet](functional_boundary/tool/kuroe-tool-implementation-dotnet.md) |
+| `Kuroe.Tool.Implementation.Git` | tool | [kuroe-tool-implementation-git](functional_boundary/tool/kuroe-tool-implementation-git.md) |
+| `Kuroe.Tool.Implementation.File` | tool | [kuroe-tool-implementation-file](functional_boundary/tool/kuroe-tool-implementation-file.md) |
+| `Kuroe.Tool.Implementation.KuroeInfo` | tool | [kuroe-tool-implementation-kuroeinfo](functional_boundary/tool/kuroe-tool-implementation-kuroeinfo.md) |
+| `Kuroe.Tool.Implementation.Source` | tool | [kuroe-tool-implementation-source](functional_boundary/tool/kuroe-tool-implementation-source.md) |
+| `Kuroe.Tool.Implementation.Time` | tool | [kuroe-tool-implementation-time](functional_boundary/tool/kuroe-tool-implementation-time.md) |
 | `Kuroe.Assistant` | assistant | [kuroe-assistant](functional_boundary/assistant/kuroe-assistant.md) |
 | `Kuroe` | host | [kuroe](functional_boundary/host/kuroe.md) |
 | `Kuroe.Console` | host | [kuroe-console](functional_boundary/host/kuroe-console.md) |
@@ -621,8 +625,8 @@ graph TD
 
 ## 命名空间与路径
 
-命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 分为 `RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records` 三支，`Kuroe.FlowDescription.Description.Shared` 分为项目根与 `Reporting`，`Kuroe.FlowDescription.Definition.Shared` 分为 `Model`、`Flow`、`Nodes`、`Ports` 与 `Validation`，`Kuroe.FlowDescription.Compilation.Shared` 分为 `Flow` 与 `NodeTypes`，`Kuroe.FlowDescription.Compilation` 的命名空间在项目根之下按目录分段，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
+命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 分为 `StaticGraph`、`RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records` 四支，`RuntimeGraph` 之下按执行、节点、端口、就绪与任务分段，`Kuroe.FlowDescription.Description.Shared` 分为项目根与 `Reporting`，`Kuroe.FlowDescription.Definition.Shared` 分为 `Model`、`Flow`、`Nodes`、`Ports` 与 `Validation`，`Kuroe.FlowDescription.Compilation.Shared` 分为项目根、`Flow` 与 `NodeTypes`，`Kuroe.FlowDescription.Compilation` 的命名空间在项目根之下按目录分段，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
 
-`Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.FlowDescription`、`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
+`Source/Kuroe.Kernel` 下的项目以 `Kuroe.Kernel` 为前缀，`Source/Kuroe/Tool/Implementation` 下的项目以 `Kuroe.Tool.Implementation` 为前缀，其余项目以 `Source` 下的目录段为项目名前缀。项目名与目录的完整推导规则见[架构测试](../架构测试.md#项目与目录约束)。`Kuroe.FlowDescription`、`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
 
 引用约束由架构测试固定，见[架构测试](../架构测试.md)。

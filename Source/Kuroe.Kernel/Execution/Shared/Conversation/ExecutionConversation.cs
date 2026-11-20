@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Conversation;
+namespace Kuroe.Kernel.Execution.Shared.Conversation;
 
 /// <summary>一条执行会话消息的角色。</summary>
 public enum ExecutionMessageRole

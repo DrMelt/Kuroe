@@ -2,7 +2,7 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Shared.Configuration;
 
-namespace Kuroe.Tool.KuroeInfo;
+namespace Kuroe.Tool.Implementation.KuroeInfo;
 
 /// <summary>生效配置的状态查询工具。只读，不产生状态改动。</summary>
 public sealed class SettingsKuroeInfoTool : ITool

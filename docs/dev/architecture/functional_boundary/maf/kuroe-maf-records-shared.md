@@ -16,4 +16,4 @@ MAF 编排流程的存档记录与种类：流程定义记录与流程状态记�
 
 ## 依赖
 
-- Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。
+- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

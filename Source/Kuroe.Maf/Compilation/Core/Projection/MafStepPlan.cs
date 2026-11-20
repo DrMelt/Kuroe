@@ -1,6 +1,6 @@
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Maf.Definition;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Maf.Compilation.Projection;
 

@@ -1,4 +1,4 @@
-namespace Kuroe.Presentation.Shared;
+namespace Kuroe.Kernel.Presentation.Shared;
 
 /// <summary>展示用分组：路径、标签、成员路径、状态与输出端口。</summary>
 public sealed record FlowGroupView(

@@ -24,7 +24,7 @@ Llm 的恢复数据使用 Microsoft Agent Framework 会话快照。
 
 执行记录由任务域从执行快照捕获。流程实现只提供 `FlowRecord`，包含流程定义与流程状态，不捕获执行记录。
 
-图流程、代码流程与 MAF 流程各自提供记录项目与编解码项目，注册到宿主时与 `FlowProvider` 并列；需要进入流程目录的实现另注册 `IFlowTemplateSource`。编解码端口 `IFlowRecordCodec` 与 `FlowRecordData` 位于 `Kuroe.Tasks.Records.Shared`。新增流程实现提供自己的定义记录、状态记录、种类常量与编解码器即可，不修改中央序列化项目。
+图流程、代码流程与 MAF 流程各自提供记录项目与编解码项目，注册到宿主时与 `FlowProvider` 并列；需要进入流程目录的实现另注册 `IFlowTemplateSource`。编解码端口 `IFlowRecordCodec` 与 `FlowRecordData` 位于 `Kuroe.Kernel.Tasks.Records.Shared`。新增流程实现提供自己的定义记录、状态记录、种类常量与编解码器即可，不修改中央序列化项目。
 
 编解码错误经返回值报告，不穿透 `FormatException`。
 

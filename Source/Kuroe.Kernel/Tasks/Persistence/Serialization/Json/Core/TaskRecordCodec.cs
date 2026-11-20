@@ -1,10 +1,10 @@
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Tasks.Persistence.Serialization.Shared;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
 
-namespace Kuroe.Tasks.Persistence.Json;
+namespace Kuroe.Kernel.Tasks.Persistence.Serialization.Json;
 
 /// <summary>存档的 JSON 编解码。版本、字段映射与流程片段编解码由通用格式负责，本类处理 JSON 文本。</summary>
 public sealed class TaskRecordCodec(TaskRecordSerializationMapper mapper) : ITaskRecordCodec

@@ -1,14 +1,14 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Input.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Errors;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Notice;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Input.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Errors;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Notice;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Tasks.Runtime;
+namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>一个任务域内的任务索引：按任务键查找、交出快照、转发执行通知。状态本身存在任务与流程控制上。</summary>
 public sealed class TaskRegistry : ITaskChangeSource

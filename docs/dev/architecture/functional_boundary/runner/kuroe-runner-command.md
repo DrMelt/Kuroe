@@ -16,4 +16,4 @@
 
 ## 依赖
 
-- Kuroe.Execution.Shared、Kuroe.Process、Kuroe.Shared。
+- Kuroe.Kernel.Execution.Shared、Kuroe.Process、Kuroe.Shared。

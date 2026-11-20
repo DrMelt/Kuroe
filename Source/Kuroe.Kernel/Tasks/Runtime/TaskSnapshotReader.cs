@@ -1,11 +1,11 @@
 using ErrorOr;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Errors;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Errors;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Tasks.Runtime;
+namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>任务索引的只读快照面：把任务索引的领域查询转成快照，交给信息查询工具。</summary>
 public sealed class TaskSnapshotReader(TaskRegistry registry) : ITaskReader

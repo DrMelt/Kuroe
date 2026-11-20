@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Kuroe.Tasks.Persistence.Files;
+namespace Kuroe.Kernel.Tasks.Persistence.Files;
 
 /// <summary>写盘的原子性保证：先写临时文件再替换，中断不会留下半份文件。IO 异常由调用方处理。</summary>
 public static class AtomicFile

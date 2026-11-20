@@ -1,5 +1,5 @@
 using Kuroe.FlowDescription.Definition.Shared.Model;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.FlowDescription.Definition.Shared.Nodes;
 

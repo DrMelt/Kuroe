@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Identity;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
 
 namespace Kuroe.Maf.Definition;
 

@@ -2,7 +2,7 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Tool.Json;
 
-namespace Kuroe.Tool.KuroeInfo;
+namespace Kuroe.Tool.Implementation.KuroeInfo;
 
 /// <summary>内置对话的一个模式及其放行的工具路径前缀。</summary>
 public sealed record DialogueToolGroup(string Name, IReadOnlyList<ToolPath> Tools);

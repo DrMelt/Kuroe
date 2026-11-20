@@ -3,7 +3,7 @@ using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess.Shared;
 
-namespace Kuroe.Tool.File;
+namespace Kuroe.Tool.Implementation.File;
 
 /// <summary>删除路径基准目录内文件或目录的工具。路径解析后必须落回工作区内，非空目录需要 recursive，路径基准目录本身拒绝删除。</summary>
 public sealed class DeleteFileTool : ITool

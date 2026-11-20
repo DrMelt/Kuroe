@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ErrorOr;
 
-namespace Kuroe.Tool.Command.Shared;
+namespace Kuroe.Tool.Implementation.Command.Shared;
 
 /// <summary>命令工具的配置定义：路径、说明、参数、命令模板与执行参数。模板的每一项是一个参数项，
 /// 里面的 {参数名} 是占位符，列表参数按元素重复整个参数项；函数定义按这些数据交给工具契约。</summary>

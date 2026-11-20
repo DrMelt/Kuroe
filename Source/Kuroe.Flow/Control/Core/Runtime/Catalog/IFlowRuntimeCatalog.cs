@@ -1,6 +1,6 @@
 using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Flow.Control.Runtime.Catalog;
 

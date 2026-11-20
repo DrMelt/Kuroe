@@ -15,9 +15,9 @@
     <ItemGroup>
         <ProjectReference Include="..\Kuroe\Core\Kuroe.csproj" />
         <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Hosting\Core\Kuroe.Flow.Hosting.csproj" />
-        <ProjectReference Include="..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
+        <ProjectReference Include="..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
     </ItemGroup>
 
@@ -25,12 +25,12 @@
         <InternalsVisibleTo Include="Kuroe.Cli.Tests" />
     </ItemGroup>
 <ItemGroup>
-        <ProjectReference Include="..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
     </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Kernel\Control\Shared\Kuroe.Kernel.Control.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Kernel\Presentation\Shared\Kuroe.Kernel.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Kernel.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
 </Project>

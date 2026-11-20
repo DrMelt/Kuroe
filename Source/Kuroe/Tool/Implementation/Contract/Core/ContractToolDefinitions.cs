@@ -1,8 +1,8 @@
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
 
 
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>契约工具的定义：路径、说明与参数。引擎按路径放行，交回能力的端口与形状由参数 schema 给出。</summary>
 static class ContractToolDefinitions

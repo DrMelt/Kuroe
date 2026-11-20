@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Kuroe.Tool.Command.Json;
+namespace Kuroe.Tool.Implementation.Command.Json;
 
 /// <summary>命令工具文件的形状：文件里的字段名与类型在此固定，读入后装配成定义。属性必须可写。</summary>
 internal sealed class CommandToolFileDto

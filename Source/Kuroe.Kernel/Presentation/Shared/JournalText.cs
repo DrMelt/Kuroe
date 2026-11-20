@@ -1,4 +1,4 @@
-namespace Kuroe.Presentation.Shared;
+namespace Kuroe.Kernel.Presentation.Shared;
 
 /// <summary>过程记录文本的展示处理：统一换行符并按逻辑行切分。</summary>
 public static class JournalText

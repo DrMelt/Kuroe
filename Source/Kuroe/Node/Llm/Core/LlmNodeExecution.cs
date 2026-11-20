@@ -1,4 +1,4 @@
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.Node.Llm;

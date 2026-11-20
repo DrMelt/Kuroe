@@ -1,11 +1,11 @@
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Journal;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Journal;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Restore;
 
-namespace Kuroe.Execution.Shared.State;
+namespace Kuroe.Kernel.Execution.Shared.State;
 
 /// <summary>一次执行的只读面：标识、请求、状态、契约、产出与过程订阅。状态迁移只由执行核心完成。</summary>
 public interface IExecution

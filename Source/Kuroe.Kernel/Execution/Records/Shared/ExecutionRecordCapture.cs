@@ -1,8 +1,8 @@
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.State;
 
 
 
-namespace Kuroe.Execution.Records.Shared;
+namespace Kuroe.Kernel.Execution.Records.Shared;
 
 /// <summary>把中性执行快照捕获为存档记录。</summary>
 public static class ExecutionRecordCapture

@@ -11,9 +11,9 @@
 ## 边界外
 
 - 不含节点类型与参数读取：在 Kuroe.Node.Input。
-- 不含输入通道实现：在 Kuroe.Input.Runtime。
+- 不含输入通道实现：在 Kuroe.Kernel.Input.Runtime。
 - 不含流程推进与图。
 
 ## 依赖
 
-- Kuroe.Execution.Shared、Kuroe.Input.Shared、Kuroe.Tasks.Shared。
+- Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Input.Shared、Kuroe.Kernel.Tasks.Shared。

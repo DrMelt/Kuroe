@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Ports;
+namespace Kuroe.Kernel.Execution.Shared.Ports;
 
 /// <summary>执行输出端口的查找。</summary>
 public static class ExecutionPortRules

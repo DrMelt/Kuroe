@@ -1,5 +1,5 @@
 
-namespace Kuroe.Execution.Shared.Journal;
+namespace Kuroe.Kernel.Execution.Shared.Journal;
 
 /// <summary>收到一段执行产出内容。</summary>
 /// <param name="content">本次增量的内容与种类。</param>

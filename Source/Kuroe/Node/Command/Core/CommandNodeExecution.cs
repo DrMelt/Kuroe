@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Node.Command;
 

@@ -1,6 +1,6 @@
-using Kuroe.Presentation.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Cli.Views;
 

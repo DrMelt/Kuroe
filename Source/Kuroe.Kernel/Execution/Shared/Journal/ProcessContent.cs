@@ -1,5 +1,5 @@
 
-namespace Kuroe.Execution.Shared.Journal;
+namespace Kuroe.Kernel.Execution.Shared.Journal;
 
 /// <summary>执行产出内容的种类。</summary>
 public enum ProcessContentKind

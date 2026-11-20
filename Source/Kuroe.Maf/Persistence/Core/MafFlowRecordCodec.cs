@@ -2,8 +2,8 @@ using ErrorOr;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Kuroe.Maf.Records.Shared;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Maf.Persistence;
 

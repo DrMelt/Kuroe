@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
 
-namespace Kuroe.Tasks.Persistence.Serialization.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
 
 /// <summary>存档文本与任务存档之间的编解码端口。不需要文本的实现直接实现存储端口。</summary>
 public interface ITaskRecordCodec

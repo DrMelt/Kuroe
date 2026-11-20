@@ -1,14 +1,14 @@
 using ErrorOr;
-using Kuroe.Execution.Records.Shared;
-using Kuroe.Tasks.Records.Shared;
-using RecordExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
-using RecordExecutionPortName = Kuroe.Execution.Shared.Ports.ExecutionPortName;
-using RecordExecutionOutputValue = Kuroe.Execution.Shared.Ports.ExecutionOutputValue;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Journal;
+using Kuroe.Kernel.Execution.Records.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using RecordExecutionId = Kuroe.Kernel.Execution.Shared.Identity.ExecutionId;
+using RecordExecutionPortName = Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName;
+using RecordExecutionOutputValue = Kuroe.Kernel.Execution.Shared.Ports.ExecutionOutputValue;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Journal;
 
-namespace Kuroe.Tasks.Persistence.Serialization.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
 
 /// <summary>任务存档与通用存档文档之间的映射与校验。流程定义与状态交给按身份注册的编解码器。</summary>
 public sealed class TaskRecordSerializationMapper(IReadOnlyList<IFlowRecordCodec> codecs)

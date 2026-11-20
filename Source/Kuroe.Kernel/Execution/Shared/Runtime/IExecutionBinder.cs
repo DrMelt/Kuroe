@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Request;
 
-namespace Kuroe.Execution.Shared.Runtime;
+namespace Kuroe.Kernel.Execution.Shared.Runtime;
 
 /// <summary>执行器绑定：按节点声明给出执行运行器工厂与本次执行的参数构造。
 /// 绑定只描述能力，不执行，也不包含步骤标识或流程语义。</summary>

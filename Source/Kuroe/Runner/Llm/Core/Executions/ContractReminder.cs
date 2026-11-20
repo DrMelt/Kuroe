@@ -1,6 +1,6 @@
 using Kuroe.Tool;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm.Executions;
 

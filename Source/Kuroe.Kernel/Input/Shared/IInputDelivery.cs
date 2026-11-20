@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Input.Shared;
+namespace Kuroe.Kernel.Input.Shared;
 
 /// <summary>输入登记的宿主面：读取任务此刻等待的步骤、交付一次输入并清理任务登记。</summary>
 public interface IInputDelivery

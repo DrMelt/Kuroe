@@ -1,8 +1,8 @@
-using Kuroe.Execution.Records.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Journal;
+using Kuroe.Kernel.Execution.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Journal;
 
-namespace Kuroe.Tasks.Records.Shared;
+namespace Kuroe.Kernel.Tasks.Records.Shared;
 
 /// <summary>任务的完整存档：身份、保存时刻、生命周期、完成事实、过程记录、流程记录与执行记录。</summary>
 public sealed record TaskRecord(

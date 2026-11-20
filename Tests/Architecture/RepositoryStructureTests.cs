@@ -67,6 +67,11 @@ public sealed class RepositoryStructureTests
     {
         string[] segments = Path.GetRelativePath(TestsRoot, DirectoryOf(project))
             .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        if (segments[0] == "Unit")
+        {
+            segments = segments[1..];
+        }
+
         List<string> directories = [];
         string[] area = segments[0] == "Kuroe.Kernel" ? segments[..2] : segments[..1];
         string component = Path.Combine([SourceRoot, .. area]);
@@ -99,6 +104,19 @@ public sealed class RepositoryStructureTests
                 .Where(directory => !IsBuildOutput(directory)));
         }
 
+        foreach (string relative in new[]
+        {
+            Path.Combine("Graph", "Shared"),
+            Path.Combine("Records", "Shared"),
+        })
+        {
+            string directory = Path.Combine(SourceRoot, "Kuroe.Flow", relative);
+            if (Directory.Exists(directory))
+            {
+                directories.Add(directory);
+            }
+        }
+
         string sourceDirectory = Path.Combine([SourceRoot, .. segments]);
         if (!directories.Contains(sourceDirectory, StringComparer.Ordinal))
         {
@@ -117,8 +135,10 @@ public sealed class RepositoryStructureTests
     {
         string[] segments = Path.GetRelativePath(TestsRoot, project)
             .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        string name = Path.GetFileNameWithoutExtension(project);
 
-        return segments.Contains("Compilation", StringComparer.Ordinal)
-            && segments.Contains("Integration", StringComparer.Ordinal);
+        return name.EndsWith(".Compilation.Integration.Tests", StringComparison.Ordinal)
+            || segments.Contains("Compilation", StringComparer.Ordinal)
+                && segments.Contains("Integration", StringComparer.Ordinal);
     }
 }

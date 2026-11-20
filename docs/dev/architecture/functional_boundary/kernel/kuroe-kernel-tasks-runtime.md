@@ -1,0 +1,26 @@
+# Kuroe.Kernel.Tasks.Runtime
+
+任务域实现：任务聚合、任务注册表、任务动作、任务快照读取、存档捕获与启动恢复运行时。任务的状态只存在任务聚合与控制实例上，注册表只做索引与转发。
+
+## 职责
+
+- 任务聚合：任务键、控制状态、过程记录、执行集合与锁，状态迁移经任务 Gate 收口。
+- 任务注册表：按任务键查找、交出快照、转发执行归属与变化通知。
+- 任务动作：按流程名提交、暂停、恢复、重新执行、终止与改名，流程语义经控制实例落地。
+- 任务快照读取：把任务与流程视图装配为任务快照，供信息工具与宿主读取。
+- 流程实现分派：按流程身份与流程名解析已注册的流程实现。
+- 任务标识生成：按时间有序的唯一键。
+- 任务级诊断记录：追加与读取共用共享存储，快照不受后续追加影响。
+- 存档捕获：按任务号捕获任务完整存档，任务状态变化时给出变化信号。
+- 启动恢复运行时：从存档重建任务与流程控制，未完成的任务启动推进循环，完成与终止的任务只恢复状态。
+
+## 边界外
+
+- 不含控制实现：流程运行期、执行索引与执行网关在 Kuroe.Kernel.Control.Runtime。
+- 不含执行实现与执行记录形状：在 Kuroe.Kernel.Execution 与 Kuroe.Kernel.Execution.Records.Shared。
+- 不含存档文件、写盘协调与编解码实现：在 Kuroe.Kernel.Tasks.Persistence.*。
+- 不依赖图、节点与输入实现，不构造流程语义。
+
+## 依赖
+
+- Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Presentation.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Input.Shared、Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Persistence.Saving.Shared、Kuroe.Kernel.Tasks.Persistence.Restoring.Shared。

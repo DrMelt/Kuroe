@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Kuroe.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Restore;
 
 namespace Kuroe.Runner.Llm.Sessions;
 

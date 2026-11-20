@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>交回端口值的 JSON Schema：按当前执行的端口声明给出每个端口的字符串或对象形态。</summary>
 internal static class ContractPortSchemas

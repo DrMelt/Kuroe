@@ -1,8 +1,8 @@
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.State;
 
 
 
-namespace Kuroe.Presentation.Shared;
+namespace Kuroe.Kernel.Presentation.Shared;
 
 /// <summary>展示用一次执行：标识、状态、过程与输出端口。</summary>
 public sealed record FlowExecutionView(

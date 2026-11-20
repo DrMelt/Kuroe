@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Runtime;
+namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>按流程身份与流程名分派已注册的流程实现。</summary>
 /// <remarks>按给定流程实现建立分派表。</remarks>

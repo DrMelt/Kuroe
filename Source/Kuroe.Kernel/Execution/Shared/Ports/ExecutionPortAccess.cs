@@ -1,6 +1,6 @@
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Request;
 
-namespace Kuroe.Execution.Shared.Ports;
+namespace Kuroe.Kernel.Execution.Shared.Ports;
 
 /// <summary>按执行请求给出的端口访问。</summary>
 public sealed class ExecutionPortAccess(ExecutionRequest request) : IExecutionPortAccess

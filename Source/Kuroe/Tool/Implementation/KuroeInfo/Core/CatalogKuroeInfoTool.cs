@@ -2,7 +2,7 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Shared.Catalogs;
 
-namespace Kuroe.Tool.KuroeInfo;
+namespace Kuroe.Tool.Implementation.KuroeInfo;
 
 /// <summary>模型目录的状态查询工具。只读，凭据不交给模型。</summary>
 public sealed class CatalogKuroeInfoTool : ITool

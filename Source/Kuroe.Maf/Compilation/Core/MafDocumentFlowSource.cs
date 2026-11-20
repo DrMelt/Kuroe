@@ -3,7 +3,7 @@ using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Maf.Compilation.Shared;
 using Kuroe.Maf.Definition;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Maf.Compilation;
 

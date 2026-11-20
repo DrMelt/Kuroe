@@ -1,7 +1,7 @@
 using Kuroe.Runner.Llm;
 using Kuroe.Tool;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Tools;
 

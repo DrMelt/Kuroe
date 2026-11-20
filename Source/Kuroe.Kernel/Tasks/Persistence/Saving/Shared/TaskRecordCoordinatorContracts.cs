@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Persistence.Saving.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
 
 /// <summary>任务存档协调：接收变更标记，合并并写入存档。</summary>
 public interface ITaskRecordCoordinator

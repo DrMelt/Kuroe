@@ -1,11 +1,11 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared.Errors;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Execution.Shared.Errors;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Control.Runtime;
+namespace Kuroe.Kernel.Control.Runtime;
 
 /// <summary>执行号与执行归属的全局索引：执行号在全部任务域间递增，按号取执行时一并交出归属任务。</summary>
 public sealed class ExecutionIndex : IExecutionIndex

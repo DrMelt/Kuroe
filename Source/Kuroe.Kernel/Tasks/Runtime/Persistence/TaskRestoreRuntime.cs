@@ -1,13 +1,13 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Persistence.Restoring.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Tasks.Runtime.Persistence;
+namespace Kuroe.Kernel.Tasks.Runtime.Persistence;
 
 /// <summary>从存档恢复任务并加入任务域。未完成的任务启动推进循环；完成与终止的任务只恢复状态，不再推进。</summary>
 public sealed class TaskRestoreRuntime(

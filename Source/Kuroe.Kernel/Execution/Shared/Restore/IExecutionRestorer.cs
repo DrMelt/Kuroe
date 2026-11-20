@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
-namespace Kuroe.Execution.Shared.Restore;
+namespace Kuroe.Kernel.Execution.Shared.Restore;
 
 /// <summary>执行实现的恢复能力。能否恢复、负载校验与恢复运行器的建立由实现决定。</summary>
 public interface IExecutionRestorer

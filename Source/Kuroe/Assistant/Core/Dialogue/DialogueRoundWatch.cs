@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Pending;
-using Kuroe.Tasks.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Tasks.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Assistant.Dialogue;
 

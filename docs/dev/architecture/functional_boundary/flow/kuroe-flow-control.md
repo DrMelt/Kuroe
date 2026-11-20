@@ -20,9 +20,9 @@
 
 - 不含静态模型与运行期节点形状：在 Kuroe.FlowDescription.Definition.Shared 与 Kuroe.Flow.Graph.Shared。
 - 不含编译与库展开：在 Kuroe.FlowDescription.Compilation。
-- 不含执行实现：执行状态机在 Kuroe.Execution。
+- 不含执行实现：执行状态机在 Kuroe.Kernel.Execution。
 - 不含任务域、输入通道与持久化实现。
 
 ## 依赖
 
-- Kuroe.Control.Shared、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Flow.Records.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Presentation.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。
+- Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Flow.Records.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

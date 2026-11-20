@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>流程控制访问执行单元的唯一端口：建立、查找、恢复、运行、中断与拒绝执行。</summary>
 public interface ITaskExecutionGateway : IExecutionOwnerIndex

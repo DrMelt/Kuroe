@@ -6,7 +6,7 @@ using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Flow.Graph.Shared.Runtime.Nodes;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 namespace Kuroe.Flow.Control.Runtime.Nodes;
 /// <summary>一个容器在任务内的运行时对象：容器定义与最近一次发布。容器不派发执行器，按统一节点方案随成员与触发输入推进，每次发布计一次执行。
 /// 状态查询只读已实例化节点，不创建节点：未实例化的成员视为没有产出。

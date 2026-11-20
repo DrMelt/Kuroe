@@ -1,4 +1,4 @@
-namespace Kuroe.Tool.Time;
+namespace Kuroe.Tool.Implementation.Time;
 
 /// <summary>系统时间工具。</summary>
 /// <param name="time">本地时间的来源。</param>

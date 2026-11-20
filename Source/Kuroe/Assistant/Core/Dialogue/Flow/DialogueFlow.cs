@@ -1,6 +1,6 @@
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
 

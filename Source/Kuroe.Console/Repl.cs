@@ -1,7 +1,7 @@
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Console.Views;
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 
 namespace Kuroe.Console;
 

@@ -2,10 +2,10 @@ using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Graph.Shared.Graph.Records;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Model;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Identity;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
 
-namespace Kuroe.Flow.Persistence.Graph;
+namespace Kuroe.Flow.Persistence.Serialization.Graph;
 
 /// <summary>存档形状到图流程记录的映射。</summary>
 internal static class GraphFlowRecordReading

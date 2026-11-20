@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\Execution\Records\Shared\Kuroe.Kernel.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\Presentation\Shared\Kuroe.Kernel.Tasks.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\Records\Shared\Kuroe.Kernel.Tasks.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\Presentation\Shared\Kuroe.Kernel.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\Control\Shared\Kuroe.Kernel.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\Input\Shared\Kuroe.Kernel.Input.Shared.csproj" />
+        <ProjectReference Include="..\Persistence\Files\Shared\Kuroe.Kernel.Tasks.Persistence.Files.Shared.csproj" />
+        <ProjectReference Include="..\Persistence\Saving\Shared\Kuroe.Kernel.Tasks.Persistence.Saving.Shared.csproj" />
+        <ProjectReference Include="..\Persistence\Restoring\Shared\Kuroe.Kernel.Tasks.Persistence.Restoring.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Kernel.Tasks.Runtime.Tests" />
+    </ItemGroup>
+</Project>

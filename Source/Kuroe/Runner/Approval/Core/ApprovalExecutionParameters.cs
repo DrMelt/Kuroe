@@ -1,5 +1,5 @@
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Request;
 
 namespace Kuroe.Runner.Approval;
 

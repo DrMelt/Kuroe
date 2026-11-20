@@ -1,7 +1,7 @@
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Execution;
+namespace Kuroe.Kernel.Execution;
 
 /// <summary>按并发额度推进执行。只负责排队与调度，运行器接线与收口由 ExecutionRun 完成；收口回调在额度释放后于线程池上执行，可安全再派生。</summary>
 public sealed class ExecutionDispatcher

@@ -1,5 +1,5 @@
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Maf.Definition;
 

@@ -22,4 +22,4 @@ Llm 执行运行器：按一次执行建立会话与工具集合，发起模型�
 
 ## 依赖
 
-- Kuroe.Runner.Shared、Kuroe.Execution.Shared、Kuroe.Tool。
+- Kuroe.Runner.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Tool。

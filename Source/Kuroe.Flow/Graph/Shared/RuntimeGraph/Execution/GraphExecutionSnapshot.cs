@@ -1,7 +1,7 @@
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Journal;
-using Kuroe.Execution.Shared.State;
-using Kuroe.Execution.Shared.Usage;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Journal;
+using Kuroe.Kernel.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Usage;
 
 
 

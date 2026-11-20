@@ -1,5 +1,5 @@
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Maf.Records.Shared;
 

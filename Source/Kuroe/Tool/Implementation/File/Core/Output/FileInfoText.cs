@@ -1,6 +1,6 @@
 using Kuroe.Files.Shared;
 
-namespace Kuroe.Tool.File.Output;
+namespace Kuroe.Tool.Implementation.File.Output;
 
 /// <summary>文件信息文本：路径、大小、时间与属性。</summary>
 /// <param name="Path">文件的展示路径。</param>

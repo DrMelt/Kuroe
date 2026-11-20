@@ -6,7 +6,7 @@ using Kuroe.Flow.Graph.Shared.StaticGraph;
 
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 namespace Kuroe.Flow.Compilation;
 
 /// <summary>把流程树编译成执行视图：流程开始端口是独立来源，节点以从根到本节点的路径标识，容器登记直接子节点，

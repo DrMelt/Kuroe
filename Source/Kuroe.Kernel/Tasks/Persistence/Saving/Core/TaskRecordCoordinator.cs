@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Tasks.Persistence.Files.Shared;
-using Kuroe.Tasks.Persistence.Saving.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Persistence.Saving;
+namespace Kuroe.Kernel.Tasks.Persistence.Saving;
 
 /// <summary>存档写盘协调：合并状态变化，后台逐任务捕获并写入，刷新时等待全部或指定任务落盘。</summary>
 public sealed class TaskRecordCoordinator : ITaskRecordCoordinator

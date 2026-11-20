@@ -11,7 +11,7 @@ public sealed class KernelControlTests
     public void Flow_runtime_lives_in_its_own_project()
     {
         string runtime = Path.Combine(SourceRoot, "Kuroe.Kernel", "Control", "Runtime", "FlowRuntime.cs");
-        string project = Path.Combine(SourceRoot, "Kuroe.Kernel", "Control", "Runtime", "Kuroe.Control.Runtime.csproj");
+        string project = Path.Combine(SourceRoot, "Kuroe.Kernel", "Control", "Runtime", "Kuroe.Kernel.Control.Runtime.csproj");
         string old = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
@@ -73,7 +73,7 @@ public sealed class KernelControlTests
             KernelRoot,
             "Control",
             "Shared",
-            "Kuroe.Control.Shared.csproj");
+            "Kuroe.Kernel.Control.Shared.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string tasksPresentation = Path.Combine(KernelRoot, "Tasks", "Presentation", "Shared");
         string tasksRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
@@ -82,7 +82,7 @@ public sealed class KernelControlTests
 
         ReferencesStayUnder(
             project,
-            "Kuroe.Control.Shared",
+            "Kuroe.Kernel.Control.Shared",
             "中性契约",
             tasks,
             tasksPresentation,
@@ -111,7 +111,7 @@ public sealed class KernelControlTests
             "Kuroe.Kernel",
             "Control",
             "Runtime",
-            "Kuroe.Control.Runtime.csproj");
+            "Kuroe.Kernel.Control.Runtime.csproj");
         string control = Path.Combine(KernelRoot, "Control", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
@@ -120,7 +120,7 @@ public sealed class KernelControlTests
 
         ReferencesStayUnder(
             project,
-            "Kuroe.Control.Runtime",
+            "Kuroe.Kernel.Control.Runtime",
             "中性契约",
             control,
             execution,

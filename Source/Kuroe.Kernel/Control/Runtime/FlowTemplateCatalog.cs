@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Presentation.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Control.Runtime;
+namespace Kuroe.Kernel.Control.Runtime;
 
 /// <summary>流程模板目录：聚合各流程实现提供的模板来源。</summary>
 public sealed class FlowTemplateCatalog(IEnumerable<IFlowTemplateSource> sources)

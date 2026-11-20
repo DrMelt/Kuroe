@@ -1,7 +1,7 @@
 using Kuroe.Process;
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Command;
+namespace Kuroe.Tool.Implementation.Command;
 
 /// <summary>命令模板工具载体：按配置定义声明一个可调用的函数，调用体在执行目录执行命令并把输出写回模型。</summary>
 public sealed class CommandTool : ITool

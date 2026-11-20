@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Ports;
+namespace Kuroe.Kernel.Execution.Shared.Ports;
 
 /// <summary>一次执行的产出形态。</summary>
 public enum ExecutionOutputKind

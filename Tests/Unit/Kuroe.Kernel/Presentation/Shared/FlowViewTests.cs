@@ -1,0 +1,29 @@
+using Xunit;
+
+namespace Kuroe.Kernel.Presentation.Shared.Tests;
+
+/// <summary>流程视图的顺位查询与步骤内容。</summary>
+public sealed class FlowViewTests
+{
+    [Fact(DisplayName = "顺位查询返回步骤位置")]
+    public void IndexOf_returns_step_position()
+    {
+        FlowView view = new(
+            "demo",
+            "graph",
+            null,
+            [],
+            [
+                Step("start"),
+                Step("finish"),
+            ],
+            []);
+
+        Assert.Equal(0, view.IndexOf("start"));
+        Assert.Equal(1, view.IndexOf("finish"));
+        Assert.Null(view.IndexOf("missing"));
+    }
+
+    private static FlowStepView Step(string path) =>
+        new(path, path, "test", FlowItemState.Pending, [], [], [], 1);
+}

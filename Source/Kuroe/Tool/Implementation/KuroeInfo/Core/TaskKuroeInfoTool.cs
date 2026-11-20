@@ -1,14 +1,14 @@
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using System.Text;
 using ErrorOr;
-using Kuroe.Presentation.Shared;
-using ExecutionSnapshot = Kuroe.Execution.Shared.State.ExecutionSnapshot;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Presentation.Shared;
+using ExecutionSnapshot = Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Tool.KuroeInfo;
+namespace Kuroe.Tool.Implementation.KuroeInfo;
 
 /// <summary>任务与执行的状态查询工具。只读，不产生状态改动。</summary>
 public sealed class TaskKuroeInfoTool : ITool

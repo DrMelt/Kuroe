@@ -1,10 +1,10 @@
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.State;
 
 
 
-namespace Kuroe.Execution.Records.Shared;
+namespace Kuroe.Kernel.Execution.Records.Shared;
 
 /// <summary>一次执行的持久状态。执行记录只使用中性执行端口与不透明来源标识。</summary>
 public sealed record ExecutionRecord(

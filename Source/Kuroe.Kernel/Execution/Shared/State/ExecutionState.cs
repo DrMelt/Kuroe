@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.State;
+namespace Kuroe.Kernel.Execution.Shared.State;
 
 /// <summary>一次执行的状态，只表达跑没跑完。</summary>
 public enum ExecutionState

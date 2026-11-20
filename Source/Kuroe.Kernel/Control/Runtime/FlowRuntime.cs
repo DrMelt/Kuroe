@@ -1,12 +1,12 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Errors;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Errors;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Control.Runtime;
+namespace Kuroe.Kernel.Control.Runtime;
 
 /// <summary>流程运行期：只持有活跃控制实例，转发命令并在退出时收口。流程语义在控制实例内。</summary>
 public sealed class FlowRuntime(

@@ -4,9 +4,9 @@ using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 using Kuroe.Tool.FileAccess.Shared;
-using Kuroe.Tool.File.Output;
+using Kuroe.Tool.Implementation.File.Output;
 
-namespace Kuroe.Tool.File;
+namespace Kuroe.Tool.Implementation.File;
 
 /// <summary>在路径基准目录内多个文本文件中按字面文本或正则表达式批量替换的工具。路径解析后必须落回工作区内，逐文件保留编码、BOM 与换行风格。</summary>
 public sealed class ReplaceTextTool : ITool

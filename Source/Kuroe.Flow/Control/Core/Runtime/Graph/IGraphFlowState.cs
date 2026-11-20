@@ -1,4 +1,4 @@
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 
 namespace Kuroe.Flow.Control.Runtime.Graph;
 

@@ -1,3 +1,3 @@
-global using IProcessJournal = Kuroe.Execution.Shared.Journal.IProcessJournal;
-global using ExecutionJournal = Kuroe.Execution.Shared.Journal.ExecutionJournal;
-global using JournalLevel = Kuroe.Execution.Shared.Journal.JournalLevel;
+global using IProcessJournal = Kuroe.Kernel.Execution.Shared.Journal.IProcessJournal;
+global using ExecutionJournal = Kuroe.Kernel.Execution.Shared.Journal.ExecutionJournal;
+global using JournalLevel = Kuroe.Kernel.Execution.Shared.Journal.JournalLevel;

@@ -1,0 +1,50 @@
+using Kuroe.Console.Views;
+using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Xunit;
+
+namespace Kuroe.Console.Tests.Views;
+
+/// <summary>启动横幅：目录规模与缺项指引。</summary>
+public sealed class StartupViewTests
+{
+    [Fact(DisplayName = "启动横幅报告规模与后续步骤")]
+    public void Startup_banner_reports_scale_and_next_steps()
+    {
+        using ConsoleSession cli = new();
+        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Templates, cli.Terminal);
+
+        startup.Print();
+
+        Assert.Contains("已启动，当前模型 fake", cli.Output.Output);
+        Assert.Contains("流程模板 1 条。", cli.Output.Output);
+        Assert.Contains("回车进入选中项，方向键切换菜单项，Esc 返回上一级。", cli.Output.Output);
+        string top = cli.Output.Output.Replace("\r", string.Empty).Split('\n')[0];
+        Assert.Matches("^┌─+┐$", top);
+        Assert.DoesNotContain("先「模型与提供商」", cli.Output.Output);
+    }
+
+    [Fact(DisplayName = "目录为空时启动横幅指向提供方设置")]
+    public void Startup_banner_points_to_provider_setup_when_the_catalog_is_empty()
+    {
+        using ConsoleSession cli = new(seedCatalog: false);
+        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Templates, cli.Terminal);
+
+        startup.Print();
+
+        Assert.Contains("当前模型 未选择", cli.Output.Output);
+        Assert.Contains("先在「模型与提供商」菜单添加提供商", cli.Output.Output);
+    }
+
+    [Fact(DisplayName = "启动横幅报告其他进程持有的任务")]
+    public void Startup_banner_reports_tasks_held_by_other_processes()
+    {
+        using ConsoleSession cli = new();
+        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Templates, cli.Terminal);
+        TaskLoadReport report = new([], [new TaskId(1), new TaskId(2)], []);
+
+        startup.Print(report);
+
+        Assert.Contains("2 个任务或会话由其他进程持有，本实例未加载。", cli.Output.Output);
+    }
+}

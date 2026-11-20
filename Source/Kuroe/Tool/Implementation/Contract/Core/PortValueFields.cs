@@ -1,4 +1,4 @@
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>端口交回对象的字段名与说明。schema 与解析共用，字段名按原文匹配。</summary>
 internal static class PortValueFields

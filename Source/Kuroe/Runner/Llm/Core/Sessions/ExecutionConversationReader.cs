@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Conversation;
-using Kuroe.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Conversation;
+using Kuroe.Kernel.Execution.Shared.Restore;
 
 namespace Kuroe.Runner.Llm.Sessions;
 

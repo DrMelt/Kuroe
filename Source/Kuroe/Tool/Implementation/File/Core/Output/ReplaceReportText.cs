@@ -2,7 +2,7 @@ using System.Text;
 using Kuroe.Tool.FileAccess.Output;
 using Kuroe.Tool.FileAccess.Shared;
 
-namespace Kuroe.Tool.File.Output;
+namespace Kuroe.Tool.Implementation.File.Output;
 
 /// <summary>批量替换报告文本：总数、失败项与逐文件明细，整体受输出上限约束。</summary>
 /// <param name="Result">替换结果。</param>

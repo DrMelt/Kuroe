@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Runtime;
+namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>任务域的错误构造。</summary>
 internal static class TaskErrors

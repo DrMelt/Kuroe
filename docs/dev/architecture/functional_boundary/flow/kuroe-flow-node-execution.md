@@ -19,4 +19,4 @@
 
 ## 依赖
 
-- Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Execution.Shared、Kuroe.Tasks.Shared、Kuroe.Runner.Shared、Kuroe.Runner.Input、Kuroe.Runner.Approval。
+- Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Runner.Shared、Kuroe.Runner.Input、Kuroe.Runner.Approval。

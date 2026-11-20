@@ -1,6 +1,6 @@
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Git.Read;
+namespace Kuroe.Tool.Implementation.Git.Read;
 
 /// <summary>列出分支的命令定义。</summary>
 internal static class Branches

@@ -1,8 +1,8 @@
-using Kuroe.Presentation.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>任务的公共快照装配：任务身份与状态、执行、过程记录、等待步骤和开始文本。</summary>
 public static class TaskSnapshotFactory

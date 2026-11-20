@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Restore;
 
-namespace Kuroe.Execution.Shared.Conversation;
+namespace Kuroe.Kernel.Execution.Shared.Conversation;
 
 /// <summary>从执行恢复数据读取会话历史。读取不发起模型请求，不决定展示方式。</summary>
 public interface IExecutionConversationReader

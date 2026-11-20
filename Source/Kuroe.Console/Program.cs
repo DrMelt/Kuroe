@@ -7,7 +7,7 @@ using Kuroe.Console;
 using Kuroe.Console.Views;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Hosting;
-using Kuroe.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;

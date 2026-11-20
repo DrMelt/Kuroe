@@ -1,6 +1,6 @@
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Git.Write;
+namespace Kuroe.Tool.Implementation.Git.Write;
 
 /// <summary>清理未跟踪文件与目录的命令定义。</summary>
 internal static class Clean

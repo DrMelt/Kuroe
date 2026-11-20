@@ -1,14 +1,14 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Persistence.Files.Shared;
-using Kuroe.Tasks.Persistence.Saving.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Tasks.Runtime;
+namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>一个任务域内的任务动作：提交、暂停、恢复、重新执行、终止与改名。流程语义经 <see cref="IFlowIdentity"/> 落地。</summary>
 public sealed class TaskActions(

@@ -1,12 +1,12 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.Maf.Definition;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Maf.Control;
 

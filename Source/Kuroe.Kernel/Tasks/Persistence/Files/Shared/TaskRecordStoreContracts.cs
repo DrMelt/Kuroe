@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Persistence.Files.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Files.Shared;
 
 /// <summary>任务存档的持久化端口。</summary>
 public interface ITaskRecordStore

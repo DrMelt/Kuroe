@@ -14,12 +14,12 @@ public sealed class PresentationBoundaryTests
             KernelRoot,
             "Presentation",
             "Shared",
-            "Kuroe.Presentation.Shared.csproj");
+            "Kuroe.Kernel.Presentation.Shared.csproj");
 
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
 
-        ReferencesStayUnder(project, "Kuroe.Presentation.Shared", "中性契约", execution, tasks);
+        ReferencesStayUnder(project, "Kuroe.Kernel.Presentation.Shared", "中性契约", execution, tasks);
     }
 
     [Fact(DisplayName = "任务表现层只引用中性契约")]
@@ -30,14 +30,14 @@ public sealed class PresentationBoundaryTests
             "Tasks",
             "Presentation",
             "Shared",
-            "Kuroe.Tasks.Presentation.Shared.csproj");
+            "Kuroe.Kernel.Tasks.Presentation.Shared.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
 
         ReferencesStayUnder(
             project,
-            "Kuroe.Tasks.Presentation.Shared",
+            "Kuroe.Kernel.Tasks.Presentation.Shared",
             "中性契约",
             tasks,
             execution,

@@ -14,9 +14,9 @@
 ## 边界外
 
 - 不含图结构、编译与流程控制。
-- 不含编解码实现：在 Kuroe.Flow.Persistence.Graph。
+- 不含编解码实现：在 Kuroe.Flow.Persistence.Serialization.Graph。
 - 不依赖流程控制与宿主实现。
 
 ## 依赖
 
-- Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Execution.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared。
+- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared。

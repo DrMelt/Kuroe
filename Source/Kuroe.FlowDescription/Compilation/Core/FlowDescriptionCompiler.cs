@@ -7,7 +7,7 @@ using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.FlowDescription.Compilation;
 

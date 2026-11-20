@@ -27,14 +27,14 @@ public sealed class KernelAreaTests
     public void Input_projects_reference_only_kernel_contracts()
     {
         string input = Path.Combine(KernelRoot, "Input");
-        string shared = Path.Combine(input, "Shared", "Kuroe.Input.Shared.csproj");
-        string runtime = Path.Combine(input, "Runtime", "Kuroe.Input.Runtime.csproj");
+        string shared = Path.Combine(input, "Shared", "Kuroe.Kernel.Input.Shared.csproj");
+        string runtime = Path.Combine(input, "Runtime", "Kuroe.Kernel.Input.Runtime.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string sharedProject = Path.Combine(input, "Shared");
 
-        Assert.Equal([Path.Combine(tasks, "Kuroe.Tasks.Shared.csproj")], ProjectReferences(shared));
+        Assert.Equal([Path.Combine(tasks, "Kuroe.Kernel.Tasks.Shared.csproj")], ProjectReferences(shared));
         Assert.Equal(
-            [Path.Combine(sharedProject, "Kuroe.Input.Shared.csproj"), Path.Combine(tasks, "Kuroe.Tasks.Shared.csproj")],
+            [Path.Combine(sharedProject, "Kuroe.Kernel.Input.Shared.csproj"), Path.Combine(tasks, "Kuroe.Kernel.Tasks.Shared.csproj")],
             ProjectReferences(runtime));
     }
 

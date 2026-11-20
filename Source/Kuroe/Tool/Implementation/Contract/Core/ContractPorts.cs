@@ -1,8 +1,8 @@
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
 
 
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>执行声明的需交回端口。契约工具按执行输出声明取交回清单。</summary>
 internal static class ContractPorts

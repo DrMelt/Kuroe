@@ -1,6 +1,6 @@
-using Kuroe.Execution.Shared.Usage;
+using Kuroe.Kernel.Execution.Shared.Usage;
 
-namespace Kuroe.Execution.Shared.Runtime;
+namespace Kuroe.Kernel.Execution.Shared.Runtime;
 
 /// <summary>执行器上报本次执行的模型请求用量。没有模型请求的执行器不实现。</summary>
 public interface IExecutionUsageSource

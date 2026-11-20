@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Errors;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Errors;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
 
-namespace Kuroe.Execution.Shared.Contract;
+namespace Kuroe.Kernel.Execution.Shared.Contract;
 
 /// <summary>执行契约的端口整理与校验：端口一一对应、触发位规则、未声明端口、必填缺失与空白原因。</summary>
 public static class ExecutionContractRules

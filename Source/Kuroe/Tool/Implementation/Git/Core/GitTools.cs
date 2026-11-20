@@ -1,10 +1,10 @@
 using Kuroe.Shared;
-using Kuroe.Tool.Command.Shared;
-using Kuroe.Tool.Git.Branch;
-using Kuroe.Tool.Git.Read;
-using Kuroe.Tool.Git.Write;
+using Kuroe.Tool.Implementation.Command.Shared;
+using Kuroe.Tool.Implementation.Git.Branch;
+using Kuroe.Tool.Implementation.Git.Read;
+using Kuroe.Tool.Implementation.Git.Write;
 
-namespace Kuroe.Tool.Git;
+namespace Kuroe.Tool.Implementation.Git;
 
 /// <summary>内置 git 工具面：十七个函数都是命令工具定义，模板展开与进程执行复用命令面，命令在路径基准目录执行。</summary>
 public static class GitTools

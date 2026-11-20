@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>上报本轮无法完成的通道。载体按执行换一份，上报时才知道是哪个执行在报。</summary>
 /// <remarks>按执行建立载体。</remarks>

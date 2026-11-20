@@ -1,8 +1,8 @@
-using Kuroe.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Contract;
 
 
 
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>契约工具回执的模型可见文本：本轮还需交回的产出，各契约入口共用一份措辞。</summary>
 static class ContractReceipts

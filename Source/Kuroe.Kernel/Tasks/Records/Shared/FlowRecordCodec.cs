@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json;
 
-namespace Kuroe.Tasks.Records.Shared;
+namespace Kuroe.Kernel.Tasks.Records.Shared;
 
 /// <summary>流程记录在存档中的定义与状态片段。片段由流程实现自己写出与读取。</summary>
 public sealed record FlowRecordData(JsonElement Definition, JsonElement State);

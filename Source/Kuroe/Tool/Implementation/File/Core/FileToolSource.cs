@@ -1,7 +1,7 @@
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
-namespace Kuroe.Tool.File;
+namespace Kuroe.Tool.Implementation.File;
 
 /// <summary>文件工具源：装配期提供定义，运行期按执行绑定创建本轮可用的文件工具。</summary>
 /// <remarks>用文件访问实现建立工具源。</remarks>

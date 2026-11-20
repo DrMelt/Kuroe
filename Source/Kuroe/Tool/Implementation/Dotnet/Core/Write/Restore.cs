@@ -1,6 +1,6 @@
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Dotnet.Write;
+namespace Kuroe.Tool.Implementation.Dotnet.Write;
 
 /// <summary>还原依赖的命令定义。</summary>
 internal static class Restore

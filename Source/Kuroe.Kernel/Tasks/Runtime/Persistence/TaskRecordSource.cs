@@ -1,7 +1,7 @@
-using Kuroe.Tasks.Persistence.Saving.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Runtime.Persistence;
+namespace Kuroe.Kernel.Tasks.Runtime.Persistence;
 
 /// <summary>按任务号从任务域捕获存档。任务状态变化时转发任务号。</summary>
 public sealed class TaskRecordSource : ITaskRecordSource

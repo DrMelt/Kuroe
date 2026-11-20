@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Presentation.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>流程模板的只读目录，供宿主浏览流程与生成提交表单。</summary>
 public interface IFlowTemplateCatalog

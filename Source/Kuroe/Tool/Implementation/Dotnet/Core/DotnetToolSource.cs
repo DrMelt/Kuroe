@@ -1,6 +1,6 @@
-using Kuroe.Tool.Command;
+using Kuroe.Tool.Implementation.Command;
 
-namespace Kuroe.Tool.Dotnet;
+namespace Kuroe.Tool.Implementation.Dotnet;
 
 /// <summary>dotnet 工具源：装配期提供定义，运行期按执行绑定创建本轮可用的命令工具。</summary>
 public sealed class DotnetToolSource : ToolSource

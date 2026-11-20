@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Tasks.Persistence.Restoring.Shared;
-using Kuroe.Tasks.Runtime;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Kernel.Tasks.Runtime;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 

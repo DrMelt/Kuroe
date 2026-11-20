@@ -1,4 +1,4 @@
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.FlowDescription.Definition.Shared.Ports;
 

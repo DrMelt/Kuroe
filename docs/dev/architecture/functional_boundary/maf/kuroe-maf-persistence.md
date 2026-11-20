@@ -16,4 +16,4 @@ MAF 流程记录的存档编解码：定义与状态各自成为一段 JSON 片�
 
 ## 依赖
 
-- Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared、Kuroe.Maf.Records.Shared。
+- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Maf.Records.Shared。

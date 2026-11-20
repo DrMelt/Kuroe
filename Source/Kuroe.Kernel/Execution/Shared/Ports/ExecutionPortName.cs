@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Errors;
+using Kuroe.Kernel.Execution.Shared.Errors;
 
-namespace Kuroe.Execution.Shared.Ports;
+namespace Kuroe.Kernel.Execution.Shared.Ports;
 
 /// <summary>执行单元的数据交换端口名。展示即原文。</summary>
 public readonly record struct ExecutionPortName(string Value)

@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using Spectre.Console;
 
 namespace Kuroe.Console.Views;

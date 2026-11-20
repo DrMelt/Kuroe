@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
 
-namespace Kuroe.Tasks.Persistence.Restoring.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 
 /// <summary>从存档恢复任务的运行时端口。由运行时实现任务构造、加入任务域与推进循环恢复。</summary>
 public interface ITaskRestoreRuntime

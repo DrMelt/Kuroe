@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
-using Kuroe.Tasks.Runtime;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Runtime;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Flow.Hosting.Workflows.Flows;
-using Kuroe.Execution.Shared.Notice;
+using Kuroe.Kernel.Execution.Shared.Notice;
 
 namespace Kuroe.Cli.Commands;
 

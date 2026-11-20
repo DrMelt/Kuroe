@@ -1,7 +1,7 @@
 using Kuroe.Flow.Graph.Shared.Graph.Records;
 using System.Text.Json.Serialization;
 
-namespace Kuroe.Flow.Persistence.Graph;
+namespace Kuroe.Flow.Persistence.Serialization.Graph;
 
 /// <summary>图流程定义的存档形状。</summary>
 internal sealed record GraphFlowDefinitionData(string? Name, string? Nodes, string? Flow);

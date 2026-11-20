@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Persistence.Files.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Files.Shared;
 
 /// <summary>任务级租约：同一任务同一时刻只允许一个进程持有。持有集合由实现维护，调用方只登记与注销。</summary>
 public interface ITaskLeaseStore

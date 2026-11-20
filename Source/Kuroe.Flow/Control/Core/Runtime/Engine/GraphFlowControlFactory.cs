@@ -1,5 +1,5 @@
 using Kuroe.Flow.Control.Runtime.Graph;
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Flow.Control.Runtime.Engine;

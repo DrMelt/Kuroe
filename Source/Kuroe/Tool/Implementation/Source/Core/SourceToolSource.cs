@@ -1,6 +1,6 @@
 using Kuroe.Files.Shared;
 
-namespace Kuroe.Tool.Source;
+namespace Kuroe.Tool.Implementation.Source;
 
 /// <summary>导出资料工具源，导出目录在装配期给出。载体的任一函数放行时创建。</summary>
 /// <param name="sourceDirectory">随程序导出的源码与文档目录。</param>

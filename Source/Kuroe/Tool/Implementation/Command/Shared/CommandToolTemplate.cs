@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Kuroe.Shared;
 
-namespace Kuroe.Tool.Command.Shared;
+namespace Kuroe.Tool.Implementation.Command.Shared;
 
 /// <summary>命令模板的文本规则与执行参数缺省。占位符写成 {参数名}，内层不含花括号。</summary>
 public static partial class CommandToolTemplate

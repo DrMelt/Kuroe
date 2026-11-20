@@ -1,9 +1,9 @@
 using Kuroe.Shared;
-using Kuroe.Tool.Command.Shared;
-using Kuroe.Tool.Dotnet.Read;
-using Kuroe.Tool.Dotnet.Write;
+using Kuroe.Tool.Implementation.Command.Shared;
+using Kuroe.Tool.Implementation.Dotnet.Read;
+using Kuroe.Tool.Implementation.Dotnet.Write;
 
-namespace Kuroe.Tool.Dotnet;
+namespace Kuroe.Tool.Implementation.Dotnet;
 
 /// <summary>内置 dotnet 工具面：只读的函数在 dotnet/read，会改动项目与产物的函数在 dotnet/write。
 /// 全部函数都是命令工具定义，模板展开与进程执行复用命令面，命令在路径基准目录执行。</summary>

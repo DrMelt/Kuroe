@@ -1,4 +1,4 @@
-namespace Kuroe.Tasks.Shared;
+namespace Kuroe.Kernel.Tasks.Shared;
 
 /// <summary>任务状态的判定与展示名。</summary>
 public static class TaskStates

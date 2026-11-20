@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
 
-namespace Kuroe.Execution.Shared.Runtime;
+namespace Kuroe.Kernel.Execution.Shared.Runtime;
 
 /// <summary>一次执行的请求入口：运行器与工具经它读取请求、交回端口、上报无法完成与读取契约状态。</summary>
 public interface IExecutionRequestEntry

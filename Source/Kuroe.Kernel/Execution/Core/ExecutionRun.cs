@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
-namespace Kuroe.Execution;
+namespace Kuroe.Kernel.Execution;
 
 /// <summary>一次执行的包裹：持有执行实例与运行器，负责运行器接线、执行与收口。</summary>
 internal sealed class ExecutionRun(

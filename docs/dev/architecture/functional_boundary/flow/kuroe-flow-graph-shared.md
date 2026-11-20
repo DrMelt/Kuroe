@@ -24,4 +24,4 @@
 
 ## 依赖
 
-- Kuroe.Execution.Shared、Kuroe.Tasks.Shared、Kuroe.FlowDescription.Definition.Shared。
+- Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.FlowDescription.Definition.Shared。

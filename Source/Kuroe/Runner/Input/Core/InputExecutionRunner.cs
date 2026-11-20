@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Input.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Journal;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Input.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Journal;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Input;
 

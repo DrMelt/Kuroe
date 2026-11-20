@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Identity;
+namespace Kuroe.Kernel.Execution.Shared.Identity;
 
 /// <summary>执行归属标识。由流程控制提供，执行单元只透传。</summary>
 public readonly record struct ExecutionOwnerId(string Value)

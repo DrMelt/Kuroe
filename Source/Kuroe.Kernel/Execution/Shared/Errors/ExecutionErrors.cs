@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Identity;
 
-namespace Kuroe.Execution.Shared.Errors;
+namespace Kuroe.Kernel.Execution.Shared.Errors;
 
 /// <summary>执行侧的错误构造。</summary>
 public static class ExecutionErrors

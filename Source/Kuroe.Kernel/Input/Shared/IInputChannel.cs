@@ -1,6 +1,6 @@
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Input.Shared;
+namespace Kuroe.Kernel.Input.Shared;
 
 /// <summary>流程步骤的输入登记面：步骤声明此刻等待外部输入，交付经接收委托交给步骤。
 /// 一次登记对应一次交付，交付后登记撤销。Accept 与 Decline 可在任务 Gate 外调用，登记表内部同步；任务清理后登记被拒绝。</summary>

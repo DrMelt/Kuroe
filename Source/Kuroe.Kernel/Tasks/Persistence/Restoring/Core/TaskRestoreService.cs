@@ -1,11 +1,11 @@
 using ErrorOr;
-using Kuroe.Tasks.Persistence.Files.Shared;
-using Kuroe.Tasks.Persistence.Restoring.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Persistence.Restoring;
+namespace Kuroe.Kernel.Tasks.Persistence.Restoring;
 
 /// <summary>启动加载：逐文件读取存档，获取租约并交给运行时恢复任务。</summary>
 public sealed class TaskRestoreService(

@@ -1,6 +1,6 @@
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Git.Write;
+namespace Kuroe.Tool.Implementation.Git.Write;
 
 /// <summary>删除已跟踪文件的命令定义。</summary>
 internal static class Remove

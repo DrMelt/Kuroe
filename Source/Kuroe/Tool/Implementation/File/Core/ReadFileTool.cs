@@ -4,7 +4,7 @@ using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess.Output;
 using Kuroe.Tool.FileAccess.Shared;
 
-namespace Kuroe.Tool.File;
+namespace Kuroe.Tool.Implementation.File;
 
 /// <summary>读取路径基准目录内文本文件指定行号范围的工具。路径解析后必须落回工作区内。</summary>
 public sealed class ReadFileTool : ITool

@@ -1,10 +1,10 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Shared;
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 using Kuroe.Tool.Json;
 
-namespace Kuroe.Tool.Command.Json;
+namespace Kuroe.Tool.Implementation.Command.Json;
 
 /// <summary>命令工具文件的读入与装配。文件不存在时为空；条目不合法时一次给出全部错误。</summary>
 public sealed class CommandToolFile : IToolFile

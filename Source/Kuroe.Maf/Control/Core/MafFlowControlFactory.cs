@@ -1,4 +1,4 @@
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 
 namespace Kuroe.Maf.Control;
 

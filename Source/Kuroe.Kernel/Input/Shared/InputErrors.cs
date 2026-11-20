@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Input.Shared;
+namespace Kuroe.Kernel.Input.Shared;
 
 /// <summary>输入交付的错误。</summary>
 public static class InputErrors

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Kuroe.Tool.Command.Json;
+namespace Kuroe.Tool.Implementation.Command.Json;
 
 /// <summary>命令工具文件的 JSON 绑定。读法由源生成固定。</summary>
 [JsonSourceGenerationOptions(

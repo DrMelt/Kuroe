@@ -1,6 +1,6 @@
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
-namespace Kuroe.Execution.Shared.Contract;
+namespace Kuroe.Kernel.Execution.Shared.Contract;
 
 /// <summary>一次执行的本轮契约状态：已交回的执行端口值与已上报的无法完成原因。</summary>
 public sealed record ExecutionContract(

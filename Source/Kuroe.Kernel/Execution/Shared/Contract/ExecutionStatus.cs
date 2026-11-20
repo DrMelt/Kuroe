@@ -1,9 +1,9 @@
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Execution.Shared.Contract;
+namespace Kuroe.Kernel.Execution.Shared.Contract;
 
 /// <summary>一次执行在本轮的契约状态：步骤、执行状态、尚缺的输出端口与无法完成原因。</summary>
 public sealed record ExecutionStatus(

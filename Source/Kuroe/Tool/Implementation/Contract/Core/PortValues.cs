@@ -1,8 +1,8 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>输出端口交回的命名段：把模型给的 JSON 对象按端口声明解析成端口值，不合法时给出一条可回给模型的原因。
 /// 顶层键按原文精确匹配声明端口，区分大小写；端口对象内的字段也按原文精确匹配。触发端口的触发位必须写出。</summary>

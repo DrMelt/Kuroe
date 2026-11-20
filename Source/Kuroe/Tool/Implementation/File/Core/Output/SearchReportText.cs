@@ -1,7 +1,7 @@
 using Kuroe.Tool.FileAccess.Output;
 using Kuroe.Tool.FileAccess.Shared;
 
-namespace Kuroe.Tool.File.Output;
+namespace Kuroe.Tool.Implementation.File.Output;
 
 /// <summary>搜索报告文本：匹配计数、按文件分组的匹配行与输出上限。</summary>
 /// <param name="Result">搜索结果。</param>

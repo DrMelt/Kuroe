@@ -1,11 +1,11 @@
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using System.Text;
 using ErrorOr;
-using Kuroe.Tasks.Persistence.Files.Shared;
-using Kuroe.Tasks.Persistence.Serialization.Shared;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
 
-namespace Kuroe.Tasks.Persistence.Files;
+namespace Kuroe.Kernel.Tasks.Persistence.Files;
 
 /// <summary>任务存档的文件存储：每个任务一个文件，写入走原子替换，读取逐文件报告失败。</summary>
 public sealed class FileTaskRecordStore(

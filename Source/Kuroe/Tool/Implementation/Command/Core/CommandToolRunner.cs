@@ -1,9 +1,9 @@
 using ErrorOr;
 using Kuroe.Process;
 using Kuroe.Shared;
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Command;
+namespace Kuroe.Tool.Implementation.Command;
 
 /// <summary>命令的执行编排：读取路径变量，展开模板，经进程端口启动命令，把输出文本交回模型。
 /// 路径参数由工具函数在调用前校验，这里按同一规则取出解析后的绝对路径供模板展开。</summary>

@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Notice;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Notice;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>流程控制可用的任务能力面：身份、控制状态、过程记录、执行集合与状态迁移。控制实例只经它读写任务。</summary>
 public interface ITaskFlowContext : ITaskFlowView

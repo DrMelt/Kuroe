@@ -3,8 +3,8 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>宿主与工具边界：宿主不引用图运行期与图共享层，工具共享项不依赖同模块核心与文件访问。
-/// Console 注册图节点能力，因此作为装配入口单独允许引用图共享层。</summary>
+/// <summary>宿主与工具边界：除 Console 外宿主不引用图运行期与图共享层；Console 注册图节点能力，只额外引用图共享层与节点执行装配。
+/// 工具共享项不依赖同模块核心与文件访问。</summary>
 public sealed class HostAndToolBoundaryTests
 {
     [Fact(DisplayName = "文件访问共享层不含核心实现与文件 IO")]
@@ -21,7 +21,7 @@ public sealed class HostAndToolBoundaryTests
         Assert.Contains(shared, ProjectReferences(core));
     }
 
-    [Fact(DisplayName = "宿主不引用图运行期，入口不引用图共享层")]
+    [Fact(DisplayName = "除 Console 外宿主不引用图运行期与图共享层")]
     public void Hosts_do_not_reference_graph_runtime_or_node_shared()
     {
         string[] projects =
@@ -35,7 +35,7 @@ public sealed class HostAndToolBoundaryTests
                 "Implementation",
                 "KuroeInfo",
                 "Core",
-                "Kuroe.Tool.KuroeInfo.csproj"),
+                "Kuroe.Tool.Implementation.KuroeInfo.csproj"),
         ];
 
         foreach (string project in projects)
@@ -49,4 +49,24 @@ public sealed class HostAndToolBoundaryTests
         }
     }
 
+    [Fact(DisplayName = "Console 只额外引用图共享层与节点执行装配")]
+    public void Console_references_only_graph_shared_and_node_execution_from_flow()
+    {
+        string project = Path.Combine(SourceRoot, "Kuroe.Console", "Kuroe.Console.csproj");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string graphShared = Path.Combine(flow, "Graph", "Shared", "Kuroe.Flow.Graph.Shared.csproj");
+        string nodeExecution = Path.Combine(flow, "NodeExecution", "Core", "Kuroe.Flow.NodeExecution.csproj");
+        string hosting = Path.Combine(flow, "Hosting", "Core", "Kuroe.Flow.Hosting.csproj");
+        IReadOnlyList<string> references = ProjectReferences(project);
+
+        Assert.Contains(graphShared, references);
+        Assert.Contains(nodeExecution, references);
+        Assert.All(
+            references.Where(reference => IsUnder(reference, flow)),
+            reference => Assert.True(
+                string.Equals(reference, graphShared, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(reference, nodeExecution, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(reference, hosting, StringComparison.OrdinalIgnoreCase),
+                $"Console 引用了图区域的 {reference}。"));
+    }
 }

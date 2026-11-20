@@ -4,7 +4,7 @@ using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess.Shared;
 
-namespace Kuroe.Tool.File;
+namespace Kuroe.Tool.Implementation.File;
 
 /// <summary>把文本覆盖写入路径基准目录内文件的工具。路径解析后必须落回工作区内，父目录缺失时自动创建。</summary>
 public sealed class WriteFileTool : ITool

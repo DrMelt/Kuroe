@@ -1,4 +1,4 @@
-namespace Kuroe.Presentation.Shared;
+namespace Kuroe.Kernel.Presentation.Shared;
 
 /// <summary>开始端口的输入来源。</summary>
 public enum FlowStartKind

@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Tasks.Presentation.Shared;
+namespace Kuroe.Kernel.Tasks.Presentation.Shared;
 
 /// <summary>任务索引的只读查询面。信息查询工具依赖此契约，任务域实现提供快照。</summary>
 public interface ITaskReader

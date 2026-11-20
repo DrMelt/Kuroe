@@ -1,10 +1,10 @@
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using System.Text;
 using ErrorOr;
-using Kuroe.Presentation.Shared;
+using Kuroe.Kernel.Presentation.Shared;
 
-namespace Kuroe.Tool.KuroeInfo;
+namespace Kuroe.Tool.Implementation.KuroeInfo;
 
 /// <summary>流程模板的状态查询工具。只读，不产生状态改动。</summary>
 public sealed class FlowKuroeInfoTool : ITool

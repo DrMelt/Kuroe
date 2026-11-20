@@ -1,7 +1,7 @@
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>流程表现与任务快照可读的任务面。只含读取，不含任务状态改动。</summary>
 public interface ITaskFlowView

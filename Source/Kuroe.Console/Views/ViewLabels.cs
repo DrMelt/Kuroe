@@ -1,9 +1,9 @@
-using Kuroe.Presentation.Shared;
-using ExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Presentation.Shared;
+using ExecutionUsage = Kuroe.Kernel.Execution.Shared.Usage.ExecutionUsage;
+using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Pending;
 using Spectre.Console;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Console.Views;
 

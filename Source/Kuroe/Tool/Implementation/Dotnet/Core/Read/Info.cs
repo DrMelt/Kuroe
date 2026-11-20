@@ -1,6 +1,6 @@
-using Kuroe.Tool.Command.Shared;
+using Kuroe.Tool.Implementation.Command.Shared;
 
-namespace Kuroe.Tool.Dotnet.Read;
+namespace Kuroe.Tool.Implementation.Dotnet.Read;
 
 /// <summary>查看本机 .NET 环境的命令定义。</summary>
 internal static class Info

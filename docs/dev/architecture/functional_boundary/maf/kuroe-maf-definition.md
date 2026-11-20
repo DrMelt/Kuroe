@@ -18,4 +18,4 @@ MAF 流程定义：流程名、开始端口、步骤与连接，以及步骤的�
 
 ## 依赖
 
-- Kuroe.Tasks.Shared、Kuroe.Execution.Shared。
+- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Execution.Shared。

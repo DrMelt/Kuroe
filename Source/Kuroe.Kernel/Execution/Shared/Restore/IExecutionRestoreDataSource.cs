@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Restore;
+namespace Kuroe.Kernel.Execution.Shared.Restore;
 
 /// <summary>运行器给出本次执行的恢复负载。成功收口也给出，是否用于恢复由任务编排决定。流程层只保存与转发，不解释负载。</summary>
 public interface IExecutionRestoreDataSource

@@ -1,9 +1,9 @@
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json;
-using Kuroe.Execution.Shared.Journal;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Journal;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Tasks.Persistence.Serialization.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
 
 /// <summary>存档文档：版本与任务形状。</summary>
 public sealed record TaskRecordDocument(int Version, TaskRecordData? Task);

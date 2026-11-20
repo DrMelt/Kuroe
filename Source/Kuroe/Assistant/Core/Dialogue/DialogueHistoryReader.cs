@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Tasks.Runtime;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Conversation;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Tasks.Runtime;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Conversation;
+using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Assistant.Dialogue;
 

@@ -1,6 +1,6 @@
 using Kuroe.Shared;
 
-namespace Kuroe.Tool.Command.Shared;
+namespace Kuroe.Tool.Implementation.Command.Shared;
 
 /// <summary>命令定义的模板一致性：模板、参数声明与路径变量必须互相吻合。</summary>
 public static class CommandToolValidation

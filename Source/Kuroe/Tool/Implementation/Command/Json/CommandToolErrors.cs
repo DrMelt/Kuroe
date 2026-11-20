@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Shared;
 
-namespace Kuroe.Tool.Command.Json;
+namespace Kuroe.Tool.Implementation.Command.Json;
 
 /// <summary>命令工具条目的错误构造。</summary>
 public static class CommandToolErrors

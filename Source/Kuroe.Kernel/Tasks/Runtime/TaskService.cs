@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Identity;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
 
-namespace Kuroe.Tasks.Runtime;
+namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>用户任务域对任务的动作：按流程名提交、暂停、恢复、重新执行、终止与改名。</summary>
 public sealed class TaskService(TaskActions actions) : ITaskControl

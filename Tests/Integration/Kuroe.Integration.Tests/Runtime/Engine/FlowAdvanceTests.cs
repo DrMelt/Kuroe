@@ -1,0 +1,349 @@
+using ErrorOr;
+using Kuroe.Kernel.Tasks.Runtime;
+using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Pending;
+using Xunit;
+
+namespace Kuroe.Integration.Tests.Runtime.Engine;
+
+/// <summary>图驱动推进：放行、汇拢、重新执行、未收口与取消。测试流程即计划后实施。</summary>
+public sealed class FlowAdvanceTests
+{
+    [Fact(DisplayName = "空流程库按名提交被拒绝")]
+    public void Empty_flow_library_rejects_submit_by_name()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(flowsJson: "{}");
+
+        ErrorOr<TaskSnapshot> submitted = environment.Tasks.Submit(
+            StartInputs.Single(new PortName("目标"), "补齐 README"), new FlowName("默认"), null);
+
+        Assert.True(submitted.IsError);
+        Assert.Contains(submitted.ErrorsOrEmptyList,
+            error => error.Description.Contains("没有名为 默认 的流程"));
+    }
+
+    [Fact(DisplayName = "计划与实施节点完成整条任务")]
+    public void Plan_implement_completes_task()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Single(done.View.Steps[0].Executions);
+        Assert.Single(done.View.Steps[1].Executions);
+        Assert.Equal(2, done.ProgressSteps);
+    }
+
+    [Fact(DisplayName = "长开始输入完整到达执行")]
+    public void Long_start_input_reaches_execution_untruncated()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        string goal = new('甲', 3000);
+
+        TaskId id = environment.Submit(goal);
+        environment.Settle(id);
+
+        IGraphExecution plan = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "制定计划");
+        InputValue target = plan.Input.Inputs.Single(value => value.Port == new PortName("目标"));
+
+        Assert.Equal(goal, target.Text);
+    }
+
+    [Fact(DisplayName = "长上游输出完整到达下游")]
+    public void Long_upstream_output_reaches_downstream_untruncated()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        string plan = new('计', 3000);
+        environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value == "制定计划"
+            ? $"{{\"计划\":\"{plan}\"}}"
+            : null;
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
+
+        IGraphExecution implement = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "分配执行");
+        InputValue value = implement.Input.Inputs.Single(input => input.Port == new PortName("计划"));
+
+        Assert.Equal(plan, value.Text);
+    }
+
+    [Fact(DisplayName = "计划上的审批停到批准")]
+    public void Approval_on_plan_parks_until_approved()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);
+
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot parked = environment.Wait(id, snapshot =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && snapshot.View.Steps[0].Executions.Count == 1);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
+        Assert.Single(parked.View.Steps[0].Executions);
+        Assert.Empty(parked.View.Steps[2].Executions);
+
+        environment.Pendings.Approve(id).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Single(done.View.Steps[2].Executions);
+    }
+
+    [Fact(DisplayName = "计划步骤未提交时任务阻塞")]
+    public void Plan_step_without_submission_blocks_task()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.SubmitsPorts = false;
+
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
+
+        Assert.Equal(TaskState.Blocked, blocked.State);
+        ExecutionSnapshot plan = Assert.Single(environment.GraphExecutions(blocked, 0));
+        Assert.Equal(ExecutionState.Failed, plan.State);
+        Assert.Contains(plan.Failures, failure => failure.Contains("未收口"));
+    }
+
+    [Fact(DisplayName = "计划未收口后重跑重新执行计划")]
+    public void Plan_uncollected_then_rerun_reexecutes_plan()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.SubmitsPorts = false;
+
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
+
+        Assert.Equal(TaskState.Blocked, blocked.State);
+        Assert.Single(blocked.View.Steps[0].Executions);
+
+        environment.Runner.SubmitsPorts = true;
+        environment.Tasks.Rerun(id).ThrowIfError();
+
+        TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
+        Assert.Equal(2, done.View.Steps[0].Executions.Count);
+    }
+
+    [Fact(DisplayName = "执行失败后重跑重新执行节点")]
+    public void Execution_failure_then_rerun_reexecutes_the_node()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.FailsWhen = execution => execution.Input.Node.Label.Value == "分配执行";
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+
+        environment.Runner.FailsWhen = null;
+        environment.Tasks.Rerun(id).ThrowIfError();
+        TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Equal(2, done.View.Steps[1].Executions.Count);
+    }
+
+    [Fact(DisplayName = "阻塞后取消任务收口")]
+    public void Cancel_after_block_settles_the_task()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.FailsWhen = execution => execution.Input.Node.Label.Value == "分配执行";
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+
+        environment.Tasks.StopTask(id).ThrowIfError();
+        TaskSnapshot canceled = environment.Settle(id);
+
+        Assert.Equal(TaskState.Terminated, canceled.State);
+        Assert.DoesNotContain(canceled.View.Steps, step => step.State == FlowItemState.Blocked);
+        Assert.DoesNotContain(canceled.View.Steps, step => step.Block is not null);
+        Assert.Single(environment.Registry.ClearSettled());
+    }
+
+    [Fact(DisplayName = "取消任务停止全部执行")]
+    public void Cancel_task_stops_every_execution()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Gate.HoldAll();
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
+        environment.Tasks.StopTask(id).ThrowIfError();
+
+        TaskSnapshot canceled = environment.Settle(id);
+        Assert.Equal(TaskState.Terminated, canceled.State);
+        Assert.Equal(0, canceled.LiveExecutions);
+        Assert.DoesNotContain(canceled.View.Steps, step => step.Block is not null);
+    }
+    [Fact(DisplayName = "暂停中断运行执行恢复后等待重跑")]
+    public void Pause_interrupts_running_execution_and_resume_waits_for_rerun()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Gate.HoldAll();
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
+
+        environment.Tasks.Pause(id).ThrowIfError();
+
+        TaskSnapshot paused = environment.Wait(id, snapshot =>
+            snapshot.State == TaskState.Paused
+            && snapshot.LiveExecutions == 0
+            && snapshot.Executions
+                .Any(execution => execution.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Interrupted));
+        Assert.Contains(
+            paused.Executions,
+            execution => execution.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Interrupted);
+
+        environment.Tasks.Resume(id).ThrowIfError();
+        Assert.Equal(TaskState.Blocked, environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked).State);
+
+        environment.Runner.Gate.ClearHolds();
+        environment.Tasks.Rerun(id).ThrowIfError();
+
+        Assert.Equal(TaskState.Done, environment.Wait(id, snapshot => snapshot.State == TaskState.Done).State);
+    }
+
+    [Fact(DisplayName = "等待时暂停拒绝输入直到恢复")]
+    public async Task Pause_while_waiting_rejects_input_until_resume()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);
+
+        TaskId id = environment.Submit("补齐 README");
+        await environment.WaitAsync(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
+
+        environment.Tasks.Pause(id).ThrowIfError();
+        Assert.Equal(TaskState.Paused, (await environment.WaitAsync(id, snapshot => snapshot.State == TaskState.Paused)).State);
+
+        ErrorOr<Success> rejected = environment.Pendings.Approve(id);
+        Assert.True(rejected.IsError);
+        Assert.Equal(FlowErrorCodes.TaskPaused, rejected.FirstError.Code);
+
+        environment.Tasks.Resume(id).ThrowIfError();
+        await environment.WaitAsync(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
+        environment.Pendings.Approve(id).ThrowIfError();
+
+        Assert.Equal(TaskState.Done, (await environment.WaitAsync(id, snapshot => snapshot.State == TaskState.Done)).State);
+    }
+
+    [Fact(DisplayName = "已完成任务不能暂停或终止")]
+    public void Done_task_cannot_pause_or_terminate()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+
+        TaskId id = environment.Submit("补齐 README");
+        Assert.Equal(TaskState.Done, environment.Settle(id).State);
+        environment.Wait(id, _ => environment.Registry.Find(id).ThrowIfError().Completed);
+
+        ErrorOr<Success> paused = environment.Tasks.Pause(id);
+        Assert.True(paused.IsError);
+        Assert.Equal(FlowErrorCodes.TaskDoneCannotPause, paused.FirstError.Code);
+
+        ErrorOr<Success> terminated = environment.Tasks.StopTask(id);
+        Assert.True(terminated.IsError);
+        Assert.Equal(FlowErrorCodes.TaskDoneCannotTerminate, terminated.FirstError.Code);
+    }
+
+    [Fact(DisplayName = "活跃任务不能恢复")]
+    public void Active_task_cannot_resume()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Gate.HoldAll();
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
+
+        ErrorOr<Success> resumed = environment.Tasks.Resume(id);
+        Assert.True(resumed.IsError);
+        Assert.Equal(FlowErrorCodes.TaskNotPaused, resumed.FirstError.Code);
+
+        environment.Tasks.StopTask(id).ThrowIfError();
+    }
+
+    [Fact(DisplayName = "关闭保留控制状态并中断执行")]
+    public async Task Shutdown_keeps_control_state_and_interrupts_executions()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Gate.HoldAll();
+
+        TaskId id = environment.Submit("补齐 README");
+        await environment.WaitAsync(id, snapshot => snapshot.LiveExecutions > 0);
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
+
+        await environment.Tasks.ShutdownAsync();
+
+        Assert.Equal(TaskLifecycle.Active, task.Lifecycle);
+        Assert.Contains(task.Executions, execution => execution.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Interrupted);
+    }
+
+
+
+    [Fact(DisplayName = "批准一个审批后另一个保持等待")]
+    public void Approve_one_approval_keeps_the_other_waiting()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(ParallelApprovalFlow);
+
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot parked = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 2);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Equal(2, environment.Awaiting(id, PendingKind.Approve).Count);
+
+        FlowStepPath review = FlowStepPath.Of("整体", "审阅甲");
+        environment.Pendings.Approve(id, [review]).ThrowIfError();
+
+        // 只放行甲分支的审批节点，乙分支仍停在待批准
+        TaskSnapshot partial = environment.Wait(id, _ =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && environment.Runner.Started.Any(execution =>
+                execution.Input.Node.Label.Value == "撰写" && execution.State == ExecutionState.Succeeded));
+        Assert.Equal(TaskState.Running, partial.State);
+        Assert.Equal("整体/审阅乙", Assert.Single(environment.Awaiting(id, PendingKind.Approve)).Value);
+        Assert.DoesNotContain(environment.Runner.Started, execution => execution.Input.Node.Label.Value == "排版");
+    }
+
+    /// <summary>计划经审批放行后实施。</summary>
+    private const string ReviewOnPlanFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+              { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "审阅", "Kind": "Approval", "Parameters": { "Question": "确认计划" }, "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@计划" } ] },
+              { "Name": "分配执行", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Parameters": { "Tools": ["GetLocalTime"] }, "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅@计划" } ] }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
+    /// <summary>两个审批节点并行放行各自的下游。</summary>
+    private const string ParallelApprovalFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+              { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "审阅甲", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@计划" } ] },
+              { "Name": "审阅乙", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@计划" } ] },
+              { "Name": "撰写", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅甲@计划" } ] },
+              { "Name": "排版", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅乙@计划" } ] }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+}

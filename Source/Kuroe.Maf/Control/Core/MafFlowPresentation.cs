@@ -1,9 +1,9 @@
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.Maf.Definition;
 using Kuroe.Maf.Records.Shared;
-using Kuroe.Presentation.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Maf.Control;
 

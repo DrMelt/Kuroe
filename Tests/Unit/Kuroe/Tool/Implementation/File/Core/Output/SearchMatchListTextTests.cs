@@ -1,0 +1,44 @@
+using Kuroe.Tool.FileAccess.Shared;
+using Kuroe.Tool.Implementation.File.Output;
+using Xunit;
+
+namespace Kuroe.Tool.Implementation.File.Tests.Output;
+
+/// <summary>搜索匹配列表文本：文件分组、相对路径、行号与展示窗口。</summary>
+public sealed class SearchMatchListTextTests
+{
+    private static readonly string Root = Path.Combine(Path.GetTempPath(), "kuroe-tests", "root");
+
+    [Fact(DisplayName = "匹配列表文本按文件分组并给出行号")]
+    public void ToString_groups_matches_by_file_with_numbered_lines()
+    {
+        TextSearchMatch[] matches =
+        [
+            new(Path.Combine(Root, "a.txt"), 3, "needle", 6, 0, 0),
+            new(Path.Combine(Root, "sub", "b.txt"), 12, "needle", 6, 0, 0),
+        ];
+
+        string text = new SearchMatchListText(matches, "在 路径基准根 中匹配 2 处：", Root).ToString();
+
+        string expected = string.Join('\n',
+            "在 路径基准根 中匹配 2 处：",
+            "a.txt",
+            "3 |needle",
+            Path.Combine("sub", "b.txt"),
+            "12 |needle");
+        Assert.Equal(expected, text);
+    }
+
+    [Fact(DisplayName = "匹配列表文本标记截断的展示窗口")]
+    public void ToString_marks_a_truncated_display_window()
+    {
+        TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 1, "needle", 1001, 1, 0)];
+
+        string text = new SearchMatchListText(matches, "匹配：", Root).ToString();
+
+        Assert.EndsWith(
+            "1 |needle（本行共 1002 字符，展示行内容第 1 至 6 字符）",
+            text,
+            StringComparison.Ordinal);
+    }
+}

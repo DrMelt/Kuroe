@@ -1,6 +1,6 @@
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>流程实现的身份判定与展示名。</summary>
 public interface IFlowIdentity

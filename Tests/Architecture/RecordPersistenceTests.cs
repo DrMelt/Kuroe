@@ -66,23 +66,23 @@ public sealed class RecordPersistenceTests
         string persistence = Path.Combine(KernelRoot, "Tasks", "Persistence");
         string[] projects =
         [
-            Path.Combine(persistence, "Files", "Shared", "Kuroe.Tasks.Persistence.Files.Shared.csproj"),
-            Path.Combine(persistence, "Files", "Core", "Kuroe.Tasks.Persistence.Files.csproj"),
-            Path.Combine(persistence, "Restoring", "Shared", "Kuroe.Tasks.Persistence.Restoring.Shared.csproj"),
-            Path.Combine(persistence, "Restoring", "Core", "Kuroe.Tasks.Persistence.Restoring.csproj"),
-            Path.Combine(persistence, "Saving", "Shared", "Kuroe.Tasks.Persistence.Saving.Shared.csproj"),
-            Path.Combine(persistence, "Saving", "Core", "Kuroe.Tasks.Persistence.Saving.csproj"),
+            Path.Combine(persistence, "Files", "Shared", "Kuroe.Kernel.Tasks.Persistence.Files.Shared.csproj"),
+            Path.Combine(persistence, "Files", "Core", "Kuroe.Kernel.Tasks.Persistence.Files.csproj"),
+            Path.Combine(persistence, "Restoring", "Shared", "Kuroe.Kernel.Tasks.Persistence.Restoring.Shared.csproj"),
+            Path.Combine(persistence, "Restoring", "Core", "Kuroe.Kernel.Tasks.Persistence.Restoring.csproj"),
+            Path.Combine(persistence, "Saving", "Shared", "Kuroe.Kernel.Tasks.Persistence.Saving.Shared.csproj"),
+            Path.Combine(persistence, "Saving", "Core", "Kuroe.Kernel.Tasks.Persistence.Saving.csproj"),
             Path.Combine(
                 persistence,
                 "Serialization",
                 "Shared",
-                "Kuroe.Tasks.Persistence.Serialization.Shared.csproj"),
+                "Kuroe.Kernel.Tasks.Persistence.Serialization.Shared.csproj"),
             Path.Combine(
                 persistence,
                 "Serialization",
                 "Json",
                 "Core",
-                "Kuroe.Tasks.Persistence.Json.csproj"),
+                "Kuroe.Kernel.Tasks.Persistence.Serialization.Json.csproj"),
         ];
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
         string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");

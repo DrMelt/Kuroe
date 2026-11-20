@@ -1,6 +1,6 @@
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Request;
 
-namespace Kuroe.Execution.Shared.Runtime;
+namespace Kuroe.Kernel.Execution.Shared.Runtime;
 
 /// <summary>按执行参数建立运行器。执行运行器项目实现它。</summary>
 public interface IExecutionRunnerFactory

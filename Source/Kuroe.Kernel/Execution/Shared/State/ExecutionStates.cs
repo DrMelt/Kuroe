@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.State;
+namespace Kuroe.Kernel.Execution.Shared.State;
 
 /// <summary>执行状态的展示名与终态判定。</summary>
 public static class ExecutionStates

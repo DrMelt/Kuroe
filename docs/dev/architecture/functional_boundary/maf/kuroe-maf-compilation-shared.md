@@ -16,4 +16,4 @@ MAF 文档装配的共享契约：把流程描述装配成 MAF 流程定义的�
 
 ## 依赖
 
-- Kuroe.Maf.Definition、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Tasks.Shared。
+- Kuroe.Maf.Definition、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared。

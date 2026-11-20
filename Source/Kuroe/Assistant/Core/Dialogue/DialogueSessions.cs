@@ -2,12 +2,12 @@ using ErrorOr;
 using Kuroe.Assistant.Dialogue.Flow;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.Runner;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Runtime;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Runtime;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Assistant.Dialogue;
 

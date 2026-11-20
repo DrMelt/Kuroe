@@ -2,7 +2,7 @@ using Kuroe.Flow.NodeType.Container;
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Tool;
 

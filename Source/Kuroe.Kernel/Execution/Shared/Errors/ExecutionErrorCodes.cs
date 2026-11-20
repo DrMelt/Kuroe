@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Errors;
+namespace Kuroe.Kernel.Execution.Shared.Errors;
 
 /// <summary>执行契约的错误码。</summary>
 public static class ExecutionErrorCodes

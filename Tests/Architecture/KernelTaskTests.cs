@@ -10,7 +10,7 @@ public sealed class KernelTaskTests
     [Fact(DisplayName = "任务运行期不引用执行核与图控制")]
     public void Task_runtime_project_does_not_reference_execution_core_or_graph_control()
     {
-        string project = Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Runtime", "Kuroe.Tasks.Runtime.csproj");
+        string project = Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Runtime", "Kuroe.Kernel.Tasks.Runtime.csproj");
 
         ReferencesExclude(
             project,
@@ -53,7 +53,7 @@ public sealed class KernelTaskTests
             KernelRoot,
             "Tasks",
             "Shared",
-            "Kuroe.Tasks.Shared.csproj");
+            "Kuroe.Kernel.Tasks.Shared.csproj");
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.DoesNotContain(references, reference =>
@@ -72,7 +72,7 @@ public sealed class KernelTaskTests
             "Tasks",
             "Records",
             "Shared",
-            "Kuroe.Tasks.Records.Shared.csproj");
+            "Kuroe.Kernel.Tasks.Records.Shared.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
@@ -103,6 +103,6 @@ public sealed class KernelTaskTests
     {
         string file = Path.Combine(KernelRoot, "Tasks", "Shared", "FlowName.cs");
 
-        Assert.Contains("namespace Kuroe.Tasks.Shared;", File.ReadAllText(file), StringComparison.Ordinal);
+        Assert.Contains("namespace Kuroe.Kernel.Tasks.Shared;", File.ReadAllText(file), StringComparison.Ordinal);
     }
 }

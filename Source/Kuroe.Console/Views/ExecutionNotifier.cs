@@ -1,6 +1,6 @@
-using Kuroe.Tasks.Runtime;
+using Kuroe.Kernel.Tasks.Runtime;
 using Spectre.Console;
-using Kuroe.Execution.Shared.Notice;
+using Kuroe.Kernel.Execution.Shared.Notice;
 
 namespace Kuroe.Console.Views;
 

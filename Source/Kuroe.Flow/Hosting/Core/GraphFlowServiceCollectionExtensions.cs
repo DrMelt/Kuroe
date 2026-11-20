@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.FlowDescription.Compilation;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Compilation.Shared;
@@ -19,7 +19,7 @@ using Kuroe.FlowDescription.Json;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.NodeExecution;
 using Kuroe.Flow.NodeType.Container;
-using Kuroe.Flow.Persistence.Graph;
+using Kuroe.Flow.Persistence.Serialization.Graph;
 using Kuroe.Node.Command;
 using Kuroe.Node.File;
 using Kuroe.Node.Llm;
@@ -30,8 +30,8 @@ using Kuroe.Runner.Command;
 using Kuroe.Runner.File;
 using Kuroe.Runner.Input;
 using Kuroe.Tool;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Kuroe.FlowDescription.Compilation.Library;
 

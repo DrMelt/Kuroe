@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Persistence.Saving.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
 
 /// <summary>按任务号捕获存档的运行时端口。由运行时实现查找、加锁与状态读取。</summary>
 public interface ITaskRecordSource : ITaskChangeSource

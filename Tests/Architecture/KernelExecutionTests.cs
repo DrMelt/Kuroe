@@ -13,7 +13,7 @@ public sealed class KernelExecutionTests
             KernelRoot,
             "Execution",
             "Shared",
-            "Kuroe.Execution.Shared.csproj");
+            "Kuroe.Kernel.Execution.Shared.csproj");
 
         Assert.Empty(ProjectReferences(project));
     }
@@ -25,12 +25,12 @@ public sealed class KernelExecutionTests
             KernelRoot,
             "Execution",
             "Shared",
-            "Kuroe.Execution.Shared.csproj");
+            "Kuroe.Kernel.Execution.Shared.csproj");
         string core = Path.Combine(
             KernelRoot,
             "Execution",
             "Core",
-            "Kuroe.Execution.csproj");
+            "Kuroe.Kernel.Execution.csproj");
 
         Assert.Equal([shared], ProjectReferences(core));
     }
@@ -43,13 +43,13 @@ public sealed class KernelExecutionTests
             "Execution",
             "Records",
             "Shared",
-            "Kuroe.Execution.Records.Shared.csproj");
+            "Kuroe.Kernel.Execution.Records.Shared.csproj");
 
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.Single(references);
         Assert.Contains(
-            Path.Combine(KernelRoot, "Execution", "Shared", "Kuroe.Execution.Shared.csproj"),
+            Path.Combine(KernelRoot, "Execution", "Shared", "Kuroe.Kernel.Execution.Shared.csproj"),
             references);
     }
 

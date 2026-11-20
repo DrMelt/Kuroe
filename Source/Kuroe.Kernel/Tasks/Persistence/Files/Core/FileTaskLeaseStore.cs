@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Tasks.Persistence.Files.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Persistence.Files;
+namespace Kuroe.Kernel.Tasks.Persistence.Files;
 
 /// <summary>任务租约的文件实现：按任务键打开独占文件句柄，进程退出时由系统释放。锁文件保留。</summary>
 public sealed class FileTaskLeaseStore(string directory) : ITaskLeaseStore, IDisposable

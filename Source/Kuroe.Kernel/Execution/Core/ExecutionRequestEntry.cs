@@ -1,11 +1,11 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
-namespace Kuroe.Execution;
+namespace Kuroe.Kernel.Execution;
 
 /// <summary>一次执行的请求入口：把运行器与工具的请求交给执行实例处理。</summary>
 internal sealed class ExecutionRequestEntry(ExecutionInstance execution) : IExecutionRequestEntry

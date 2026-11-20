@@ -1,9 +1,9 @@
 using ErrorOr;
 using Kuroe.CodeFlow.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
 
 namespace Kuroe.CodeFlow.Persistence;
 

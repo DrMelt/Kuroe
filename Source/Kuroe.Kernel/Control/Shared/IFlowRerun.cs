@@ -1,4 +1,4 @@
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>流程控制的可选重跑面。只有支持按步骤重新执行的流程实现才提供。</summary>
 public interface IFlowRerun

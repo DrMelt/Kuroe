@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Assistant.Tools;
 using Kuroe.CodeFlow.Persistence;
-using Kuroe.Tool.Source;
+using Kuroe.Tool.Implementation.Source;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Assistant;

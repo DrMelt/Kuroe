@@ -1,4 +1,4 @@
-namespace Kuroe.Tasks.Shared;
+namespace Kuroe.Kernel.Tasks.Shared;
 
 /// <summary>任务标题的推导与截断：未给出标题时取第一个开始输入的首行，标题过长时截断。</summary>
 public static class TaskTitle

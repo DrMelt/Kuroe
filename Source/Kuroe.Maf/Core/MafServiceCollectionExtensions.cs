@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
@@ -8,7 +8,7 @@ using Kuroe.Maf.Compilation.Shared;
 using Kuroe.Maf.Definition;
 using Kuroe.Maf.Control;
 using Kuroe.Maf.Persistence;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Maf;

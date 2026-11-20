@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Ports;
+namespace Kuroe.Kernel.Execution.Shared.Ports;
 
 /// <summary>执行输入端口：本次执行接受的输入通道、角色与默认文本。</summary>
 public sealed record ExecutionInputPort(

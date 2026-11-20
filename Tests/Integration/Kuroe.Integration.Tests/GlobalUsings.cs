@@ -1,0 +1,15 @@
+global using Kuroe.Kernel.Presentation.Shared;
+global using IProcessJournal = Kuroe.Kernel.Execution.Shared.Journal.IProcessJournal;
+global using ProcessContent = Kuroe.Kernel.Execution.Shared.Journal.ProcessContent;
+global using ProcessContentKind = Kuroe.Kernel.Execution.Shared.Journal.ProcessContentKind;
+global using ProcessContentHandler = Kuroe.Kernel.Execution.Shared.Journal.ProcessContentHandler;
+global using JournalEntryHandler = Kuroe.Kernel.Execution.Shared.Journal.JournalEntryHandler;
+global using ProgressTextHandler = Kuroe.Kernel.Execution.Shared.Journal.ProgressTextHandler;
+global using ProcessObserver = Kuroe.Kernel.Execution.Shared.Journal.ProcessObserver;
+global using ExecutionId = Kuroe.Kernel.Execution.Shared.Identity.ExecutionId;
+global using ExecutionState = Kuroe.Kernel.Execution.Shared.State.ExecutionState;
+global using Kuroe.Integration.Tests.Support;
+global using Kuroe.TestSupport;
+global using ExecutionSnapshot = Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution.GraphExecutionSnapshot;
+global using JournalEntry = Kuroe.Kernel.Execution.Shared.Journal.JournalEntry;
+global using JournalLevel = Kuroe.Kernel.Execution.Shared.Journal.JournalLevel;

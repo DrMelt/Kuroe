@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Ports;
+namespace Kuroe.Kernel.Execution.Shared.Ports;
 
 /// <summary>执行端口承载的内容种类。</summary>
 public enum ExecutionPortKind

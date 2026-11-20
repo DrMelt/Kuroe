@@ -2,7 +2,7 @@ using Kuroe.Flow.Graph.Shared.Graph.Records;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Kuroe.Flow.Persistence.Graph;
+namespace Kuroe.Flow.Persistence.Serialization.Graph;
 
 /// <summary>图流程存档片段的 JSON 绑定。读取拒绝未定义字段，写出省略 null 字段。</summary>
 [JsonSourceGenerationOptions(

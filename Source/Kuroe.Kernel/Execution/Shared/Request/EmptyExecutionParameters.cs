@@ -1,4 +1,4 @@
-namespace Kuroe.Execution.Shared.Request;
+namespace Kuroe.Kernel.Execution.Shared.Request;
 
 /// <summary>没有类型专属参数的目标使用的空参数。</summary>
 public sealed class EmptyExecutionParameters : IExecutionParameters

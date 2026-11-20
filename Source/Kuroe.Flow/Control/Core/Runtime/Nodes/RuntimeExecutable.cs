@@ -11,8 +11,8 @@ using Kuroe.FlowDescription.Definition.Shared.Ports;
 using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 
 using Kuroe.Flow.Graph.Shared.Runtime.Nodes;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Ports;
 namespace Kuroe.Flow.Control.Runtime.Nodes;
 
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体，交回与产出也记在它上面。

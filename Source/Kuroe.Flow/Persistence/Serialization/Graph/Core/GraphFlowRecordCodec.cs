@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
 
-namespace Kuroe.Flow.Persistence.Graph;
+namespace Kuroe.Flow.Persistence.Serialization.Graph;
 
 /// <summary>图流程记录的存档编解码：定义与状态各自成为一段 JSON 片段。</summary>
 public sealed class GraphFlowRecordCodec : IFlowRecordCodec

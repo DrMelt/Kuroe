@@ -1,5 +1,5 @@
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 namespace Kuroe.FlowDescription.Definition.Shared.Ports;
 
 /// <summary>端口表的查找、交回判定与声明文本。</summary>

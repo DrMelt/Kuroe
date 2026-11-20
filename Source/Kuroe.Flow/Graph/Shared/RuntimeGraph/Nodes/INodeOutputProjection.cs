@@ -1,6 +1,6 @@
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 

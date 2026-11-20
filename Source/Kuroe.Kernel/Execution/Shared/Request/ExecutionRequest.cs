@@ -1,7 +1,7 @@
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
-namespace Kuroe.Execution.Shared.Request;
+namespace Kuroe.Kernel.Execution.Shared.Request;
 
 /// <summary>一次执行的输入：归属、步骤、执行端口与执行可读文本。</summary>
 public sealed record ExecutionRequest(

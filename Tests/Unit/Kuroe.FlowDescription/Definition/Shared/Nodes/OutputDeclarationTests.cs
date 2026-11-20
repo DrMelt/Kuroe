@@ -1,0 +1,46 @@
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
+using Kuroe.Kernel.Tasks.Shared;
+using Xunit;
+
+namespace Kuroe.FlowDescription.Definition.Shared.Tests.Nodes;
+
+/// <summary>输出端口声明：允许的输出类型由声明方式决定。</summary>
+public sealed class OutputDeclarationTests
+{
+    [Fact(DisplayName = "声明输出使用声明的类型范围")]
+    public void Declared_uses_the_declared_type_range()
+    {
+        NodeTypeShape shape = new() { OutputTypes = [PortTypes.Text] };
+
+        Assert.IsType<OutputDeclaration.Declared>(shape.Outputs);
+        Assert.Equal([PortTypes.Text], shape.AllowedOutputTypes);
+    }
+
+    [Fact(DisplayName = "派生输出使用声明的类型范围")]
+    public void Derived_outputs_use_the_declared_type_range()
+    {
+        NodeTypeShape shape = new()
+        {
+            Outputs = OutputDeclaration.DerivedFromInputs.Instance,
+            OutputTypes = [PortTypes.Text, PortTypes.Signal],
+        };
+
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.AllowedOutputTypes);
+    }
+
+    [Fact(DisplayName = "给定输出使用端口类型")]
+    public void Given_outputs_use_the_port_types()
+    {
+        NodeTypeShape shape = new()
+        {
+            Outputs = new OutputDeclaration.Given(
+            [
+                new Port(new PortName("Output"), PortTypes.Text),
+                new Port(new PortName("Completed"), PortTypes.Signal),
+            ]),
+        };
+
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.AllowedOutputTypes);
+    }
+}

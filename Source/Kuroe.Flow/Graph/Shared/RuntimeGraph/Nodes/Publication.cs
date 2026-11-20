@@ -1,5 +1,5 @@
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 

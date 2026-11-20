@@ -1,4 +1,4 @@
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.CodeFlow.Persistence;

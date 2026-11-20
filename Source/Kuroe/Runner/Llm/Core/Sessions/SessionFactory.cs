@@ -4,9 +4,9 @@ using Kuroe.Runner.Llm.Tools;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
-using Kuroe.Execution.Shared.Conversation;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Conversation;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.Llm.Sessions;
 

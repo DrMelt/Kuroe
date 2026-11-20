@@ -19,4 +19,4 @@ MAF 文档装配实现：把流程描述经共享描述编译投影成 MAF 流�
 
 ## 依赖
 
-- Kuroe.Maf.Compilation.Shared、Kuroe.Maf.Definition、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Tasks.Shared、Kuroe.Execution.Shared。
+- Kuroe.Maf.Compilation.Shared、Kuroe.Maf.Definition、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Execution.Shared。

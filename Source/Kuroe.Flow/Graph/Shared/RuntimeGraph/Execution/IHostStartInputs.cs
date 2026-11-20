@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 

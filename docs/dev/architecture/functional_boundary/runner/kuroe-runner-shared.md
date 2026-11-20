@@ -9,7 +9,7 @@
 
 ## 边界外
 
-- 不含执行契约与运行器实现：在 Kuroe.Execution.Shared 与各运行器项目。
+- 不含执行契约与运行器实现：在 Kuroe.Kernel.Execution.Shared 与各运行器项目。
 - 不含节点类型、执行参数与图。
 - 不依赖任何项目。
 

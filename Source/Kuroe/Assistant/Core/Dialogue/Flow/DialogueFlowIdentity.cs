@@ -1,6 +1,6 @@
 using Kuroe.CodeFlow.Records.Shared;
-using Kuroe.Control.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
 

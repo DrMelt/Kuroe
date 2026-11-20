@@ -2,7 +2,7 @@ using System.Text;
 using Kuroe.Tool.FileAccess.Output;
 using Kuroe.Tool.FileAccess.Shared;
 
-namespace Kuroe.Tool.File.Output;
+namespace Kuroe.Tool.Implementation.File.Output;
 
 /// <summary>搜索匹配列表文本：按文件分组，相对路径一行，其后是带行号的匹配行。</summary>
 /// <param name="Matches">匹配集合。</param>

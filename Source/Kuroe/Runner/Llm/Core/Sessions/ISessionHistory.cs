@@ -1,8 +1,8 @@
 using ApiHub.Shared.Models;
 using Kuroe.Tool;
 using Microsoft.Extensions.AI;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
 
 namespace Kuroe.Runner.Llm.Sessions;
 

@@ -1,7 +1,7 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Shared;
 
 namespace Kuroe.Console.Views;

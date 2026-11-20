@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Tasks.Presentation.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Persistence.Restoring.Shared;
+namespace Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 
 /// <summary>启动加载：读取存档、编译流程快照并恢复任务。</summary>
 public interface ITaskRestoreService

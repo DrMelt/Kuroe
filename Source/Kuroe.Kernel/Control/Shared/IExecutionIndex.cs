@@ -1,10 +1,10 @@
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.State;
 
 
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>执行号与归属的登记面：建立、恢复、查找与移除执行。</summary>
 public interface IExecutionIndex : IExecutionOwnerIndex

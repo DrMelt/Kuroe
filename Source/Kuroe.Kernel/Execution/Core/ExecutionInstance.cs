@@ -1,14 +1,14 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Journal;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
-using Kuroe.Execution.Shared.Usage;
-namespace Kuroe.Execution;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Journal;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Usage;
+namespace Kuroe.Kernel.Execution;
 
 /// <summary>一次执行的状态机：排队、运行、收口、中断与过程记录。执行只使用执行请求与中性产出，不读取节点与图。</summary>
 internal sealed class ExecutionInstance : IExecution

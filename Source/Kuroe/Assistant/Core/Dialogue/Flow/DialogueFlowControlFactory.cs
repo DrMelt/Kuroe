@@ -1,6 +1,6 @@
-using Kuroe.Control.Shared;
-using Kuroe.Input.Shared;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Input.Shared;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
 

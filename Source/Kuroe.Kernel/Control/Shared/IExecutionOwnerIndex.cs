@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>按执行号查找执行与归属任务的中性索引。契约工具只依赖它。</summary>
 public interface IExecutionOwnerIndex

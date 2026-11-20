@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Tasks.Runtime.Persistence;
+namespace Kuroe.Kernel.Tasks.Runtime.Persistence;
 
 /// <summary>捕获任务的完整存档。要求持有任务 Gate。</summary>
 public sealed class TaskRecordCapture(WorkTask task) : ITaskRecordCapture

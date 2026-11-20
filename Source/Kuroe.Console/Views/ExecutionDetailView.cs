@@ -1,8 +1,8 @@
-using Kuroe.Tasks.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Spectre.Console;
 using Spectre.Console.Rendering;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Console.Views;
 

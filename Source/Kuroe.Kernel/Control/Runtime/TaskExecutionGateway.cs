@@ -1,12 +1,12 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.Runtime;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.State;
 
-namespace Kuroe.Control.Runtime;
+namespace Kuroe.Kernel.Control.Runtime;
 
 /// <summary>执行网关：把执行号归属交给任务域，装配执行，其余执行操作交给执行单元。</summary>
 public sealed class TaskExecutionGateway(

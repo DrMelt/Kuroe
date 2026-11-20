@@ -4,7 +4,7 @@ using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
-namespace Kuroe.Tool.File;
+namespace Kuroe.Tool.Implementation.File;
 
 /// <summary>文件访问工具面共用的写入上限、路径绑定与写回编码解析。</summary>
 internal static class FileTools

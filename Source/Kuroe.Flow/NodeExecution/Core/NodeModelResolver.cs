@@ -5,7 +5,7 @@ using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 using Kuroe.Node.Llm;
 using Kuroe.Runner;
 using ModelErrors = Kuroe.Node.Llm.ModelErrors;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Flow.NodeExecution;
 

@@ -20,4 +20,4 @@
 
 ## 依赖
 
-- Kuroe.Tasks.Shared。
+- Kuroe.Kernel.Tasks.Shared。

@@ -1,4 +1,4 @@
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>契约工具源：按执行创建交回、上报与状态查询载体。</summary>
 public sealed class ContractToolSource : IToolSource

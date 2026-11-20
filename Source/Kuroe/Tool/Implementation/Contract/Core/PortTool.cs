@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Runtime;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Runtime;
 
-namespace Kuroe.Tool.Contract;
+namespace Kuroe.Tool.Implementation.Contract;
 
 /// <summary>需交回输出端口的执行节点交回命名端口产出的通道。载体按执行建立，提交时才知道是哪个执行在交。</summary>
 /// <remarks>端口清单来自该执行的输出声明。</remarks>

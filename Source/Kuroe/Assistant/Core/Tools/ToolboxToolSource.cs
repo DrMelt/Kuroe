@@ -1,7 +1,7 @@
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Tool;
 using Kuroe.Tool.Json;
-using Kuroe.Tool.KuroeInfo;
+using Kuroe.Tool.Implementation.KuroeInfo;
 
 namespace Kuroe.Assistant.Tools;
 

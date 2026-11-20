@@ -17,4 +17,4 @@
 
 ## 依赖
 
-- Kuroe.CodeFlow.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。
+- Kuroe.CodeFlow.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

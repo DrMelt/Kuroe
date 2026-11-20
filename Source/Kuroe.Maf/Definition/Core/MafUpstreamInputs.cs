@@ -1,4 +1,4 @@
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
 namespace Kuroe.Maf.Definition;
 

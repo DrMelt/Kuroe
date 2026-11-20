@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Control.Shared;
+namespace Kuroe.Kernel.Control.Shared;
 
 /// <summary>流程实现的提交与恢复：校验提交输入并给出初始状态，从存档重建流程状态。</summary>
 public interface IFlowSubmission

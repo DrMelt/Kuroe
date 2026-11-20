@@ -20,4 +20,4 @@
 
 ## 依赖
 
-- Kuroe.FlowDescription.Json.Shared、Kuroe.FlowDescription.Description.Shared、Kuroe.Tasks.Shared。
+- Kuroe.FlowDescription.Json.Shared、Kuroe.FlowDescription.Description.Shared、Kuroe.Kernel.Tasks.Shared。

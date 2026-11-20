@@ -1,11 +1,11 @@
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.State;
 
 
 
-namespace Kuroe.Execution;
+namespace Kuroe.Kernel.Execution;
 
 /// <summary>执行实例的建立入口。状态迁移仍只由执行核完成。</summary>
 internal static class ExecutionFactory

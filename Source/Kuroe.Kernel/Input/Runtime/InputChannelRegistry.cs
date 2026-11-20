@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Input.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Input.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Input.Runtime;
+namespace Kuroe.Kernel.Input.Runtime;
 
 /// <summary>输入通道的进程内实现：按任务与步骤保存等待登记、提问与接收委托。
 /// 内部锁保护登记表结构，接收委托在锁外调用。交付要求持有任务 Gate；登记可在 Gate 外调用，任务清理后拒绝新登记。</summary>

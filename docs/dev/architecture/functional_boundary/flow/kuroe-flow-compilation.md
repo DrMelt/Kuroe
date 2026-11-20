@@ -17,4 +17,4 @@
 
 ## 依赖
 
-- Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation、Kuroe.Flow.Graph.Shared、Kuroe.Tasks.Shared。
+- Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation、Kuroe.Flow.Graph.Shared、Kuroe.Kernel.Tasks.Shared。

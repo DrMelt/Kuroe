@@ -3,17 +3,17 @@ using Kuroe.Catalogs;
 using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Control.Shared;
-using Kuroe.Execution.Records.Shared;
-using Kuroe.Tasks.Records.Shared;
-using Kuroe.Tasks.Shared;
-using Kuroe.Execution.Shared.Contract;
-using Kuroe.Execution.Shared.Identity;
-using Kuroe.Execution.Shared.Ports;
-using Kuroe.Execution.Shared.Request;
-using Kuroe.Execution.Shared.Restore;
-using Kuroe.Execution.Shared.State;
-using Kuroe.Execution.Shared.Usage;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Execution.Records.Shared;
+using Kuroe.Kernel.Tasks.Records.Shared;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Restore;
+using Kuroe.Kernel.Execution.Shared.State;
+using Kuroe.Kernel.Execution.Shared.Usage;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
 

@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Control.Shared;
-using Kuroe.Presentation.Shared;
-using Kuroe.Tasks.Shared;
+using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Presentation.Shared;
+using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Flow.Hosting.Workflows.Flows;
 using Spectre.Console;
 

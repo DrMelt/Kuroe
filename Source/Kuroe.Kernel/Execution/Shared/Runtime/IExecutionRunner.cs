@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Execution.Shared.Journal;
-using Kuroe.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Journal;
+using Kuroe.Kernel.Execution.Shared.Ports;
 
-namespace Kuroe.Execution.Shared.Runtime;
+namespace Kuroe.Kernel.Execution.Shared.Runtime;
 
 /// <summary>一次执行运行器。运行器只读取执行请求入口与自身执行参数，不读取节点与图。</summary>
 public interface IExecutionRunner
