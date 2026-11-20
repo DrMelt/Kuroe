@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.TestSupport;
 using NeutralExecutionId = Kuroe.Execution.Shared.Identity.ExecutionId;
 using NeutralExecutionOutput = Kuroe.Execution.Shared.Ports.ExecutionOutput;

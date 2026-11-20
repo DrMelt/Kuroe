@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Graph.Shared.StaticGraph;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
+using Kuroe.FlowDescription.Definition.Shared.Flow;
 
 namespace Kuroe.Flow.Compilation;
 

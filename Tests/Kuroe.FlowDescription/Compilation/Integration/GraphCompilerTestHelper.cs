@@ -2,11 +2,11 @@ using ErrorOr;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.FlowDescription.Compilation.Library;
-using Kuroe.FlowDescription.Shared;
-using Kuroe.FlowDescription.Shared.Compilation;
-using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Description.Shared;
+using Kuroe.FlowDescription.Compilation.Shared;
+using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
+using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.FlowDescription.Compilation.Integration.Tests;
 

@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Runner.File;
 using Kuroe.Tasks.Shared;
 

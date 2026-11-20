@@ -26,7 +26,8 @@
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Control\Core\Kuroe.Flow.Control.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Records\Shared\Kuroe.Flow.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
-    <ProjectReference Include="..\..\Source\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Kernel\Input\Shared\Kuroe.Input.Shared.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Kernel\Input\Runtime\Kuroe.Input.Runtime.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />

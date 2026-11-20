@@ -28,7 +28,7 @@
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Persistence\Restoring\Shared\Kuroe.Tasks.Persistence.Restoring.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
         <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
     </ItemGroup>

@@ -2,7 +2,7 @@ using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Graph.Shared.Graph.Records;
 using Kuroe.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Tasks.Records.Shared;
-using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Model;
 using Xunit;
 
 namespace Kuroe.Flow.TestSupport;

@@ -1,8 +1,8 @@
+using Kuroe.FlowDescription.Description.Shared.Reporting;
 using ErrorOr;
-using Kuroe.FlowDescription.Shared.Compilation.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Compilation.Shared.Flow;
+using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.FlowDescription.Compilation.Library;
 

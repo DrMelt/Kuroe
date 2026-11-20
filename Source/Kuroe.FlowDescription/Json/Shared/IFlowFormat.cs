@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Description.Shared;
 
 namespace Kuroe.FlowDescription.Json.Shared;
 

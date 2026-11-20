@@ -1,5 +1,5 @@
 using Kuroe.Execution.Shared.Runtime;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.Node.Llm;
 

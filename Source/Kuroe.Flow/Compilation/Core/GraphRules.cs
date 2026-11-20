@@ -1,9 +1,10 @@
+using Kuroe.FlowDescription.Description.Shared.Reporting;
 using ErrorOr;
-using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.StaticGraph;
 
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
-using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
+using Kuroe.FlowDescription.Definition.Shared.Validation;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Compilation;

@@ -1,4 +1,4 @@
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Maf.Definition;
 using Kuroe.Tasks.Shared;
 

@@ -2,15 +2,15 @@ using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Flow.Graph.Shared.Graph.Records;
-using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Readiness;
 
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
 
 using Kuroe.Flow.Control.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;

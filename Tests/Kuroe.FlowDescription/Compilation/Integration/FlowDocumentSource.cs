@@ -1,6 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Json;
 
 namespace Kuroe.FlowDescription.Compilation.Integration.Tests;

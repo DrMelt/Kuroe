@@ -1,6 +1,7 @@
-using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
-using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Description.Shared.Reporting;
+using Kuroe.FlowDescription.Definition.Shared.Validation;
+using Kuroe.FlowDescription.Definition.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.Node.Input;
 

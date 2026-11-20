@@ -7,10 +7,10 @@
     <ItemGroup>
         <ProjectReference Include="..\..\Compilation\Shared\Kuroe.Maf.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\Compilation\Core\Kuroe.Maf.Compilation.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Node\File\Core\Kuroe.Node.File.csproj" />
         <ProjectReference Include="..\..\..\Kuroe\Node\Command\Core\Kuroe.Node.Command.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
     </ItemGroup>
 </Project>

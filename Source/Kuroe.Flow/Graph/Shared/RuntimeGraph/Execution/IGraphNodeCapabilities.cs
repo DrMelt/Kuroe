@@ -1,6 +1,6 @@
 using Kuroe.Execution.Shared.Runtime;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 

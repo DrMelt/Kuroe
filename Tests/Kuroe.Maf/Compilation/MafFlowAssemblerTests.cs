@@ -6,7 +6,7 @@ using Kuroe.Execution.Shared.Request;
 using Kuroe.Execution.Shared.Runtime;
 using Kuroe.FlowDescription.Compilation;
 using Kuroe.FlowDescription.Compilation.Library;
-using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.Maf.Definition;
 using Kuroe.TestSupport;
 using Kuroe.Tasks.Shared;

@@ -2,8 +2,8 @@ using Kuroe.Tasks.Shared;
 using System.Collections.ObjectModel;
 using ErrorOr;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
 
 namespace Kuroe.Flow.Hosting.Workflows.Flows;
 

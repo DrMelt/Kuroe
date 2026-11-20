@@ -49,7 +49,9 @@ graph TD
     end
 
     subgraph DFlowDescription["flow-description：流程描述与共享编译"]
-        FlowDescriptionShared["FlowDescription.Shared<br>描述模型 / 端口词汇 / 节点类型规格 / 校验"]
+        FlowDescriptionDescriptionShared["FlowDescription.Description.Shared<br>描述形态 / 错误作用域"]
+        FlowDescriptionDefinitionShared["FlowDescription.Definition.Shared<br>静态定义模型 / 端口词汇 / 语言规则"]
+        FlowDescriptionCompilationShared["FlowDescription.Compilation.Shared<br>编译与节点类型契约"]
         FlowDescriptionCompilation["FlowDescription.Compilation<br>描述构造 / 库展开 / 语言校验"]
         FlowDescriptionJsonShared["FlowDescription.Json.Shared<br>流程文件格式端口"]
         FlowDescriptionJson["FlowDescription.Json<br>流程文件 JSON 读写"]
@@ -189,14 +191,17 @@ graph TD
     TasksRuntime --> TasksPersistenceRestoringShared
 
     %% flow 域：描述编译在 FlowDescription，流程区域负责运行期与装配
-    FlowDescriptionCompilation --> FlowDescriptionShared
+    FlowDescriptionCompilation --> FlowDescriptionDescriptionShared
+    FlowDescriptionCompilation --> FlowDescriptionDefinitionShared
+    FlowDescriptionCompilation --> FlowDescriptionCompilationShared
     FlowDescriptionCompilation --> TasksShared
-    FlowCompilation --> FlowDescriptionShared
+    FlowCompilation --> FlowDescriptionDescriptionShared
+    FlowCompilation --> FlowDescriptionDefinitionShared
     FlowCompilation --> FlowDescriptionCompilation
     FlowCompilation --> FlowGraphShared
     FlowCompilation --> TasksShared
     FlowNodeExecution --> FlowGraphShared
-    FlowNodeExecution --> FlowDescriptionShared
+    FlowNodeExecution --> FlowDescriptionDefinitionShared
     FlowNodeExecution --> ExecutionShared
     FlowNodeExecution --> TasksShared
     FlowNodeExecution --> NodeLlm
@@ -208,11 +213,16 @@ graph TD
     FlowNodeExecution --> RunnerInput
     FlowNodeExecution --> RunnerApproval
     FlowDescriptionJson --> FlowDescriptionJsonShared
-    FlowDescriptionJson --> FlowDescriptionShared
+    FlowDescriptionJson --> FlowDescriptionDescriptionShared
     FlowDescriptionJson --> TasksShared
-    FlowDescriptionJsonShared --> FlowDescriptionShared
-    FlowDescriptionShared --> TasksShared
-    FlowControl --> FlowDescriptionShared
+    FlowDescriptionJsonShared --> FlowDescriptionDescriptionShared
+    FlowDescriptionDescriptionShared --> TasksShared
+    FlowDescriptionDefinitionShared --> FlowDescriptionDescriptionShared
+    FlowDescriptionDefinitionShared --> TasksShared
+    FlowDescriptionCompilationShared --> FlowDescriptionDescriptionShared
+    FlowDescriptionCompilationShared --> FlowDescriptionDefinitionShared
+    FlowDescriptionCompilationShared --> TasksShared
+    FlowControl --> FlowDescriptionDefinitionShared
     FlowControl --> ControlShared
     FlowControl --> ExecutionShared
     FlowControl --> ExecutionRecordsShared
@@ -221,7 +231,7 @@ graph TD
     FlowControl --> PresentationShared
     FlowControl --> TasksShared
     FlowControl --> TasksRecordsShared
-    FlowRecordsShared --> FlowDescriptionShared
+    FlowRecordsShared --> FlowDescriptionDefinitionShared
     FlowRecordsShared --> TasksShared
     FlowRecordsShared --> TasksRecordsShared
     FlowRecordsShared --> ExecutionShared
@@ -235,7 +245,9 @@ graph TD
     FlowHosting --> FlowDescriptionCompilation
     FlowHosting --> FlowCompilation
     FlowHosting --> FlowNodeExecution
-    FlowHosting --> FlowDescriptionShared
+    FlowHosting --> FlowDescriptionDescriptionShared
+    FlowHosting --> FlowDescriptionDefinitionShared
+    FlowHosting --> FlowDescriptionCompilationShared
     FlowHosting --> FlowDescriptionJsonShared
     FlowHosting --> FlowDescriptionJson
     FlowHosting --> InputShared
@@ -267,12 +279,14 @@ graph TD
     FlowGraphShared --> FlowDescriptionShared
     FlowGraphShared --> TasksShared
     FlowGraphShared --> ExecutionShared
-    FlowNodeTypeContainer --> FlowDescriptionShared
+    FlowNodeTypeContainer --> FlowDescriptionDescriptionShared
+    FlowNodeTypeContainer --> FlowDescriptionDefinitionShared
+    FlowNodeTypeContainer --> FlowDescriptionCompilationShared
     FlowNodeTypeContainer --> TasksShared
     FlowNodeTypeContainer --> FlowGraphShared
     FlowPersistenceGraph --> FlowRecordsShared
     FlowPersistenceGraph --> FlowGraphShared
-    FlowPersistenceGraph --> FlowDescriptionShared
+    FlowPersistenceGraph --> FlowDescriptionDefinitionShared
     FlowPersistenceGraph --> ExecutionShared
     FlowPersistenceGraph --> ExecutionRecordsShared
     FlowPersistenceGraph --> TasksShared
@@ -292,24 +306,29 @@ graph TD
     MafControl --> TasksRecordsShared
     MafControl --> MafRecordsShared
     MafControl --> MafDefinition
-    MafCompilationShared --> FlowDescriptionShared
+    MafCompilationShared --> FlowDescriptionDescriptionShared
+    MafCompilationShared --> FlowDescriptionDefinitionShared
     MafCompilationShared --> MafDefinition
     MafCompilationShared --> TasksShared
     MafCompilation --> MafCompilationShared
     MafCompilation --> MafDefinition
-    MafCompilation --> FlowDescriptionShared
+    MafCompilation --> FlowDescriptionDescriptionShared
+    MafCompilation --> FlowDescriptionDefinitionShared
+    MafCompilation --> FlowDescriptionCompilationShared
     MafCompilation --> TasksShared
     MafCompilation --> ExecutionShared
     MafNodeExecution --> MafCompilationShared
     MafNodeExecution --> MafCompilation
-    MafNodeExecution --> FlowDescriptionShared
+    MafNodeExecution --> FlowDescriptionDefinitionShared
     MafNodeExecution --> NodeLlm
     MafNodeExecution --> NodeFile
     MafNodeExecution --> NodeCommand
     MafNodeExecution --> ExecutionShared
     Maf --> ControlShared
     Maf --> TasksRecordsShared
-    Maf --> FlowDescriptionShared
+    Maf --> FlowDescriptionDescriptionShared
+    Maf --> FlowDescriptionDefinitionShared
+    Maf --> FlowDescriptionCompilationShared
     Maf --> MafCompilation
     Maf --> MafDefinition
     Maf --> MafControl
@@ -338,22 +357,32 @@ graph TD
     RunnerLlm --> RunnerShared
     RunnerLlm --> ExecutionShared
     RunnerLlm --> Tool
-    NodeApproval --> FlowDescriptionShared
-    NodeCommand --> FlowDescriptionShared
+    NodeApproval --> FlowDescriptionDescriptionShared
+    NodeApproval --> FlowDescriptionDefinitionShared
+    NodeApproval --> FlowDescriptionCompilationShared
+    NodeCommand --> FlowDescriptionDescriptionShared
+    NodeCommand --> FlowDescriptionDefinitionShared
+    NodeCommand --> FlowDescriptionCompilationShared
     NodeCommand --> Shared
     NodeCommand --> RunnerCommand
     NodeCommand --> TasksShared
     NodeCommand --> ExecutionShared
-    NodeFile --> FlowDescriptionShared
+    NodeFile --> FlowDescriptionDescriptionShared
+    NodeFile --> FlowDescriptionDefinitionShared
+    NodeFile --> FlowDescriptionCompilationShared
     NodeFile --> Shared
     NodeFile --> RunnerFile
     NodeFile --> TasksShared
     NodeFile --> ExecutionShared
-    NodeInput --> FlowDescriptionShared
+    NodeInput --> FlowDescriptionDescriptionShared
+    NodeInput --> FlowDescriptionDefinitionShared
+    NodeInput --> FlowDescriptionCompilationShared
     NodeLlm --> Tool
     NodeLlm --> RunnerShared
     NodeLlm --> RunnerLlm
-    NodeLlm --> FlowDescriptionShared
+    NodeLlm --> FlowDescriptionDescriptionShared
+    NodeLlm --> FlowDescriptionDefinitionShared
+    NodeLlm --> FlowDescriptionCompilationShared
     NodeLlm --> Shared
     NodeLlm --> TasksShared
     NodeLlm --> ExecutionShared
@@ -459,7 +488,7 @@ graph TD
     Console --> TasksRuntime
     Console --> TasksPersistenceRestoringShared
     Console --> ExecutionShared
-    Console --> FlowDescriptionShared
+    Console --> FlowDescriptionCompilationShared
     Console --> Shared
     Console --> TasksShared
     Console --> ControlShared
@@ -540,7 +569,9 @@ graph TD
 | `Kuroe.Flow.Control` | flow | [kuroe-flow-control](functional_boundary/flow/kuroe-flow-control.md) |
 | `Kuroe.Flow.Hosting` | flow | [kuroe-flow-hosting](functional_boundary/flow/kuroe-flow-hosting.md) |
 | `Kuroe.Flow.Persistence.Graph` | flow | [kuroe-flow-persistence-graph](functional_boundary/flow/kuroe-flow-persistence-graph.md) |
-| `Kuroe.FlowDescription.Shared` | flow-description | [kuroe-flow-description-shared](functional_boundary/flow-description/kuroe-flow-description-shared.md) |
+| `Kuroe.FlowDescription.Description.Shared` | flow-description | [kuroe-flow-description-description-shared](functional_boundary/flow-description/kuroe-flow-description-description-shared.md) |
+| `Kuroe.FlowDescription.Definition.Shared` | flow-description | [kuroe-flow-description-definition-shared](functional_boundary/flow-description/kuroe-flow-description-definition-shared.md) |
+| `Kuroe.FlowDescription.Compilation.Shared` | flow-description | [kuroe-flow-description-compilation-shared](functional_boundary/flow-description/kuroe-flow-description-compilation-shared.md) |
 | `Kuroe.FlowDescription.Compilation` | flow-description | [kuroe-flow-description-compilation](functional_boundary/flow-description/kuroe-flow-description-compilation.md) |
 | `Kuroe.FlowDescription.Json.Shared` | flow-description | [kuroe-flow-description-json-shared](functional_boundary/flow-description/kuroe-flow-description-json-shared.md) |
 | `Kuroe.FlowDescription.Json` | flow-description | [kuroe-flow-description-json](functional_boundary/flow-description/kuroe-flow-description-json.md) |
@@ -590,7 +621,7 @@ graph TD
 
 ## 命名空间与路径
 
-命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 分为 `RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records` 三支，`Kuroe.FlowDescription.Shared` 分为 `Model`、`StaticGraph`、`Parameters` 与 `Compilation` 四支，`Kuroe.FlowDescription.Compilation` 的命名空间在项目根之下按目录分段，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
+命名空间根与项目名一致，程序集内按目录继续分段。`Kuroe.Runner.Shared` 是唯一例外，命名空间根为 `Kuroe.Runner`。`Kuroe.Flow.Graph.Shared` 分为 `RuntimeGraph`、`Runtime.Nodes` 与 `Graph.Records` 三支，`Kuroe.FlowDescription.Description.Shared` 分为项目根与 `Reporting`，`Kuroe.FlowDescription.Definition.Shared` 分为 `Model`、`Flow`、`Nodes`、`Ports` 与 `Validation`，`Kuroe.FlowDescription.Compilation.Shared` 分为 `Flow` 与 `NodeTypes`，`Kuroe.FlowDescription.Compilation` 的命名空间在项目根之下按目录分段，`Kuroe.Flow.Control` 的命名空间全部在 `Kuroe.Flow.Control.Runtime` 之下。
 
 `Source/Kuroe.Kernel` 下的 `Control`、`Execution`、`Input`、`Tasks`、`Presentation` 只是路径分组，`Source/Kuroe` 下的 `Node`、`Runner`、`Tool`、`Assistant` 同样只是路径分组。`Kuroe.FlowDescription`、`Kuroe.Process`、`Kuroe.Files`、`Kuroe.Console`、`Kuroe.Cli` 位于 `Source` 顶层。
 

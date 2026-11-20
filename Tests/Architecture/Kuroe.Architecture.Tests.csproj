@@ -9,8 +9,4 @@
         <PackageReference Include="xunit.v3" />
         <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
     </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\..\Source\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
-    </ItemGroup>
 </Project>

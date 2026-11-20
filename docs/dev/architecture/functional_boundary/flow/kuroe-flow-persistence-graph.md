@@ -18,4 +18,4 @@
 
 ## 依赖
 
-- Kuroe.Flow.Records.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Shared、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。
+- Kuroe.Flow.Records.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Execution.Shared、Kuroe.Execution.Records.Shared、Kuroe.Tasks.Shared、Kuroe.Tasks.Records.Shared。

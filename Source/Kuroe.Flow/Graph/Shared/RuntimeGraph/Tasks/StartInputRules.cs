@@ -1,4 +1,4 @@
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Tasks;
 

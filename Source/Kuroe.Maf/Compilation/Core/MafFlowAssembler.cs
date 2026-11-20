@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.FlowDescription.Shared;
-using Kuroe.FlowDescription.Shared.Compilation;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Description.Shared;
+using Kuroe.FlowDescription.Compilation.Shared;
+using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Maf.Compilation.Projection;
 using Kuroe.Maf.Compilation.Shared;
 using Kuroe.Maf.Definition;

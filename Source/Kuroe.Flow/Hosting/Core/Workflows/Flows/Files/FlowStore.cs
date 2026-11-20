@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Json.Shared;
 using Kuroe.Tasks.Persistence.Files;
 

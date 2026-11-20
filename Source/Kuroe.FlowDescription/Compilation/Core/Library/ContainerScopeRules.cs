@@ -1,7 +1,7 @@
-using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
-using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Definition.Shared.Validation;
+using Kuroe.FlowDescription.Definition.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.FlowDescription.Compilation.Library;

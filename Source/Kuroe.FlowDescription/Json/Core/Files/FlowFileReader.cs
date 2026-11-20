@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.FlowDescription.Shared;
-using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
+using Kuroe.FlowDescription.Description.Shared;
+using Kuroe.FlowDescription.Description.Shared.Reporting;
 
 namespace Kuroe.FlowDescription.Json.Files;
 

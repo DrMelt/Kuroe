@@ -1,5 +1,5 @@
-using Kuroe.FlowDescription.Shared.Parameters;
-using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
+using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
+using Kuroe.FlowDescription.Definition.Shared.Validation;
 using Kuroe.Runner.Command;
 
 namespace Kuroe.Node.Command;

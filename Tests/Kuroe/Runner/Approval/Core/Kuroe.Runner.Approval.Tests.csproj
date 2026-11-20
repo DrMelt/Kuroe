@@ -19,6 +19,6 @@
         <ProjectReference Include="..\..\..\Support\Kuroe.TestSupport.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Shared\Kuroe.FlowDescription.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
     </ItemGroup>
 </Project>

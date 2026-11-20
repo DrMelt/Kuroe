@@ -9,15 +9,15 @@
 - 库装配：内置与文件定义合并、同名覆盖、引用展开与容器作用域。
 - 校验：流程规则、节点规则与引用解析。
 - 语言不变量：引用可解析、端口声明、连接覆盖与触发来源。
-- 规则分界：单节点不变量在描述共享层，跨节点与图级规则在本层。
+- 规则分界：单节点不变量在定义共享层，跨节点与图级规则在本层。
 
 ## 边界外
 
-- 不含描述模型、端口词汇与校验规则：在 Kuroe.FlowDescription.Shared。
+- 不含描述形态、静态模型、端口词汇、语言规则与编译契约：在 Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared 与 Kuroe.FlowDescription.Compilation.Shared。
 - 不含文件格式：在 Kuroe.FlowDescription.Json。
 - 不含图编译、图静态视图与控制：在 Kuroe.Flow.Compilation、Kuroe.Flow.Graph.Shared 与 Kuroe.Flow.Control。
 - 不含 MAF 投影与 MAF 运行期：在 Kuroe.Maf.Compilation 与 Kuroe.Maf.Control。
 
 ## 依赖
 
-- Kuroe.FlowDescription.Shared、Kuroe.Tasks.Shared。
+- Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Tasks.Shared。

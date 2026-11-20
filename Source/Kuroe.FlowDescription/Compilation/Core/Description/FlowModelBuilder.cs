@@ -1,12 +1,12 @@
+using Kuroe.FlowDescription.Description.Shared.Reporting;
 using ErrorOr;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared;
-using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
-using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Description.Shared;
+using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
+using Kuroe.FlowDescription.Definition.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.FlowDescription.Compilation.Description;

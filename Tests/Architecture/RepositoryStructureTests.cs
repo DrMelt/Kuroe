@@ -79,7 +79,7 @@ public sealed class RepositoryStructureTests
         }
 
         // 执行、任务与表现的共享契约是中性基础层，任何共享层都可引用
-        // 图共享层承载跨流程的图静态模型与能力映射，描述测试需要引用它
+        // 流程描述与图模型的共享层是跨流程的中性契约，共享测试可直接使用
         foreach (string neutral in new[] { "Execution", "Tasks", "Presentation" })
         {
             string contracts = Path.Combine(KernelRoot, neutral);
@@ -91,16 +91,12 @@ public sealed class RepositoryStructureTests
             }
         }
 
-        string flowGraphShared = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
-        if (Directory.Exists(flowGraphShared))
+        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription");
+        if (Directory.Exists(description))
         {
-            directories.Add(flowGraphShared);
-        }
-
-        string descriptionShared = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
-        if (Directory.Exists(descriptionShared))
-        {
-            directories.Add(descriptionShared);
+            directories.AddRange(Directory
+                .EnumerateDirectories(description, "Shared", SearchOption.AllDirectories)
+                .Where(directory => !IsBuildOutput(directory)));
         }
 
         string sourceDirectory = Path.Combine([SourceRoot, .. segments]);

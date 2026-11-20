@@ -20,7 +20,7 @@ public sealed class RecordPersistenceTests
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string tasksRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
+        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
 
         ReferencesStayUnder(
             project,

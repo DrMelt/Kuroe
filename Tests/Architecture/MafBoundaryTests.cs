@@ -84,7 +84,9 @@ public sealed class MafBoundaryTests
     [Fact(DisplayName = "Maf 文档装配只引用流程描述")]
     public void Maf_compilation_references_only_flow_description()
     {
-        string document = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
+        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Description", "Shared");
+        string definition = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
+        string descriptionCompilation = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Compilation", "Shared");
         string mafCompilationShared = Path.Combine(SourceRoot, "Kuroe.Maf", "Compilation", "Shared");
         string mafDefinition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
@@ -108,7 +110,8 @@ public sealed class MafBoundaryTests
             shared,
             "Kuroe.Maf.Compilation.Shared",
             "流程描述、MAF 定义与执行契约",
-            document,
+            description,
+            definition,
             mafDefinition,
             tasks,
             execution);
@@ -116,7 +119,9 @@ public sealed class MafBoundaryTests
             compilation,
             "Kuroe.Maf.Compilation",
             "流程描述、MAF 定义与 Kernel 契约",
-            document,
+            description,
+            definition,
+            descriptionCompilation,
             mafCompilationShared,
             mafDefinition,
             tasks,

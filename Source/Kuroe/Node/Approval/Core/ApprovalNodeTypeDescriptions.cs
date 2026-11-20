@@ -1,4 +1,4 @@
-using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
+using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
 
 namespace Kuroe.Node.Approval;
 

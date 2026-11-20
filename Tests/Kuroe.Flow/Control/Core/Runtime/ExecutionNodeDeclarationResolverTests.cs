@@ -1,10 +1,10 @@
 using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.Flow.Control.Runtime.Engine;
-using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Tasks.Shared;
 using Xunit;
 

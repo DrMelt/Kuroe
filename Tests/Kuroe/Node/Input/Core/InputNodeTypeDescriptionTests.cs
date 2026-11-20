@@ -1,5 +1,5 @@
-using Kuroe.FlowDescription.Shared.Parameters;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Xunit;
 
 namespace Kuroe.Node.Input.Tests;

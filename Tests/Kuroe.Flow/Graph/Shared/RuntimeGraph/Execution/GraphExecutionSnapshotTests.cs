@@ -1,5 +1,5 @@
-using Kuroe.FlowDescription.Shared.Model;
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using ExecutionUsage = Kuroe.Execution.Shared.Usage.ExecutionUsage;
 using Kuroe.Tasks.Shared;

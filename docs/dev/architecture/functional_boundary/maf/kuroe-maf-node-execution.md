@@ -16,4 +16,4 @@ MAF 内置节点的执行装配：把 MAF 步骤可表达的节点类型注册�
 
 ## 依赖
 
-- Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Maf.Compilation、Kuroe.Maf.Compilation.Shared、Kuroe.FlowDescription.Shared、Kuroe.Execution.Shared。
+- Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Maf.Compilation、Kuroe.Maf.Compilation.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Execution.Shared。

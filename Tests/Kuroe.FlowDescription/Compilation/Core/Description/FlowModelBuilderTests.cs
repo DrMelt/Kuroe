@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared.Compilation;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
+using Kuroe.FlowDescription.Compilation.Shared;
+using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.Flow.NodeType.Container;
 using Xunit;
 using Kuroe.FlowDescription.Compilation.Library;

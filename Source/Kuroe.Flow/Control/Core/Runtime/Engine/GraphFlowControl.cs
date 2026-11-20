@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Control.Runtime.Graph;
 using Kuroe.Control.Shared;
 
-using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Control.Runtime.Nodes;

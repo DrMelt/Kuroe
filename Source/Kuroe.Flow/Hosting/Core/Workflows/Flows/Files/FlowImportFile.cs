@@ -1,4 +1,4 @@
-using Kuroe.FlowDescription.Shared;
+using Kuroe.FlowDescription.Description.Shared;
 
 namespace Kuroe.Flow.Hosting.Workflows.Flows.Files;
 

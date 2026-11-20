@@ -17,7 +17,7 @@ public sealed class AssistantBoundaryTests
         Assert.DoesNotContain(references, reference =>
             IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Compilation", "Shared")));
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared")));
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.FlowDescription")));
     }
 
     [Fact(DisplayName = "助手把对话宿主与其代码流程分开")]

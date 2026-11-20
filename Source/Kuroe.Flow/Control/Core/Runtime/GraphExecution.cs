@@ -4,7 +4,7 @@ using Kuroe.Execution.Records.Shared;
 using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Tasks.Shared;
 using Kuroe.Execution.Shared.Contract;
 using Kuroe.Execution.Shared.Identity;

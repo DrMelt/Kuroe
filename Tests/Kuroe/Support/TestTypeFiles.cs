@@ -1,6 +1,6 @@
 using Kuroe.Flow.NodeExecution;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
+using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Node.Approval;

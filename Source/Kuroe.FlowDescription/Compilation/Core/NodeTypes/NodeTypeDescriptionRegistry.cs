@@ -1,5 +1,5 @@
-using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
+using Kuroe.FlowDescription.Definition.Shared.Model;
 
 namespace Kuroe.FlowDescription.Compilation.NodeTypes;
 

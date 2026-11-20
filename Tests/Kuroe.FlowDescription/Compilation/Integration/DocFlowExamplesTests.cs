@@ -1,9 +1,9 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
-using Kuroe.FlowDescription.Shared.Compilation;
-using Kuroe.FlowDescription.Shared;
-using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
+using Kuroe.FlowDescription.Compilation.Shared;
+using Kuroe.FlowDescription.Description.Shared;
+using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Node.Approval;
 using Kuroe.Node.File;

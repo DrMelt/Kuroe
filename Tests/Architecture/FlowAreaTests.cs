@@ -72,7 +72,7 @@ public sealed class FlowAreaTests
             "Kuroe.Flow.Graph.Shared.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
+        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
 
         ReferencesStayUnder(project, "Kuroe.Flow.Graph.Shared", "描述、契约层与执行共享层", tasks, execution, description);
     }
@@ -185,7 +185,7 @@ public sealed class FlowAreaTests
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Shared");
+        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
 
         ReferencesStayUnder(
             project,

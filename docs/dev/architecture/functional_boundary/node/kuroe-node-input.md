@@ -19,4 +19,4 @@
 
 ## 依赖
 
-- Kuroe.FlowDescription.Shared。
+- Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared。

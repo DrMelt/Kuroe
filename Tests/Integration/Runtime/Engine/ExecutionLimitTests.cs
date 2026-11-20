@@ -1,4 +1,4 @@
-using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.Tasks.Runtime;
 using Kuroe.Tasks.Presentation.Shared;

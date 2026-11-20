@@ -5,12 +5,12 @@ using Kuroe.Flow.Control.Runtime.Graph;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Records.Shared;
 using Kuroe.Flow.Records.Shared;
-using Kuroe.FlowDescription.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Tasks;
 
-using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Tasks.Records.Shared;
 using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 using Kuroe.Tasks.Shared;
