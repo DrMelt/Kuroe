@@ -10,12 +10,13 @@ namespace Kuroe.Maf.Control;
 internal sealed class MafFlowControl(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
-    MafFlowState state) : IFlowControl, IFlowRerun, IMafStepRunControl
+    MafFlowState state) : IFlowControl, IFlowRerun
 {
     private readonly MafFlowCheckpoints _checkpoints = new(task, state);
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private CancellationTokenSource? _cancel;
     private string? _interruptReason;
+    private int _run;
     private bool _running;
     private bool _completed;
     private volatile bool _paused;
@@ -242,6 +243,7 @@ internal sealed class MafFlowControl(
     private async Task RunAsync()
     {
         using CancellationTokenSource cancel = new();
+        int run;
         int startVersion;
         lock (task.Gate)
         {
@@ -251,78 +253,95 @@ internal sealed class MafFlowControl(
                 return;
             }
 
-            if (task.Lifecycle != TaskLifecycle.Active)
-            {
-                _paused = true;
-                _running = false;
-                return;
-            }
-
             _interrupted = false;
             _interruptReason = null;
             state.FreezeCheckpoint = false;
+            run = ++_run;
             startVersion = task.ControlVersion;
             _cancel = cancel;
         }
 
-        IMafWorkflowRun? run = null;
+        IMafWorkflowRun? runHandle = null;
         try
         {
-            run = await MafWorkflowRunner.StartAsync(
+            runHandle = await MafWorkflowRunner.StartAsync(
                 state.Definition,
                 Entry(),
                 task.Id.Value,
-                Handler,
+                step => Handler(run, step),
                 _checkpoints,
                 cancel.Token).ConfigureAwait(false);
 
-            await foreach (MafWorkflowEvent update in run.WatchAsync(cancel.Token).ConfigureAwait(false))
+            await foreach (MafWorkflowEvent update in runHandle.WatchAsync(cancel.Token).ConfigureAwait(false))
             {
                 Handle(update);
             }
 
+            if (!IsCurrent(run))
+            {
+                return;
+            }
+
             if (_interrupted)
             {
-                SettleInterruption(startVersion);
+                SettleInterruption(run, startVersion);
             }
             else if (!_stopped && !_paused && !_failed)
             {
-                Complete();
+                Complete(run);
             }
         }
         catch (OperationCanceledException)
         {
             // 暂停与终止取消运行属于正常路径。
-            if (_interrupted)
+            if (_interrupted && IsCurrent(run))
             {
-                SettleInterruption(startVersion);
+                SettleInterruption(run, startVersion);
             }
         }
         catch (Exception ex)
         {
+            if (!IsCurrent(run))
+            {
+                return;
+            }
+
             if (_interrupted)
             {
-                SettleInterruption(startVersion);
+                SettleInterruption(run, startVersion);
             }
             else if (!_stopped)
             {
-                Fail(ex);
+                Fail(run, ex);
             }
         }
         finally
         {
+            // 旧运行释放完成前保持推进循环占用，避免恢复启动的运行与旧运行重叠。
+            await DisposeRunAsync(runHandle).ConfigureAwait(false);
+
             lock (task.Gate)
             {
-                _cancel = null;
-                _running = false;
-                Launch();
-                if (_completed || _stopped)
+                if (run == _run)
                 {
-                    _completion.TrySetResult();
+                    _cancel = null;
+                    _running = false;
+                    Launch();
+                    if (_completed || _stopped)
+                    {
+                        _completion.TrySetResult();
+                    }
                 }
             }
+        }
+    }
 
-            await DisposeRunAsync(run).ConfigureAwait(false);
+    /// <summary>该运行是否仍是当前推进循环。</summary>
+    private bool IsCurrent(int run)
+    {
+        lock (task.Gate)
+        {
+            return run == _run;
         }
     }
 
@@ -338,28 +357,31 @@ internal sealed class MafFlowControl(
                 .Select(pair => new MafStepOutput(entry.Id, pair.Key, pair.Value))]);
     }
 
-    /// <summary>把一个步骤接到 Kuroe 执行网关。</summary>
-    private MafStepHandler Handler(MafStep step) =>
+    /// <summary>把一个步骤接到 Kuroe 执行网关，中断上报只对发起它的运行有效。</summary>
+    private MafStepHandler Handler(int run, MafStep step) =>
         (message, cancellationToken) =>
-            new MafStepExecutor(task, gateway, step, state.Model, this)
+            new MafStepExecutor(task, gateway, step, state.Model, new RunControl(this, run))
                 .HandleAsync(message, cancellationToken);
-
-    /// <inheritdoc/>
-    bool IMafStepRunControl.Halted => Halted;
-
-    /// <inheritdoc/>
-    void IMafStepRunControl.Interrupt(string reason) => Abort(reason);
 
     /// <summary>流程是否已停止接收新的步骤运行。</summary>
     private bool Halted => _stopped || _paused || _interrupted;
 
+    /// <summary>本次运行是否已停止推进，过期的运行一律视为停止。</summary>
+    private bool HaltedFor(int run)
+    {
+        lock (task.Gate)
+        {
+            return run != _run || Halted;
+        }
+    }
+
     /// <summary>步骤执行被中断：放弃检查点，停止当前运行，交给推进循环收口。</summary>
-    private void Abort(string reason)
+    private void Interrupt(int run, string reason)
     {
         CancellationTokenSource? cancel;
         lock (task.Gate)
         {
-            if (_stopped)
+            if (run != _run || _stopped)
             {
                 return;
             }
@@ -377,8 +399,18 @@ internal sealed class MafFlowControl(
         task.NotifyChanged();
     }
 
+    /// <summary>把中断上报与停止判定绑定到建立它的运行。</summary>
+    private sealed class RunControl(MafFlowControl owner, int run) : IMafStepRunControl
+    {
+        /// <inheritdoc/>
+        public bool Halted => owner.HaltedFor(run);
+
+        /// <inheritdoc/>
+        public void Interrupt(string reason) => owner.Interrupt(run, reason);
+    }
+
     /// <summary>中断收口：控制动作发生在这次运行期间时保留推进，否则把任务停在可恢复阻塞。</summary>
-    private void SettleInterruption(int startVersion)
+    private void SettleInterruption(int run, int startVersion)
     {
         if (_stopped)
         {
@@ -387,7 +419,7 @@ internal sealed class MafFlowControl(
 
         lock (task.Gate)
         {
-            if (task.Lifecycle != TaskLifecycle.Active || task.ControlVersion != startVersion)
+            if (run != _run || task.Lifecycle != TaskLifecycle.Active || task.ControlVersion != startVersion)
             {
                 return;
             }
@@ -459,10 +491,15 @@ internal sealed class MafFlowControl(
     }
 
     /// <summary>流程走完：清空待处理步骤并标记任务完成。</summary>
-    private void Complete()
+    private void Complete(int run)
     {
         lock (task.Gate)
         {
+            if (run != _run)
+            {
+                return;
+            }
+
             state.PendingSteps.Clear();
             state.FreezeCheckpoint = false;
             _completed = true;
@@ -477,11 +514,11 @@ internal sealed class MafFlowControl(
     }
 
     /// <summary>推进异常：记错误并让任务停在阻塞。</summary>
-    private void Fail(Exception exception)
+    private void Fail(int run, Exception exception)
     {
         lock (task.Gate)
         {
-            if (Halted)
+            if (run != _run || Halted)
             {
                 return;
             }
