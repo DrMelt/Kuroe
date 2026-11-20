@@ -1,4 +1,4 @@
-using Kuroe.FlowDescription.Compilation.Description;
+using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared;
 using Kuroe.FlowDescription.Shared.Parameters;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
@@ -7,7 +7,7 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Xunit;
 
-namespace Kuroe.FlowDescription.Compilation.Tests.Description;
+namespace Kuroe.FlowDescription.Compilation.Tests.NodeTypes;
 
 /// <summary>参数字段的描述读取：按字段表转换取值、未知字段与形状不符的报出。</summary>
 public sealed class NodeParameterReaderTests

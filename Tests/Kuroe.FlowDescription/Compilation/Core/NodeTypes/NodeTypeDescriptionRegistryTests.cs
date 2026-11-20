@@ -1,4 +1,4 @@
-using Kuroe.FlowDescription.Compilation.Description;
+using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.Parameters;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
@@ -6,7 +6,7 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Xunit;
 
-namespace Kuroe.FlowDescription.Compilation.Tests.Description;
+namespace Kuroe.FlowDescription.Compilation.Tests.NodeTypes;
 
 /// <summary>节点类型描述注册表：同名覆盖、查找与注册序。</summary>
 public sealed class NodeTypeDescriptionRegistryTests

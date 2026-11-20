@@ -4,7 +4,7 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.FlowDescription.Compilation;
+namespace Kuroe.FlowDescription.Compilation.Library;
 
 /// <summary>库装配入口：合并内置与文件定义，校验节点库后逐流程展开。</summary>
 public sealed class NodeLibraryExpander : IFlowExpander
@@ -34,7 +34,7 @@ public sealed class NodeLibraryExpander : IFlowExpander
         List<FlowDefinition> flows = [];
         foreach (FlowDefinition flow in authoringFlows)
         {
-            ErrorOr<NodeSpec> expanded = NodeExpander.Expand(library, flow.RootNode, flow.StartPorts, NodeScope.Flow(flow.Name.Value));
+            ErrorOr<NodeSpec> expanded = NodeTreeExpander.Expand(library, flow.RootNode, flow.StartPorts, NodeScope.Flow(flow.Name.Value));
             if (expanded.IsError)
             {
                 errors.AddRange(expanded.ErrorsOrEmptyList);

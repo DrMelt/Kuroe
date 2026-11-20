@@ -4,9 +4,9 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 
-namespace Kuroe.FlowDescription.Compilation;
+namespace Kuroe.FlowDescription.Compilation.Library;
 
-/// <summary>节点库定义的校验：结构合法、端口声明、子树自包含。展开在 NodeExpander 里进行。</summary>
+/// <summary>节点库定义的校验：结构合法、端口声明、子树自包含。展开在 NodeTreeExpander 里进行。</summary>
 internal static class NodeLibraryRules
 {
     /// <summary>校验节点库：定义结构与子树自包含。各流程随后按节点库展开。同名覆盖与重复节点名报告在注册处完成，
@@ -78,7 +78,7 @@ internal static class NodeLibraryRules
         List<Error> errors)
     {
         NodeSpec? find(NodeName name) => byName.GetValueOrDefault(name);
-        HashSet<NodeLabel> subtreeLabels = ContainerScope.SubtreeLabels(members, find);
+        HashSet<NodeLabel> subtreeLabels = ContainerScopeRules.SubtreeLabels(members, find);
 
         var subtreeOutputs = new Dictionary<NodeLabel, IReadOnlyList<Port>>();
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
@@ -91,7 +91,7 @@ internal static class NodeLibraryRules
         var literalLabels = new HashSet<NodeLabel>();
         CheckLiteralLabels(members, literalLabels, container, errors);
 
-        ContainerScope.Check(container, members, find, (member, message) =>
+        ContainerScopeRules.Check(container, members, find, (member, message) =>
             errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
 
         foreach (NodeSpec member in members)
@@ -205,7 +205,7 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>校验容器的一个成员：结构不混用、引用存在。作用域来源由 ContainerScope 判定。</summary>
+    /// <summary>校验容器的一个成员：结构不混用、引用存在。作用域来源由 ContainerScopeRules 判定。</summary>
     private static void CheckMember(
         NodeSpec member,
         Dictionary<NodeName, NodeSpec> byName,

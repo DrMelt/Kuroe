@@ -1,5 +1,5 @@
 using Kuroe.FlowDescription.Compilation;
-using Kuroe.FlowDescription.Compilation.Description;
+using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Json;
 using Kuroe.Flow.NodeType.Container;
@@ -12,6 +12,7 @@ using Kuroe.Tests.Support;
 using Kuroe.Flow.Hosting.Workflows.Flows;
 using Kuroe.Flow.Hosting.Workflows.Flows.Files;
 using Xunit;
+using Kuroe.FlowDescription.Compilation.Library;
 
 namespace Kuroe.Tests.Workflows.Flows;
 

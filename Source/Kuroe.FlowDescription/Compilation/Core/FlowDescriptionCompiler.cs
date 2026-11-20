@@ -4,7 +4,6 @@ using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared.Compilation.Flow;
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared;
-using Kuroe.FlowDescription.Compilation.Validation;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
 using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
@@ -56,7 +55,7 @@ public sealed class FlowDescriptionCompiler(
         List<FlowGraph> flows = [];
         foreach (FlowDefinition flow in expanded.Value)
         {
-            ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(flow);
+            ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
             if (compiled.IsError)
             {
                 errors.AddRange(compiled.ErrorsOrEmptyList);

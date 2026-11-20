@@ -5,10 +5,10 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Graph;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
-namespace Kuroe.FlowDescription.Compilation;
+namespace Kuroe.FlowDescription.Compilation.Library;
 /// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的静态绑定与 From 在所在作用域建立绑定域，成员的 From 与 Bindings 引用都在该绑定域里取 @端口。
 /// 节点按作者写下的原文保留，定义条目沿用节点名，引用条目用标签，层级由树给出；引用由编译期按作用域链解析。</summary>
-internal static class NodeExpander
+internal static class NodeTreeExpander
 {
     /// <summary>展开作用域的一层：容器实例的端口绑定。每层以 parent 串起，从内向外透传端口绑定。</summary>
     private sealed class Env(
@@ -113,7 +113,7 @@ internal static class NodeExpander
         {
             if (!inInstance)
             {
-                ContainerScope.Check(node, children, name => Find(library, name), (member, message) =>
+                ContainerScopeRules.Check(node, children, name => Find(library, name), (member, message) =>
                     errors.Add(scope.Node(member.Label.Value, message)));
             }
 

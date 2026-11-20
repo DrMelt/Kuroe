@@ -7,7 +7,7 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.FlowDescription.Compilation.Description;
+namespace Kuroe.FlowDescription.Compilation.NodeTypes;
 
 /// <summary>参数字段的描述读取：按类型字段表检查未知字段与值形状，再建出类型实例。
 /// 字段属于哪个类型只由类型描述说明，本层不按字段名做任何判断。</summary>

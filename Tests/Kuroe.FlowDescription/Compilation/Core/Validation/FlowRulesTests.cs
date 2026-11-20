@@ -3,7 +3,6 @@ using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
-using Kuroe.FlowDescription.Compilation.Validation;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
@@ -664,5 +663,5 @@ public sealed class FlowRulesTests
 
     /// <summary>校验流程，取错误说明。类型规则按引擎内置类型注册表判定。</summary>
     private static IReadOnlyList<string> Errors(FlowDefinition flow) =>
-        [.. FlowRules.ValidateAndCompile(flow).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowCompiler.Compile(flow).ErrorsOrEmptyList.Select(error => error.Description)];
 }

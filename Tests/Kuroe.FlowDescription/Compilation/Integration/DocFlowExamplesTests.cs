@@ -1,6 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.FlowDescription.Compilation.Description;
+using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
@@ -11,6 +11,7 @@ using Kuroe.Node.Input;
 using Kuroe.Node.Llm;
 using Kuroe.TestSupport;
 using Xunit;
+using Kuroe.FlowDescription.Compilation.Library;
 
 namespace Kuroe.FlowDescription.Compilation.Integration.Tests;
 

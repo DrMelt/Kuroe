@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.FlowDescription.Compilation.Validation;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
@@ -8,6 +7,7 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Xunit;
+using Kuroe.FlowDescription.Compilation.Library;
 
 namespace Kuroe.FlowDescription.Compilation.Tests.Validation;
 
@@ -76,7 +76,7 @@ public sealed class FlowRulesLimitTests
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], [], []);
         Assert.False(expanded.IsError, string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         return compiled.Value;

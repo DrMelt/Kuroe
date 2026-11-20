@@ -112,7 +112,7 @@
     <Project Path="Tests/Kuroe.Flow/Control/Core/Kuroe.Flow.Control.Tests.csproj" />
     <Project Path="Tests/Kuroe.Maf/Control/Kuroe.Maf.Control.Tests.csproj" />
     <Project Path="Tests/Kuroe.Maf/Compilation/Kuroe.Maf.Compilation.Tests.csproj" />
-    <Project Path="Tests/Kuroe.FlowDescription/Compilation/Compiler/Kuroe.FlowDescription.Compilation.Tests.csproj" />
+    <Project Path="Tests/Kuroe.FlowDescription/Compilation/Core/Kuroe.FlowDescription.Compilation.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Graph/Shared/Kuroe.Flow.Graph.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.FlowDescription/Json/Core/Kuroe.FlowDescription.Json.Tests.csproj" />
     <Project Path="Tests/Kuroe.FlowDescription/Shared/Kuroe.FlowDescription.Shared.Tests.csproj" />

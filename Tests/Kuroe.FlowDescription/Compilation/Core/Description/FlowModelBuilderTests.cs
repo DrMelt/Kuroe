@@ -1,10 +1,11 @@
 using ErrorOr;
 using Kuroe.FlowDescription.Shared;
-using Kuroe.FlowDescription.Compilation.Description;
+using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.Compilation;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
 using Kuroe.Flow.NodeType.Container;
 using Xunit;
+using Kuroe.FlowDescription.Compilation.Library;
 
 namespace Kuroe.FlowDescription.Compilation.Tests.Description;
 

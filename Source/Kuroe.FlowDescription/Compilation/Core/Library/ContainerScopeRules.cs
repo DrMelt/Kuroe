@@ -4,10 +4,10 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 
-namespace Kuroe.FlowDescription.Compilation;
+namespace Kuroe.FlowDescription.Compilation.Library;
 
 /// <summary>容器作用域规则：成员的上游来源只落在容器子树或容器声明的传入端口，容器外的节点与端口不可见。</summary>
-internal static class ContainerScope
+internal static class ContainerScopeRules
 {
     /// <summary>检查容器的直接成员：命名来源必须是子树标签，@端口 必须是容器声明的传入端口。</summary>
     public static void Check(

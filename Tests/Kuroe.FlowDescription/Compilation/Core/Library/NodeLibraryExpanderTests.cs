@@ -1,12 +1,13 @@
 using ErrorOr;
 using Kuroe.Flow.NodeType.Container;
+using Kuroe.FlowDescription.Compilation.Library;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Flow;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.FlowDescription.Compilation.Tests.NodeLibrary;
+namespace Kuroe.FlowDescription.Compilation.Tests.Library;
 
 /// <summary>节点库展开：库容器的成员并入引用处，未知定义在展开期拒绝。</summary>
 public sealed class NodeLibraryExpanderTests

@@ -1,7 +1,7 @@
 using Kuroe.FlowDescription.Shared.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Shared.Model;
 
-namespace Kuroe.FlowDescription.Compilation.Description;
+namespace Kuroe.FlowDescription.Compilation.NodeTypes;
 
 /// <summary>节点类型描述的默认注册表：类型名到描述的唯一入口，同名覆盖，按注册序保留类型名。</summary>
 public sealed class NodeTypeDescriptionRegistry : INodeTypeDescriptionRegistry

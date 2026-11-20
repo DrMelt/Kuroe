@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.FlowDescription.Shared.StaticGraph.Validation;
-using Kuroe.FlowDescription.Compilation.Validation;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
@@ -10,6 +9,7 @@ using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 using Kuroe.FlowDescription.Shared.StaticGraph.Ports;
 using Kuroe.Tasks.Shared;
 using Xunit;
+using Kuroe.FlowDescription.Compilation.Library;
 
 namespace Kuroe.FlowDescription.Compilation.Tests;
 
@@ -38,7 +38,7 @@ public sealed class StaticPortTests
         NodeSpec delivery = tree.RootNode.Nodes.Single(node => node.Label.Value == "交付");
         Assert.True(delivery.Outputs.Single(port => port.Name == Model).IsConstant);
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(tree);
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(tree);
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
@@ -57,7 +57,7 @@ public sealed class StaticPortTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
@@ -169,7 +169,7 @@ public sealed class StaticPortTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
@@ -350,7 +350,7 @@ public sealed class StaticPortTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
         Assert.True(compiled.IsError);
         Assert.Contains(compiled.ErrorsOrEmptyList,
             error => error.Description.Contains($"静态输入端口 {Model} 没有绑定来源"));
@@ -374,7 +374,7 @@ public sealed class StaticPortTests
                 ],
             });
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(flow);
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
         Assert.False(compiled.IsError,
             string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
@@ -461,7 +461,7 @@ public sealed class StaticPortTests
                 ],
             });
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(flow);
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
@@ -509,7 +509,7 @@ public sealed class StaticPortTests
                 ],
             });
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(flow);
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
@@ -672,7 +672,7 @@ public sealed class StaticPortTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ContainerNode container = compiled.Value.Containers.Single(node => node.InputBindings?.ContainsKey(gate) == true);
@@ -745,5 +745,5 @@ public sealed class StaticPortTests
         new([new FromLink(Goal, PortRef.Start(Goal))]);
 
     private static IReadOnlyList<string> Errors(FlowDefinition flow) =>
-        [.. FlowRules.ValidateAndCompile(flow).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowCompiler.Compile(flow).ErrorsOrEmptyList.Select(error => error.Description)];
 }

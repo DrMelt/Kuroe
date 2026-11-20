@@ -12,6 +12,7 @@ using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.TestSupport;
 using Xunit;
+using Kuroe.FlowDescription.Compilation.Library;
 
 namespace Kuroe.FlowDescription.Compilation.Integration.Tests;
 

@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Kuroe.FlowDescription.Shared.Model;
 using Kuroe.FlowDescription.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.FlowDescription.Compilation;
+namespace Kuroe.FlowDescription.Compilation.Library;
 
 /// <summary>节点库：节点定义的注册中心。同名后注册覆盖先注册，注册在装配期完成，之后只读查找。
 /// 定义表按注册顺序保留全部条目，名字索引只收有名条目，没有节点名的条目由校验报出。</summary>

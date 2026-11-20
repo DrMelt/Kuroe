@@ -32,7 +32,7 @@ public sealed class NodeDto
     public List<JsonElement>? Outputs { get; set; }
 
     /// <summary>上游 From 组：数组元素是一个组，组内是输入端口名到来源的映射，值写引用文本或带 Ref 与 Condition 的对象。
-    /// 组是一套完整的输入绑定方案，组间任一齐备即启动。引用规则由 FlowRules 校验。</summary>
+    /// 组是一套完整的输入绑定方案，组间任一齐备即启动。引用规则由 GraphRules 校验。</summary>
     public List<JsonElement>? From { get; set; }
 
     /// <summary>同一执行路径的最高执行次数，未写时取默认值。</summary>
