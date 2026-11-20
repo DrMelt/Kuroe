@@ -3,14 +3,6 @@ using System.Text.Json.Serialization;
 
 namespace Kuroe.FlowDescription.Json.Files;
 
-/// <summary>节点库文件的形状：文件里的字段名与类型在此固定，读入后装配成节点定义。
-/// 属性必须可写，否则缺键的项拿不到声明的默认值。</summary>
-public sealed class NodeFileDto
-{
-    /// <summary>节点库定义，按声明序。</summary>
-    public List<NodeDto> Nodes { get; set; } = [];
-}
-
 /// <summary>文件里的一个节点，省略的字段在装配时取安全默认值，合法性交校验。
 /// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义。文件层只认结构字段，类型专属字段只能写在 <see cref="Parameters"/> 对象里。</summary>
 public sealed class NodeDto
@@ -58,42 +50,4 @@ public sealed class NodeDto
     /// <summary>节点对象上不属于结构字段的键，文件层据此报出类型专属字段写错了位置。</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Unrecognized { get; set; }
-}
-
-/// <summary>端口的对象形状：输出端口与输入端口共用条目。Type 写类型名，Mode 写 Plain、Trigger 或 Constant。</summary>
-public sealed class PortEntryDto
-{
-    /// <summary>端口名。</summary>
-    public string? Name { get; set; }
-
-    /// <summary>端口类型名，取值由端口类型注册表决定。未写时按 Text。</summary>
-    public string? Type { get; set; }
-
-    /// <summary>端口模式：Plain、Trigger 或 Constant。未写时按类型默认模式。</summary>
-    public string? Mode { get; set; }
-
-    /// <summary>输出端口的来源引用，写 成员@端口、来源@端口 或 @本节点输入。</summary>
-    public string? Ref { get; set; }
-
-    /// <summary>端口承载内容的说明，未写时为空。</summary>
-    public string? Description { get; set; }
-
-    /// <summary>常量输出端口的固定值，未写时由 Ref 或 Once 执行产出提供来源。</summary>
-    public string? Value { get; set; }
-
-    /// <summary>默认值：开始端口表示提交时的预填值与省略时的回退值，输入端口表示来源组没有连接该端口时的回退值，其他输出端口不使用。</summary>
-    public string? Default { get; set; }
-
-    /// <summary>输入端口的执行角色，取值 Content、Configuration 或 Control。</summary>
-    public string? Role { get; set; }
-}
-
-/// <summary>带触发条件的 From 连接形状：Ref 写引用，Condition 写 Positive 或 Negative。写出时未写条件或条件为 Positive 仍写成引用文本。</summary>
-public sealed class BindingEntryDto
-{
-    /// <summary>来源引用，写 @端口 或 来源@端口。</summary>
-    public string? Ref { get; set; }
-
-    /// <summary>触发门控条件，取值 Positive 或 Negative。</summary>
-    public string? Condition { get; set; }
 }
