@@ -6,14 +6,14 @@
 
 文档以技术文档风格编写，直白且准确，不用括号，不用装饰性语言。
 
-依赖事实以工程文件的项目引用为准，依赖图是它的呈现，各文档的依赖段与两者保持一致。
+依赖事实以工程文件的项目引用为准，各文档的依赖段与之一致。
 
 ## architecture
 
-`dev/architecture/architecture.md` 给出项目划分、依赖图与索引。
+`dev/architecture/architecture.md` 给出项目划分与索引，`dev/architecture/design.md` 给出系统结构图。
 
-- 只写全景：项目定位、依赖图、索引表。
-- 依赖图与项目引用一一对应，节点只带最短定位。
+- `architecture.md` 只写全景：项目定位、索引表。
+- `design.md` 只写运行时分层图：功能模块、功能单元与项目根路径，不重复模块职责与项目引用边。
 - 索引表按域分组，给出模块与边界文档链接，不重复模块职责。
 
 ## functional_boundary

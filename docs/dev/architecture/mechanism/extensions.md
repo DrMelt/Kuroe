@@ -6,7 +6,7 @@
 
 1. 实现 `IFlowIdentity`，按流程名与 `FlowIdentity` 认领提交与恢复。
 2. 实现 `IFlowSubmission`、`IFlowState`、`IFlowControlFactory` 与 `IFlowControl`；需要恢复时另实现 `IFlowStateBinder`，支持按步骤重跑时另实现 `IFlowRerun`。
-3. 需要外部输入时，由步骤的执行函数以任务标识与流程步骤路径向 `IInputChannel` 登记等待。交付完成等待，执行收口后由控制实例继续推进。等待执行被暂停或退出中断时，控制实例重新派发执行。
+3. 需要外部输入时，由步骤的执行函数登记等待，中断与重新派发由控制实例负责，见[流程控制与任务域](flow-control.md)。
 4. 实现 `IFlowPresentation` 的 `CaptureView` 与 `IFlowRecordSource` 的 `CaptureRecord`。等待步骤由任务视图提供，表现不另设入口。
 5. 把端口组合为 `FlowProvider` 注册。状态绑定与流程记录来源按需提供，不需要的能力以空值表达，不使用空实现对象。
 6. 提供自有定义记录、状态记录与流程种类常量，实现 `IFlowRecordCodec` 并注册。编解码错误经返回值报告。

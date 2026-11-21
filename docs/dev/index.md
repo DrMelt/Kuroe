@@ -2,7 +2,9 @@
 
 这里面向修改 Kuroe 源码与把 Kuroe 作为库接入的读者。安装、配置与操作见[使用文档](../user/index.md)。
 
-文档分层与写作规则见 [docs-rules](../docs-rules.md)。
+## 总体设计
+
+[系统结构](architecture/design.md)给出运行时分层图。
 
 ## 域索引
 
@@ -24,7 +26,7 @@
 
 ## 跨模块机制
 
-[执行模型](architecture/mechanism/execution.md)、[流程控制与任务域](architecture/mechanism/flow-control.md)、[执行契约工具](architecture/mechanism/contract-tools.md)、[存档与持久化](architecture/mechanism/persistence.md)、[同名覆盖与重名](architecture/mechanism/overrides.md)、[MAF 流程](architecture/mechanism/maf-flow.md)、[新增流程实现与扩展点](architecture/mechanism/extensions.md)。
+[跨模块机制](architecture/mechanism/index.md)。
 
 ## 第三方库机制
 
