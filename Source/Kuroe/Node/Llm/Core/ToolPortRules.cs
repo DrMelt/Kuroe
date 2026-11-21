@@ -11,7 +11,7 @@ namespace Kuroe.Node.Llm;
 /// <summary>Llm 节点工具路径与路径变量的装载期规则：映射必须落在白名单内，并覆盖每个可用工具的全部变量。</summary>
 internal static class ToolPortRules
 {
-    /// <summary>按白名单与工具契约校验全部映射，错误经 fail 报出。</summary>
+    /// <summary>按白名单与工具契约校验全部映射，错误经 <paramref name="fail"/> 报出。</summary>
     internal static void Validate(
         LlmParameters? parameters,
         NodeSpec node,

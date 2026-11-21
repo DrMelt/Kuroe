@@ -9,7 +9,7 @@ namespace Kuroe.Flow.Control.Runtime.Graph;
 
 /// <summary>为执行节点装配执行输入：按输入端口的执行角色决定内容与配置，动态取值与常量取值使用同一份出处结构。
 /// Content 端口进入内容输入，Configuration 端口只进入文本视图，Control 端口只参与启动。
-/// Context 内容端口置于内容输入最前，其余按组内连接序。
+/// <see cref="PortTypes.Context"/> 内容端口置于内容输入最前，其余按组内连接序。
 /// 取值按上游发布原样进入，装配层不改变内容长度。</summary>
 internal static class GraphExecutionInputBuilder
 {

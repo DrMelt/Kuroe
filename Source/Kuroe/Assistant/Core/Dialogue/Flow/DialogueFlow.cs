@@ -4,13 +4,13 @@ using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue.Flow;
 
-/// <summary>内置对话流程的代码定义：流程名、开始端口、回话步骤、存档键与回话参数。流程状态由对话框架维护，不经过节点图。</summary>
+/// <summary>内置对话流程的代码定义：流程名、开始端口、回话步骤、存档键与回话参数。流程状态不进入节点图。</summary>
 internal static class DialogueFlow
 {
     /// <summary>流程名。</summary>
     internal static FlowName Name { get; } = new("对话");
 
-    /// <summary>代码流程实现的种类名，存档按它区分实现。</summary>
+    /// <summary>代码流程实现的种类名，存档按该种类名区分实现。</summary>
     internal const string Implementation = "dialogue";
 
     /// <summary>开始端口名：任务的初始输入由此进入流程。</summary>
@@ -87,7 +87,7 @@ internal static class DialogueFlow
             ["dotnet"] = RootPorts(),
         };
 
-    /// <summary>单个工具组的变量映射，root 指向工作区端口。</summary>
+    /// <summary>单个工具组的变量映射，路径变量 <see cref="PathVariables.RootName"/> 指向工作区端口。</summary>
     private static Dictionary<string, string> RootPorts() =>
         new()
         {

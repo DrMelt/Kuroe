@@ -16,7 +16,7 @@ internal sealed record RuntimeSettings
     /// <summary>模型设置在用户层中的路径。</summary>
     public const string ModelPath = $"{SectionName}:{nameof(Model)}";
 
-    /// <summary>当前选用的模型名，必须在目录中注册。空或全空白的文本视为未选择，由调用方给出选择指引。</summary>
+    /// <summary>当前选用的模型名，必须在目录中注册。空或全空白的文本视为未选择。</summary>
     public ModelName? Model { get; init; }
 
     /// 低于该级别的日志不产生输出。

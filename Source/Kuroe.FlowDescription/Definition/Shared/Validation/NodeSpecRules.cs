@@ -2,11 +2,11 @@ using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.FlowDescription.Definition.Shared.Validation;
 
-/// <summary>节点不变量的统一入口：标识、结构、接线、输入绑定与 From 覆盖按固定顺序判定。
+/// <summary>节点不变量的统一入口：标识、结构、接线、输入绑定与 <see cref="NodeSpec.From"/> 覆盖按固定顺序判定。
 /// 静态来源解析与图级规则由调用方补充。</summary>
 public static partial class NodeSpecRules
 {
-    /// <summary>按作用域检查一个节点的全部不变量，每条错误经 fail 报出。</summary>
+    /// <summary>按作用域检查一个节点的全部不变量，每条错误经 <paramref name="fail"/> 报出。</summary>
     public static void Check(this NodeSpec node, NodeRuleContext context, ValidationMessageHandler fail)
     {
         node.CheckIdentity(context, fail);

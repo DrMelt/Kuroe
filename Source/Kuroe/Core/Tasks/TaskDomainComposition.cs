@@ -22,7 +22,7 @@ public sealed record TaskDomain(
     ITaskRecordCoordinator? Records,
     ITaskRestoreService? Restore);
 
-/// <summary>任务域装配：按存档目录建立独立的注册表、存档、租约、写盘协调与恢复服务，供用户任务域与内置助手会话域共用。</summary>
+/// <summary>任务域装配：按存档目录建立独立的注册表、存档、租约、写盘协调与恢复服务。</summary>
 public static class TaskDomainComposition
 {
     /// <summary>建立一个任务域。不写存档时不建立存档与恢复。</summary>

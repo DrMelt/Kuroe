@@ -12,7 +12,7 @@ public enum ExecutionState
     /// <summary>请求正常结束。</summary>
     Succeeded,
 
-    /// <summary>请求失败或执行单元未收口。</summary>
+    /// <summary>请求失败或执行核心未收口。</summary>
     Failed,
 
     /// <summary>因任务暂停、停止执行、任务终止或进程退出而中断。</summary>

@@ -17,7 +17,7 @@ public interface INodeTypeDescription
     /// <summary>参数段声明的字段与取值形态。</summary>
     IReadOnlyList<ParameterField> Fields { get; }
 
-    /// <summary>由本轮取值建出类型实例，声明内容不合法经 fail 报出。</summary>
+    /// <summary>由本轮取值建出类型实例，声明内容不合法经 <paramref name="fail"/> 报出。</summary>
     INodeType Read(IParameterReader values, ValidationMessageHandler fail);
 }
 

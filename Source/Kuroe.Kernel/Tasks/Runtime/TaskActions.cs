@@ -28,7 +28,7 @@ public sealed class TaskActions(
     private readonly ITaskRecordCoordinator? _records = records;
     private readonly ITaskLeaseStore? _leases = leases;
 
-    /// <summary>按流程名提交：取负责的流程实现，再按实现提交。observer 收到该任务全部执行的过程事件。</summary>
+    /// <summary>按流程名提交：取负责的流程实现，再按实现提交。<paramref name="observer"/> 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> Submit(
         FlowName flowName,
         StartInputs inputs,

@@ -3,7 +3,7 @@ using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Kernel.Execution;
 
-/// <summary>按并发额度推进执行。只负责排队与调度，运行器接线与收口由 ExecutionRun 完成；收口回调在额度释放后于线程池上执行，可安全再派生。</summary>
+/// <summary>按并发额度推进执行。只负责排队与调度，运行器接线与收口由 <see cref="ExecutionRun"/> 完成；收口回调在额度释放后于线程池上执行，可安全再派生。</summary>
 public sealed class ExecutionDispatcher
 {
     /// <summary>同时在跑的执行数上限，超出的排队等待。</summary>

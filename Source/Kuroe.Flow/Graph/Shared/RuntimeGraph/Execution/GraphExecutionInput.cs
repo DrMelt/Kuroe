@@ -27,7 +27,7 @@ public sealed record GraphExecutionInput : IPortTexts
     /// <summary>该节点的执行轮次上限。</summary>
     public int MaxAttempts { get; init; } = ExecutableSpec.DefaultMaxExecutions;
 
-    /// <summary>本轮各输入端口取到的内容：Context 输入端口的取值在最前，其余按生效组内连接序，
+    /// <summary>本轮各输入端口取到的内容：<see cref="PortTypes.Context"/> 输入端口的取值在最前，其余按生效组内连接序，
     /// 未连接的默认值按输入声明序追加，信号输入不取内容。文本经 <see cref="Texts"/> 读取。</summary>
     public IReadOnlyList<InputValue> Inputs { get; init; } = [];
 
@@ -43,6 +43,6 @@ public sealed record GraphExecutionInput : IPortTexts
     /// <summary>节点声明的输入端口，未声明时为空。</summary>
     public IReadOnlyList<InputPort> InputPorts { get; init; } = [];
 
-    /// <summary>本轮需交回的命名端口：动态 Text 与 Signal 端口，以及全部运行期常量端口，未声明时为空。</summary>
+    /// <summary>本轮需交回的命名端口：动态 <see cref="PortTypes.Text"/> 与 <see cref="PortTypes.Signal"/> 端口，以及全部运行期常量端口，未声明时为空。</summary>
     public IReadOnlyList<Port> RequiredPorts => PortRules.RequiredFromSubmittable(OutputPorts);
 }

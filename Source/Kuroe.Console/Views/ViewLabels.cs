@@ -7,7 +7,7 @@ using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>宿主侧呈现：状态与时间取自 InfoLabels，样式、模型名与单行摘要由宿主给出。</summary>
+/// <summary>呈现文案：状态与时间复用 <see cref="InfoLabels"/> 的文案，样式、模型名与单行摘要在此给出。</summary>
 internal static class ViewLabels
 {
     public static string Of(TaskState state) => InfoLabels.Of(state);
@@ -31,7 +31,7 @@ internal static class ViewLabels
     /// <summary>阻塞原因一行能看到的文本长度。</summary>
     public const int BlockLimit = 80;
 
-    /// <summary>等待节点的提示：种类与提问，供节点行与选择项共用。</summary>
+    /// <summary>等待节点的提示：种类与提问。</summary>
     public static string WaitingLabel(PendingNode waiting) =>
         waiting.Question is { Length: > 0 } question
             ? $"{Of(waiting.Kind)}：{OneLine(question, QuestionLimit)}"
@@ -85,7 +85,7 @@ internal static class ViewLabels
         Elapsed(execution.Elapsed),
         execution.Failures.Count > 0 ? $"失败 {execution.Failures.Count} 条" : null);
 
-    /// <summary>执行概况一行，供菜单与清单使用。</summary>
+    /// <summary>执行概况一行。</summary>
     public static string ExecutionLabel(FlowExecutionView execution)
     {
         (string id, string round, string state, string elapsed, string? failures) = ExecutionParts(execution);
@@ -112,7 +112,7 @@ internal static class ViewLabels
 
     public static string Clock(DateTimeOffset? at) => InfoLabels.Clock(at);
 
-    /// <summary>把多行文本压成一行，超过长度时截取前缀并给出是否截断；截断不追加记号，由调用方给出提示。</summary>
+    /// <summary>把多行文本压成一行，超过长度时截取前缀并给出是否截断；截断不追加记号。</summary>
     public static (string Text, bool Truncated) Truncate(string text, int limit)
     {
         string flat = text.Replace('\n', ' ').Replace('\r', ' ').Trim();

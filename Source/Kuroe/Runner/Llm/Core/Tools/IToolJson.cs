@@ -11,6 +11,6 @@ public interface IToolJson
     /// <summary>参数的 JSON Schema，随请求交给模型。</summary>
     JsonElement Schema(IReadOnlyList<ToolParameter> parameters);
 
-    /// <summary>一次调用的实参写成 JSON 文本，供过程记录。</summary>
+    /// <summary>一次调用的实参写成 JSON 文本。</summary>
     string Describe(AIFunctionArguments arguments);
 }

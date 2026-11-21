@@ -4,7 +4,7 @@ using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Flow.Control.Runtime.Catalog;
 
-/// <summary>运行期的流程模板查询。由宿主实现，引擎只经它取流程定义。</summary>
+/// <summary>运行期的流程模板查询。实现由宿主提供。</summary>
 public interface IFlowCatalog
 {
     /// <summary>全部流程，按文件顺序。</summary>

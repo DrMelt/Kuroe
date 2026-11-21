@@ -29,7 +29,7 @@ public sealed class LlmNodeType(
     /// <summary>模型名静态输入端口。</summary>
     public PortName? ModelPort => LlmNodeTypes.ModelPort;
 
-    /// <summary>节点声明的工具与系统指令块，供信息查询展示。</summary>
+    /// <summary>节点声明的工具与系统指令块。</summary>
     public IReadOnlyList<NodeAttribute> Attributes
     {
         get

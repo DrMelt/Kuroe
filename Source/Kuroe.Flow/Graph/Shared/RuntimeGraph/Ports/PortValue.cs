@@ -1,6 +1,8 @@
+using Kuroe.FlowDescription.Definition.Shared.Ports;
+
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 
-/// <summary>一次交回的端口产出：文本与是否触发下游。Signal 语义的文本不进入产出，承载触发的端口按交回值给出触发位。
+/// <summary>一次交回的端口产出：文本与是否触发下游。<see cref="PortTypes.Signal"/> 语义的文本不进入产出，承载触发的端口按交回值给出触发位。
 /// 契约交回要求触发端口写出触发位；其他发布路径未给出触发位时按触发处理。</summary>
 public readonly record struct PortValue(string? Text, bool? Trigger = null)
 {

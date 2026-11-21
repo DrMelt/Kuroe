@@ -5,6 +5,8 @@ using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
+using Kuroe.Kernel.Control.Shared;
+
 namespace Kuroe.Flow.Control.Runtime.Graph;
 
 /// <summary>运行期节点的物化：按图定义建立节点对象，按路径逐段下钻，未命中时按需建出缺失的段。
@@ -22,7 +24,7 @@ internal sealed class NodeMaterializer(
     /// <summary>已实例化的节点，先根序。</summary>
     internal IEnumerable<NodeRuntime> Materialized => _roots.SelectMany(Subtree);
 
-    /// <summary>按路径取节点，未实例化时建出缺失的段。要求持有任务 Gate。</summary>
+    /// <summary>按路径取节点，未实例化时建出缺失的段。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     internal NodeRuntime Get(NodePath path) => Walk(path, materialize: true)
         ?? throw new InvalidOperationException($"路径 {path} 为空，无法建立运行期节点。");
 

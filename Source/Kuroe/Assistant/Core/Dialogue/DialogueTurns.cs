@@ -13,7 +13,7 @@ internal sealed class DialogueTurns(TaskRegistry registry, DialogueRound rounds)
     private readonly Lock _gate = new();
     private readonly HashSet<TaskId> _running = [];
 
-    /// <summary>一轮结束触发，宿主据此给出完成提示。</summary>
+    /// <summary>一轮结束触发。</summary>
     internal event Action<DialogueTurnNotice>? Completed;
 
     /// <summary>会话是否有一轮没有收口。</summary>

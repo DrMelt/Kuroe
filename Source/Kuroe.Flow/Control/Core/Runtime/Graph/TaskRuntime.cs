@@ -42,7 +42,7 @@ public enum ExecutionInterruption
 
 /// <summary>按图驱动的执行推进：激活、发布、重新执行与会合。节点状态在运行时节点对象上，这里是图算法面。
 /// 启动条件按节点输入侧方案判定，不参与方案的节点在评估时按图上的常量依赖单独挡住。来源侧读数不创建节点。
-/// 所有方法都要求调用者持有所属任务的 Gate。</summary>
+/// 所有方法都要求调用者持有所属任务的 <see cref="ITaskFlowContext.Gate"/>。</summary>
 internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeConstantSource
 {
     private readonly ITaskFlowContext _task;
@@ -73,19 +73,19 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>任务锁定的流程执行视图。</summary>
     public NodeGraph Graph => _state.Flow.Graph;
 
-    /// <summary>运行期节点物化器，快照投影按它读已实例化节点。</summary>
+    /// <summary>运行期节点物化器。</summary>
     internal NodeMaterializer Materializer => _materializer;
 
-    /// <summary>任务内的静态端口解析，执行节点声明解析与激活输入共用。</summary>
+    /// <summary>任务内的静态端口解析。</summary>
     internal StaticPortValues StaticPorts => _staticPorts;
 
-    /// <summary>按节点路径取运行时节点对象，未实例化时按图定义实例化。读写要求持有 Gate。</summary>
+    /// <summary>按节点路径取运行时节点对象，未实例化时按图定义实例化。读写要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public NodeRuntime this[NodePath path] => _materializer.Get(path);
 
     /// <summary>按节点路径取运行时执行节点对象，节点必须是执行节点。</summary>
     public RuntimeExecutable Executable(NodePath path) => (RuntimeExecutable)_materializer.Get(path);
 
-    /// <summary>执行所属的运行时执行节点。要求持有 Gate。</summary>
+    /// <summary>执行所属的运行时执行节点。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public RuntimeExecutable Node(IGraphExecution execution) => Executable(execution.Input.Node);
 
     /// <summary>已实例化的运行时节点，未实例化时为空。判定与展示按它读数，不创建节点。</summary>
@@ -237,7 +237,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     // ---- 发布与作废 ----
 
-    /// <summary>作废执行节点的产出并刷新祖先容器，重新执行起点用它让下游重新等待。已发布的 Once 节点不重跑。</summary>
+    /// <summary>作废执行节点的产出并刷新祖先容器，重新执行起点用它让下游重新等待。已发布的 <see cref="NodeEmission.Once"/> 节点不重跑。</summary>
     private void InvalidateNode(RuntimeExecutable node)
     {
         if (Frozen(node.Path))
@@ -250,7 +250,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         node.Invalidate();
     }
 
-    /// <summary>作废已发表产出，宿主重新执行入口按节点路径定位节点。已发布的 Once 节点不重跑。</summary>
+    /// <summary>作废已发布产出。已发布的 <see cref="NodeEmission.Once"/> 节点不重跑。</summary>
     public void Invalidate(NodePath node)
     {
         if (Frozen(node))
@@ -345,7 +345,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         Graph.PlanOf(executable.Path) is { } plan
         && plan.Ready(IdleProgress, this);
 
-    /// <summary>给定节点的产出已变，要重新评估的目标：取下游、待评估的祖先容器与依赖它的节点，去重保持顺序。要求持有 Gate。</summary>
+    /// <summary>给定节点的产出已变，要重新评估的目标：取下游、待评估的祖先容器与依赖它的节点，去重保持顺序。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public IReadOnlyList<NodePath> Notify(IReadOnlyList<NodePath> nodes)
     {
         List<NodePath> notify = [];
@@ -372,7 +372,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         bool Restart = false);
 
     /// <summary>执行收口：等待节点的中断按重新派发处理，其余未启动的中断单独分类，失败与未收口先停驻阻塞，
-    /// 通过后发布产出并给出下游通知。接收器先经 ReleaseActive 再进入。终止任务的收口只通知等待方，不再阻塞或发布。</summary>
+    /// 通过后发布产出并给出下游通知。接收器先经 <see cref="RuntimeExecutable.ReleaseActive"/> 再进入。终止任务的收口只通知等待方，不再阻塞或发布。</summary>
     public SettlePlan Settle(RuntimeExecutable node, GraphExecution execution, bool restartOnInterrupt = false)
     {
         if (_task.Lifecycle == TaskLifecycle.Terminated)
@@ -489,7 +489,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     // ---- 推进评估 ----
 
     /// <summary>一个节点被激活后的评估：非派发型节点在其中自行处理并报告版本与失败，派发型的按就绪条件启动一次执行。
-    /// 返回要通知的下游与要启动的执行。要求持有 Gate。</summary>
+    /// 返回要通知的下游与要启动的执行。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public EvaluateResult Evaluate(NodeRuntime node)
     {
         if (Graph.ShapeOf(node.Path) is not { } shape)
@@ -711,7 +711,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>一个重新执行目标：停住的节点，与它要重跑的节点。执行失败时目标为节点自身。</summary>
     public readonly record struct RerunTarget(NodePath Blocked, NodePath Node);
 
-    /// <summary>计算重新执行会作废并重跑的目标：各停在阻塞的执行节点记录的目标，按执行节点表顺序。不改变状态。要求持有 Gate。</summary>
+    /// <summary>计算重新执行会作废并重跑的目标：各停在阻塞的执行节点记录的目标，按执行节点表顺序。不改变状态。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public IReadOnlyList<RerunTarget> PlanReruns()
     {
         List<RerunTarget> targets = [];
@@ -738,19 +738,19 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         GraphExecutionInput Input,
         PreparedExecutionRestore Prepared);
 
-    /// <summary>是否存在可派发的恢复计划。要求持有 Gate。</summary>
+    /// <summary>是否存在可派发的恢复计划。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public bool HasRestorePlans => _restorePlans.Count > 0;
 
-    /// <summary>取出当前恢复计划，按执行节点表顺序。不改变状态。要求持有 Gate。</summary>
+    /// <summary>取出当前恢复计划，按执行节点表顺序。不改变状态。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public IReadOnlyList<RestorePlan> PlanRestores() =>
         [.. MaterializedExecutables()
             .Select(node => _restorePlans.GetValueOrDefault(node.Path))
             .OfType<RestorePlan>()];
 
-    /// <summary>阻塞节点此刻是否已有恢复计划。要求持有 Gate。</summary>
+    /// <summary>阻塞节点此刻是否已有恢复计划。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public bool CanRestore(NodePath path) => _restorePlans.ContainsKey(path);
 
-    /// <summary>从存档恢复任务后按当前阻塞与来源执行重建全部恢复计划。要求持有 Gate。</summary>
+    /// <summary>从存档恢复任务后按当前阻塞与来源执行重建全部恢复计划。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public void RefreshRestorePlans()
     {
         ClearRestorePlans();
@@ -771,12 +771,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         _restorePlans.Clear();
     }
 
-    /// <summary>给定计划是否仍是该节点当前的恢复计划。要求持有 Gate。</summary>
+    /// <summary>给定计划是否仍是该节点当前的恢复计划。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     internal bool IsCurrentRestorePlan(RestorePlan plan) =>
         _restorePlans.TryGetValue(plan.Blocked, out RestorePlan? current)
         && ReferenceEquals(current, plan);
 
-    /// <summary>恢复计划已经派发，移除缓存。要求持有 Gate。</summary>
+    /// <summary>恢复计划已经派发，移除缓存。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     internal void RemoveRestorePlan(RestorePlan plan)
     {
         if (IsCurrentRestorePlan(plan) && Materialized(plan.Blocked) is RuntimeExecutable node)
@@ -899,7 +899,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>节点是否已经产出过内容。</summary>
     private bool HasPublished(NodePath node) => Materialized(node) is { Revision: > 0 };
 
-    /// <summary>已发布的 Once 节点冻结，不再重新执行或作废。</summary>
+    /// <summary>已发布的 <see cref="NodeEmission.Once"/> 节点冻结，不再重新执行或作废。</summary>
     private bool Frozen(NodePath node) =>
         HasPublished(node) && Graph[node] is ExecutableNode { Spec.Emission: NodeEmission.Once };
 

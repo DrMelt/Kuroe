@@ -6,7 +6,7 @@ namespace Kuroe.Tool.FileAccess.Shared;
 /// <summary>工具实参里的行号范围，行号从 1 起。缺省值由调用方给定，取 0 表示该行号必填，To 为空表示没有结束行。</summary>
 public readonly record struct LineRange(int From, int? To)
 {
-    /// <summary>从工具实参解析 from 与 to，缺省或空白取给定量；非数字、小于 1 或 to 小于 from 时给出拒绝错误。</summary>
+    /// <summary>从工具实参解析起始行号与结束行号，缺省或空白取给定量；非数字、小于 1 或结束行号小于起始行号时给出拒绝错误。</summary>
     public static ErrorOr<LineRange> Parse(ToolArguments arguments, int defaultFrom, int? defaultTo)
     {
         ErrorOr<int?> from = ParseNumber("from", arguments.Text(new ToolName("from")), defaultFrom);

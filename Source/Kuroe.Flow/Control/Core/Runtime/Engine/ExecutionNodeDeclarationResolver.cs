@@ -14,6 +14,6 @@ public sealed class ExecutionNodeDeclarationResolver(IExecutionNodeDeclarationRe
             ? new UnmodeledDeclaration()
             : resolver.For(executable, portTexts);
 
-    /// <summary>不经过模型的执行节点使用的空声明。</summary>
+    /// <summary>没有模型端口的执行节点的空声明。</summary>
     private sealed record UnmodeledDeclaration : INodeDeclaration;
 }

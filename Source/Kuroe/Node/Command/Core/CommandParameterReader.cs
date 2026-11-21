@@ -7,7 +7,7 @@ namespace Kuroe.Node.Command;
 /// <summary>命令节点参数段的读取：Program 必填，执行目录保留原文，命令变量与解析边界由运行期使用。</summary>
 internal static class CommandParameterReader
 {
-    /// <summary>读出程序、参数、执行目录、命令变量、超时、输出上限与退出码策略，缺失或非法时经 fail 报出。</summary>
+    /// <summary>读出程序、参数、执行目录、命令变量、超时、输出上限与退出码策略，缺失或非法时经 <paramref name="fail"/> 报出。</summary>
     internal static CommandExecutionParameters Read(
         IParameterReader values,
         ValidationMessageHandler fail,

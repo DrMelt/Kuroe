@@ -35,12 +35,12 @@ public sealed class TaskRegistry : ITaskChangeSource
     /// <summary>任务域的输入登记。</summary>
     public IInputDelivery? Input { get; }
 
-    /// <summary>任务域是否在可恢复的中断收口时暂停任务，等待宿主恢复。</summary>
+    /// <summary>任务域是否在可恢复的中断收口时暂停任务。</summary>
     internal bool PauseOnRestore { get; }
 
     private readonly Dictionary<string, WorkTask> _tasks = [];
 
-    /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
+    /// <summary>一条值得单独提示的执行事件。</summary>
     public event Action<ExecutionNotice>? Notified;
 
     /// <summary>任务状态已变，存档协调与观察方据此读取新状态。</summary>
@@ -171,7 +171,7 @@ public sealed class TaskRegistry : ITaskChangeSource
         return [.. all.Where(TryDrop).Select(task => task.Id)];
     }
 
-    /// <summary>丢掉一个任务。判定与移除都在该任务 Gate 之内，保持锁序一致。</summary>
+    /// <summary>丢掉一个任务。判定与移除都在该任务 <see cref="WorkTask.Gate"/> 之内，保持锁序一致。</summary>
     private bool TryDrop(WorkTask task)
     {
         lock (task.Gate)

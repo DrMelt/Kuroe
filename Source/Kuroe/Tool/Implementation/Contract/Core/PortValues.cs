@@ -131,7 +131,7 @@ internal static class PortValues
         return new ExecutionOutputValue(port.Name, text, trigger.Value);
     }
 
-    /// <summary>端口是否承载文本内容，Signal 不承载内容。</summary>
+    /// <summary>端口是否承载文本内容，信号端口不承载内容。</summary>
     private static bool CarriesText(ExecutionOutputPort port) => port.Kind != ExecutionPortKind.Signal;
 
     /// <summary>触发对象允许的字段清单。</summary>

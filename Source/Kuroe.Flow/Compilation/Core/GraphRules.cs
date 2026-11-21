@@ -7,6 +7,8 @@ using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.FlowDescription.Definition.Shared.Validation;
 using Kuroe.Kernel.Tasks.Shared;
 
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
+
 namespace Kuroe.Flow.Compilation;
 
 /// <summary>展平后的图规则：环、可达性、静态来源、输出与容器绑定。执行直接按边推进。</summary>
@@ -65,7 +67,7 @@ internal static class GraphRules
         }
     }
 
-    /// <summary>容器传入端口的绑定：静态输入来自 Bindings，动态输入来自 From；来源必须在容器外部，端口存在，类型一致。
+    /// <summary>容器传入端口的绑定：静态输入来自 <see cref="NodeSpec.Bindings"/>，动态输入来自 <see cref="NodeSpec.From"/>；来源必须在容器外部，端口存在，类型一致。
     /// 静态输入沿常量来源解析，动态输入不能绑定常量来源。</summary>
     private static void CheckContainerInputs(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
@@ -113,7 +115,7 @@ internal static class GraphRules
         }
     }
 
-    /// <summary>容器输入绑定的角色：静态输入只接受 Bindings 产生的绑定，动态输入只接受 From 产生的门控或别名绑定。</summary>
+    /// <summary>容器输入绑定的角色：静态输入只接受 <see cref="NodeSpec.Bindings"/> 产生的绑定，动态输入只接受 <see cref="NodeSpec.From"/> 产生的门控或别名绑定。</summary>
     private static bool AllowedRole(bool isStatic, BindingRole role) =>
         isStatic ? role == BindingRole.Static : role is BindingRole.Gate or BindingRole.Alias;
 

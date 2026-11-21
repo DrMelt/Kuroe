@@ -2,7 +2,7 @@ using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.FlowDescription.Definition.Shared.Validation;
 
-/// <summary>节点接线规则：From 与输入绑定的上下文限制。绑定目标能否承接由 <see cref="CheckBindings"/> 按端口模式判定。</summary>
+/// <summary>节点接线规则：<see cref="NodeSpec.From"/> 与输入绑定的上下文限制。绑定目标能否承接由 <see cref="CheckBindings"/> 按端口模式判定。</summary>
 public static partial class NodeSpecRules
 {
     /// <summary>按作用域检查接线字段。container 为真时按容器判定，引用条目按被引用定义判定。</summary>

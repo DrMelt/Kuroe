@@ -2,6 +2,8 @@ using ErrorOr;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.Kernel.Tasks.Shared;
 
+using Kuroe.FlowDescription.Definition.Shared.Ports;
+
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 
 /// <summary>宿主开始输入表：按流程名给出开始端口到宿主输入名的绑定。表由宿主维护，不进入流程定义与流程编译。
@@ -13,7 +15,7 @@ public interface IHostStartInputs
     IReadOnlyDictionary<PortName, string> Bindings(FlowName flow);
 
     /// <summary>按流程的开始入口校验表项并给出可用的绑定，表项与开始入口不一致时一次给出全部错误。
-    /// 绑定端口必须已在开始入口声明、不带固定值且承载 Text，带默认值的端口允许绑定。</summary>
+    /// 绑定端口必须已在开始入口声明、不带固定值且承载 <see cref="PortTypes.Text"/>，带默认值的端口允许绑定。</summary>
     /// <param name="flow">要绑定宿主输入的流程。</param>
     ErrorOr<IReadOnlyDictionary<PortName, string>> Resolve(FlowDefinition flow);
 }

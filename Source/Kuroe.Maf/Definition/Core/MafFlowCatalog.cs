@@ -3,7 +3,7 @@ using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Maf.Definition;
 
-/// <summary>MAF 流程定义的来源。宿主持有可供提交的 MAF 流程。</summary>
+/// <summary>MAF 流程定义的来源。</summary>
 public interface IMafFlowSource
 {
     /// <summary>全部 MAF 流程定义。</summary>

@@ -10,7 +10,7 @@ using Kuroe.Flow.Library.Files;
 
 namespace Kuroe.Flow.Library;
 
-/// <summary>运行期的流程模板集合。流程描述是授权来源，编译结果是运行期来源，落盘交给 FlowStore。</summary>
+/// <summary>运行期的流程模板集合。流程描述是授权来源，编译结果是运行期来源，落盘交给 <see cref="FlowStore"/>。</summary>
 public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapshotSource, IFlowSnapshotCompiler, IFlowLibrary
 {
     private readonly FlowStore _store;

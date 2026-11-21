@@ -6,7 +6,7 @@ using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Kernel.Execution.Shared.Runtime;
 
-/// <summary>执行单元的控制面：建立、恢复、运行收口、中断、拒绝未收口执行与退出收口。执行状态机只在执行单元内部推进。</summary>
+/// <summary>执行核心的控制面：建立、恢复、运行收口、中断、拒绝未收口执行与退出收口。执行状态机只在执行核心内部推进。</summary>
 public interface IExecutionRuntime
 {
     /// <summary>按执行号建立一个排队中的执行。</summary>

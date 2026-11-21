@@ -17,15 +17,15 @@ using Kuroe.Kernel.Execution.Shared.Usage;
 
 namespace Kuroe.Flow.Control.Runtime;
 
-/// <summary>一次执行。状态机由执行单元承担，这里装配图侧输入并转换执行单元的中性产出与契约。</summary>
+/// <summary>图执行：一次图节点的执行。装配图侧输入并转换中性产出与契约。</summary>
 public sealed class GraphExecution : IGraphExecution
 {
     private readonly IExecution _unit;
 
-    /// <summary>底层中性执行，供中性派发器使用。</summary>
+    /// <summary>底层中性执行。</summary>
     internal IExecution Unit => _unit;
 
-    /// <summary>快照可见的状态或过程变化。</summary>
+    /// <inheritdoc/>
     internal event Action? Changed
     {
         add => _unit.Changed += value;
@@ -71,28 +71,28 @@ public sealed class GraphExecution : IGraphExecution
         return new GraphExecution(input, unit, 0, capabilities);
     }
 
-    /// <summary>执行标识。</summary>
+    /// <inheritdoc/>
     public ExecutionId Id => _unit.Id;
 
     /// <summary>本次执行的输入。</summary>
     public GraphExecutionInput Input { get; }
 
-    /// <summary>本次执行的中性请求。</summary>
+    /// <inheritdoc/>
     public ExecutionRequest Request { get; }
 
     /// <summary>本次执行的装配结果。</summary>
     internal ExecutionInvocation Invocation { get; }
 
-    /// <summary>执行创建时刻。</summary>
+    /// <inheritdoc/>
     public DateTimeOffset CreatedAt => _unit.CreatedAt;
 
     /// <summary>创建时的任务控制代次，用于收口时判断控制动作是否已经发生。</summary>
     internal int ControlVersion { get; }
 
-    /// <summary>当前执行状态。</summary>
+    /// <inheritdoc/>
     public ExecutionState State => _unit.State;
 
-    /// <summary>还在排队或正在执行。</summary>
+    /// <inheritdoc/>
     public bool IsLive => _unit.IsLive;
 
     /// <summary>模型输出的一段流式内容，按到达顺序给出。</summary>
@@ -129,13 +129,13 @@ public sealed class GraphExecution : IGraphExecution
     /// <summary>本次执行从哪次执行恢复，独立执行时为空。</summary>
     internal ExecutionId? ContinuedFrom => _unit.ContinuedFrom;
 
-    /// <summary>本次执行的本轮契约状态。</summary>
+    /// <inheritdoc/>
     internal GraphExecutionContract Contract => ToContract(_unit.Contract);
 
-    /// <summary>本次执行的产出。</summary>
+    /// <inheritdoc/>
     internal ExecutionOutput? Output => _unit.Output;
 
-    /// <summary>当前状态的只读快照。</summary>
+    /// <inheritdoc/>
     public GraphExecutionSnapshot Snapshot()
     {
         ExecutionSnapshot unit = _unit.Snapshot();

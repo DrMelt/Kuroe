@@ -6,7 +6,7 @@ using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Maf.Control;
 
-/// <summary>一个任务的 MAF 流程控制：MAF 运行期决定步骤推进，Kuroe 执行单元承担每次运行。</summary>
+/// <summary>一个任务的 MAF 流程控制：MAF 运行期决定步骤推进，Kuroe 执行核心承担每次运行。</summary>
 internal sealed class MafFlowControl(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
@@ -24,7 +24,7 @@ internal sealed class MafFlowControl(
     private volatile bool _failed;
     private volatile bool _interrupted;
 
-    /// <summary>该任务的推进循环，宿主持有以便收口。</summary>
+    /// <summary>该任务的推进循环。</summary>
     public Task Loop { get; private set; } = Task.CompletedTask;
 
     /// <summary>终止、退出中断或流程走完且推进循环退出后完成。</summary>
@@ -39,7 +39,7 @@ internal sealed class MafFlowControl(
     /// <summary>MAF 流程不保留可恢复的阻塞，中断恢复从入口重新执行。</summary>
     public bool HasRestores => false;
 
-    /// <summary>启动推进循环。要求持有任务 Gate。</summary>
+    /// <summary>启动推进循环。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public void Start()
     {
         lock (task.Gate)
@@ -51,7 +51,7 @@ internal sealed class MafFlowControl(
         }
     }
 
-    /// <summary>从存档恢复流程，任务保持暂停，恢复后由宿主决定何时推进。要求持有任务 Gate。</summary>
+    /// <summary>从存档恢复流程，任务保持暂停。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public void Restore(FlowSeed seed)
     {
         lock (task.Gate)
@@ -65,7 +65,7 @@ internal sealed class MafFlowControl(
         }
     }
 
-    /// <summary>暂停推进并中断在跑执行。要求持有任务 Gate。</summary>
+    /// <summary>暂停推进并中断在跑执行。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public void Pause()
     {
         CancellationTokenSource? cancel;
@@ -79,7 +79,7 @@ internal sealed class MafFlowControl(
         InterruptLive("任务已暂停。");
     }
 
-    /// <summary>恢复推进循环；MAF 流程没有可恢复的阻塞，continueRestores 不参与。要求持有任务 Gate。</summary>
+    /// <summary>恢复推进循环；MAF 流程没有可恢复的阻塞，<paramref name="continueRestores"/> 不参与。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public void Resume(bool continueRestores = true)
     {
         lock (task.Gate)
@@ -89,7 +89,7 @@ internal sealed class MafFlowControl(
         }
     }
 
-    /// <summary>终止任务并结束推进循环。要求持有任务 Gate。</summary>
+    /// <summary>终止任务并结束推进循环。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public ErrorOr<Success> Terminate()
     {
         CancellationTokenSource? cancel;
@@ -107,7 +107,7 @@ internal sealed class MafFlowControl(
         return result;
     }
 
-    /// <summary>放弃检查点与当前运行，从入口重新执行流程，返回发出的重新执行目标数。要求持有任务 Gate。</summary>
+    /// <summary>放弃检查点与当前运行，从入口重新执行流程，返回发出的重新执行目标数。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public int Rerun()
     {
         CancellationTokenSource? cancel;
@@ -178,7 +178,7 @@ internal sealed class MafFlowControl(
         }
     }
 
-    /// <summary>在没有循环推进时启动一次推进循环。要求持有任务 Gate。</summary>
+    /// <summary>在没有循环推进时启动一次推进循环。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     private void Launch()
     {
         if (_running || _stopped || _failed || _completed || _paused)

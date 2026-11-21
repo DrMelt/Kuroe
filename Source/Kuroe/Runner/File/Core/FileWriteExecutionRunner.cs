@@ -5,7 +5,7 @@ using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Runner.File;
 
-/// <summary>文件写入节点的一次执行：把唯一的 Text 输入内容写入文件，写入内容作为产出。</summary>
+/// <summary>文件写入节点的一次执行：把唯一的文本输入内容写入文件，写入内容作为产出。</summary>
 internal sealed class FileWriteExecutionRunner(
     FileExecutionParameters parameters,
     IWorkspaceFiles files,

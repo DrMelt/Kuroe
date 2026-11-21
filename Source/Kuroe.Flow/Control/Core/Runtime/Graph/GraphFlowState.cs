@@ -53,7 +53,7 @@ internal sealed class GraphFlowState(
     /// <summary>图运行期是否已接到任务。</summary>
     public bool Attached => _runtime is not null;
 
-    /// <summary>记下一个执行在图侧的上下文。要求持有任务 Gate。</summary>
+    /// <summary>记下一个执行在图侧的上下文。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     internal void Bind(ExecutionId id, GraphExecutionInput input, int controlVersion) =>
         _executions[id] = new GraphExecutionContext(input, controlVersion);
 

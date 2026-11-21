@@ -119,7 +119,7 @@ static class FlowFileWriter
         ];
     }
 
-    /// <summary>写一条 From 来源：正向条件写引用文本，翻转条件写带 Ref 与 Condition 的对象。</summary>
+    /// <summary>写一条 <see cref="NodeDto.From"/> 来源：正向条件写引用文本，翻转条件写带 Ref 与 Condition 的对象。</summary>
     private static JsonElement WriteFromSource(FromLinkDescription link) =>
         link.Condition switch
         {

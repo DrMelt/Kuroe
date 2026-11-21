@@ -4,7 +4,7 @@ using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Kernel.Tasks.Runtime.Persistence;
 
-/// <summary>捕获任务的完整存档。要求持有任务 Gate。</summary>
+/// <summary>捕获任务的完整存档。要求持有 <see cref="WorkTask.Gate"/>。</summary>
 public sealed class TaskRecordCapture(WorkTask task) : ITaskRecordCapture
 {
     /// <inheritdoc/>
@@ -22,7 +22,7 @@ public sealed class TaskRecordCapture(WorkTask task) : ITaskRecordCapture
     }
 }
 
-/// <summary>捕获任务的完整存档。要求持有任务 Gate。</summary>
+/// <summary>捕获任务的完整存档。要求持有 <see cref="WorkTask.Gate"/>。</summary>
 public interface ITaskRecordCapture
 {
     /// <summary>捕获任务存档。</summary>

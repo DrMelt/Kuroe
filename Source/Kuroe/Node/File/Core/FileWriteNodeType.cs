@@ -7,7 +7,7 @@ using Kuroe.Runner.File;
 
 namespace Kuroe.Node.File;
 
-/// <summary>文件写入节点类型：按路径变量解析路径，把唯一的内容 Text 输入写入文件，写入内容作为产出。</summary>
+/// <summary>文件写入节点类型：按路径变量解析路径，把唯一的内容 <see cref="PortTypes.Text"/> 输入写入文件，写入内容作为产出。</summary>
 public sealed class FileWriteNodeType(FileExecutionParameters? parameters)
     : INodeType, INodeTypeValidation
 {
@@ -20,7 +20,7 @@ public sealed class FileWriteNodeType(FileExecutionParameters? parameters)
     /// <summary>文件写入节点类型的静态形状。</summary>
     public NodeTypeShape Shape => FileWriteNodeTypes.Shape;
 
-    /// <summary>文件写入节点的类型规则：一个内容 Text 输入加若干路径变量 Text 输入，输出可选，不接受执行方式。</summary>
+    /// <summary>文件写入节点的类型规则：一个内容 <see cref="PortTypes.Text"/> 输入加若干路径变量 <see cref="PortTypes.Text"/> 输入，输出可选，不接受执行方式。</summary>
     public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         void Reject(bool condition, string message)

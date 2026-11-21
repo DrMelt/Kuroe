@@ -25,7 +25,7 @@ sealed class CatalogStore(string file, string baseDirectory)
     /// <summary>把内容写入目录文件。</summary>
     public ErrorOr<Success> Save(CatalogContents contents) => Write(_file, contents);
 
-    /// <summary>从指定文件读取内容，供导入使用。</summary>
+    /// <summary>读取指定文件的内容。</summary>
     public static ErrorOr<CatalogContents> Read(string path)
     {
         try
@@ -38,7 +38,7 @@ sealed class CatalogStore(string file, string baseDirectory)
         }
     }
 
-    /// <summary>把内容写入指定文件，供导出使用。</summary>
+    /// <summary>把内容写入指定文件。</summary>
     public static ErrorOr<Success> Write(string path, CatalogContents contents)
     {
         try

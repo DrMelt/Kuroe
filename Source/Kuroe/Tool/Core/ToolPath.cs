@@ -7,11 +7,11 @@ public readonly record struct ToolPath(string Value)
     /// <summary>路径的文本形式。</summary>
     public override string ToString() => Value;
 
-    /// <summary>路径末段的函数名，供宿主展示。</summary>
+    /// <summary>路径末段的函数名。</summary>
     public ToolName Name => new(Value[(Value.LastIndexOf('/') + 1)..]);
 
     /// <summary>模型调用名：路径的扁平形式，层级分隔符换成下划线。模型接口只接受字母、数字、下划线与连字符，
-    /// 路径段的字符集与之相同。两条路径的调用名可能相同，装配处按它查重。</summary>
+    /// 路径段的字符集与之相同。两条路径的调用名可能相同，装配处按调用名查重。</summary>
     public ToolName CallName => new(Value.Replace('/', '_'));
 
     /// <summary>本条目是否放行给定路径：路径落在本条目之下或与之相等。空条目不匹配任何路径。</summary>

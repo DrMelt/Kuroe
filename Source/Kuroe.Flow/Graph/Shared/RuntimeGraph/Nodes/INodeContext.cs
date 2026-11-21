@@ -7,7 +7,7 @@ using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 
-/// <summary>引擎给节点实现的机制入口：来源状态、来源内容、输入侧方案与运行期对象。读写要求持有任务 Gate。</summary>
+/// <summary>引擎给节点实现的机制入口：来源状态、来源内容、输入侧方案与运行期对象。读写要求持有任务串行锁。</summary>
 public interface INodeContext : IReadinessSources
 {
     /// <summary>所属任务的标识，节点用它登记外部输入。</summary>

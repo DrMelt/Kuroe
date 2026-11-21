@@ -10,7 +10,7 @@ namespace Kuroe.Assistant.Dialogue;
 /// 回答的交付由等待型节点的宿主功能承担，这里只管一轮的挂载、观察与收口。</summary>
 internal sealed class DialogueRound(TaskRegistry registry, PendingService pendings)
 {
-    /// <summary>回答待输入的节点并等本轮产出执行收口，只报成败。过程事件经 observer 送出。</summary>
+    /// <summary>回答待输入的节点并等本轮产出执行收口，只报成败。过程事件经 <paramref name="observer"/> 送出。</summary>
     internal async Task<ErrorOr<Success>> AskAsync(
         TaskId id,
         string input,

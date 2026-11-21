@@ -13,7 +13,7 @@ namespace Kuroe.FlowDescription.Compilation.NodeTypes;
 /// 字段属于哪个类型只由类型描述说明，本层不按字段名做任何判断。</summary>
 static class NodeParameterReader
 {
-    /// <summary>读出参数段。未知字段与形状不符经 fail 报出，有错误时返回空。</summary>
+    /// <summary>读出参数段。未知字段与形状不符经 <paramref name="fail"/> 报出，有错误时返回空。</summary>
     public static INodeType? Read(
         INodeTypeDescription description,
         NodeParameters parameters,
@@ -46,7 +46,7 @@ static class NodeParameterReader
         return type;
     }
 
-    /// <summary>一轮取值的读侧：按字段名取，形状不符经 fail 报出，缺失取安全默认。</summary>
+    /// <summary>一轮取值的读侧：按字段名取，形状不符经校验错误出口报出，缺失取安全默认。</summary>
     private sealed class Reader(IReadOnlyDictionary<string, FlowValue> values, ValidationMessageHandler fail) : IParameterReader
     {
         public string? Text(string name)

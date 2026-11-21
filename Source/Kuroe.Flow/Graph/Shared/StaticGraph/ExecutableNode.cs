@@ -21,7 +21,7 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>执行节点的输入端口表：名字、类型、默认值与静态标记，类型决定来源产出如何进入本节点。</summary>
     public override IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
-    /// <summary>执行节点的输出端口表：名字、类型与来源。常量输出由固定值、静态输入来源或 Once 节点唯一一次执行提供。</summary>
+    /// <summary>执行节点的输出端口表：名字、类型与来源。常量输出由固定值、静态输入来源或 <see cref="NodeEmission.Once"/> 节点唯一一次执行提供。</summary>
     public override IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>输出端口到内部来源端口的绑定：常量输出来源是本节点的静态输入。未声明来源时为空。</summary>
@@ -35,7 +35,7 @@ public sealed record ExecutableNode : GraphNode
 
 
 
-    /// <summary>需经契约工具交回的输出端口：动态 Text 与 Signal 端口，以及由执行产出的常量端口。</summary>
+    /// <summary>需经契约工具交回的输出端口：动态 <see cref="PortTypes.Text"/> 与 <see cref="PortTypes.Signal"/> 端口，以及由执行产出的常量端口。</summary>
     public IReadOnlyList<Port> RequiredPorts => PortRules.RequiringSubmission(Outputs, Spec.Emission);
 
     /// <summary>执行可交回的输出端口：全部动态端口与由执行产出的常量端口。</summary>

@@ -12,14 +12,14 @@ public static class LlmNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Llm");
 
-    /// <summary>类型名的文本形式，供不引用流程模型的展示使用。</summary>
+    /// <summary>类型名的文本形式。</summary>
     public static string TypeName { get; } = Name.Value;
 
     /// <summary>模型名静态输入端口，由宿主在任务启动时给出。</summary>
     public static PortName ModelPort { get; } = new("MODEL_NAME");
 
     /// <summary>Llm 类型的静态形状：派发执行，输入与输出端口取文本、上下文与信号，
-    /// Text 与 Signal 可配置触发，触发交回时携带是否触发下游的布尔值。模型端口由流程声明，类型规则要求它是常量配置。</summary>
+    /// <see cref="PortTypes.Text"/> 与 <see cref="PortTypes.Signal"/> 可配置触发，触发交回时携带是否触发下游的布尔值。模型端口由流程声明，类型规则要求它是常量配置。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,

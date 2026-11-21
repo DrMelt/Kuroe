@@ -64,7 +64,7 @@ sealed class UserSettingsStore
     /// <summary>读取路径上的标量文本，路径不存在或指向对象时返回 null。</summary>
     public string? TryGetValue(string path) => Walk(_root, path) is JsonValue value ? value.ToString() : null;
 
-    /// <summary>节点树副本，修改后交给 Commit。</summary>
+    /// <summary>节点树副本，修改后交给 <see cref="Commit"/>。</summary>
     public JsonObject Snapshot() => (JsonObject)_root.DeepClone();
 
     /// <summary>用规范化后的树替换当前树，不落盘。</summary>

@@ -31,7 +31,7 @@ public sealed class DialogueHost : IDisposable, IAsyncDisposable
         _restore = restore;
     }
 
-    /// <summary>一轮后台对话结束触发，宿主据此给出完成提示。</summary>
+    /// <summary>一轮后台对话结束触发。</summary>
     public event Action<DialogueTurnNotice>? TurnCompleted
     {
         add => _turns.Completed += value;

@@ -60,7 +60,7 @@ public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
         _ => null,
     };
 
-    /// <summary>产出替换了给定参数值的实参，未给出的参数保持原值。命令展开用它把路径参数换成解析后的绝对路径。</summary>
+    /// <summary>产出替换了给定参数值的实参，未给出的参数保持原值。命令展开按结果把路径参数换成解析后的绝对路径。</summary>
     public ToolArguments Replace(IReadOnlyDictionary<ToolName, object?> replacements)
     {
         if (replacements.Count == 0)

@@ -12,7 +12,7 @@ public sealed class CommandTool : ITool
     {
     }
 
-    /// <summary>用执行绑定的根目录建立载体，供测试与无变量工具使用。</summary>
+    /// <summary>用执行绑定的根目录建立载体。</summary>
     public CommandTool(CommandToolDefinition definition, string baseDirectory)
         : this(definition, baseDirectory, new ProcessRunner())
     {
@@ -31,7 +31,7 @@ public sealed class CommandTool : ITool
         Functions = [definition.Definition.Bind(runner.Execute, runner.Paths)];
     }
 
-    /// <summary>用执行绑定的根目录建立载体，供测试与无变量工具使用。</summary>
+    /// <summary>用执行绑定的根目录建立载体。</summary>
     public CommandTool(
         CommandToolDefinition definition,
         string baseDirectory,

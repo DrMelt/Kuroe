@@ -10,7 +10,7 @@ public static class ApprovalNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Approval");
 
-    /// <summary>审批节点类型的静态形状：对外端口由输入端口派生，Signal 只作驱动，端口只转发停驻时的内容。</summary>
+    /// <summary>审批节点类型的静态形状：对外端口由输入端口派生，<see cref="PortTypes.Signal"/> 只作驱动，端口只转发停驻时的内容。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,

@@ -65,13 +65,13 @@ public sealed class KuroeComposition
     public IExecutionRunnerFactory LlmRunner =>
         _llmRunner ?? throw new InvalidOperationException("核心装配尚未建立 Llm 执行运行器工厂。");
 
-    /// <summary>已装载的配置命令工具，供状态查询工具呈现。</summary>
+    /// <summary>已装载的配置命令工具。</summary>
     public IReadOnlyList<ConfiguredTool> ConfiguredTools { get; }
 
     /// <summary>记下 Llm 执行运行器工厂，只在核心装配内调用。</summary>
     internal void AttachLlmRunner(IExecutionRunnerFactory runner) => _llmRunner = runner;
 
-    /// <summary>已并入的工具定义，供流程节点类型在装配期校验。</summary>
+    /// <summary>已并入的工具定义。</summary>
     public IReadOnlyList<ToolDefinition> ToolDefinitions => _definitions;
 
     /// <summary>把工具源并入工具集并注册，按函数路径与模型调用名校验重复。失败时不注册任何源。</summary>
@@ -93,7 +93,7 @@ public sealed class KuroeComposition
         return Result.Success;
     }
 
-    /// <summary>并入工具定义并按函数路径与模型调用名校验重复。供由容器延迟创建的工具源预先占位。</summary>
+    /// <summary>并入工具定义并按函数路径与模型调用名校验重复。</summary>
     public ErrorOr<Success> AddToolDefinitions(IEnumerable<ToolDefinition> definitions)
     {
         List<ToolDefinition> incoming = [.. definitions];

@@ -13,7 +13,7 @@ using Kuroe.Kernel.Execution.Shared.Usage;
 
 namespace Kuroe.Kernel.Execution.Tests;
 
-/// <summary>执行单元的状态机：启动、契约产出、中断与存档恢复。</summary>
+/// <summary>执行核心的状态机：启动、契约产出、中断与存档恢复。</summary>
 public sealed class ExecutionTests
 {
     [Fact(DisplayName = "标记运行只通知一次并记录开始")]

@@ -7,7 +7,7 @@ namespace Kuroe.Node.File;
 /// <summary>文件节点参数段的读取：Path 必填，路径变量映射与解析边界由运行期使用。</summary>
 internal static class FileTargetReader
 {
-    /// <summary>读出文件路径、路径变量与字符上限，路径缺失或上限为负数时经 fail 报出。</summary>
+    /// <summary>读出文件路径、路径变量与字符上限，路径缺失或上限为负数时经 <paramref name="fail"/> 报出。</summary>
     internal static FileExecutionParameters Read(
         IParameterReader values,
         ValidationMessageHandler fail,

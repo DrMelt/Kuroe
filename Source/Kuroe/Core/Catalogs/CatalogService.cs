@@ -37,7 +37,7 @@ public sealed class CatalogService : IModelAccess
         return loaded.IsError ? loaded.ErrorsOrEmptyList : new CatalogService(store, loaded.Value);
     }
 
-    /// <summary>目录当前快照，供列出与展示。</summary>
+    /// <summary>目录当前快照。</summary>
     public CatalogContents Snapshot()
     {
         lock (_gate)
@@ -70,7 +70,7 @@ public sealed class CatalogService : IModelAccess
         }
     }
 
-    /// <summary>模型可接入时成功，否则给出接入信息解析的错误，供不持有客户端的调用方判可用性。</summary>
+    /// <summary>模型可接入时成功，否则给出接入信息解析的错误。</summary>
     internal ErrorOr<Success> Check(ModelName modelName)
     {
         ErrorOr<ModelConnection> connection = Connect(modelName);

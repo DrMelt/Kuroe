@@ -1,6 +1,6 @@
 namespace Kuroe.Tool;
 
-/// <summary>从工具定义建立的契约目录，供流程编译校验。</summary>
+/// <summary>从工具定义建立的契约目录。</summary>
 /// <remarks>按定义声明序建立契约。</remarks>
 public sealed class ToolContractCatalog(IEnumerable<ToolDefinition> definitions) : IToolContractCatalog
 {

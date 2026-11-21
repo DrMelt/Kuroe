@@ -1,9 +1,11 @@
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Kernel.Tasks.Shared;
 
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
+
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 
-/// <summary>运行期常量的取值来源：由任务运行状态给出 Once 节点唯一一次执行的产出文本，未产出时为空。</summary>
+/// <summary>运行期常量的取值来源：由任务运行状态给出 <see cref="NodeEmission.Once"/> 节点唯一一次执行的产出文本，未产出时为空。</summary>
 public interface IRuntimeConstantSource
 {
     /// <summary>节点某常量输出端口是否已产出。非文本常量没有文本，仍以该判定表示就绪。</summary>

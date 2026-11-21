@@ -4,15 +4,16 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.Flow.Graph.Shared.StaticGraph;
 
+using Kuroe.FlowDescription.Compilation.Validation;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
 namespace Kuroe.Flow.Compilation;
 
 /// <summary>把流程树编译成执行视图：流程开始端口是独立来源，节点以从根到本节点的路径标识，容器登记直接子节点，
-/// From 启动组编译为带取值域与输入类型的绑定：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
+/// <see cref="NodeSpec.From"/> 启动组编译为带取值域与输入类型的绑定：输入类型非 <see cref="PortTypes.Text"/> 的按整份消费，其余按来源与目标模式推导。
 /// 引用按作用域链解析成路径：从引用者所在容器逐层向外，先看该层的直接子节点，再看该层子树，定义内引用因此可以指向子树的成员。
-/// 要求已通过 FlowRules 校验，输入绑定引用与节点标签都可解析。传入的树必须是展开后的节点树。</summary>
+/// 要求已通过 <see cref="FlowRules"/> 校验，输入绑定引用与节点标签都可解析。传入的树必须是展开后的节点树。</summary>
 internal sealed class NodeGraphCompiler
 {
     /// <summary>报错作用域，引用解析与结构问题按它给出流程级错误。</summary>
@@ -104,7 +105,7 @@ internal sealed class NodeGraphCompiler
         _ => throw new InvalidOperationException($"节点 {pending.Path} 既没有子节点也没有执行配置。"),
     };
 
-    /// <summary>把 From 启动组、输入绑定与输出端口来源解析成路径，落定全部接线。</summary>
+    /// <summary>把 <see cref="NodeSpec.From"/> 启动组、输入绑定与输出端口来源解析成路径，落定全部接线。</summary>
     private void LinkWiring()
     {
         foreach (Pending pending in Flatten(_roots))
@@ -123,7 +124,7 @@ internal sealed class NodeGraphCompiler
         }
     }
 
-    /// <summary>执行节点的 From 启动组编译成绑定：组序号按组序，来源与端口按作用域解析，输入类型取自目标输入端口声明。</summary>
+    /// <summary>执行节点的 <see cref="NodeSpec.From"/> 启动组编译成绑定：组序号按组序，来源与端口按作用域解析，输入类型取自目标输入端口声明。</summary>
     private void LinkExecutable(Pending pending)
     {
         int groupIndex = 0;
@@ -150,7 +151,7 @@ internal sealed class NodeGraphCompiler
         }
     }
 
-    /// <summary>容器的 From 组编译成传入端口绑定：组内目标必须是动态输入，触发端口只门控发布，其余端口作为成员取值来源。
+    /// <summary>容器的 <see cref="NodeSpec.From"/> 组编译成传入端口绑定：组内目标必须是动态输入，触发端口只门控发布，其余端口作为成员取值来源。
     /// 绑定挂在容器自身，不进入驱动绑定表，来源版本不直接驱动发布。</summary>
     private void LinkContainerFrom(Pending pending)
     {
@@ -172,7 +173,7 @@ internal sealed class NodeGraphCompiler
         }
     }
 
-    /// <summary>解析一条 From 连接：来源按作用域链解析，目标输入取自生效输入且必须是动态输入。
+    /// <summary>解析一条 <see cref="NodeSpec.From"/> 连接：来源按作用域链解析，目标输入取自生效输入且必须是动态输入。
     /// 容器的连接还要求来源在容器外部。</summary>
     private bool TryResolveFrom(
         Pending pending,

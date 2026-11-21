@@ -4,11 +4,11 @@ using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.FlowDescription.Definition.Shared.Validation;
 
-/// <summary>输入绑定规则：绑定目标必须是已声明的静态输入端口。动态输入一律经 From，容器只有一组 From。
+/// <summary>输入绑定规则：绑定目标必须是已声明的静态输入端口。动态输入一律经 <see cref="NodeSpec.From"/>，容器只有一组 <see cref="NodeSpec.From"/>。
 /// 覆盖要求按节点形态判定：执行节点静态输入要有绑定或默认值，容器静态输入要有绑定。</summary>
 public static partial class NodeSpecRules
 {
-    /// <summary>检查绑定目标，逐条经 fail 报出。引用节点在库校验阶段尚未展开，目标由展开后判定。</summary>
+    /// <summary>检查绑定目标，逐条经 <paramref name="fail"/> 报出。引用节点在库校验阶段尚未展开，目标由展开后判定。</summary>
     public static void CheckBindings(this NodeSpec node, ValidationMessageHandler fail)
     {
         if (node.Bindings is not { Count: > 0 } bindings)

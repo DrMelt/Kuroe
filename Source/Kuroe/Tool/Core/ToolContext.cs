@@ -52,7 +52,7 @@ public sealed record ToolBinding(
     IReadOnlyDictionary<string, ExecutionPortName> PortsByName,
     string WorkspaceDirectory)
 {
-    /// <summary>无变量映射的绑定，root 变量指向给定目录。用于测试与不经过流程装配的载体。</summary>
+    /// <summary>无变量映射的绑定，路径变量 <see cref="PathVariables.RootName"/> 指向给定目录。</summary>
     public static ToolBinding Root(string workspaceDirectory)
     {
         ExecutionPortName port = new(PathVariables.RootName);
@@ -68,7 +68,7 @@ public sealed record ToolBinding(
         PortsByName.TryGetValue(name, out ExecutionPortName port) ? Ports.Text(port) : null;
 }
 
-/// <summary>固定返回一个端口文本的访问，用于不经过流程装配的载体。</summary>
+/// <summary>固定返回一个端口文本的访问。</summary>
 public sealed class FixedPortAccess(ExecutionPortName fixedPort, string text) : IExecutionPortAccess
 {
     /// <inheritdoc/>

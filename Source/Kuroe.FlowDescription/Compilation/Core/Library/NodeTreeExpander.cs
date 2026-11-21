@@ -6,7 +6,7 @@ using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
 namespace Kuroe.FlowDescription.Compilation.Library;
-/// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的静态绑定与 From 在所在作用域建立绑定域，成员的 From 与 Bindings 引用都在该绑定域里取 @端口。
+/// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的静态绑定与 <see cref="NodeSpec.From"/> 在所在作用域建立绑定域，成员的 <see cref="NodeSpec.From"/> 与 <see cref="NodeSpec.Bindings"/> 引用都在该绑定域里取 @端口。
 /// 节点按作者写下的原文保留，定义条目沿用节点名，引用条目用标签，层级由树给出；引用由编译期按作用域链解析。</summary>
 internal static class NodeTreeExpander
 {
@@ -188,7 +188,7 @@ internal static class NodeTreeExpander
     private static NodeSpec? Find(NodeLibrary library, NodeName name) =>
         library.TryFind(name, out NodeSpec? definition) ? definition : null;
 
-    /// <summary>构造容器实例的子作用域：静态绑定与 From 连接都进入绑定域。
+    /// <summary>构造容器实例的子作用域：静态绑定与 <see cref="NodeSpec.From"/> 连接都进入绑定域。
     /// parent 沿当前环境链挂上，便于 @更外层端口 逐层透传。</summary>
     private static Env BuildContainerEnv(Env? parent, NodeSpec node)
     {
@@ -224,7 +224,7 @@ internal static class NodeTreeExpander
                     : ResolveRef(pair.Value, env, scope, errors))
             : null;
 
-    /// <summary>逐个解析上游 From 组：来源标签沿实例映射链与端口绑定链解析，输入名、触发条件与类型保留。</summary>
+    /// <summary>逐个解析上游 <see cref="NodeSpec.From"/> 组：来源标签沿实例映射链与端口绑定链解析，输入名、触发条件与类型保留。</summary>
     private static IReadOnlyList<FromGroup> ResolveAll(
         IReadOnlyList<FromGroup> from,
         Env? env,

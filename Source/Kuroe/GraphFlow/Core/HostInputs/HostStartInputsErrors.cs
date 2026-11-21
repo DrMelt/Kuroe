@@ -1,6 +1,8 @@
 using ErrorOr;
 using Kuroe.Shared;
 
+using Kuroe.FlowDescription.Definition.Shared.Ports;
+
 namespace Kuroe.GraphFlow.HostInputs;
 
 /// <summary>宿主开始输入表的错误构造。表与流程的开始入口不一致时在任务提交阶段报出。</summary>
@@ -14,7 +16,7 @@ static class HostStartInputsErrors
     public static Error ConstantPort(string flow, string port) =>
         Error.Validation(ErrorCodes.TaskStartInput, $"流程 {flow} 的开始端口 {port} 带固定值，不能由宿主给值。");
 
-    /// <summary>非 Text 开始端口不承载宿主给出的文本。</summary>
+    /// <summary>非 <see cref="PortTypes.Text"/> 开始端口不承载宿主给出的文本。</summary>
     public static Error NonTextPort(string flow, string port) =>
         Error.Validation(ErrorCodes.TaskStartInput, $"流程 {flow} 的开始端口 {port} 不是 Text 端口，不能由宿主给值。");
 

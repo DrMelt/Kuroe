@@ -12,7 +12,7 @@ internal static class CommandVariableExpansion
     /// <summary>命令参数展开错误的错误码。</summary>
     private const string ArgumentErrorCode = "Command.Argument";
 
-    /// <summary>从映射端口读出变量原文，root 变量解析为工作区内的相对路径基准。</summary>
+    /// <summary>从映射端口读出变量原文，路径变量 <see cref="PathVariables.RootName"/> 解析为工作区内的相对路径基准。</summary>
     internal static ErrorOr<CommandVariableValues> Resolve(
         IReadOnlyDictionary<string, string> variables,
         Func<string, string?> portText,
@@ -40,7 +40,7 @@ internal static class CommandVariableExpansion
         return new CommandVariableValues(values, baseDirectory);
     }
 
-    /// <summary>展开命令的执行目录：root 替换为工作区内的绝对基准，其他变量保持原文，结果必须落在工作区根内。</summary>
+    /// <summary>展开命令的执行目录：<see cref="PathVariables.RootName"/> 替换为工作区内的绝对基准，其他变量保持原文，结果必须落在工作区根内。</summary>
     internal static ErrorOr<string> ExpandDirectory(
         string template,
         CommandVariableValues values,
@@ -84,7 +84,7 @@ internal static class CommandVariableExpansion
 
 /// <summary>命令变量的取值：变量名到原文的映射与相对路径的解析基准。</summary>
 /// <param name="Variables">变量名到原文的映射。</param>
-/// <param name="BaseDirectory">相对路径的解析基准，没有 root 变量时是工作区根。</param>
+/// <param name="BaseDirectory">相对路径的解析基准，没有 <see cref="PathVariables.RootName"/> 时是工作区根。</param>
 internal sealed record CommandVariableValues(
     IReadOnlyDictionary<string, string> Variables,
     string BaseDirectory);

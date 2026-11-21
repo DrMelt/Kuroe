@@ -14,7 +14,7 @@ public static class FileReadNodeTypes
     /// <summary>未声明 MaxChars 时的读取上限。</summary>
     public const int DefaultMaxChars = 8000;
 
-    /// <summary>文件读取节点的静态形状：路径变量给出解析基准，Signal 输入只作触发，输出承载读取内容。</summary>
+    /// <summary>文件读取节点的静态形状：路径变量给出解析基准，<see cref="PortTypes.Signal"/> 输入只作触发，输出承载读取内容。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,

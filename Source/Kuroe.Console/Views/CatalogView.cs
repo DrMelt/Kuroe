@@ -4,7 +4,7 @@ using Spectre.Console;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>目录两张表的终端渲染，供目录菜单的列表共用。</summary>
+/// <summary>目录两张表的终端渲染。</summary>
 internal sealed class CatalogView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;

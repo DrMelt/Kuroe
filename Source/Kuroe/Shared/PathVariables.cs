@@ -18,7 +18,7 @@ public static class PathVariables
         Func<string, bool?> portIsText) =>
         VariableMappings.Validate(variables, placeholders, portIsText, "路径", "Path");
 
-    /// <summary>从映射端口读出变量值并解析为工作区内的绝对路径，root 变量给出相对路径基准。
+    /// <summary>从映射端口读出变量值并解析为工作区内的绝对路径，<see cref="RootName"/> 给出相对路径基准。
     /// 端口未连接、取值为空或越出工作区时给出错误。</summary>
     public static ErrorOr<PathResolution> Resolve(
         IReadOnlyDictionary<string, string> variables,
@@ -67,7 +67,7 @@ public static class PathVariables
     }
 }
 
-/// <summary>解析后的路径变量：变量值按工作区内的绝对路径给出，root 变量作为相对路径基准。</summary>
+/// <summary>解析后的路径变量：变量值按工作区内的绝对路径给出，<see cref="PathVariables.RootName"/> 作为相对路径基准。</summary>
 /// <param name="Variables">变量名到绝对路径的映射。</param>
-/// <param name="BaseDirectory">相对路径的解析基准，没有 root 变量时是工作区根。</param>
+/// <param name="BaseDirectory">相对路径的解析基准，没有 <see cref="PathVariables.RootName"/> 时是工作区根。</param>
 public sealed record PathResolution(IReadOnlyDictionary<string, string> Variables, string BaseDirectory);

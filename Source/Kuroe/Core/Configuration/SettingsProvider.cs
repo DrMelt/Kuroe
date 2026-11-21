@@ -76,7 +76,7 @@ public sealed class SettingsProvider : ISettingsView
     public ErrorOr<SettingsEffect> Clear(string path) =>
         WithResolved(path, (root, resolved) => UserSettingsStore.RemoveValue(root, resolved));
 
-    /// <summary>各配置节各设置项的生效值与来源，供宿主直接列出。</summary>
+    /// <summary>各配置节各设置项的生效值与来源。</summary>
     public IReadOnlyList<SettingSection> Sections => Current.Sections(_store);
 
     /// <summary>读取用户层中该路径的设置，未设置时返回 null。路径须是 <see cref="ResolvePath"/> 给出的规范路径。</summary>

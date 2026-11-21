@@ -35,10 +35,10 @@ public sealed class ToolCollection
         Names = [.. Definitions.Select(definition => definition.Path.Name)];
     }
 
-    /// <summary>全部函数的定义，按载体与声明顺序排列，供宿主展示工具面。</summary>
+    /// <summary>全部函数的定义，按载体与声明顺序排列。</summary>
     public IReadOnlyList<ToolDefinition> Definitions { get; }
 
-    /// <summary>函数名，取工具路径的末段，供宿主展示可用性。</summary>
+    /// <summary>函数名，取工具路径的末段。</summary>
     public IReadOnlyList<ToolName> Names { get; }
 
     /// <summary>模型可调用的工具函数，请求选项与工具执行共用这一份。没有声明时为空。

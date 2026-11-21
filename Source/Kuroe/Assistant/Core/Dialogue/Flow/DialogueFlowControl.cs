@@ -148,7 +148,7 @@ internal sealed class DialogueFlowControl(
         _ = Task.Run(ContinueWithInput, CancellationToken.None);
     }
 
-    /// <summary>按已收到的输入建立回话执行。交付在任务 Gate 内完成，这里在 Gate 释放后进入。</summary>
+    /// <summary>按已收到的输入建立回话执行。交付在任务 <see cref="ITaskFlowContext.Gate"/> 内完成，这里在 <see cref="ITaskFlowContext.Gate"/> 释放后进入。</summary>
     private void ContinueWithInput()
     {
         IExecution? execution;

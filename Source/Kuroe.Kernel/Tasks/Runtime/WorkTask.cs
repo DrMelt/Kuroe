@@ -10,8 +10,7 @@ using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Kernel.Tasks.Runtime;
 
-/// <summary>任务 = 一条长期执行线程：控制状态、开始输入、过程记录与全部执行。
-/// 流程语义由 <see cref="FlowProvider"/> 的端口提供，宿主读 <see cref="Snapshot"/>。</summary>
+/// <summary>任务 = 一条长期执行线程：控制状态、开始输入、过程记录与全部执行。</summary>
 public sealed class WorkTask : ITaskFlowHost
 {
     private readonly List<IExecution> _executions = [];
@@ -124,13 +123,13 @@ public sealed class WorkTask : ITaskFlowHost
     /// <summary>任务的流程控制工厂。</summary>
     IFlowControlFactory ITaskFlowHost.Controls => _provider.Controls;
 
-    /// <summary>任务启动后的流程控制实例，命令由运行期引擎转发给它。</summary>
+    /// <summary>任务启动后的流程控制实例，命令由运行期引擎转发给 <see cref="IFlowControl"/>。</summary>
     public IFlowControl? Control { get; private set; }
 
     /// <summary>接上控制实例。</summary>
     void ITaskFlowHost.AttachControl(IFlowControl control) => Control = control;
 
-    /// <summary>任务推进循环已退出，任务真正走完。瞬态的 Done 快照不代表此值为真。</summary>
+    /// <summary>任务推进循环已退出，任务真正走完。瞬态的 <see cref="TaskState.Done"/> 快照不代表此值为真。</summary>
     public bool Completed
     {
         get
@@ -175,7 +174,7 @@ public sealed class WorkTask : ITaskFlowHost
     /// <summary>任务的过程记录。</summary>
     internal Journal Journal { get; } = new();
 
-    /// <summary>任务内状态改动的串行点。锁序以任务 Gate 为最外层，注册表先于执行索引。</summary>
+    /// <summary>任务内状态改动的串行点。</summary>
     internal Lock Gate { get; } = new();
 
     /// <inheritdoc/>
@@ -183,7 +182,7 @@ public sealed class WorkTask : ITaskFlowHost
 
     private event Action<IExecution>? ExecutionSettled;
 
-    /// <summary>执行收口后的通知，回答等待方借此取回本轮产出。要求持有 Gate 触发。</summary>
+    /// <summary>执行收口后的通知，回答等待方借此取回本轮产出。要求持有 <see cref="Gate"/> 触发。</summary>
     void ITaskFlowContext.NotifyExecutionSettled(IExecution execution) =>
         ExecutionSettled?.Invoke(execution);
 
@@ -195,7 +194,7 @@ public sealed class WorkTask : ITaskFlowHost
         return () => ExecutionSettled -= handler;
     }
 
-    /// <summary>任务的全部执行，按提交顺序。对外给出不可变快照，读取不需要任务 Gate。</summary>
+    /// <summary>任务的全部执行，按提交顺序。对外给出不可变快照，读取不需要 <see cref="Gate"/>。</summary>
     public IReadOnlyList<IExecution> Executions => _executionsSnapshot;
 
     /// <summary>任务标题，创建时按输入与流程名推导，可由宿主改写。</summary>
@@ -464,7 +463,7 @@ public sealed class WorkTask : ITaskFlowHost
 
     private event Action<IExecution>? ExecutionAttached;
 
-    /// <summary>订阅新执行启动的通知，回答等待方借此挂上流式观察。要求持有 Gate 触发。</summary>
+    /// <summary>订阅新执行启动的通知，回答等待方借此挂上流式观察。要求持有 <see cref="Gate"/> 触发。</summary>
     public Action SubscribeExecutionAttached(Action<IExecution> handler)
     {
         ExecutionAttached += handler;

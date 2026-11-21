@@ -2,7 +2,7 @@ using Kuroe.Kernel.Control.Shared;
 
 namespace Kuroe.Maf.Control;
 
-/// <summary>把运行期检查点写入 MAF 流程状态，写入受任务 Gate 与检查点冻结控制。</summary>
+/// <summary>把运行期检查点写入 MAF 流程状态，写入受 <see cref="ITaskFlowContext.Gate"/> 与检查点冻结控制。</summary>
 internal sealed class MafFlowCheckpoints(ITaskFlowContext task, MafFlowState state) : IMafWorkflowCheckpoints
 {
     /// <inheritdoc/>

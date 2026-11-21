@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Graph.Shared.StaticGraph;
 
 /// <summary>静态输入与常量输出的结构解析：沿绑定链找到值终点，只依赖图，不接触注入文本。
 /// 所有节点共用同一套输出来源，开始端口给固定值或注入绑定，常量输出沿输出来源或静态输入下钻，
-/// 没有固定值与来源引用的常量输出是 Once 节点唯一一次执行的运行期常量。</summary>
+/// 没有固定值与来源引用的常量输出是 <see cref="NodeEmission.Once"/> 节点唯一一次执行的运行期常量。</summary>
 public static class StaticSources
 {
     /// <summary>解析一个静态输入端口的来源终点，无法解析时给出错误说明。</summary>
@@ -77,7 +77,7 @@ public static class StaticSources
             : StaticResolution.StartInjected(port);
     }
 
-    /// <summary>节点的常量输出：固定值、内部来源端口或 Once 节点唯一一次执行的产出。</summary>
+    /// <summary>节点的常量输出：固定值、内部来源端口或 <see cref="NodeEmission.Once"/> 节点唯一一次执行的产出。</summary>
     private static StaticResolution ResolveOutput(
         NodeGraph graph,
         GraphNode node,
@@ -143,7 +143,7 @@ public static class StaticSources
     private readonly record struct StaticPortKey(BindingSource Source, PortName Port, StaticPortSide Side);
 }
 
-/// <summary>静态输入与常量输出解析的终点。Missing 带错误说明，其余带固定值、默认值、开始端口或运行期常量来源。</summary>
+/// <summary>静态输入与常量输出解析的终点。<see cref="StaticSourceKind.Missing"/> 带错误说明，其余带固定值、默认值、开始端口或运行期常量来源。</summary>
 public readonly record struct StaticResolution(
     StaticSourceKind Kind,
     BindingSource Source,
@@ -163,7 +163,7 @@ public readonly record struct StaticResolution(
     public static StaticResolution Literal(NodePath node, PortName port, string text) =>
         new(StaticSourceKind.Literal, BindingSource.ForNode(node), port, text, null);
 
-    /// <summary>Once 节点唯一一次执行产出的常量。</summary>
+    /// <summary><see cref="NodeEmission.Once"/> 节点唯一一次执行产出的常量。</summary>
     public static StaticResolution RuntimeConstant(NodePath node, PortName port) =>
         new(StaticSourceKind.RuntimeConstant, BindingSource.ForNode(node), port, null, null);
 
@@ -192,7 +192,7 @@ public enum StaticSourceKind
     /// <summary>常量输出的字面量。</summary>
     Literal,
 
-    /// <summary>Once 节点唯一一次执行产出的常量。</summary>
+    /// <summary><see cref="NodeEmission.Once"/> 节点唯一一次执行产出的常量。</summary>
     RuntimeConstant,
 
     /// <summary>静态输入的默认值。</summary>

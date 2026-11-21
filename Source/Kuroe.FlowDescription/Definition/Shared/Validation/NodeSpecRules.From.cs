@@ -4,11 +4,11 @@ using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.FlowDescription.Definition.Shared.Validation;
 
-/// <summary>From 接线规则：动态输入经 From 连接，静态输入经 Bindings 绑定。容器只有一组 From，
+/// <summary><see cref="NodeSpec.From"/> 接线规则：动态输入经 <see cref="NodeSpec.From"/> 连接，静态输入经 <see cref="NodeSpec.Bindings"/> 绑定。容器只有一组 <see cref="NodeSpec.From"/>，
 /// 成员通过 @端口 读取的传入来源因此唯一。触发条件只用于触发端口。</summary>
 public static partial class NodeSpecRules
 {
-    /// <summary>检查 From 的目标、覆盖与条件，按节点形态判定需要覆盖的动态内容输入。</summary>
+    /// <summary>检查 <see cref="NodeSpec.From"/> 的目标、覆盖与条件，按节点形态判定需要覆盖的动态内容输入。</summary>
     public static void CheckFrom(this NodeSpec node, ValidationMessageHandler fail)
     {
         IReadOnlyList<InputPort> declared = node.DeclaredInputs;

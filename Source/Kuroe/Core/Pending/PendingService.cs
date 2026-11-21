@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Input.Shared;
 using Kuroe.Kernel.Tasks.Runtime;
 using Kuroe.Kernel.Tasks.Shared;
@@ -35,7 +36,7 @@ public sealed class PendingService(TaskRegistry registry)
     public ErrorOr<Success> Approve(TaskId id, IReadOnlyList<FlowStepPath>? nodes = null) =>
         Take(id, PendingKind.Approve, null, string.Empty, nodes);
 
-    /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，交付在任务 Gate 内完成。</summary>
+    /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，交付在任务 <see cref="ITaskFlowContext.Gate"/> 内完成。</summary>
     private ErrorOr<Success> Take(
         TaskId id,
         PendingKind kind,
@@ -106,7 +107,7 @@ public sealed class PendingService(TaskRegistry registry)
         });
     }
 
-    /// <summary>任务里此刻待处理的节点，带等待时的提问。要求持有 Gate。</summary>
+    /// <summary>任务里此刻待处理的节点，带等待时的提问。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     private List<PendingNode> Pending(WorkTask task) =>
         registry.Input is not { } inputs
             ? []

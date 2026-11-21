@@ -399,7 +399,7 @@ public sealed class CommandToolFile : IToolFile
         return entries;
     }
 
-    /// <summary>装配模板参数项：字符串项要求非空白，对象项要求 Text 与 OmitWhenMissing 都非空且无未知字段。</summary>
+    /// <summary>装配模板参数项：字符串项要求非空白，对象项要求 <see cref="CommandToolTemplateItemDto.Text"/> 与 <see cref="CommandToolTemplateItemDto.OmitWhenMissing"/> 都非空且无未知字段。</summary>
     private static ErrorOr<IReadOnlyList<CommandToolTemplateItem>> ToTemplateItems(string tool, List<JsonElement>? elements)
     {
         if (elements is not { Count: > 0 })

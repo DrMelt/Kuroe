@@ -82,7 +82,7 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
         return new Session(agent, created, provider, history, journal, executionClient, restored: false);
     }
 
-    /// <summary>读取恢复数据中的会话历史。装配一个不接模型的 Agent，只用于反序列化与会话历史提供者。</summary>
+    /// <summary>读取恢复数据中的会话历史，使用不接模型的 Agent 完成反序列化。</summary>
     internal static async Task<ErrorOr<ExecutionConversation>> ReadConversationAsync(
         ExecutionRestoreState restore,
         CancellationToken cancellationToken)

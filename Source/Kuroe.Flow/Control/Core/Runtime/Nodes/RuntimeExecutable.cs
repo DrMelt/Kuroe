@@ -11,13 +11,14 @@ using Kuroe.FlowDescription.Definition.Shared.Ports;
 using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
 
 using Kuroe.Flow.Graph.Shared.Runtime.Nodes;
+using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Kernel.Execution.Shared.Ports;
 namespace Kuroe.Flow.Control.Runtime.Nodes;
 
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体，交回与产出也记在它上面。
 /// 待收口的交回按执行记，发布后只保留已发布那次，产出锚指向已发布的那次执行。
-/// 节点状态只经推进方法改动，读写都要求持有任务 Gate。</summary>
+/// 节点状态只经推进方法改动，读写都要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
 internal sealed class RuntimeExecutable(
     ExecutableNode executable,
     IGraphNodeCapabilities capabilities) : RuntimeNode(executable)
@@ -28,12 +29,12 @@ internal sealed class RuntimeExecutable(
     /// <summary>该节点使用的输出投影，未注册时为空。</summary>
     private readonly INodeOutputProjection? _projection = capabilities.Projection(executable.Type);
 
-    /// <summary>停在本节点时记下的重新执行目标，全部处理后解除阻塞。</summary>
+    /// <summary>重新执行目标的后备存储。</summary>
     private readonly List<NodePath> _rerunTargets = [];
 
     private bool _canceled;
 
-    /// <summary>在跑的执行数。推进时经 AddActive 与 ReleaseActive 改动。</summary>
+    /// <summary>在跑的执行数。推进时经 <see cref="AddActive"/> 与 <see cref="ReleaseActive"/> 改动。</summary>
     public int Active { get; private set; }
 
     /// <summary>是否仍有在跑的执行。</summary>
@@ -170,7 +171,7 @@ internal sealed class RuntimeExecutable(
     /// <summary>作废已发布产出，重新执行起点用它让下游重新等待。阻塞与重新执行目标不在此清除：达到执行上限的目标长期留驻，由 <see cref="FinishRerun"/> 按处理进度解除。</summary>
     public void Invalidate() => Progress.Invalidate();
 
-    /// <summary>记一轮派发。调用点唯一：WorkTask.Attach。</summary>
+    /// <summary>记一轮派发。调用点唯一：任务登记执行时。</summary>
     public void RecordExecution() => Progress.Started();
 
     /// <summary>启动即登记方案内全部取值来源的当前版本，防止同版本重复触发。</summary>
@@ -208,7 +209,7 @@ internal sealed class RuntimeExecutable(
         return new Publication(revision, new Dictionary<PortName, bool>(), values);
     }
 
-    /// <summary>按这次执行构造一次发布：承载触发的端口取交回触发位，动态 Context 端口转发来源输入内容，
+    /// <summary>按这次执行构造一次发布：承载触发的端口取交回触发位，动态 <see cref="PortTypes.Context"/> 端口转发来源输入内容，
     /// 承载内容的端口取交回文本，其余端口不承载内容。</summary>
     private Publication CreatePublication(GraphExecution execution, long revision)
     {

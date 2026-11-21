@@ -37,7 +37,7 @@ internal static class ContainerScopeRules
         }
     }
 
-    /// <summary>成员在所属容器作用域里求值的引用：From 的连接与成员对容器传入端口的 Bindings 绑定。</summary>
+    /// <summary>成员在所属容器作用域里求值的引用：<see cref="NodeSpec.From"/> 的连接与成员对容器传入端口的 <see cref="NodeSpec.Bindings"/> 绑定。</summary>
     private static IEnumerable<(PortRef Reference, string Field)> References(NodeSpec member)
     {
         foreach (FromGroup group in member.From)

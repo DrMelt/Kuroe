@@ -5,7 +5,7 @@ namespace Kuroe.FlowDescription.Definition.Shared.Ports;
 /// <summary>端口表的查找、交回判定与声明文本。</summary>
 public static class PortRules
 {
-    /// <summary>执行需经契约工具交回的端口类型：Text 交回内容，Signal 交回端口名或触发值；Context 由来源透传，不需要交回。
+    /// <summary>执行需经契约工具交回的端口类型：<see cref="PortTypes.Text"/> 交回内容，<see cref="PortTypes.Signal"/> 交回端口名或触发值；<see cref="PortTypes.Context"/> 由来源透传，不需要交回。
     /// 不承载触发的端口交回时触发值恒为 true。</summary>
     public static bool RequiresSubmission(PortType type) =>
         type.Semantics is PortSemantics.Text or PortSemantics.Signal;
@@ -19,7 +19,7 @@ public static class PortRules
     /// <summary>端口是否承载文本内容。</summary>
     public static bool CarriesText(PortType type) => type.Semantics == PortSemantics.Text;
 
-    /// <summary>端口是否承载内容。Text 与 Context 承载内容，Signal 不承载内容。</summary>
+    /// <summary>端口是否承载内容。<see cref="PortTypes.Text"/> 与 <see cref="PortTypes.Context"/> 承载内容，<see cref="PortTypes.Signal"/> 不承载内容。</summary>
     public static bool CarriesContent(PortType type) =>
         type.Semantics is PortSemantics.Text or PortSemantics.Context;
 
@@ -35,7 +35,7 @@ public static class PortRules
     public static IReadOnlyList<Port> SubmittablePorts(IReadOnlyList<Port> ports, NodeEmission emission) =>
         [.. ports.Where(port => port.Mode != PortMode.Constant || IsRuntimeConstant(port, emission))];
 
-    /// <summary>可交回端口表里本轮必须交回的端口：动态 Text 与 Signal，以及全部运行期常量端口。</summary>
+    /// <summary>可交回端口表里本轮必须交回的端口：动态 <see cref="PortTypes.Text"/> 与 <see cref="PortTypes.Signal"/>，以及全部运行期常量端口。</summary>
     public static IReadOnlyList<Port> RequiredFromSubmittable(IReadOnlyList<Port> ports) =>
         [.. ports.Where(port => port.Mode == PortMode.Constant || RequiresSubmission(port.Type))];
 

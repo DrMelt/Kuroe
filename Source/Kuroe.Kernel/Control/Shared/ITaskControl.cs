@@ -9,7 +9,7 @@ namespace Kuroe.Kernel.Control.Shared;
 /// <summary>宿主对用户任务域的动作端口。实现负责提交策略与任务生命周期，宿主只经此提交与操作任务。</summary>
 public interface ITaskControl
 {
-    /// <summary>按流程名提交任务。observer 收到该任务全部执行的过程事件。</summary>
+    /// <summary>按流程名提交任务。<paramref name="observer"/> 收到该任务全部执行的过程事件。</summary>
     ErrorOr<TaskSnapshot> Submit(
         StartInputs inputs,
         FlowName flowName,

@@ -631,7 +631,7 @@ static class FlowFileReader
         return errors.Count > 0 ? errors : bindings;
     }
 
-    /// <summary>读一条 From 来源：字符串即引用文本，对象写 Ref 与可选 Condition。</summary>
+    /// <summary>读一条 <see cref="NodeDto.From"/> 来源：字符串即引用文本，对象写 Ref 与可选 Condition。</summary>
     private static ErrorOr<(string Ref, TriggerConditionDescription? Condition)> ReadFromSource(
         JsonElement entry,
         NodeScope scope,

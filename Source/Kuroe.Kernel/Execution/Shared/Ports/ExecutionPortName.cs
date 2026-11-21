@@ -3,7 +3,7 @@ using Kuroe.Kernel.Execution.Shared.Errors;
 
 namespace Kuroe.Kernel.Execution.Shared.Ports;
 
-/// <summary>执行单元的数据交换端口名。展示即原文。</summary>
+/// <summary>执行核心的数据交换端口名。展示即原文。</summary>
 public readonly record struct ExecutionPortName(string Value)
 {
     /// <summary>解析执行端口名，拒绝空、全空白或含 @ 的文本。</summary>

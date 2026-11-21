@@ -9,7 +9,7 @@ public interface IInputDelivery
     /// <summary>任务里此刻等待外部输入的步骤，按步骤路径排序。</summary>
     IReadOnlyList<FlowPendingStep> Pending(TaskId task);
 
-    /// <summary>向等待中的步骤交付一次输入并撤销登记。要求持有任务 Gate。</summary>
+    /// <summary>向等待中的步骤交付一次输入并撤销登记。要求持有任务串行锁。</summary>
     ErrorOr<Success> Deliver(TaskId task, FlowStepPath step, string input);
 
     /// <summary>清空一个任务的全部等待登记。</summary>

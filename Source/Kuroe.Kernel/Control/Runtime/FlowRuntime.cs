@@ -16,7 +16,7 @@ public sealed class FlowRuntime(
     private readonly Dictionary<ITaskFlowContext, IFlowControl> _controls = [];
     private readonly Dictionary<ITaskFlowContext, Task> _settled = [];
 
-    /// <summary>要求持有任务 Gate：启动该任务的推进循环。</summary>
+    /// <summary>要求持有 <see cref="ITaskFlowContext.Gate"/>：启动该任务的推进循环。</summary>
     public void Start(ITaskFlowHost task)
     {
         IFlowControl control = task.Controls.CreateControl(task);
@@ -25,7 +25,7 @@ public sealed class FlowRuntime(
         Track(task, control);
     }
 
-    /// <summary>要求持有任务 Gate：按恢复种子启动推进循环，任务保持暂停不自动推进。</summary>
+    /// <summary>要求持有 <see cref="ITaskFlowContext.Gate"/>：按恢复种子启动推进循环，任务保持暂停不自动推进。</summary>
     public void Restore(ITaskFlowHost task, FlowSeed seed)
     {
         IFlowControl control = task.Controls.CreateControl(task);
@@ -87,7 +87,7 @@ public sealed class FlowRuntime(
         }
     }
 
-    /// <summary>要求持有任务 Gate：暂停任务的推进循环并中断在跑执行。</summary>
+    /// <summary>要求持有 <see cref="ITaskFlowContext.Gate"/>：暂停任务的推进循环并中断在跑执行。</summary>
     public void Pause(ITaskFlowContext task) => Find(task)?.Pause();
 
     /// <summary>按执行号取出本任务的一个已启动执行并停止它。</summary>
@@ -115,11 +115,11 @@ public sealed class FlowRuntime(
         return Result.Success;
     }
 
-    /// <summary>要求持有任务 Gate：恢复任务的推进循环，并把可恢复的阻塞排入恢复队列。</summary>
+    /// <summary>要求持有 <see cref="ITaskFlowContext.Gate"/>：恢复任务的推进循环，并把可恢复的阻塞排入恢复队列。</summary>
     public void ResumeTask(ITaskFlowContext task, bool continueRestores = true) =>
         Find(task)?.Resume(continueRestores);
 
-    /// <summary>要求持有任务 Gate：对阻塞的步骤重新执行，流程实现不提供重跑能力时为零。</summary>
+    /// <summary>要求持有 <see cref="ITaskFlowContext.Gate"/>：对阻塞的步骤重新执行，流程实现不提供重跑能力时为零。</summary>
     public int Rerun(ITaskFlowContext task) => (Find(task) as IFlowRerun)?.Rerun() ?? 0;
 
 

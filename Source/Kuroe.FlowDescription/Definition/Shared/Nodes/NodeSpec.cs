@@ -29,7 +29,7 @@ public sealed record NodeSpec
     /// <summary>节点标签：节点在图里的标识段，同一容器内唯一且恒非空。定义条目取节点名的文本，引用条目取使用处写下的标签。</summary>
     public required NodeLabel Label { get; init; }
 
-    /// <summary>节点类型的描述实例，类型专属声明封在它里面。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
+    /// <summary>节点类型的描述实例，类型专属声明封在 <see cref="INodeType"/> 里面。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
     public INodeType? Type { get; init; }
 
     /// <summary>节点声明的类型名，引用节点为空。</summary>
@@ -43,21 +43,21 @@ public sealed record NodeSpec
     public NodeName? Use { get; init; }
 
     /// <summary>输入端口声明：执行节点与容器共用，动态输入由 <see cref="From"/> 连接，静态输入由 <see cref="Bindings"/> 绑定；
-    /// 成员用 @端口 引用容器传入端口。派发执行节点的 Text 输入端口可声明默认值，
-    /// 默认值在 From 组没有连接该端口时提供内容。</summary>
+    /// 成员用 @端口 引用容器传入端口。派发执行节点的 <see cref="PortTypes.Text"/> 输入端口可声明默认值，
+    /// 默认值在 <see cref="NodeSpec.From"/> 组没有连接该端口时提供内容。</summary>
     public IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
-    /// <summary>静态输入绑定：输入端口到来源端口引用，来源识别与 From 使用同一套作用域规则。
-    /// Constant 端口在运行期沿绑定链取值，不进入版本。容器绑定的来源必须在容器外部；动态输入一律经 <see cref="From"/>。</summary>
+    /// <summary>静态输入绑定：输入端口到来源端口引用，来源识别与 <see cref="NodeSpec.From"/> 使用同一套作用域规则。
+    /// <see cref="PortMode.Constant"/> 端口在运行期沿绑定链取值，不进入版本。容器绑定的来源必须在容器外部；动态输入一律经 <see cref="From"/>。</summary>
     public IReadOnlyDictionary<PortName, PortRef>? Bindings { get; init; }
 
-    /// <summary>上游 From 组：执行节点的组内输入全部齐备该组才成立，组间任一组成即可启动。
+    /// <summary>上游 <see cref="NodeSpec.From"/> 组：执行节点的组内输入全部齐备该组才成立，组间任一组成即可启动。
     /// 容器只有一组，作为成员的传入端口接线。触发门控条件随连接给出。库执行定义不写接线，由引用处注入；
     /// 库容器成员与装配层节点自身声明。</summary>
     public IReadOnlyList<FromGroup> From { get; init; } = [];
 
     /// <summary>输出端口表：所有节点共用。类型在编译期落定产出形态与消费方式，引用处按名字消费。
-    /// 执行节点逐次交回动态 Text 与 Signal 端口值，常量输出由 Value、常量来源或 Once 节点唯一一次执行提供；容器输出由子树来源提供。</summary>
+    /// 执行节点逐次交回动态 <see cref="PortTypes.Text"/> 与 <see cref="PortTypes.Signal"/> 端口值，常量输出由 Value、常量来源或 <see cref="NodeEmission.Once"/> 节点唯一一次执行提供；容器输出由子树来源提供。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>产出模式的覆盖声明：引用执行节点时可覆盖库定义的产出模式，展开后并入执行配置。容器不使用。</summary>
@@ -75,7 +75,7 @@ public sealed record NodeSpec
             ? [.. Inputs, .. contract.Where(port => Inputs.All(input => input.Name != port.Name))]
             : Inputs;
 
-    /// <summary>生效输入端口表：声明输入加 From 目标引入的内容端口。From 目标只在类型允许推断时补成 Text 内容输入。</summary>
+    /// <summary>生效输入端口表：声明输入加 <see cref="NodeSpec.From"/> 目标引入的内容端口。<see cref="NodeSpec.From"/> 目标只在类型允许推断时补成 <see cref="PortTypes.Text"/> 内容输入。</summary>
     public IReadOnlyList<InputPort> EffectiveInputs
     {
         get

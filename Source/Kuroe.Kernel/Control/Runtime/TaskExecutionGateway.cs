@@ -8,7 +8,7 @@ using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Kernel.Control.Runtime;
 
-/// <summary>执行网关：把执行号归属交给任务域，装配执行，其余执行操作交给执行单元。</summary>
+/// <summary>执行网关：把执行号归属交给任务域，装配执行，其余执行操作交给执行核心。</summary>
 public sealed class TaskExecutionGateway(
     IExecutionIndex executions,
     IExecutionRuntime runtime) : ITaskExecutionGateway

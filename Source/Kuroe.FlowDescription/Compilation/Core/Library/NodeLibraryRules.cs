@@ -7,7 +7,7 @@ using Kuroe.FlowDescription.Definition.Shared.Ports;
 
 namespace Kuroe.FlowDescription.Compilation.Library;
 
-/// <summary>节点库定义的校验：结构合法、端口声明、子树自包含。展开在 NodeTreeExpander 里进行。</summary>
+/// <summary>节点库定义的校验：结构合法、端口声明、子树自包含。展开在 <see cref="NodeTreeExpander"/> 里进行。</summary>
 internal static class NodeLibraryRules
 {
     /// <summary>校验节点库：定义结构与子树自包含。各流程随后按节点库展开。同名覆盖与重复节点名报告在注册处完成，
@@ -71,7 +71,7 @@ internal static class NodeLibraryRules
         return byName;
     }
 
-    /// <summary>校验容器子树：整棵子树标签扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。</summary>
+    /// <summary>校验容器子树：整棵子树标签扁平唯一，成员引用存在且结构合法，<see cref="NodeSpec.From"/> 全部落在子树或声明端口内。</summary>
     private static void CheckContainer(
         NodeSpec container,
         IReadOnlyList<NodeSpec> members,
@@ -206,7 +206,7 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>校验容器的一个成员：结构不混用、引用存在。作用域来源由 ContainerScopeRules 判定。</summary>
+    /// <summary>校验容器的一个成员：结构不混用、引用存在。作用域来源由 <see cref="ContainerScopeRules"/> 判定。</summary>
     private static void CheckMember(
         NodeSpec member,
         Dictionary<NodeName, NodeSpec> byName,

@@ -15,7 +15,7 @@ internal static class FileTools
     /// <summary>文件工具共用的路径准入：拒绝工作区根下的配置与仓库内部目录。</summary>
     internal static ToolPathAccess PathAccess { get; } = new([], [".kuroe", ".git"]);
 
-    /// <summary>按执行绑定读取 root 变量，建立文件访问作用域。缺变量时作用域返回绑定错误。</summary>
+    /// <summary>按执行绑定读取路径变量 <see cref="PathVariables.RootName"/>，建立文件访问作用域。缺变量时作用域返回绑定错误。</summary>
     internal static FileScope Scope(ToolBinding binding, IWorkspaceFiles files)
     {
         string? root = binding.Variable(PathVariables.RootName);

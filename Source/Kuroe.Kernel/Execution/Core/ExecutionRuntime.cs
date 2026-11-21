@@ -7,7 +7,7 @@ using Kuroe.Kernel.Execution.Shared.State;
 
 namespace Kuroe.Kernel.Execution;
 
-/// <summary>执行单元的控制面：按装配结果派发执行、等待收口与退出收口。执行状态迁移不出执行单元。</summary>
+/// <summary>执行核心的控制面：按装配结果派发执行、等待收口与退出收口。执行状态迁移不出执行核心。</summary>
 public sealed class ExecutionRuntime(
     ExecutionDispatcher dispatcher) : IExecutionRuntime
 {

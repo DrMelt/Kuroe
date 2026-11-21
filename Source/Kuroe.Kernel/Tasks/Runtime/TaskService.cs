@@ -11,7 +11,7 @@ public sealed class TaskService(TaskActions actions) : ITaskControl
 {
     private readonly TaskActions _actions = actions;
 
-    /// <summary>提交任务：按流程名取负责的框架建任务并启动执行。observer 收到该任务全部执行的过程事件。</summary>
+    /// <summary>提交任务：按流程名取负责的框架建任务并启动执行。<paramref name="observer"/> 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> Submit(
         StartInputs inputs,
         FlowName flowName,

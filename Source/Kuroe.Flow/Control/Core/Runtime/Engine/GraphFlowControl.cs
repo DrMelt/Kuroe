@@ -37,7 +37,7 @@ internal sealed class GraphFlowControl(
     private bool _stop;
     private int _resumeVersion;
 
-    /// <summary>该任务的推进循环，宿主持有以便收口。</summary>
+    /// <summary>该任务的推进循环。</summary>
     public Task Loop { get; private set; } = Task.CompletedTask;
 
     /// <summary>推进循环结束即控制实例不再需要。</summary>
@@ -52,7 +52,7 @@ internal sealed class GraphFlowControl(
     /// <summary>是否有可恢复的阻塞。</summary>
     public bool HasRestores => state.Runtime.HasRestorePlans;
 
-    /// <summary>启动推进循环。要求持有任务 Gate：全部根执行节点入队。</summary>
+    /// <summary>启动推进循环。要求持有 <see cref="ITaskFlowContext.Gate"/>：全部根执行节点入队。</summary>
     public void Start()
     {
         List<NodePath> roots;
@@ -65,7 +65,7 @@ internal sealed class GraphFlowControl(
         Loop = Task.Run(RunAsync);
     }
 
-    /// <summary>从存档启动推进循环：调度种子与当前已就绪的根节点一并入队，任务保持暂停，恢复后由宿主决定何时推进。要求持有任务 Gate。</summary>
+    /// <summary>从存档启动推进循环：调度种子与当前已就绪的根节点一并入队，任务保持暂停。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public void Restore(FlowSeed seed)
     {
         List<NodePath> roots;
@@ -92,7 +92,7 @@ internal sealed class GraphFlowControl(
         Loop = Task.Run(RunAsync);
     }
 
-    /// <summary>恢复推进循环，continueRestores 为真时恢复可恢复的阻塞。要求持有任务 Gate。</summary>
+    /// <summary>恢复推进循环，<paramref name="continueRestores"/> 为真时恢复可恢复的阻塞。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public void Resume(bool continueRestores = true)
     {
         IReadOnlyList<TaskRuntime.RestorePlan> restores = continueRestores
@@ -101,7 +101,7 @@ internal sealed class GraphFlowControl(
         ResumeTask(restores, clearPendingRestores: !continueRestores);
     }
 
-    /// <summary>对阻塞的执行节点重新执行，返回实际发出的重新执行目标数。要求持有任务 Gate。</summary>
+    /// <summary>对阻塞的执行节点重新执行，返回实际发出的重新执行目标数。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public int Rerun()
     {
         IReadOnlyList<TaskRuntime.RerunTarget> targets;
@@ -135,7 +135,7 @@ internal sealed class GraphFlowControl(
         return targets.Count;
     }
 
-    /// <summary>终止任务并结束推进循环。要求持有任务 Gate。</summary>
+    /// <summary>终止任务并结束推进循环。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public ErrorOr<Success> Terminate() => Stop();
 
     /// <summary>此刻尚未处理的目标：排队中、已入队未取批与正在评估的节点，按首次出现顺序去重。</summary>
@@ -188,7 +188,7 @@ internal sealed class GraphFlowControl(
         }
     }
 
-    /// <summary>恢复推进：唤醒推进循环重新取待处理目标，并把恢复计划按节点去重后排入队列。clearPendingRestores 为真时丢弃此前排队的计划。要求持有任务 Gate。</summary>
+    /// <summary>恢复推进：唤醒推进循环重新取待处理目标，并把恢复计划按节点去重后排入队列。<paramref name="clearPendingRestores"/> 为真时丢弃此前排队的计划。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public void ResumeTask(IReadOnlyList<TaskRuntime.RestorePlan>? restores = null, bool clearPendingRestores = false)
     {
         lock (_gate)
@@ -207,7 +207,7 @@ internal sealed class GraphFlowControl(
         }
     }
 
-    /// <summary>排入一个收口后仍需继续的恢复计划。要求持有任务 Gate。</summary>
+    /// <summary>排入一个收口后仍需继续的恢复计划。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     private void EnqueueRestore(TaskRuntime.RestorePlan restore)
     {
         bool wake;
@@ -243,7 +243,7 @@ internal sealed class GraphFlowControl(
     /// <summary>任务当前是否暂停。暂停状态只在任务对象上，推进器只读它。</summary>
     private bool IsPaused() => task.UnderLock(() => task.Lifecycle == TaskLifecycle.Paused);
 
-    /// <summary>终止任务：置任务为已终止并中断在跑的执行，唤醒挂起点后主循环按停止位退出。要求持有任务 Gate。</summary>
+    /// <summary>终止任务：置任务为已终止并中断在跑的执行，唤醒挂起点后主循环按停止位退出。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
     public ErrorOr<Success> Stop()
     {
         ErrorOr<Success> result;

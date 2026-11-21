@@ -8,7 +8,7 @@ namespace Kuroe.FlowDescription.Definition.Shared.Validation;
 /// 输出按 Value、Ref 与运行期常量判定来源。流程校验与节点库校验共用这一份，报错出口由调用方给出。</summary>
 public static partial class NodeSpecRules
 {
-    /// <summary>逐条检查一个节点的端口声明，每条错误经 fail 报出。shape 给出端口类型值域与推进方式，
+    /// <summary>逐条检查一个节点的端口声明，每条错误经 <paramref name="fail"/> 报出。<paramref name="shape"/> 给出端口类型值域与推进方式，
     /// 端口模式由类型注册声明支持范围。</summary>
     public static void CheckInterface(
         this NodeSpec node,

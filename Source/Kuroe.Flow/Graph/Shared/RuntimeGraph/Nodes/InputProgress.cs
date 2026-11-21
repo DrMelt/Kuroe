@@ -7,7 +7,7 @@ using Kuroe.Kernel.Tasks.Shared;
 namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 
 /// <summary>节点输入侧的运行期进展：已消费版本、执行次数、上次启动组、重跑意图、当前发布与发布历史。
-/// 发布是不可变快照，进展由节点在发布与作废点改动，读写都要求持有任务 Gate。</summary>
+/// 发布是不可变快照，进展由节点在发布与作废点改动，读写都要求持有任务串行锁。</summary>
 public sealed class InputProgress : IInputProgress
 {
     private readonly Dictionary<ConsumptionKey, long> _consumed = [];

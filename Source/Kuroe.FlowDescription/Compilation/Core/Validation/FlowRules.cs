@@ -19,7 +19,7 @@ public static class FlowRules
         CheckTree(flow.RootNode, NodeScope.Flow(flow.Name.Value), errors);
     }
 
-    /// <summary>开始端口的规则：开始端口可以没有。动态端口只能是 Text 或 Signal，常量端口可以使用任意类型。
+    /// <summary>开始端口的规则：开始端口可以没有。动态端口只能是 <see cref="PortTypes.Text"/> 或 <see cref="PortTypes.Signal"/>，常量端口可以使用任意类型。
     /// Default 只用于承载内容的开始端口，是提交输入的预填值与省略时的回退值，不能与 Value 同时使用；不承载内容的常量开始端口必须写 Value。
     /// 承载内容的常量端口没有 Value 与宿主给值时由提交输入给值，宿主给值的端口由宿主开始输入表在提交时确定。</summary>
     private static void CheckStart(FlowDefinition flow, List<Error> errors)

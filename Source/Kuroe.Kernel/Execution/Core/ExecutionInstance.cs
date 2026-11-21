@@ -46,16 +46,16 @@ internal sealed class ExecutionInstance : IExecution
         CreatedAt = createdAt;
     }
 
-    /// <summary>执行标识。</summary>
+    /// <inheritdoc/>
     public ExecutionId Id { get; }
 
-    /// <summary>本次执行的中性请求。</summary>
+    /// <inheritdoc/>
     public ExecutionRequest Request { get; }
 
-    /// <summary>执行创建时刻。</summary>
+    /// <inheritdoc/>
     public DateTimeOffset CreatedAt { get; }
 
-    /// <summary>当前执行状态。</summary>
+    /// <inheritdoc/>
     public ExecutionState State
     {
         get
@@ -67,33 +67,33 @@ internal sealed class ExecutionInstance : IExecution
         }
     }
 
-    /// <summary>还在排队或正在执行。</summary>
+    /// <inheritdoc/>
     public bool IsLive => State.IsLive();
 
-    /// <summary>中断令牌。</summary>
+    /// <inheritdoc/>
     public CancellationToken CancellationToken => _cancellation.Token;
 
-    /// <summary>快照可见的状态或过程变化。</summary>
+    /// <inheritdoc/>
     public event Action? Changed;
 
-    /// <summary>执行进入运行态后触发一次。</summary>
+    /// <inheritdoc/>
     public event Action? Started;
 
-    /// <summary>流式内容到达。</summary>
+    /// <inheritdoc/>
     public event ProcessContentHandler? ContentEmitted
     {
         add => _process.Content += value;
         remove => _process.Content -= value;
     }
 
-    /// <summary>需要即时呈现的过程记录写入。</summary>
+    /// <inheritdoc/>
     public event JournalEntryHandler? EntryEmitted
     {
         add => _process.Entry += value;
         remove => _process.Entry -= value;
     }
 
-    /// <summary>恢复数据变化。</summary>
+    /// <inheritdoc/>
     public event Action? RestoreDataChanged;
 
     /// <summary>进入运行态。</summary>
@@ -399,7 +399,7 @@ internal sealed class ExecutionInstance : IExecution
         Settle(ExecutionState.Failed, [reason]);
     }
 
-    /// <summary>当前状态的只读快照。</summary>
+    /// <inheritdoc/>
     public ExecutionSnapshot Snapshot()
     {
         ExecutionState state;

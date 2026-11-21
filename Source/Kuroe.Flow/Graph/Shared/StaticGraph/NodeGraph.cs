@@ -7,8 +7,8 @@ using Kuroe.Kernel.Tasks.Shared;
 namespace Kuroe.Flow.Graph.Shared.StaticGraph;
 
 /// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，执行节点与容器在同一棵树上。
-/// 依赖由 From 绑定、静态输入指向的运行期常量依赖与容器触发输入共同表达，绑定的角色与取值域固化在绑定上。执行按“组齐备且有驱动则激活”推进。
-/// 流程开始端口作为独立来源表保存在图上，不进入节点树。树与绑定在编译期落定，与节点相关的绑定在构造时挂到节点上。</summary>
+/// 依赖由 <see cref="NodeSpec.From"/> 绑定、静态输入指向的运行期常量依赖与容器触发输入共同表达。
+/// 流程开始端口作为独立来源表保存在图上，不进入节点树。</summary>
 public sealed class NodeGraph
 {
     private readonly IReadOnlyList<GraphNode> _roots;
@@ -61,7 +61,7 @@ public sealed class NodeGraph
     /// <summary>驱动绑定，按编译顺序。</summary>
     public IReadOnlyList<InputBinding> Bindings { get; }
 
-    /// <summary>静态启动条件：静态输入绑定到 Once 来源节点唯一一次执行的产出。</summary>
+    /// <summary>静态启动条件：静态输入绑定到 <see cref="NodeEmission.Once"/> 来源节点唯一一次执行的产出。</summary>
     public IReadOnlyList<InputBinding> StaticBindings { get; }
 
     /// <summary>节点数，执行节点与容器一起算。</summary>
@@ -126,7 +126,7 @@ public sealed class NodeGraph
         _ => null,
     };
 
-    /// <summary>来源节点某输出端口声明的类型，未声明按 Text。供绑定规则按类型校验。</summary>
+    /// <summary>来源节点某输出端口声明的类型，未声明按 <see cref="PortTypes.Text"/>。供绑定规则按类型校验。</summary>
     public PortType TypeOf(NodePath node, PortName port) =>
         this[node].FindPort(port)?.Type ?? PortTypes.Text;
 

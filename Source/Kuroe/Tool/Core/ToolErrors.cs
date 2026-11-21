@@ -2,7 +2,7 @@ using ErrorOr;
 
 namespace Kuroe.Tool;
 
-/// <summary>工具调用拒绝与失败的错误构造，交回模型前由宿主渲染为文本。</summary>
+/// <summary>工具调用拒绝与失败的错误构造。</summary>
 public static class ToolErrors
 {
     /// <summary>参数缺失、取值非法或参数指定的内容不被接受。</summary>

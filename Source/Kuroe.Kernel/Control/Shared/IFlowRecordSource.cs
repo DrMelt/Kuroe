@@ -2,7 +2,7 @@ using Kuroe.Kernel.Tasks.Records.Shared;
 
 namespace Kuroe.Kernel.Control.Shared;
 
-/// <summary>流程存档捕获：流程记录。要求持有任务 Gate。</summary>
+/// <summary>流程存档捕获：流程记录。要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
 public interface IFlowRecordSource
 {
     /// <summary>捕获流程记录。</summary>
