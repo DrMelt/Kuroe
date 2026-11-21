@@ -1,10 +1,10 @@
 # 任务与执行
 
-本文说明任务与执行的数据、状态与操作后果，术语见[概念](../reference/概念.md)。
+本文说明任务与执行的数据、状态与操作后果，术语见[概念](../reference/concepts.md)。
 
 ## 任务数据
 
-每次提交任务在 `.kuroe_tasks/` 下建立任务目录，名字是任务键，即 32 位十六进制唯一标识，`TASK_WORK_PATH` 给出它的绝对路径，绑定方式见[宿主开始输入](../reference/宿主开始输入.md)。任务标题与流程保存在任务存档，由 Console 与 KuroeInfo 展示。
+每次提交任务在 `.kuroe_tasks/` 下建立任务目录，名字是任务键，即 32 位十六进制唯一标识，`TASK_WORK_PATH` 给出它的绝对路径，绑定方式见[宿主开始输入](../reference/host-start-inputs.md)。任务标题与流程保存在任务存档，由 Console 与 KuroeInfo 展示。
 
 任务数据保存在工作目录内，包含任务输入、过程记录、工具参数与输出、模型回复、流程快照与执行恢复数据，属于敏感数据，需要与工作目录一起保护。
 
@@ -16,11 +16,11 @@ Console 启动时加载未完成的任务，以暂停状态呈现，恢复后继
 
 ## 助手会话
 
-内置助手的会话是独立的对话任务域，存档与租约位于 `.kuroe_assistant/records/`，不占用用户任务号，不出现在用户任务列表与 `KuroeInfo` 的任务查询中。每个会话一条任务，模型、回复语言与模式的生效范围见[内置助手](../console/内置助手.md#会话)。
+内置助手的会话是独立的对话任务域，存档与租约位于 `.kuroe_assistant/records/`，不占用用户任务号，不出现在用户任务列表与 `KuroeInfo` 的任务查询中。每个会话一条任务，模型、回复语言与模式的生效范围见[内置助手](../console/built-in-assistant.md#会话)。
 
-会话页的历史来自执行记录与恢复数据，见[内置助手](../console/内置助手.md#历史)。
+会话页的历史来自执行记录与恢复数据，见[内置助手](../console/built-in-assistant.md#历史)。
 
-助手会话的并发与冲突处理见[内置助手](../console/内置助手.md#会话)，其执行同样受全局执行派发上限约束。
+助手会话的并发与冲突处理见[内置助手](../console/built-in-assistant.md#会话)，其执行同样受全局执行派发上限约束。
 
 ## 状态
 
@@ -69,5 +69,5 @@ token 用量取自 provider 返回的 usage，分输入、输出与合计，另�
 ## 相关页面
 
 - 节点类型的中断行为见[Llm](../reference/nodes/llm.md)
-- 查看入口见[操作指南](../console/操作指南.md#任务)与[命令行接口](../cli/命令行接口.md#run)
-- 敏感数据保护见[安全与权限](安全与权限.md#凭据与数据)
+- 查看入口见[操作指南](../console/operation-guide.md#任务)与[命令行接口](../cli/command-line-interface.md#run)
+- 敏感数据保护见[安全与权限](security-and-permissions.md#凭据与数据)

@@ -1,6 +1,6 @@
 # 流程示例
 
-示例按文件分块，节点库写入 `.kuroe/nodes.json`，流程写入 `.kuroe/flows.json`，哪些开始端口由宿主给值写入 `.kuroe/hostStartInputs.json`。两个示例都通过导入校验。字段说明见[流程定义](流程定义.md)，节点类型见[节点](nodes/index.md)。
+示例按文件分块，节点库写入 `.kuroe/nodes.json`，流程写入 `.kuroe/flows.json`，哪些开始端口由宿主给值写入 `.kuroe/hostStartInputs.json`。两个示例都通过导入校验。字段说明见[流程定义](flow-definition.md)，节点类型见[节点](nodes/index.md)。
 
 ## 单线撰写
 

@@ -54,6 +54,6 @@ dotnet publish Source/Kuroe.Console -c Release -p:UseAppHost=false -o <输出目
 dotnet publish Source/Kuroe.Cli -c Release -p:UseAppHost=false -o <输出目录>
 ```
 
-两个入口可以发布到同一目录。Kuroe.Console 的产物包含 `source/`，见[导出资料](../user/reference/tools/source.md)。产物形态、目标机要求与工作目录见[安装与运行](../user/usage/安装与运行.md)。
+两个入口可以发布到同一目录。Kuroe.Console 的产物包含 `source/`，见[导出资料](../user/reference/tools/source.md)。产物形态、目标机要求与工作目录见[安装与运行](../user/usage/install-and-run.md)。
 
 单文件、自包含与 AOT 发布都要求指定运行时标识，产物按平台生成，不能作为跨平台产物分发。

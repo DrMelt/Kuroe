@@ -1,6 +1,6 @@
 # 流程定义
 
-节点库存工作目录 `.kuroe/` 的 `nodes.json`，流程模板存 `flows.json`，宿主给值的开始端口存 `hostStartInputs.json`，三个文件都可以手工编辑，文件不存在时对应部分为空。导入或启动时校验流程与节点库，非法项一次给出。完整示例见[流程示例](流程示例.md)。
+节点库存工作目录 `.kuroe/` 的 `nodes.json`，流程模板存 `flows.json`，宿主给值的开始端口存 `hostStartInputs.json`，三个文件都可以手工编辑，文件不存在时对应部分为空。导入或启动时校验流程与节点库，非法项一次给出。完整示例见[流程示例](flow-examples.md)。
 
 ## 文件结构
 
@@ -56,7 +56,7 @@
 { "Name": "分支", "Type": "Text", "Default": "main" }
 ```
 
-流程只声明开始端口，哪些开始端口由宿主给值写在 `.kuroe/hostStartInputs.json`，不进入流程文件与流程模型。端口名不受宿主输入名约束，表的结构、规则与校验见[宿主开始输入](宿主开始输入.md)。
+流程只声明开始端口，哪些开始端口由宿主给值写在 `.kuroe/hostStartInputs.json`，不进入流程文件与流程模型。端口名不受宿主输入名约束，表的结构、规则与校验见[宿主开始输入](host-start-inputs.md)。
 
 开始端口不属于任何容器，只在流程作用域可见：根节点的 `From` 与根容器的 `From`、`Bindings` 用 `@端口` 取用，容器成员经容器传入端口取用。
 
@@ -67,7 +67,7 @@
 ]
 ```
 
-节点声明静态输入 `启动路径`，用 `Bindings: { "启动路径": "@启动路径" }` 取用；节点在容器内时由容器的静态输入经 `Bindings` 转发。`启动路径` 在宿主开始输入表里绑定 `WORKSPACE_PATH` 时由 Kuroe 给值。任务目录见[任务与执行](../usage/任务与执行.md#任务数据)。
+节点声明静态输入 `启动路径`，用 `Bindings: { "启动路径": "@启动路径" }` 取用；节点在容器内时由容器的静态输入经 `Bindings` 转发。`启动路径` 在宿主开始输入表里绑定 `WORKSPACE_PATH` 时由 Kuroe 给值。任务目录见[任务与执行](../usage/tasks-and-execution.md#任务数据)。
 
 ## 节点
 
@@ -110,7 +110,7 @@
 
 节点结束时经契约工具 `SubmitPortValues` 交回动态端口与由执行产出的常量端口，`Context` 输出由来源透传，不需要交回。另附 `GetStatus` 与 `ReportCannotComplete`，见[契约工具](tools/contract.md)。
 
-恢复语义见[契约工具](tools/contract.md)与[任务与执行](../usage/任务与执行.md#暂停与恢复)。
+恢复语义见[契约工具](tools/contract.md)与[任务与执行](../usage/tasks-and-execution.md#暂停与恢复)。
 
 ## 容器
 
@@ -205,13 +205,13 @@
 
 执行节点的静态输入没有绑定且没有默认值时导入报错，容器静态输入必须由 `Bindings` 绑定。宿主输入在提交任务时缺失或与开始入口不一致时报错。
 
-执行节点的模型来自静态输入端口 `MODEL_NAME`，开始端口、宿主绑定与转发的写法见[模型接入](../usage/模型接入.md)。需要在流程里固定模型时，给常量开始端口写 `Value`，该端口不进宿主开始输入表。
+执行节点的模型来自静态输入端口 `MODEL_NAME`，开始端口、宿主绑定与转发的写法见[模型接入](../usage/model-integration.md)。需要在流程里固定模型时，给常量开始端口写 `Value`，该端口不进宿主开始输入表。
 
 ## 路径与任务目录
 
-`WORKSPACE_PATH` 与 `TASK_WORK_PATH` 按模型同样的方式声明、转发与绑定。文件节点的 `Path` 与命令节点的 `Directory`、`Arguments` 用 `Variables` 把变量映射到静态 `Text` 输入端口，`root` 变量是相对路径的基准，解析结果必须落在工作区根内。在宿主开始输入表里把某个开始端口绑定到 `TASK_WORK_PATH` 并转发到节点，再把 `Path` 或 `Directory` 写成 `{root}/...`，路径就落在本次任务目录下，绑定写法见[宿主开始输入](宿主开始输入.md)。
+`WORKSPACE_PATH` 与 `TASK_WORK_PATH` 按模型同样的方式声明、转发与绑定。文件节点的 `Path` 与命令节点的 `Directory`、`Arguments` 用 `Variables` 把变量映射到静态 `Text` 输入端口，`root` 变量是相对路径的基准，解析结果必须落在工作区根内。在宿主开始输入表里把某个开始端口绑定到 `TASK_WORK_PATH` 并转发到节点，再把 `Path` 或 `Directory` 写成 `{root}/...`，路径就落在本次任务目录下，绑定写法见[宿主开始输入](host-start-inputs.md)。
 
-Llm 节点的工具用 `ToolPorts` 把 `root` 映射到 `TASK_WORK_PATH`，工具即以任务目录为基准。任务目录见[任务与执行](../usage/任务与执行.md#任务数据)。
+Llm 节点的工具用 `ToolPorts` 把 `root` 映射到 `TASK_WORK_PATH`，工具即以任务目录为基准。任务目录见[任务与执行](../usage/tasks-and-execution.md#任务数据)。
 
 ## 关键约束
 

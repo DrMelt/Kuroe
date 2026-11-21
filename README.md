@@ -17,7 +17,7 @@ Kuroe 把用户定义的「流程」交给模型执行。流程是节点组成�
 dotnet Kuroe.Console.dll -d <工作目录>
 ```
 
-完整上手见 [快速开始](docs/user/快速开始.md)，使用说明见 [docs/user](docs/user/index.md)，开发文档见 [docs/dev](docs/dev/index.md)。
+完整上手见 [快速开始](docs/user/quick-start.md)，使用说明见 [docs/user](docs/user/index.md)，开发文档见 [docs/dev](docs/dev/index.md)。
 
 ## 许可
 

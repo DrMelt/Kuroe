@@ -12,6 +12,6 @@
 | `source`       | [导出资料](source.md)      | 随产物导出的源码与文档查询                                                                                   |
 | `GetLocalTime` | —                          | 当前系统时区与准确当地时间                                                                                   |
 
-契约工具由引擎自动附加，见[契约工具](contract.md)。路径参数在调用前校验，路径基准由 `root` 变量给出，节点用 `ToolPorts` 映射，见[工具变量](../流程定义.md#工具变量)。
+契约工具由引擎自动附加，见[契约工具](contract.md)。路径参数在调用前校验，路径基准由 `root` 变量给出，节点用 `ToolPorts` 映射，见[工具变量](../flow-definition.md#工具变量)。
 
-命令模板工具写在 `.kuroe/tools.json`，不属于内置工具，见[工具配置](../工具配置.md#命令模板工具)。Console 内置助手的模式白名单见[内置助手](../../console/内置助手.md)。
+命令模板工具写在 `.kuroe/tools.json`，不属于内置工具，见[工具配置](../tool-configuration.md#命令模板工具)。Console 内置助手的模式白名单见[内置助手](../../console/built-in-assistant.md)。

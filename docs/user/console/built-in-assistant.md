@@ -40,4 +40,4 @@
 - 只读：`KuroeInfo` 与 `source` 整组放行，另放行 `GetLocalTime`、`file/read`、`git/read` 与 `dotnet/read`。
 - 更改：只读白名单加 `file/write`。
 
-`git/read` 含暂存、提交与删除的只读预演函数，助手可以预演这三步，但不能改动仓库。更改模式不能提交、暂存或清理仓库，不能构建、测试、格式化项目，也不能调用 `.kuroe/tools.json` 声明的命令模板工具。助手工具以工作区根为路径基准。白名单说明见[工具配置](../reference/工具配置.md#工具白名单)，工具分组见[内置工具](../reference/tools/index.md)，工具的权限边界见[安全与权限](../usage/安全与权限.md)。
+`git/read` 含暂存、提交与删除的只读预演函数，助手可以预演这三步，但不能改动仓库。更改模式不能提交、暂存或清理仓库，不能构建、测试、格式化项目，也不能调用 `.kuroe/tools.json` 声明的命令模板工具。助手工具以工作区根为路径基准。白名单说明见[工具配置](../reference/tool-configuration.md#工具白名单)，工具分组见[内置工具](../reference/tools/index.md)，工具的权限边界见[安全与权限](../usage/security-and-permissions.md)。

@@ -32,7 +32,7 @@ public sealed class DocFlowExamplesTests
         return compiler.Compile(document);
     }
 
-    private const string Page = "docs/user/reference/流程示例.md";
+    private const string Page = "docs/user/reference/flow-examples.md";
 
     /// <summary>文档页面的流程示例，每个 Flows 代码块一条。</summary>
     public static TheoryData<string, string, string> Examples() => ExamplesOf(Page);

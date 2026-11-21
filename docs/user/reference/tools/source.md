@@ -15,4 +15,4 @@
 
 `lineNumbers`、`maxChars` 与 `maxLineChars` 的含义与读取输出格式与文件工具的 `ReadFile` 一致，见[文件](file.md#文本)。文本按 UTF-8 解码。
 
-导出目录的来源与产物形态见[安装与运行](../../usage/安装与运行.md#工作目录)与[从源码构建](../../../dev/从源码构建.md#发布)。
+导出目录的来源与产物形态见[安装与运行](../../usage/install-and-run.md#工作目录)与[从源码构建](../../../dev/build-from-source.md#发布)。

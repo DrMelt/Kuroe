@@ -1,0 +1,41 @@
+# 安装与运行
+
+## 环境要求
+
+目标机需要 .NET 10 运行时。Kuroe.Console 要求可读键盘的交互终端，输入或输出被重定向时拒绝启动。
+
+## 安装
+
+从 release 页面下载编译产物压缩包，解压到任意目录。压缩包内含 `Kuroe.Console.dll` 与 `Kuroe.Cli.dll`。
+
+## 运行入口
+
+| 入口          | 用途                         |
+| ------------- | ---------------------------- |
+| Kuroe.Console | 交互终端、内置助手与任务浏览 |
+| Kuroe.Cli     | 脚本与 CI 的一次性调用       |
+
+Console 的页面与操作见[操作指南](../console/operation-guide.md)，CLI 的命令见[命令行接口](../cli/command-line-interface.md)。
+
+两个入口都支持 `-d` 与 `-h`。`-d` 省略时用启动进程的当前目录，`-h` 打印用法，参数错误以非零退出码结束。
+
+## 工作目录
+
+`-d` 给出工作目录，其下的 `.kuroe/` 存放以下配置文件：
+
+| 文件                   | 内容                                                                 |
+| ---------------------- | -------------------------------------------------------------------- |
+| `settings.json`        | 偏好设置，见[设置](settings.md)                                          |
+| `catalog.json`         | 提供商、模型及其凭据，含明文凭据，不要提交                           |
+| `nodes.json`           | 节点库，流程引用的可复用节点，见[流程定义](../reference/flow-definition.md) |
+| `flows.json`           | 任务流程模板，见[流程定义](../reference/flow-definition.md)                 |
+| `hostStartInputs.json` | 宿主开始输入表，见[宿主开始输入](../reference/host-start-inputs.md)       |
+| `tools.json`           | 命令模板工具，见[工具配置](../reference/tool-configuration.md#命令模板工具)    |
+
+两个入口的命令里的文件参数相对该工作目录解析，与启动时的进程当前目录无关。
+
+每次提交任务在工作目录的 `.kuroe_tasks/` 下建立任务目录，任务数据的保存与多实例行为见[任务与执行](tasks-and-execution.md)。
+
+内置助手的会话保存在工作目录的 `.kuroe_assistant/records/` 下，与用户任务分开存档并各自持有租约，见[任务与执行](tasks-and-execution.md#助手会话)。
+
+`nodes.json`、`flows.json` 与 `tools.json` 含命令执行声明，来源不可信的工作目录不要直接运行，见[安全与权限](security-and-permissions.md)。

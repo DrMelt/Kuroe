@@ -1,10 +1,10 @@
 # 快速开始
 
-从安装产物到完成第一个任务。目标机需要 .NET 10 运行时，安装、产物与工作目录见[安装与运行](usage/安装与运行.md)。
+从安装产物到完成第一个任务。目标机需要 .NET 10 运行时，安装、产物与工作目录见[安装与运行](usage/install-and-run.md)。
 
 ## 准备流程
 
-按[流程示例](reference/流程示例.md#单线撰写)把节点库写入 `.kuroe/nodes.json`，流程写入 `.kuroe/flows.json`，宿主开始输入写入 `.kuroe/hostStartInputs.json`，`.kuroe/` 不存在时先建立。这三个文件在 Console 启动时读取。
+按[流程示例](reference/flow-examples.md#单线撰写)把节点库写入 `.kuroe/nodes.json`，流程写入 `.kuroe/flows.json`，宿主开始输入写入 `.kuroe/hostStartInputs.json`，`.kuroe/` 不存在时先建立。这三个文件在 Console 启动时读取。
 
 流程示例含「单线撰写」与「容器引用两次」两个示例，本页使用前者；宿主开始输入表照抄示例即可，其中没有对应流程的表项不会被用到。
 
@@ -28,7 +28,7 @@ dotnet Kuroe.Console.dll -d <工作目录>
 2. 「注册模型」，选择提供商后填写本地模型名与提供商模型名，后者留空时用前者
 3. 「选择模型」，选中刚注册的模型
 
-提供商与模型的含义见[模型接入](usage/模型接入.md)。
+提供商与模型的含义见[模型接入](usage/model-integration.md)。
 
 ## 提交任务
 
@@ -38,4 +38,4 @@ dotnet Kuroe.Console.dll -d <工作目录>
 
 ## 结果
 
-任务在列表显示已完成时，定稿已写入本次任务目录的 `单线定稿.md`，任务目录见[任务与执行](usage/任务与执行.md)。
+任务在列表显示已完成时，定稿已写入本次任务目录的 `单线定稿.md`，任务目录见[任务与执行](usage/tasks-and-execution.md)。
