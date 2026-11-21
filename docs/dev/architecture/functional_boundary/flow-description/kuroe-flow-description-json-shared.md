@@ -10,8 +10,8 @@
 
 ## 边界外
 
-- 不含 JSON 实现：在 Kuroe.FlowDescription.Json。
-- 不含描述模型：在 Kuroe.FlowDescription.Description.Shared。不含编译：在 Kuroe.FlowDescription.Compilation。
+- 不含 JSON 实现。
+- 不含描述模型与编译。
 - 不含流程控制与持久化。
 
 ## 依赖

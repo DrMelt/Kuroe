@@ -18,9 +18,9 @@
 
 ## 边界外
 
-- 不含静态模型与运行期节点形状：在 Kuroe.FlowDescription.Definition.Shared 与 Kuroe.Flow.Graph.Shared。
-- 不含编译与库展开：在 Kuroe.FlowDescription.Compilation。
-- 不含执行实现：执行状态机在 Kuroe.Kernel.Execution。
+- 不含静态模型与运行期节点形状。
+- 不含编译与库展开。
+- 不含执行实现。
 - 不含任务域、输入通道与持久化实现。
 
 ## 依赖

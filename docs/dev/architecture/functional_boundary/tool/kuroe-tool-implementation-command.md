@@ -10,8 +10,8 @@
 
 ## 边界外
 
-- 不含模板规则与一致性校验：在 Kuroe.Tool.Implementation.Command.Shared。
-- 不含文件读取：在 Kuroe.Tool.Implementation.Command.Json。
+- 不含模板规则与一致性校验。
+- 不含文件读取。
 - 不含进程实现与工具面装配。
 
 ## 依赖

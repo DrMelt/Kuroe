@@ -10,7 +10,7 @@
 
 ## 边界外
 
-- 不含协调契约：端口与结果在 Kuroe.Kernel.Tasks.Persistence.Saving.Shared。
+- 不含协调契约。
 - 不含文件写入与编解码。
 - 不含任务状态读取：捕获来源在运行时。
 

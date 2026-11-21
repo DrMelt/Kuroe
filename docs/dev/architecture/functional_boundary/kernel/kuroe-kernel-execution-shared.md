@@ -16,8 +16,8 @@
 
 ## 边界外
 
-- 不含状态机与派发：状态迁移、执行实例与调度在 Kuroe.Kernel.Execution。
-- 不含任务与流程语义：任务域在 Kuroe.Kernel.Tasks.Shared 与 Kuroe.Kernel.Tasks.Runtime，流程控制在 Kuroe.Kernel.Control.Shared。
+- 不含状态机与派发。
+- 不含任务与流程语义。
 - 不依赖任何项目，不做序列化与展示格式。
 
 ## 依赖

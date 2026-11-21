@@ -12,8 +12,8 @@
 
 ## 边界外
 
-- 不含等待登记与交付：在 Kuroe.Runner.Input 与 Kuroe.Kernel.Input.Runtime。
-- 不含执行装配与输出投影：在 Kuroe.GraphFlow。
+- 不含等待登记与交付。
+- 不含执行装配与输出投影。
 - 不含图运行期与流程推进。
 - 不含其他节点类型。
 

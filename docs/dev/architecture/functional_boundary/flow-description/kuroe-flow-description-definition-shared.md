@@ -13,10 +13,10 @@
 
 ## 边界外
 
-- 不含文件写下的描述形态与描述层错误作用域：在 Kuroe.FlowDescription.Description.Shared。
-- 不含编译入口、库装配、节点类型扩展契约与参数读取：在 Kuroe.FlowDescription.Compilation.Shared。
-- 不含编译实现：在 Kuroe.FlowDescription.Compilation。
-- 不含图静态视图、就绪判定与流程控制：在 Kuroe.Flow.Compilation、Kuroe.Flow.Graph.Shared 与 Kuroe.Flow.Control。
+- 不含文件写下的描述形态与描述层错误作用域。
+- 不含编译入口、库装配、节点类型扩展契约与参数读取。
+- 不含编译实现。
+- 不含图静态视图、就绪判定与流程控制。
 
 ## 依赖
 

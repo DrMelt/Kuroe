@@ -13,11 +13,11 @@
 
 ## 边界外
 
-- 不含核心装配与任务运行时：在 Kuroe。
-- 不含图运行期、图控制与图共享层：在 Kuroe.Flow.Control 与 Kuroe.Flow.Graph.Shared。
-- 不含流程库、文件存取与导入：在 Kuroe.Flow.Library。
-- 不含节点类型与执行器实现：在 Kuroe.Node.* 与 Kuroe.Runner.*。
-- 不含 MAF 流程装配：在 Kuroe.Maf。
+- 不含核心装配与任务运行时。
+- 不含图运行期、图控制与图共享层。
+- 不含流程库、文件存取与导入。
+- 不含节点类型与执行器实现。
+- 不含 MAF 流程装配。
 
 ## 依赖
 

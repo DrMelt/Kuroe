@@ -11,8 +11,8 @@
 
 ## 边界外
 
-- 不含协调实现：合并与后台写盘在 Kuroe.Kernel.Tasks.Persistence.Saving。
-- 不含文件存储与编解码：在 Kuroe.Kernel.Tasks.Persistence.Files 与 Kuroe.Kernel.Tasks.Persistence.Serialization.Json。
+- 不含协调实现。
+- 不含文件存储与编解码。
 - 不含任务域。
 
 ## 依赖

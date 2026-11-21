@@ -16,8 +16,8 @@
 
 ## 边界外
 
-- 不含任务聚合与注册表：任务域在 Kuroe.Kernel.Tasks.Runtime。
-- 不含执行形状：执行身份与状态在 Kuroe.Kernel.Execution.Shared。
+- 不含任务聚合与注册表。
+- 不含执行形状。
 - 不含流程控制与流程实现，不含图与节点词汇。
 
 ## 依赖

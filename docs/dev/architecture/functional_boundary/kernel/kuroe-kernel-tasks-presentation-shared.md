@@ -11,9 +11,9 @@
 
 ## 边界外
 
-- 不含任务域与任务状态迁移：在 Kuroe.Kernel.Tasks.Runtime。
-- 不含流程视图与展示文本：在 Kuroe.Kernel.Presentation.Shared。
-- 不含执行形状：在 Kuroe.Kernel.Execution.Shared。
+- 不含任务域与任务状态迁移。
+- 不含流程视图与展示文本。
+- 不含执行形状。
 - 不依赖流程实现、图与节点。
 
 ## 依赖

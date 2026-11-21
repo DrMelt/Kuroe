@@ -14,7 +14,7 @@
 ## 边界外
 
 - 不含图结构、编译与流程控制。
-- 不含编解码实现：在 Kuroe.Flow.Persistence.Serialization.Graph。
+- 不含编解码实现。
 - 不依赖流程控制与宿主实现。
 
 ## 依赖

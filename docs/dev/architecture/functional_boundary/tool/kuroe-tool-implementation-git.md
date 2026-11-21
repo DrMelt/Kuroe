@@ -12,7 +12,7 @@ git 工具组：状态查看、暂存与提交、分支与历史查看、合并�
 
 ## 边界外
 
-- 不含命令模板的执行与装配：在 Kuroe.Tool.Implementation.Command 与 Kuroe.Tool.Implementation.Command.Shared。
+- 不含命令模板的执行与装配。
 - 不含进程实现与仓库访问库。
 - 不含工具文件配置。
 

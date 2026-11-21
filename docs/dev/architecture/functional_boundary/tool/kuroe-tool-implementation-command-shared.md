@@ -10,8 +10,8 @@
 
 ## 边界外
 
-- 不含执行：在 Kuroe.Tool.Implementation.Command。
-- 不含文件格式：在 Kuroe.Tool.Implementation.Command.Json。
+- 不含执行。
+- 不含文件格式。
 - 不含工具载体与调用上下文。
 
 ## 依赖

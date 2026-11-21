@@ -13,9 +13,9 @@
 
 ## 边界外
 
-- 不含任务域与捕获时机：执行记录与流程记录的捕获由 Kuroe.Kernel.Tasks.Runtime 调度。
+- 不含任务域与捕获时机。
 - 不含具体流程记录与种类常量：由 flow、codeflow 与 maf 各自持有。
-- 不含文件存储与文档组装：在 Kuroe.Kernel.Tasks.Persistence.*。
+- 不含文件存储与文档组装。
 - 不依赖图、流程控制与持久化实现。
 
 ## 依赖

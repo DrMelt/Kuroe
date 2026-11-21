@@ -15,8 +15,8 @@ file 工具组：读取、写入、搜索、批量替换、列举、信息查询
 
 ## 边界外
 
-- 不含文件访问契约与文本处理：在 Kuroe.Tool.FileAccess.Shared 与 Kuroe.Tool.FileAccess。
-- 不含工作区文件系统实现：在 Kuroe.Files。
+- 不含文件访问契约与文本处理。
+- 不含工作区文件系统实现。
 - 不含工具载体框架与命令工具。
 
 ## 依赖

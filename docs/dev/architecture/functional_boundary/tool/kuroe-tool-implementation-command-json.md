@@ -12,8 +12,8 @@
 
 ## 边界外
 
-- 不含模板规则与执行：在 Kuroe.Tool.Implementation.Command.Shared 与 Kuroe.Tool.Implementation.Command。
-- 不含工具文件注册表实现：在 Kuroe.Tool.Json。
+- 不含模板规则与执行。
+- 不含工具文件注册表实现。
 - 不含工具载体。
 
 ## 依赖

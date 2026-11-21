@@ -11,8 +11,8 @@
 
 ## 边界外
 
-- 不含加载实现：逐文件读取与租约获取在 Kuroe.Kernel.Tasks.Persistence.Restoring。
-- 不含任务构造与任务域：在 Kuroe.Kernel.Tasks.Runtime。
+- 不含加载实现。
+- 不含任务构造与任务域。
 - 不含编解码与文件存储。
 
 ## 依赖

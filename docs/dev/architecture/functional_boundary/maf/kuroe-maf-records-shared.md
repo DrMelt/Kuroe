@@ -10,8 +10,8 @@ MAF 编排流程的存档记录与种类：流程定义记录与流程状态记�
 
 ## 边界外
 
-- 不含流程定义与运行时：在 Kuroe.Maf.Definition 与 Kuroe.Maf.Control。
-- 不含编解码实现：在 Kuroe.Maf.Persistence。
+- 不含流程定义与运行时。
+- 不含编解码实现。
 - 不依赖执行、图、节点与流程控制。
 
 ## 依赖

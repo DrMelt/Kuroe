@@ -12,10 +12,10 @@
 
 ## 边界外
 
-- 不含描述形态：在 Kuroe.FlowDescription.Description.Shared。
-- 不含静态模型、端口词汇与语言规则：在 Kuroe.FlowDescription.Definition.Shared。
-- 不含编译实现：在 Kuroe.FlowDescription.Compilation。
-- 不含文件格式：在 Kuroe.FlowDescription.Json。
+- 不含描述形态。
+- 不含静态模型、端口词汇与语言规则。
+- 不含编译实现。
+- 不含文件格式。
 
 ## 依赖
 

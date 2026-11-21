@@ -16,9 +16,9 @@
 
 ## 边界外
 
-- 不含描述模型与端口词汇：在 Kuroe.FlowDescription.Definition.Shared。
-- 不含描述构造、库展开与图编译：在 Kuroe.FlowDescription.Compilation 与 Kuroe.Flow.Compilation。
-- 不含图运行期调度与流程控制：在 Kuroe.Flow.Control。
+- 不含描述模型与端口词汇。
+- 不含描述构造、库展开与图编译。
+- 不含图运行期调度与流程控制。
 - 不含具体节点类型与运行器实现。
 - 不含持久化编解码与文件格式。
 

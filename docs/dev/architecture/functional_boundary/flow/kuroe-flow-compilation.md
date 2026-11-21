@@ -11,8 +11,8 @@
 
 ## 边界外
 
-- 不含描述模型与库展开：在 Kuroe.FlowDescription.Definition.Shared 与 Kuroe.FlowDescription.Compilation。
-- 不含运行期与控制：在 Kuroe.Flow.Control。
+- 不含描述模型与库展开。
+- 不含运行期与控制。
 - 不含 MAF 装配。
 
 ## 依赖

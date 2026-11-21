@@ -11,7 +11,7 @@
 
 ## 边界外
 
-- 不含命令变量展开与退出码策略：在 Kuroe.Runner.Command 与 Kuroe.Tool.Implementation.Command。
+- 不含命令变量展开与退出码策略。
 - 不含节点与工具。
 - 不依赖任何项目。
 

@@ -10,8 +10,8 @@
 
 ## 边界外
 
-- 不含作用域校验规则：在 Kuroe.FlowDescription.Compilation。
-- 不含图运行期与节点调度：在 Kuroe.Flow.Control 与 Kuroe.Flow.Graph.Shared。
+- 不含作用域校验规则。
+- 不含图运行期与节点调度。
 - 不含其他节点类型。
 
 ## 依赖

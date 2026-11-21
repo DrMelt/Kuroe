@@ -13,10 +13,10 @@
 
 ## 边界外
 
-- 不含静态模型与端口词汇：在 Kuroe.FlowDescription.Definition.Shared。
-- 不含编译契约与参数读取：在 Kuroe.FlowDescription.Compilation.Shared。
-- 不含编译实现：在 Kuroe.FlowDescription.Compilation。
-- 不含文件格式：在 Kuroe.FlowDescription.Json。
+- 不含静态模型与端口词汇。
+- 不含编译契约与参数读取。
+- 不含编译实现。
+- 不含文件格式。
 
 ## 依赖
 

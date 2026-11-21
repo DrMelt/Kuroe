@@ -11,8 +11,8 @@
 
 ## 边界外
 
-- 不含控制契约：控制实例、网关与任务能力面的接口在 Kuroe.Kernel.Control.Shared。
-- 不含任务域：任务聚合、注册表与存档由 Kuroe.Kernel.Tasks.Runtime 承担。
+- 不含控制契约。
+- 不含任务域。
 - 不含具体流程实现，不依赖图、节点与 MAF。
 
 ## 依赖

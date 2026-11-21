@@ -13,10 +13,10 @@
 
 ## 边界外
 
-- 不含描述形态、静态模型、端口词汇、语言规则与编译契约：在 Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared 与 Kuroe.FlowDescription.Compilation.Shared。
-- 不含文件格式：在 Kuroe.FlowDescription.Json。
-- 不含图编译、图静态视图与控制：在 Kuroe.Flow.Compilation、Kuroe.Flow.Graph.Shared 与 Kuroe.Flow.Control。
-- 不含 MAF 投影与 MAF 运行期：在 Kuroe.Maf.Compilation 与 Kuroe.Maf.Control。
+- 不含描述形态、静态模型、端口词汇、语言规则与编译契约。
+- 不含文件格式。
+- 不含图编译、图静态视图与控制。
+- 不含 MAF 投影与 MAF 运行期。
 
 ## 依赖
 

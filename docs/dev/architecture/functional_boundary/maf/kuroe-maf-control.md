@@ -17,10 +17,10 @@ MAF 流程控制：把流程定义构造成工作流运行，由 MAF 运行期�
 
 ## 边界外
 
-- 不含流程定义：在 Kuroe.Maf.Definition。
-- 不含流程记录与编解码：在 Kuroe.Maf.Records.Shared 与 Kuroe.Maf.Persistence。
+- 不含流程定义。
+- 不含流程记录与编解码。
 - 不含执行实现与任务域。
-- 不依赖图、节点与 Kuroe.Flow 下任何项目。
+- 不依赖图、节点与图流程。
 
 ## 依赖
 

@@ -16,9 +16,9 @@
 
 ## 边界外
 
-- 不含控制实现：流程运行期、执行索引与执行网关在 Kuroe.Kernel.Control.Runtime。
-- 不含执行实现与执行记录形状：在 Kuroe.Kernel.Execution 与 Kuroe.Kernel.Execution.Records.Shared。
-- 不含存档文件、写盘协调与编解码实现：在 Kuroe.Kernel.Tasks.Persistence.*。
+- 不含控制实现。
+- 不含执行实现与执行记录形状。
+- 不含存档文件、写盘协调与编解码实现。
 - 不依赖图、节点与输入实现，不构造流程语义。
 
 ## 依赖

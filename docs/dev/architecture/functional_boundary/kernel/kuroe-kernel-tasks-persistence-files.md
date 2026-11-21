@@ -10,8 +10,8 @@
 
 ## 边界外
 
-- 不含存储契约：端口、租约与读取结果在 Kuroe.Kernel.Tasks.Persistence.Files.Shared。
-- 不含存档编解码与目录语义：编解码在 Kuroe.Kernel.Tasks.Persistence.Serialization.Json，路径与目录由宿主给出。
+- 不含存储契约。
+- 不含存档编解码与目录语义：路径与目录由宿主给出。
 - 不含任务域与写盘调度。
 
 ## 依赖

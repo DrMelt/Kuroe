@@ -11,8 +11,8 @@
 
 ## 边界外
 
-- 不含加载契约：端口、报告与失败形状在 Kuroe.Kernel.Tasks.Persistence.Restoring.Shared。
-- 不含任务构造与推进循环：在 Kuroe.Kernel.Tasks.Runtime。
+- 不含加载契约。
+- 不含任务构造与推进循环。
 - 不含文件格式与写盘。
 
 ## 依赖
