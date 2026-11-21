@@ -3,11 +3,11 @@ namespace Kuroe.FlowDescription.Description.Shared;
 /// <summary>节点描述：定义与引用共享的公共字段。</summary>
 public abstract record NodeDescription
 {
-    /// <summary>上游 <see cref="NodeDescription.From"/> 组：执行节点按组启动，容器只有一组作为传入端口接线。</summary>
+    /// <summary>上游 <see cref="From"/> 组：执行节点按组启动，容器只有一组作为传入端口接线。</summary>
     public IReadOnlyList<FromGroupDescription> From { get; init; } = [];
 
-    /// <summary>静态输入绑定：输入端口到来源引用文本，来源识别与 <see cref="NodeDescription.From"/> 使用同一套作用域规则。
-    /// 动态输入一律写在 <see cref="NodeDescription.From"/>，容器只有一组 <see cref="NodeDescription.From"/>。</summary>
+    /// <summary>静态输入绑定：输入端口到来源引用文本，来源识别与 <see cref="From"/> 使用同一套作用域规则。
+    /// 动态输入一律写在 <see cref="From"/>，容器只有一组 <see cref="From"/>。</summary>
     public IReadOnlyDictionary<string, string>? Bindings { get; init; }
 
     /// <summary>产出模式：逐次发布或首次发布后冻结。</summary>

@@ -239,10 +239,10 @@ public sealed class CommandToolRunnerTests
             200,
             ["root"]);
         ToolBinding binding = new(
-            new FixedPortAccess(new Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName("root"), root),
-            new Dictionary<string, Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName>
+            new FixedPortAccess(new Kernel.Execution.Shared.Ports.ExecutionPortName("root"), root),
+            new Dictionary<string, Kernel.Execution.Shared.Ports.ExecutionPortName>
             {
-                ["root"] = new Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName("root"),
+                ["root"] = new Kernel.Execution.Shared.Ports.ExecutionPortName("root"),
             },
             root);
         FakeProcessRunner process = new();

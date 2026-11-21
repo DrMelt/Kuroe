@@ -23,7 +23,7 @@ public sealed class NodeDto
     /// 容器按 Ref 写 成员@端口，执行节点按 Ref 写自身静态输入，常量输出可写 Value。</summary>
     public List<JsonElement>? Outputs { get; set; }
 
-    /// <summary>上游 <see cref="NodeDto.From"/> 组：数组元素是一个组，组内是输入端口名到来源的映射，值写引用文本或带 Ref 与 Condition 的对象。
+    /// <summary>上游 <see cref="From"/> 组：数组元素是一个组，组内是输入端口名到来源的映射，值写引用文本或带 Ref 与 Condition 的对象。
     /// 组是一套完整的输入绑定方案，组间任一齐备即启动。引用规则在流程编译阶段校验。</summary>
     public List<JsonElement>? From { get; set; }
 
@@ -31,14 +31,14 @@ public sealed class NodeDto
     public int? MaxExecutions { get; set; }
 
     /// <summary>输入端口条目：执行节点与容器共用，写 Name 与可选 Type、Mode、Description、Default、Role。
-    /// 值由节点自身的 <see cref="NodeDto.Bindings"/> 绑定提供，或由 <see cref="NodeDto.From"/> 提供。Mode 为 Constant 时是静态输入。</summary>
+    /// 值由节点自身的 <see cref="Bindings"/> 绑定提供，或由 <see cref="From"/> 提供。Mode 为 Constant 时是静态输入。</summary>
     public List<JsonElement>? Inputs { get; set; }
 
     /// <summary>产出模式：Repeated 逐次发布，Once 首次发布后冻结。</summary>
     public string? Emission { get; set; }
 
-    /// <summary>静态输入绑定：目标输入端口到来源引用文本。来源写 @端口 或 来源@端口，识别规则与 <see cref="NodeDto.From"/> 一致。
-    /// 动态输入写在 <see cref="NodeDto.From"/>，输入绑定的值不能写对象与 Condition。</summary>
+    /// <summary>静态输入绑定：目标输入端口到来源引用文本。来源写 @端口 或 来源@端口，识别规则与 <see cref="From"/> 一致。
+    /// 动态输入写在 <see cref="From"/>，输入绑定的值不能写对象与 Condition。</summary>
     public Dictionary<string, JsonElement>? Bindings { get; set; }
 
     /// <summary>类型参数段：类型专属字段的唯一位置，取值与字段名由节点类型解释，文件层只要求它是对象。</summary>

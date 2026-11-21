@@ -100,10 +100,10 @@ public sealed class RunCommandTests
     public async Task Done_flow_reports_requests_tokens_and_context()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        environment.Runner.Usage = new Kuroe.Kernel.Execution.Shared.Usage.ExecutionUsage(
+        environment.Runner.Usage = new Kernel.Execution.Shared.Usage.ExecutionUsage(
             2,
             0,
-            new Kuroe.Kernel.Execution.Shared.Usage.TokenUsage(100, 20, 120, 80, 5))
+            new Kernel.Execution.Shared.Usage.TokenUsage(100, 20, 120, 80, 5))
         {
             ContextTokens = 75,
         };
@@ -123,7 +123,7 @@ public sealed class RunCommandTests
     public async Task Done_flow_reports_unknown_context()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        environment.Runner.Usage = new Kuroe.Kernel.Execution.Shared.Usage.ExecutionUsage(
+        environment.Runner.Usage = new Kernel.Execution.Shared.Usage.ExecutionUsage(
             1,
             1,
             Kuroe.Kernel.Execution.Shared.Usage.TokenUsage.None);

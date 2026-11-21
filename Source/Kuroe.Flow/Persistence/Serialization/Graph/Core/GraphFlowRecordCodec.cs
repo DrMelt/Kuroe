@@ -17,7 +17,7 @@ public sealed class GraphFlowRecordCodec : IFlowRecordCodec
     {
         try
         {
-            return GraphFlowRecordReading.ReadDefinition(Read<GraphFlowDefinitionData>(
+            return GraphFlowRecordReading.ReadDefinition(Read(
                 data.Definition,
                 GraphFlowRecordJson.Default.GraphFlowDefinitionData,
                 "图流程定义"));
@@ -33,7 +33,7 @@ public sealed class GraphFlowRecordCodec : IFlowRecordCodec
     {
         try
         {
-            return GraphFlowRecordReading.ReadState(Read<GraphFlowStateData>(
+            return GraphFlowRecordReading.ReadState(Read(
                 data.State,
                 GraphFlowRecordJson.Default.GraphFlowStateData,
                 "图流程状态"));

@@ -144,7 +144,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IToolJson>(toolJson);
         services.AddSingleton<IToolFactory>(toolFactory);
-        services.AddSingleton<SessionFactory>(_ => sessions);
+        services.AddSingleton(_ => sessions);
         services.AddSingleton<IExecutionRunnerFactory>(llmRunner);
         services.AddSingleton(sp => ToolCollection.ForDisplay(
             composition.ToolSources.SelectMany(source => source.Definitions),
@@ -183,10 +183,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => sp.GetRequiredService<TaskDomain>().Pendings);
         if (coreOptions.PersistTasks)
         {
-            services.AddSingleton<ITaskRecordCoordinator>(sp =>
+            services.AddSingleton(sp =>
                 sp.GetRequiredService<TaskDomain>().Records
                 ?? throw new InvalidOperationException("任务域未建立写盘协调。"));
-            services.AddSingleton<ITaskRestoreService>(sp =>
+            services.AddSingleton(sp =>
                 sp.GetRequiredService<TaskDomain>().Restore
                 ?? throw new InvalidOperationException("任务域未建立恢复服务。"));
         }

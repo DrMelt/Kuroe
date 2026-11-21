@@ -14,8 +14,8 @@ namespace Kuroe.Kernel.Tasks.Runtime.Tests;
 public sealed class WorkTaskTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
-    private static Kuroe.Kernel.Execution.ExecutionRuntime Runtime() =>
-        new(new Kuroe.Kernel.Execution.ExecutionDispatcher());
+    private static Execution.ExecutionRuntime Runtime() =>
+        new(new Execution.ExecutionDispatcher());
     [Fact(DisplayName = "暂停接受瞬时完成快照")]
     public void Pause_accepts_transient_done_snapshot()
     {

@@ -46,7 +46,7 @@ public sealed class CliApplicationTests
     public async Task Flow_list_runs_through_the_command_tree()
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-cli-tests", Guid.NewGuid().ToString("N"));
-        Kuroe.TestSupport.InMemoryWorkspaceFiles files = new();
+        TestSupport.InMemoryWorkspaceFiles files = new();
         files.AddFile(Path.Combine(root, ".kuroe", "flows.json"), CliFlows.Done);
 
         StringWriter output = new();
@@ -56,10 +56,10 @@ public sealed class CliApplicationTests
             error,
             directory => CliSession.Create(
                 directory,
-                compositionOptions: new Kuroe.Composition.KuroeCompositionOptions
+                compositionOptions: new Composition.KuroeCompositionOptions
                 {
                     Files = files,
-                    LeaseStores = new Kuroe.TestSupport.InMemoryTaskLeaseStores().Create,
+                    LeaseStores = new TestSupport.InMemoryTaskLeaseStores().Create,
                 }));
 
         RootCommand rootCommand = CliCommandLine.Build(application);

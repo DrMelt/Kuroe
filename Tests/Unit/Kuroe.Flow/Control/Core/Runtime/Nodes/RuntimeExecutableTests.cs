@@ -88,9 +88,9 @@ public sealed class RuntimeExecutableTests
             Type = executable.Type,
             OutputPorts = executable.Outputs,
         };
-        Kuroe.Kernel.Execution.ExecutionRuntime runtime = new(new Kuroe.Kernel.Execution.ExecutionDispatcher());
-        Kuroe.Kernel.Execution.Shared.State.IExecution unit = runtime.Create(
-            new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(1),
+        Kernel.Execution.ExecutionRuntime runtime = new(new Kernel.Execution.ExecutionDispatcher());
+        Kernel.Execution.Shared.State.IExecution unit = runtime.Create(
+            new Kernel.Execution.Shared.Identity.ExecutionId(1),
             RuntimeExecution.BuildRequest(input));
         RuntimeExecution execution = new(input, unit, 0, TestNodeCapabilities.Build());
 
@@ -100,7 +100,7 @@ public sealed class RuntimeExecutableTests
     private static Task<ErrorOr<Success>> SubmitAsync(
         RuntimeExecution execution,
         Dictionary<PortName, PortValue> values) =>
-        new Kuroe.Kernel.Execution.ExecutionRuntime(new Kuroe.Kernel.Execution.ExecutionDispatcher())
+        new Kernel.Execution.ExecutionRuntime(new Kernel.Execution.ExecutionDispatcher())
             .RunAsync(
                 execution.Unit,
                 new ExecutionInvocation(

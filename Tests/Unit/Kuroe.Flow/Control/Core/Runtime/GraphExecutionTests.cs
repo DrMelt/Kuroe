@@ -11,8 +11,8 @@ namespace Kuroe.Flow.Control.Tests.Runtime;
 public sealed class GraphExecutionTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
-    private static Kuroe.Kernel.Execution.ExecutionRuntime Runtime() =>
-        new(new Kuroe.Kernel.Execution.ExecutionDispatcher());
+    private static Kernel.Execution.ExecutionRuntime Runtime() =>
+        new(new Kernel.Execution.ExecutionDispatcher());
 
     [Fact(DisplayName = "没有过程记录的快照没有条目")]
     public void Snapshot_without_journal_has_no_entries()
@@ -33,15 +33,15 @@ public sealed class GraphExecutionTests
         {
             OutputPorts =
             [
-                new Kuroe.FlowDescription.Definition.Shared.Ports.Port(
+                new FlowDescription.Definition.Shared.Ports.Port(
                     new PortName("结论"),
                     Kuroe.FlowDescription.Definition.Shared.Ports.PortTypes.Text,
                     description: "结论文本"),
             ],
         };
 
-        Kuroe.Kernel.Execution.Shared.Request.ExecutionRequest request = GraphExecution.BuildRequest(input);
-        Kuroe.Kernel.Execution.Shared.Ports.ExecutionOutputPort port = Assert.Single(request.OutputPorts);
+        Kernel.Execution.Shared.Request.ExecutionRequest request = GraphExecution.BuildRequest(input);
+        Kernel.Execution.Shared.Ports.ExecutionOutputPort port = Assert.Single(request.OutputPorts);
 
         Assert.Equal("结论", port.Name.Value);
         Assert.True(port.Required);
@@ -51,9 +51,9 @@ public sealed class GraphExecutionTests
     private static GraphExecution Create()
     {
         GraphExecutionInput input = Input();
-        Kuroe.Kernel.Execution.Shared.Request.ExecutionRequest request = GraphExecution.BuildRequest(input);
-        Kuroe.Kernel.Execution.Shared.State.IExecution unit = Runtime().Create(
-            new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(1),
+        Kernel.Execution.Shared.Request.ExecutionRequest request = GraphExecution.BuildRequest(input);
+        IExecution unit = Runtime().Create(
+            new Kernel.Execution.Shared.Identity.ExecutionId(1),
             request);
 
         return new GraphExecution(input, unit, 0, TestNodeCapabilities.Build());

@@ -133,7 +133,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         ExecutionRecord first = record.Executions[0] with
         {
             RestoreData = new ExecutionRestoreRecord("test", """{"payload":true}"""),
-            ContinuedFrom = new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(6),
+            ContinuedFrom = new Execution.Shared.Identity.ExecutionId(6),
         };
         TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };
         TaskRecordCodec codec = TaskRecordCodecs.Codec();
@@ -150,10 +150,10 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     public void Write_and_read_preserve_execution_contract()
     {
         TaskRecord record = TaskRecordFixture.Create();
-        Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName port = new("结论");
-        Kuroe.Kernel.Execution.Shared.Ports.ExecutionOutputValue value = new(port, "内容", false);
+        Execution.Shared.Ports.ExecutionPortName port = new("结论");
+        Execution.Shared.Ports.ExecutionOutputValue value = new(port, "内容", false);
         ExecutionContractRecord contract = new(
-            new Dictionary<Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName, Kuroe.Kernel.Execution.Shared.Ports.ExecutionOutputValue> { [port] = value },
+            new Dictionary<Execution.Shared.Ports.ExecutionPortName, Execution.Shared.Ports.ExecutionOutputValue> { [port] = value },
             "缺少资料");
         ExecutionRecord first = record.Executions[0] with { Contract = contract };
         TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };
@@ -167,8 +167,8 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.NotNull(restored);
         Assert.Equal("缺少资料", restored.CannotCompleteReason);
         IReadOnlyDictionary<
-            Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName,
-            Kuroe.Kernel.Execution.Shared.Ports.ExecutionOutputValue> outputs =
+            Execution.Shared.Ports.ExecutionPortName,
+            Execution.Shared.Ports.ExecutionOutputValue> outputs =
             restored.Outputs ?? throw new InvalidOperationException("契约没有产出。");
         Assert.Equal(value, Assert.Single(outputs).Value);
     }

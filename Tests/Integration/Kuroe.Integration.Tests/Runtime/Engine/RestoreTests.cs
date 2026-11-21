@@ -14,7 +14,7 @@ public sealed class RestoreTests
     public void A_restorable_failure_pauses_the_task_and_resume_restores()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -40,7 +40,7 @@ public sealed class RestoreTests
     public void Rerun_on_a_paused_task_starts_without_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -55,7 +55,7 @@ public sealed class RestoreTests
         Assert.Null(environment.Runner.Starts[1]);
         Assert.Null(environment.Runner.Started[1].Snapshot().ContinuedFrom);
         ExecutionSnapshot first = environment.GraphExecution(
-            new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(environment.Registry.Find(id).ThrowIfError().Executions[0].Id.Value))
+            new ExecutionId(environment.Registry.Find(id).ThrowIfError().Executions[0].Id.Value))
             .Snapshot();
         Assert.True(first.HasRestoreData);
     }
@@ -64,14 +64,14 @@ public sealed class RestoreTests
     public void A_successful_execution_keeps_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
 
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
 
         Assert.Equal(TaskState.Done, done.State);
         ExecutionSnapshot execution = environment.GraphExecution(
-            new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(environment.Registry.Find(id).ThrowIfError().Executions[0].Id.Value))
+            new ExecutionId(environment.Registry.Find(id).ThrowIfError().Executions[0].Id.Value))
             .Snapshot();
         Assert.Equal(ExecutionState.Succeeded, execution.State);
         Assert.True(execution.HasRestoreData);
@@ -81,7 +81,7 @@ public sealed class RestoreTests
     public void A_failed_restore_can_retry_from_the_source_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -118,13 +118,13 @@ public sealed class RestoreTests
     public void Stopping_an_execution_interrupts_it_and_keeps_the_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, snapshot => snapshot.Executions
             .Any(entry => entry.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Running));
-        Kuroe.Kernel.Execution.Shared.Identity.ExecutionId execution = environment.Registry.LiveExecutions()
+        ExecutionId execution = environment.Registry.LiveExecutions()
             .Single(entry => entry.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Running).Id;
 
         environment.Tasks.StopExecution(execution).ThrowIfError();
@@ -134,7 +134,7 @@ public sealed class RestoreTests
                 .All(entry => entry.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Interrupted));
 
         var task = environment.Registry.Find(id).ThrowIfError();
-        Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot stopped = task.Executions.Single(candidate => candidate.Id == execution).Snapshot();
+        Kernel.Execution.Shared.State.ExecutionSnapshot stopped = task.Executions.Single(candidate => candidate.Id == execution).Snapshot();
         Assert.Equal(Kuroe.Kernel.Execution.Shared.State.ExecutionState.Interrupted, stopped.State);
         Assert.NotNull(stopped.RestoreData);
         Assert.True(Assert.Single(paused.View.Steps, step => step.State == FlowItemState.Blocked).CanRestore);
@@ -149,7 +149,7 @@ public sealed class RestoreTests
     public void A_queued_execution_restarts_after_pause_and_resume()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ManyRootsFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
@@ -182,14 +182,14 @@ public sealed class RestoreTests
     public void A_failed_restore_that_consumed_requests_does_not_fall_back()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
         Assert.Equal(TaskState.Paused, environment.Wait(id, snapshot => snapshot.State == TaskState.Paused).State);
 
         environment.Runner.RestoreData = null;
-        environment.Runner.Usage = new Kuroe.Kernel.Execution.Shared.Usage.ExecutionUsage(
+        environment.Runner.Usage = new Kernel.Execution.Shared.Usage.ExecutionUsage(
             1,
             0,
             Kuroe.Kernel.Execution.Shared.Usage.TokenUsage.None);
@@ -201,7 +201,7 @@ public sealed class RestoreTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(2, task.Executions.Count);
-        Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot second = task.Executions[^1].Snapshot();
+        Kernel.Execution.Shared.State.ExecutionSnapshot second = task.Executions[^1].Snapshot();
         Assert.NotNull(second.ContinuedFrom);
         Assert.Equal(1, environment.Runner.Usage.RequestCount);
         Assert.Equal(1, second.Usage.RequestCount);
@@ -215,7 +215,7 @@ public sealed class RestoreTests
     public void A_pending_target_survives_resume_alongside_a_restore()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ParallelRootFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = execution => execution.Input.Node.Label.Value == "先失败";
         environment.Runner.Gate.Hold(NodePath.Of("后完成"));
 
@@ -248,7 +248,7 @@ public sealed class RestoreTests
     public void Terminating_a_running_restore_keeps_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -259,7 +259,7 @@ public sealed class RestoreTests
         environment.Tasks.Resume(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.Executions.Any(
             entry => entry.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Running));
-        Kuroe.Kernel.Execution.Shared.Identity.ExecutionId running = environment
+        ExecutionId running = environment
             .Snapshot(id)
             .Executions
             .Last(entry => entry.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Running)
@@ -273,7 +273,7 @@ public sealed class RestoreTests
 
         var task = environment.Registry.Find(id).ThrowIfError();
         Assert.Contains(task.Executions, execution => execution.Snapshot().RestoreData is not null);
-        Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot terminatedExecution = task
+        Kernel.Execution.Shared.State.ExecutionSnapshot terminatedExecution = task
             .Executions
             .Single(execution => execution.Id == running)
             .Snapshot();
@@ -289,7 +289,7 @@ public sealed class RestoreTests
     public void Restore_preparation_runs_once_for_snapshots_and_dispatch()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -316,7 +316,7 @@ public sealed class RestoreTests
     public void Restore_inherits_submitted_ports()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -337,14 +337,14 @@ public sealed class RestoreTests
     public void Resume_during_a_held_execution_does_not_pause_again()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new Kuroe.Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new Kernel.Execution.Shared.Restore.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
         environment.Runner.Gate.HoldAll();
         environment.Runner.IgnoreCancellationWhileHeld = true;
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
-        Kuroe.Kernel.Execution.Shared.Identity.ExecutionId first = environment.Registry.LiveExecutions().Single().Id;
+        ExecutionId first = environment.Registry.LiveExecutions().Single().Id;
 
         environment.Tasks.Pause(id).ThrowIfError();
         environment.Tasks.Resume(id).ThrowIfError();

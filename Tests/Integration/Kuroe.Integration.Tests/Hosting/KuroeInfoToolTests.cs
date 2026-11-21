@@ -45,10 +45,10 @@ public sealed class KuroeInfoToolTests
     public async Task GetExecution_renders_execution_process_and_tool_entry()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Usage = new Kuroe.Kernel.Execution.Shared.Usage.ExecutionUsage(
+        environment.Runner.Usage = new Kernel.Execution.Shared.Usage.ExecutionUsage(
             1,
             0,
-            new Kuroe.Kernel.Execution.Shared.Usage.TokenUsage(12, 3, 15, null, null))
+            new Kernel.Execution.Shared.Usage.TokenUsage(12, 3, 15, null, null))
         {
             ContextTokens = 12,
         };

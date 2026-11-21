@@ -100,14 +100,14 @@ public static class TaskRecordFixture
                                     new PortName("结论")),
                                 "计划结果")]),
                     ],
-                    new Kuroe.Kernel.Tasks.Shared.FlowSeed(
+                    new FlowSeed(
                     [
-                        new Kuroe.Kernel.Tasks.Shared.FlowStepPath([.. plan.Levels.Select(level => level.Value)]),
-                        new Kuroe.Kernel.Tasks.Shared.FlowStepPath([.. read.Levels.Select(level => level.Value)]),
+                        new FlowStepPath([.. plan.Levels.Select(level => level.Value)]),
+                        new FlowStepPath([.. read.Levels.Select(level => level.Value)]),
                     ]))),
             [
                 new ExecutionRecord(
-                    new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(taskId * 10 + 1),
+                    new ExecutionId(taskId * 10 + 1),
                     GraphRecordSteps.Format(plan),
                     Kuroe.Kernel.Execution.Shared.State.ExecutionState.Succeeded,
                     "完成",
@@ -118,16 +118,16 @@ public static class TaskRecordFixture
                     new ExecutionUsageRecord(2, 0, new TokenUsageRecord(120, 30, 150, 80, 5), 90),
                     [
                         new ExecutionInputRecord(
-                            new Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName(target.Value),
+                            new Kernel.Execution.Shared.Ports.ExecutionPortName(target.Value),
                             GraphRecordSources.Write(new StartSource(target)),
                             "目标内容"),
                     ],
-                    new Dictionary<Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName, string>
+                    new Dictionary<Kernel.Execution.Shared.Ports.ExecutionPortName, string>
                     {
-                        [new Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName(target.Value)] = "目标内容",
+                        [new Kernel.Execution.Shared.Ports.ExecutionPortName(target.Value)] = "目标内容",
                     }),
                 new ExecutionRecord(
-                    new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(taskId * 10 + 2),
+                    new ExecutionId(taskId * 10 + 2),
                     GraphRecordSteps.Format(read),
                     Kuroe.Kernel.Execution.Shared.State.ExecutionState.Failed,
                     "失败",
@@ -137,9 +137,9 @@ public static class TaskRecordFixture
                     ["读取失败。"],
                     new ExecutionUsageRecord(0, 0, new TokenUsageRecord(null, null, null, null, null), null),
                     [],
-                    new Dictionary<Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName, string>()),
+                    new Dictionary<Kernel.Execution.Shared.Ports.ExecutionPortName, string>()),
                 new ExecutionRecord(
-                    new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(taskId * 10 + 3),
+                    new ExecutionId(taskId * 10 + 3),
                     GraphRecordSteps.Format(answer),
                     Kuroe.Kernel.Execution.Shared.State.ExecutionState.Interrupted,
                     "已中断",
@@ -149,7 +149,7 @@ public static class TaskRecordFixture
                     ["任务已暂停。"],
                     new ExecutionUsageRecord(0, 0, new TokenUsageRecord(null, null, null, null, null), null),
                     [],
-                    new Dictionary<Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortName, string>()),
+                    new Dictionary<Kernel.Execution.Shared.Ports.ExecutionPortName, string>()),
             ]);
     }
 

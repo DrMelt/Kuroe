@@ -88,7 +88,7 @@ public sealed class ExecutionTests
     [Fact(DisplayName = "运行拒绝与请求不匹配的目标")]
     public async Task Run_rejects_a_target_that_does_not_match_the_request()
     {
-        Kuroe.Kernel.Execution.ExecutionRuntime runtime = new(new Kuroe.Kernel.Execution.ExecutionDispatcher());
+        ExecutionRuntime runtime = new(new ExecutionDispatcher());
         IExecution execution = runtime.Create(new ExecutionId(1), Request());
         ExecutionInvocation invocation = new(
             new ExecutionStepId("其他"),

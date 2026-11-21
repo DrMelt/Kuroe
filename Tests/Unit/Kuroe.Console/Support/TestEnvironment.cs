@@ -88,7 +88,7 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>把一轮输入交给当前会话，没有会话时按当前配置新建。</summary>
     public async Task<ErrorOr<Success>> SayAsync(
         string input,
-        Kuroe.Kernel.Execution.Shared.Journal.ProcessObserver? observer = null)
+        Kernel.Execution.Shared.Journal.ProcessObserver? observer = null)
     {
         if (Dialogue.Active is not { } session)
         {

@@ -96,7 +96,7 @@ internal sealed class TaskBrowser(
 
     /// <summary>停止单个执行。</summary>
     public void StopExecution(int id) => results.Report(
-        tasks.StopExecution(new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(id)),
+        tasks.StopExecution(new Kernel.Execution.Shared.Identity.ExecutionId(id)),
         $"执行 #{id} 已停止。");
 
     /// <summary>打开任务节点树页。</summary>
@@ -360,7 +360,7 @@ internal sealed class TaskBrowser(
     /// <summary>打印执行详情。</summary>
     public void ShowExecution(int executionId)
     {
-        ErrorOr<(TaskSnapshot Task, Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot Execution)> found = FindExecution(executionId);
+        ErrorOr<(TaskSnapshot Task, Kernel.Execution.Shared.State.ExecutionSnapshot Execution)> found = FindExecution(executionId);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -387,7 +387,7 @@ internal sealed class TaskBrowser(
             }
 
             TaskSnapshot task = found.Value.Task;
-            Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot snapshot = found.Value.Execution;
+            Kernel.Execution.Shared.State.ExecutionSnapshot snapshot = found.Value.Execution;
 
             terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Request.Step}");
             executionView.Print(task, snapshot);
@@ -427,17 +427,17 @@ internal sealed class TaskBrowser(
     }
 
     /// <summary>按执行号取执行与其所属任务的快照。</summary>
-    private ErrorOr<(TaskSnapshot Task, Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot Execution)> FindExecution(int id)
+    private ErrorOr<(TaskSnapshot Task, Kernel.Execution.Shared.State.ExecutionSnapshot Execution)> FindExecution(int id)
     {
-        ErrorOr<(WorkTask Task, Kuroe.Kernel.Execution.Shared.State.IExecution Execution)> found =
-            registry.FindOwnedExecution(new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(id));
+        ErrorOr<(WorkTask Task, Kernel.Execution.Shared.State.IExecution Execution)> found =
+            registry.FindOwnedExecution(new Kernel.Execution.Shared.Identity.ExecutionId(id));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
         WorkTask owner = found.Value.Task;
-        Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot snapshot = found.Value.Execution.Snapshot();
+        Kernel.Execution.Shared.State.ExecutionSnapshot snapshot = found.Value.Execution.Snapshot();
 
         return (owner.Snapshot(), snapshot);
     }

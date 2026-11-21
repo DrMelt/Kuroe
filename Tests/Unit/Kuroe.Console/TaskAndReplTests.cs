@@ -423,8 +423,8 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
 
-        Kuroe.Kernel.Execution.Shared.State.ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(
-            new Kuroe.Kernel.Execution.Shared.Identity.ExecutionId(1)).ThrowIfError();
+        Kernel.Execution.Shared.State.ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(
+            new Kernel.Execution.Shared.Identity.ExecutionId(1)).ThrowIfError();
         cli.Tasks.ShowExecution(execution.Id.Value);
 
         Assert.Contains("执行 #1", cli.Output.Output);

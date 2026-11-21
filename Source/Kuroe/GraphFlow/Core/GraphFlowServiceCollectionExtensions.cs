@@ -140,7 +140,7 @@ public static class GraphFlowServiceCollectionExtensions
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
-        services.AddSingleton<IFlowDescriptionCompiler>(descriptionCompiler);
+        services.AddSingleton(descriptionCompiler);
         services.AddSingleton<IFlowGraphCompiler>(new FlowGraphCompiler());
         services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
         services.AddSingleton<IExecutionNodeDeclarationResolver>(sp => new ExecutionNodeDeclarationResolver(

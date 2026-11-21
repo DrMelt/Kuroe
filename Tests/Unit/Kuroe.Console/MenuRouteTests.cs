@@ -573,7 +573,7 @@ public sealed class MenuRouteTests
     private static IReadOnlyList<ConfiguredTool> Configured(string json)
     {
         string directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Kuroe.TestSupport.InMemoryWorkspaceFiles files = new();
+        TestSupport.InMemoryWorkspaceFiles files = new();
         files.AddFile(Path.Combine(directory, "tools.json"), json);
 
         return new CommandToolFile(files).Load(directory, Path.GetTempPath()).Value;

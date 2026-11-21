@@ -59,13 +59,13 @@ internal sealed class CliEnvironment : IAsyncDisposable
             {
                 for (int index = services.Count - 1; index >= 0; index--)
                 {
-                    if (services[index].ServiceType == typeof(IExecutionRunnerFactory))
+                    if (services[index].ServiceType == typeof(NeutralExecutionRunnerFactory))
                     {
                         services.RemoveAt(index);
                     }
                 }
 
-                services.AddSingleton<IExecutionRunnerFactory>(runner);
+                services.AddSingleton<NeutralExecutionRunnerFactory>(runner);
             },
             new GraphFlowOptions { LlmRunnerFactory = runner },
             new KuroeCompositionOptions { Files = files, LeaseStores = leases.Create });

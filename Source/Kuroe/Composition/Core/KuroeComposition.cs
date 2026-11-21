@@ -86,7 +86,7 @@ public sealed class KuroeComposition
 
         foreach (IToolSource source in incoming)
         {
-            _services.AddSingleton<IToolSource>(source);
+            _services.AddSingleton(source);
             _sources.Add(source);
         }
 

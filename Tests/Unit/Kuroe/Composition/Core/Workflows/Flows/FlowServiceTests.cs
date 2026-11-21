@@ -49,13 +49,13 @@ public sealed class FlowServiceTests
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-isolation-{Guid.NewGuid():N}");
         string nodesFile = Path.Combine(root, "nodes.json");
         string flowsFile = Path.Combine(root, "flows.json");
-        Kuroe.TestSupport.InMemoryWorkspaceFiles files = new();
+        TestSupport.InMemoryWorkspaceFiles files = new();
         files.AddFile(flowsFile, Mixed);
 
         NodeTypeDescriptionRegistry types = new();
         ContainerNodeTypeDescriptions.RegisterInto(types);
         LlmNodeTypeDescriptions.RegisterInto(types);
-        Kuroe.Flow.Library.FlowCompilation compiler = new(
+        FlowCompilation compiler = new(
             new FlowDescriptionCompiler(types, new NodeLibraryExpander()),
             new FlowGraphCompiler());
         JsonNodeFormat nodeFormat = new();

@@ -29,7 +29,7 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         Assert.NotEmpty(provider.GetServices<IExecutionRunnerFactory>());
-        Assert.NotNull(provider.GetRequiredService<Kuroe.Kernel.Execution.ExecutionRuntime>());
+        Assert.NotNull(provider.GetRequiredService<Kernel.Execution.ExecutionRuntime>());
         Assert.NotNull(provider.GetRequiredService<SessionFactory>());
     }
 
@@ -103,7 +103,7 @@ public sealed class WiringTests : IDisposable
     {
         using ServiceProvider provider = Services();
 
-        IReadOnlyList<string> names = [.. provider.GetRequiredService<Kuroe.Runner.Llm.Tools.ToolCollection>()
+        IReadOnlyList<string> names = [.. provider.GetRequiredService<ToolCollection>()
             .Definitions
             .Select(definition => definition.Path.CallName.Value)];
 
@@ -117,7 +117,7 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         IReadOnlyList<string> paths =
-            [.. provider.GetRequiredService<Kuroe.Runner.Llm.Tools.ToolCollection>()
+            [.. provider.GetRequiredService<ToolCollection>()
                 .Definitions.Select(definition => definition.Path.Value)];
         Assert.Contains("git/read/Status", paths);
         Assert.Contains("git/write/Restore", paths);
@@ -130,7 +130,7 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         IReadOnlyList<string> paths =
-            [.. provider.GetRequiredService<Kuroe.Runner.Llm.Tools.ToolCollection>()
+            [.. provider.GetRequiredService<ToolCollection>()
                 .Definitions.Select(definition => definition.Path.Value)];
 
         Assert.Contains("dotnet/read/Info", paths);
@@ -148,8 +148,8 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<ModelService>());
         Assert.NotNull(provider.GetRequiredService<ToolCollection>());
         Assert.NotNull(provider.GetRequiredService<TaskRegistry>());
-        Assert.NotNull(provider.GetRequiredService<Kuroe.Kernel.Execution.ExecutionDispatcher>());
-        Assert.NotNull(provider.GetRequiredService<Kuroe.Kernel.Execution.Shared.Runtime.IExecutionRuntime>());
+        Assert.NotNull(provider.GetRequiredService<Kernel.Execution.ExecutionDispatcher>());
+        Assert.NotNull(provider.GetRequiredService<IExecutionRuntime>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());
         Assert.NotNull(provider.GetRequiredService<ITaskControl>());
         Assert.NotEmpty(provider.GetServices<IToolSource>());
