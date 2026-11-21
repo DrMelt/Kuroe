@@ -28,10 +28,6 @@
 
 [跨模块机制](architecture/mechanism/index.md)。
 
-## 第三方库机制
-
-[Agent Framework 工作流](libraries/agent-framework-workflows.md)、[Agent Framework 会话](libraries/agent-framework-sessions.md)、[Spectre.Console 渲染](libraries/spectre-console.md)。
-
 ## 工程
 
 [开发规范](../standards/index.md)、[架构测试](architecture-tests.md)、[从源码构建](build-from-source.md)。
