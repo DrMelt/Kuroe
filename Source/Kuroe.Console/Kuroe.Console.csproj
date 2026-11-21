@@ -30,7 +30,7 @@
         <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe\Platform\Kuroe.Platform.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -14,7 +14,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Kuroe\Composition\Core\Kuroe.Composition.csproj" />
-        <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe\Platform\Kuroe.Platform.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
         <ProjectReference Include="..\Kuroe\GraphFlow\Core\Kuroe.GraphFlow.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />

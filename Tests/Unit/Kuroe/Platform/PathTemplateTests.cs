@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace Kuroe.Shared.Tests;
+namespace Kuroe.Platform.Tests;
 
 /// <summary>路径模板与路径变量规则的纯函数行为。</summary>
 public sealed class PathTemplateTests

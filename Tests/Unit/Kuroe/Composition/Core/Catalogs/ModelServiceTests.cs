@@ -1,6 +1,6 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Shared.Catalogs;
+using Kuroe.Platform.Catalogs;
 using Kuroe.Composition.Tests.Support;
 using Xunit;
 

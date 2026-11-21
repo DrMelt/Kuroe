@@ -1,6 +1,6 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess.Shared;
 

@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Composition.Configuration.Files;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Xunit;
 
 namespace Kuroe.Composition.Tests.Configuration.Files;

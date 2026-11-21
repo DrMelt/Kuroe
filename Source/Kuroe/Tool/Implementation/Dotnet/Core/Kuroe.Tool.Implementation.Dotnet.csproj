@@ -8,7 +8,7 @@
         <ProjectReference Include="..\..\Command\Core\Kuroe.Tool.Implementation.Command.csproj" />
         <ProjectReference Include="..\..\Command\Shared\Kuroe.Tool.Implementation.Command.Shared.csproj" />
         <ProjectReference Include="..\..\..\Core\Kuroe.Tool.csproj" />
-        <ProjectReference Include="..\..\..\..\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Platform\Kuroe.Platform.csproj" />
     </ItemGroup>
 
 </Project>

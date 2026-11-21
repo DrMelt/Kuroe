@@ -20,4 +20,4 @@ dotnet 工具组：查看环境、包引用、SDK 与包源，校验格式，以
 
 ## 依赖
 
-- Kuroe.Tool.Implementation.Command、Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Shared。
+- Kuroe.Tool.Implementation.Command、Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Platform。

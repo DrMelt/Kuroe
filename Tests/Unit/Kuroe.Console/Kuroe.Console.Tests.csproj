@@ -34,7 +34,7 @@
     <ProjectReference Include="..\..\..\Source\Kuroe\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe\Node\Input\Core\Kuroe.Node.Input.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
-    <ProjectReference Include="..\..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe\Platform\Kuroe.Platform.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Command\Json\Kuroe.Tool.Implementation.Command.Json.csproj" />

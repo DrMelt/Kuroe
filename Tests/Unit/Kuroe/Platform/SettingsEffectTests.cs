@@ -1,10 +1,10 @@
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Configuration;
 using Xunit;
 
-namespace Kuroe.Shared.Tests;
+namespace Kuroe.Platform.Tests;
 
-/// <summary>宿主侧的契约模型：偏好改动的影响标记。</summary>
-public sealed class SharedContractTests
+/// <summary>平台的契约模型：偏好改动的影响标记。</summary>
+public sealed class SettingsEffectTests
 {
     [Fact(DisplayName = "配置效果为无表示不改变")]
     public void SettingsEffect_none_means_no_change()

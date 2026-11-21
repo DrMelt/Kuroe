@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Shared;
+using Kuroe.Platform;
 
 namespace Kuroe.GraphFlow.HostInputs;
 

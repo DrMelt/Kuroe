@@ -1,5 +1,5 @@
 using Kuroe.Composition.Catalogs;
-using Kuroe.Shared.Catalogs;
+using Kuroe.Platform.Catalogs;
 using Kuroe.Composition.Tests.Support;
 using Kuroe.Tool;
 using Kuroe.Tool.Implementation.KuroeInfo;

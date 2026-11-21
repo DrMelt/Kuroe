@@ -1,6 +1,6 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Configuration;
 
 namespace Kuroe.Tool.Implementation.KuroeInfo;
 

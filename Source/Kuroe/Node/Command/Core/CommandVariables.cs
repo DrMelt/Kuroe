@@ -3,7 +3,7 @@ using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Runner.Command;
-using Kuroe.Shared;
+using Kuroe.Platform;
 
 namespace Kuroe.Node.Command;
 

@@ -1,4 +1,4 @@
-namespace Kuroe.Shared;
+namespace Kuroe.Platform;
 
 /// <summary>任务目录、宿主开始输入表与设置改动的错误码。</summary>
 public static class ErrorCodes

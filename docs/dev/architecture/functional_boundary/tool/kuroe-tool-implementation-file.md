@@ -21,4 +21,4 @@ file 工具组：读取、写入、搜索、批量替换、列举、信息查询
 
 ## 依赖
 
-- Kuroe.Tool、Kuroe.Tool.FileAccess.Shared、Kuroe.Tool.FileAccess、Kuroe.Shared、Kuroe.Files.Shared。
+- Kuroe.Tool、Kuroe.Tool.FileAccess.Shared、Kuroe.Tool.FileAccess、Kuroe.Platform、Kuroe.Files.Shared。

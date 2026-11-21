@@ -1,6 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Tool.Implementation.Command.Shared;
 using Kuroe.Tool.Json;
 

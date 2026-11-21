@@ -33,7 +33,7 @@
             Include="..\..\Tool\Implementation\Contract\Core\Kuroe.Tool.Implementation.Contract.csproj" />
         <ProjectReference
             Include="..\..\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.Implementation.KuroeInfo.csproj" />
-        <ProjectReference Include="..\..\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\Platform\Kuroe.Platform.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Files\Core\Kuroe.Files.csproj" />
         <ProjectReference

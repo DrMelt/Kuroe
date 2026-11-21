@@ -21,4 +21,4 @@
 
 ## 依赖
 
-- Kuroe、Kuroe.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.GraphFlow、Kuroe.Flow.Library、Kuroe.Kernel.Tasks.Runtime、Kuroe.Node.Llm、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。
+- Kuroe、Kuroe.Platform、Kuroe.Kernel.Execution.Shared、Kuroe.GraphFlow、Kuroe.Flow.Library、Kuroe.Kernel.Tasks.Runtime、Kuroe.Node.Llm、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

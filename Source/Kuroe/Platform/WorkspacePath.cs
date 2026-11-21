@@ -1,4 +1,4 @@
-namespace Kuroe.Shared;
+namespace Kuroe.Platform;
 
 /// <summary>工作区根目录内的路径边界：相对路径按根目录或基准目录解析，解析结果必须落在根目录内。
 /// 只做字符串解析与归一，不解析符号链接、目录联接点与硬链接。</summary>

@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Cli.Commands;
-using Kuroe.Shared;
+using Kuroe.Platform;
 
 namespace Kuroe.Cli;
 

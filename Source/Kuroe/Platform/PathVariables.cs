@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Shared;
+namespace Kuroe.Platform;
 
 /// <summary>路径变量的规则入口与运行期解析：装载期校验变量与占位符，运行期把变量解析为工作区内的路径。</summary>
 public static class PathVariables

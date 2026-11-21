@@ -19,7 +19,7 @@
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Composition\Core\Kuroe.Composition.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe\GraphFlow\Core\Kuroe.GraphFlow.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Platform\Kuroe.Platform.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Compilation\Core\Kuroe.FlowDescription.Compilation.csproj" />

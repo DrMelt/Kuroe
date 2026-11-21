@@ -3,7 +3,7 @@ using Kuroe.Composition.Configuration.Files;
 using Kuroe.Kernel.Control.Runtime;
 using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.Kernel.Input.Shared;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Files.Shared;
 using Kuroe.Tool;
 using Kuroe.Tool.Json;

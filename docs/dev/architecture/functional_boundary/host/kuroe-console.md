@@ -21,4 +21,4 @@
 
 ## 依赖
 
-- Kuroe、Kuroe.Assistant、Kuroe.Node.Llm、Kuroe.Runner.Llm、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Kernel.Input.Shared、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.GraphFlow、Kuroe.Flow.Library、Kuroe.Flow.Graph.Shared、Kuroe.Flow.Control、Kuroe.Flow.Records.Shared、Kuroe.Kernel.Tasks.Runtime、Kuroe.Kernel.Tasks.Persistence.Restoring.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。
+- Kuroe、Kuroe.Assistant、Kuroe.Node.Llm、Kuroe.Runner.Llm、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Kernel.Input.Shared、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.GraphFlow、Kuroe.Flow.Library、Kuroe.Flow.Graph.Shared、Kuroe.Flow.Control、Kuroe.Flow.Records.Shared、Kuroe.Kernel.Tasks.Runtime、Kuroe.Kernel.Tasks.Persistence.Restoring.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Platform、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

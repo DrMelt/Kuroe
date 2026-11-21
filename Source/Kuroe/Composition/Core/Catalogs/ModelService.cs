@@ -2,8 +2,8 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Composition.Configuration;
 using Kuroe.Composition.Configuration.Model;
-using Kuroe.Shared.Catalogs;
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Catalogs;
+using Kuroe.Platform.Configuration;
 
 namespace Kuroe.Composition.Catalogs;
 

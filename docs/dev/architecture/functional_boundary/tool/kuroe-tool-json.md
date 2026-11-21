@@ -17,4 +17,4 @@
 
 ## 依赖
 
-- Kuroe.Tool、Kuroe.Shared。
+- Kuroe.Tool、Kuroe.Platform。

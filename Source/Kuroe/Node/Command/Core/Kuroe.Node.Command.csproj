@@ -8,7 +8,7 @@
         <ProjectReference Include="..\..\..\..\Kuroe.FlowDescription\Description\Shared\Kuroe.FlowDescription.Description.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Platform\Kuroe.Platform.csproj" />
         <ProjectReference Include="..\..\..\Runner\Command\Core\Kuroe.Runner.Command.csproj" />
     </ItemGroup>
 

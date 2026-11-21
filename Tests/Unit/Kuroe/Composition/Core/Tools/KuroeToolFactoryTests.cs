@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Runner.Llm;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Tool;
 using Kuroe.Composition.Tools;
 using Xunit;

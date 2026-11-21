@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Configuration;
 
-namespace Kuroe.Shared.Catalogs;
+namespace Kuroe.Platform.Catalogs;
 
 /// <summary>一次模型选择的结果：是否改动了用户层，以及该改动的影响。</summary>
 public sealed record ModelSelection(bool Changed, SettingsEffect Effect);

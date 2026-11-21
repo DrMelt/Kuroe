@@ -5,7 +5,7 @@ using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Runner;
-using Kuroe.Shared;
+using Kuroe.Platform;
 
 namespace Kuroe.GraphFlow.HostInputs;
 

@@ -1,4 +1,4 @@
-namespace Kuroe.Shared;
+namespace Kuroe.Platform;
 
 /// <summary>变量映射的装载期规则：变量名合法，端口已声明且承载文本，变量集合与占位符一一对应。</summary>
 public static class VariableMappings

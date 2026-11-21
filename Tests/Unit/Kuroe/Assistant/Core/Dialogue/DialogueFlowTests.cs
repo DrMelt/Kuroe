@@ -1,7 +1,7 @@
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Assistant.Dialogue.Flow;
 using Kuroe.Node.Llm;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Tool;
 using Xunit;
 

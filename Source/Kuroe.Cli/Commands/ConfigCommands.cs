@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
 using Kuroe.Composition.Configuration;
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Configuration;
 
 namespace Kuroe.Cli.Commands;
 

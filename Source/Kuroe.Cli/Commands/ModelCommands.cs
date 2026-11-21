@@ -1,8 +1,8 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Cli.Views;
-using Kuroe.Shared.Catalogs;
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Catalogs;
+using Kuroe.Platform.Configuration;
 
 namespace Kuroe.Cli.Commands;
 

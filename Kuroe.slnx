@@ -1,5 +1,5 @@
 <Solution>
-    <Project Path="Source/Kuroe/Shared/Kuroe.Shared.csproj" />
+    <Project Path="Source/Kuroe/Platform/Kuroe.Platform.csproj" />
     <Project Path="Source/Kuroe.Files/Shared/Kuroe.Files.Shared.csproj" />
     <Project Path="Source/Kuroe.Files/Core/Kuroe.Files.csproj" />
     <Project Path="Source/Kuroe.Process/Core/Kuroe.Process.csproj" />
@@ -80,7 +80,7 @@
     <Project Path="Tests/Architecture/Kuroe.Architecture.Tests.csproj" />
     <Project Path="Tests/Integration/Kuroe.Integration.Tests/Kuroe.Integration.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe/Composition/Core/Kuroe.Composition.Tests.csproj" />
-    <Project Path="Tests/Unit/Kuroe/Shared/Kuroe.Shared.Tests.csproj" />
+    <Project Path="Tests/Unit/Kuroe/Platform/Kuroe.Platform.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe.Files/Core/Kuroe.Files.Tests.csproj" />
     <Project Path="Tests/Support/Kuroe.TestSupport/Kuroe.TestSupport.csproj" />
     <Project Path="Tests/Unit/Kuroe/Assistant/Core/Kuroe.Assistant.Tests.csproj" />

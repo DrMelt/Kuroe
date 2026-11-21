@@ -12,7 +12,7 @@
         <ProjectReference Include="..\Shared\Kuroe.Tool.Implementation.Command.Shared.csproj" />
         <ProjectReference Include="..\..\..\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\..\..\Kuroe.Process\Core\Kuroe.Process.csproj" />
-        <ProjectReference Include="..\..\..\..\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Platform\Kuroe.Platform.csproj" />
     </ItemGroup>
 
 </Project>

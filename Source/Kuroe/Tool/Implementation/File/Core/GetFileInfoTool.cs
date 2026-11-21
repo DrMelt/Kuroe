@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess.Shared;
 using Kuroe.Tool.Implementation.File.Output;

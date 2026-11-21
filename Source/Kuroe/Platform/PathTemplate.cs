@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Kuroe.Shared;
+namespace Kuroe.Platform;
 
 /// <summary>文本里的变量占位符：写成 {变量名}，内层不含花括号。</summary>
 public static partial class PathTemplate

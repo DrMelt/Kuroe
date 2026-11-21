@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using ErrorOr;
 using Kuroe.Composition.Configuration.Files;
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Configuration;
 
 namespace Kuroe.Composition.Configuration.Model;
 

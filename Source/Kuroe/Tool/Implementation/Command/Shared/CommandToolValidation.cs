@@ -1,4 +1,4 @@
-using Kuroe.Shared;
+using Kuroe.Platform;
 
 namespace Kuroe.Tool.Implementation.Command.Shared;
 

@@ -1,4 +1,4 @@
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Kernel.Execution.Shared.Ports;
 using Kuroe.Kernel.Execution.Shared.Runtime;
 

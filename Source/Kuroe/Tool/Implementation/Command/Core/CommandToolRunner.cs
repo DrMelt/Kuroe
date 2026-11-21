@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Process;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Tool.Implementation.Command.Shared;
 
 namespace Kuroe.Tool.Implementation.Command;

@@ -118,7 +118,7 @@ graph TD
     end
 
     subgraph DPlatform["platform：路径、文件与进程"]
-        Shared["Shared<br>路径变量与配置视图契约"]
+        Platform["Platform<br>路径规则与配置视图契约"]
         FilesShared["Files.Shared<br>工作区文件契约"]
         Files["Files<br>工作区文件实现"]
         Process["Process<br>进程执行端口与实现"]
@@ -235,7 +235,7 @@ graph TD
     FlowRecordsShared --> ExecutionShared
     FlowRecordsShared --> FlowGraphShared
     GraphFlow --> Composition
-    GraphFlow --> Shared
+    GraphFlow --> Platform
     GraphFlow --> FilesShared
     GraphFlow --> Process
     GraphFlow --> FlowLibrary
@@ -349,10 +349,10 @@ graph TD
     RunnerApproval --> TasksShared
     RunnerCommand --> ExecutionShared
     RunnerCommand --> Process
-    RunnerCommand --> Shared
+    RunnerCommand --> Platform
     RunnerFile --> ExecutionShared
     RunnerFile --> FilesShared
-    RunnerFile --> Shared
+    RunnerFile --> Platform
     RunnerInput --> ExecutionShared
     RunnerInput --> InputShared
     RunnerInput --> TasksShared
@@ -365,14 +365,14 @@ graph TD
     NodeCommand --> FlowDescriptionDescriptionShared
     NodeCommand --> FlowDescriptionDefinitionShared
     NodeCommand --> FlowDescriptionCompilationShared
-    NodeCommand --> Shared
+    NodeCommand --> Platform
     NodeCommand --> RunnerCommand
     NodeCommand --> TasksShared
     NodeCommand --> ExecutionShared
     NodeFile --> FlowDescriptionDescriptionShared
     NodeFile --> FlowDescriptionDefinitionShared
     NodeFile --> FlowDescriptionCompilationShared
-    NodeFile --> Shared
+    NodeFile --> Platform
     NodeFile --> RunnerFile
     NodeFile --> TasksShared
     NodeFile --> ExecutionShared
@@ -385,12 +385,12 @@ graph TD
     NodeLlm --> FlowDescriptionDescriptionShared
     NodeLlm --> FlowDescriptionDefinitionShared
     NodeLlm --> FlowDescriptionCompilationShared
-    NodeLlm --> Shared
+    NodeLlm --> Platform
     NodeLlm --> TasksShared
     NodeLlm --> ExecutionShared
 
     %% tool 域：载体在最上，工具组按下层能力组装
-    Tool --> Shared
+    Tool --> Platform
     Tool --> ExecutionShared
     Tool --> TasksShared
     ToolFileAccess --> ToolFileAccessShared
@@ -400,31 +400,31 @@ graph TD
     ToolCommand --> ToolCommandShared
     ToolCommand --> Tool
     ToolCommand --> Process
-    ToolCommand --> Shared
+    ToolCommand --> Platform
     ToolCommandJson --> ToolJson
     ToolCommandJson --> ToolCommand
     ToolCommandJson --> ToolCommandShared
     ToolCommandJson --> Tool
-    ToolCommandJson --> Shared
+    ToolCommandJson --> Platform
     ToolCommandShared --> Tool
-    ToolCommandShared --> Shared
+    ToolCommandShared --> Platform
     ToolContract --> Tool
     ToolContract --> ExecutionShared
     ToolContract --> TasksShared
     ToolDotnet --> ToolCommand
     ToolDotnet --> ToolCommandShared
     ToolDotnet --> Tool
-    ToolDotnet --> Shared
+    ToolDotnet --> Platform
     ToolFile --> Tool
     ToolFile --> ToolFileAccessShared
     ToolFile --> ToolFileAccess
-    ToolFile --> Shared
+    ToolFile --> Platform
     ToolFile --> FilesShared
     ToolGit --> ToolCommand
     ToolGit --> ToolCommandShared
     ToolGit --> Tool
-    ToolGit --> Shared
-    ToolKuroeInfo --> Shared
+    ToolGit --> Platform
+    ToolKuroeInfo --> Platform
     ToolKuroeInfo --> Tool
     ToolKuroeInfo --> ToolJson
     ToolKuroeInfo --> TasksShared
@@ -438,11 +438,11 @@ graph TD
     ToolSource --> FilesShared
     ToolTime --> Tool
     ToolJson --> Tool
-    ToolJson --> Shared
+    ToolJson --> Platform
 
     %% assistant 与 host 域：装配根向下依赖各域实现
     Assistant --> Composition
-    Assistant --> Shared
+    Assistant --> Platform
     Assistant --> NodeLlm
     Assistant --> RunnerShared
     Assistant --> RunnerLlm
@@ -468,7 +468,7 @@ graph TD
     Assistant --> TasksRuntime
     Assistant --> TasksShared
     Cli --> Composition
-    Cli --> Shared
+    Cli --> Platform
     Cli --> ExecutionShared
     Cli --> GraphFlow
     Cli --> FlowLibrary
@@ -496,7 +496,7 @@ graph TD
     Console --> TasksPersistenceRestoringShared
     Console --> ExecutionShared
     Console --> FlowDescriptionCompilationShared
-    Console --> Shared
+    Console --> Platform
     Console --> TasksShared
     Console --> ControlShared
     Console --> PresentationShared
@@ -510,7 +510,7 @@ graph TD
     Composition --> ToolCommandJson
     Composition --> ToolContract
     Composition --> ToolKuroeInfo
-    Composition --> Shared
+    Composition --> Platform
     Composition --> FilesShared
     Composition --> Files
     Composition --> ExecutionShared
@@ -621,7 +621,7 @@ graph TD
 | `Kuroe.GraphFlow` | host | [kuroe-graph-flow](functional_boundary/host/kuroe-graph-flow.md) |
 | `Kuroe.Console` | host | [kuroe-console](functional_boundary/host/kuroe-console.md) |
 | `Kuroe.Cli` | host | [kuroe-cli](functional_boundary/host/kuroe-cli.md) |
-| `Kuroe.Shared` | platform | [kuroe-shared](functional_boundary/platform/kuroe-shared.md) |
+| `Kuroe.Platform` | platform | [kuroe-platform](functional_boundary/platform/kuroe-platform.md) |
 | `Kuroe.Files.Shared` | platform | [kuroe-files-shared](functional_boundary/platform/kuroe-files-shared.md) |
 | `Kuroe.Files` | platform | [kuroe-files](functional_boundary/platform/kuroe-files.md) |
 | `Kuroe.Process` | platform | [kuroe-process](functional_boundary/platform/kuroe-process.md) |

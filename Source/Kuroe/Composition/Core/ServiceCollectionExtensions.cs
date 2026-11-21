@@ -15,7 +15,7 @@ using Kuroe.Runner.Llm;
 using Kuroe.Runner.Llm.Executions;
 using Kuroe.Runner.Llm.Sessions;
 using Kuroe.Runner.Llm.Tools;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Kernel.Tasks.Persistence.Serialization.Json;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;

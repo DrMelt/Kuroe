@@ -16,4 +16,4 @@
 
 ## 依赖
 
-- Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Process、Kuroe.Shared。
+- Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Process、Kuroe.Platform。

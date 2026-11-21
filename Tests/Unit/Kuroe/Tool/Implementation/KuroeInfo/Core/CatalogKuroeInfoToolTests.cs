@@ -1,4 +1,4 @@
-using Kuroe.Shared.Catalogs;
+using Kuroe.Platform.Catalogs;
 using Xunit;
 
 namespace Kuroe.Tool.Implementation.KuroeInfo.Tests;

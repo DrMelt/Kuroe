@@ -1,4 +1,4 @@
-namespace Kuroe.Shared.Configuration;
+namespace Kuroe.Platform.Configuration;
 
 /// <summary>一次配置改动对运行态的影响。三项都为假表示改动即时生效且不影响上下文与既有对话。</summary>
 public sealed record SettingsEffect(bool RequiresRestart, bool InvalidatesHistory, bool AffectsNewDialogueSessions)

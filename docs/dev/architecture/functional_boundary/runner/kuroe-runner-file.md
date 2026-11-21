@@ -17,4 +17,4 @@
 
 ## 依赖
 
-- Kuroe.Kernel.Execution.Shared、Kuroe.Files.Shared、Kuroe.Shared。
+- Kuroe.Kernel.Execution.Shared、Kuroe.Files.Shared、Kuroe.Platform。

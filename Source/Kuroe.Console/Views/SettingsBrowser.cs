@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Composition.Configuration;
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Configuration;
 using Spectre.Console;
 
 namespace Kuroe.Console.Views;

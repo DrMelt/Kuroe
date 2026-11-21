@@ -18,4 +18,4 @@ git 工具组：状态查看、暂存与提交、分支与历史查看、合并�
 
 ## 依赖
 
-- Kuroe.Tool.Implementation.Command、Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Shared。
+- Kuroe.Tool.Implementation.Command、Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Platform。

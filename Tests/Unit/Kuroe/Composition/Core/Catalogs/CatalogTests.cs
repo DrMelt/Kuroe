@@ -3,7 +3,7 @@ using ErrorOr;
 using Kuroe.Composition.Catalogs;
 using Kuroe.Composition.Catalogs.Files;
 using Kuroe.Composition.Configuration.Files;
-using Kuroe.Shared.Catalogs;
+using Kuroe.Platform.Catalogs;
 using Kuroe.Composition.Tests.Support;
 using Xunit;
 

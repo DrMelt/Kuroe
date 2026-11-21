@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace Kuroe.Shared.Tests;
+namespace Kuroe.Platform.Tests;
 
 /// <summary>工作区路径关系判断的纯函数行为。</summary>
 public sealed class WorkspacePathTests

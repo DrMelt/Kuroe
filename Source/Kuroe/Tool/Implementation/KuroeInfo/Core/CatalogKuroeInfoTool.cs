@@ -1,6 +1,6 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Shared.Catalogs;
+using Kuroe.Platform.Catalogs;
 
 namespace Kuroe.Tool.Implementation.KuroeInfo;
 

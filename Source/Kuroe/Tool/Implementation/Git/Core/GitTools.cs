@@ -1,4 +1,4 @@
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Tool.Implementation.Command.Shared;
 using Kuroe.Tool.Implementation.Git.Branch;
 using Kuroe.Tool.Implementation.Git.Read;

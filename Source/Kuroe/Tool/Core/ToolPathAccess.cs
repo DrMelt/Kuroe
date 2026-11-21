@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Shared;
+using Kuroe.Platform;
 
 namespace Kuroe.Tool;
 

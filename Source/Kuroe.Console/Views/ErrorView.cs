@@ -2,7 +2,7 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Composition.Catalogs;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Shared;
+using Kuroe.Platform;
 
 namespace Kuroe.Console.Views;
 

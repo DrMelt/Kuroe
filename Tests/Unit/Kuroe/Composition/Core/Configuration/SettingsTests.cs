@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Text.Json.Nodes;
 using Kuroe.Composition.Configuration;
 using Kuroe.Composition.Configuration.Files;
-using Kuroe.Shared.Configuration;
+using Kuroe.Platform.Configuration;
 using Kuroe.Composition.Tests.Support;
 using Xunit;
 

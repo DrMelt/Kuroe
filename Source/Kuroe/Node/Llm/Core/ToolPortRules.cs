@@ -3,7 +3,7 @@ using Kuroe.FlowDescription.Definition.Shared.Validation;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Shared;
+using Kuroe.Platform;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm;
