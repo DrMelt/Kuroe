@@ -14,7 +14,3 @@
 - 不含节点类型与参数读取。
 - 不含工作区文件系统实现。
 - 不含执行状态机、工具与图。
-
-## 依赖
-
-- Kuroe.Kernel.Execution.Shared、Kuroe.Files.Shared、Kuroe.Platform。

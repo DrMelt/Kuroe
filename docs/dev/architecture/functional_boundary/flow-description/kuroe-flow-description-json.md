@@ -17,7 +17,3 @@
 - 不含描述模型。
 - 不含校验与编译：端口类型名与节点类型名由流程描述的节点类型契约与共享编译解释。
 - 不含流程控制与持久化。
-
-## 依赖
-
-- Kuroe.FlowDescription.Json.Shared、Kuroe.FlowDescription.Description.Shared、Kuroe.Kernel.Tasks.Shared。

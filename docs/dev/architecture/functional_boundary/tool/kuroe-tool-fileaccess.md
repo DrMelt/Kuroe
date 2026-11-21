@@ -16,7 +16,3 @@
 - 不含契约与结果形状。
 - 不含工作区文件系统。
 - 不含工具载体与模型侧输出。
-
-## 依赖
-
-- Kuroe.Tool.FileAccess.Shared、Kuroe.Tool、Kuroe.Files.Shared。

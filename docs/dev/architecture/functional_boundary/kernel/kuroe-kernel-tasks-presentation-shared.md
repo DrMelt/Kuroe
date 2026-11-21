@@ -15,7 +15,3 @@
 - 不含流程视图与展示文本。
 - 不含执行形状。
 - 不依赖流程实现、图与节点。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Execution.Shared。

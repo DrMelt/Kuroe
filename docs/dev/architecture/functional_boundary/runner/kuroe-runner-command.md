@@ -13,7 +13,3 @@
 - 不含节点类型与参数读取。
 - 不含进程实现。
 - 不含执行状态机与任务域。
-
-## 依赖
-
-- Kuroe.Kernel.Execution.Shared、Kuroe.Process、Kuroe.Platform。

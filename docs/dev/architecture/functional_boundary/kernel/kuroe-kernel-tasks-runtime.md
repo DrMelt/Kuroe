@@ -20,7 +20,3 @@
 - 不含执行实现与执行记录形状。
 - 不含存档文件、写盘协调与编解码实现。
 - 不依赖图、节点与输入实现，不构造流程语义。
-
-## 依赖
-
-- Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Presentation.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Input.Shared、Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Persistence.Saving.Shared、Kuroe.Kernel.Tasks.Persistence.Restoring.Shared。

@@ -15,7 +15,3 @@
 - 不含命令执行与进程能力。
 - 不含图运行期与流程控制。
 - 不含其他节点类型。
-
-## 依赖
-
-- Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Platform、Kuroe.Runner.Command、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Execution.Shared。

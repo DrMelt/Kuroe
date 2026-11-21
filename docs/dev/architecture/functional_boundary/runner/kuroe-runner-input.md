@@ -13,7 +13,3 @@
 - 不含节点类型与参数读取。
 - 不含输入通道实现。
 - 不含流程推进与图。
-
-## 依赖
-
-- Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Input.Shared、Kuroe.Kernel.Tasks.Shared。

@@ -17,7 +17,3 @@
 - 不含具体流程记录与种类常量：由 flow、codeflow 与 maf 各自持有。
 - 不含文件存储与文档组装。
 - 不依赖图、流程控制与持久化实现。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Execution.Shared。

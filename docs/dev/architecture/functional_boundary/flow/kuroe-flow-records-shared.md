@@ -16,7 +16,3 @@
 - 不含图结构、编译与流程控制。
 - 不含编解码实现。
 - 不依赖流程控制与宿主实现。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared。

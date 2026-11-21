@@ -13,7 +13,3 @@ MAF 内置节点的执行装配：把 MAF 步骤可表达的节点类型注册�
 - 不含 MAF 步骤投影与流程定义。
 - 不含图流程输出投影与模型声明解析。
 - 不支持等待外部输入的节点类型。
-
-## 依赖
-
-- Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Maf.Compilation、Kuroe.Maf.Compilation.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Kernel.Execution.Shared。

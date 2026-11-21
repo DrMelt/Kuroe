@@ -16,7 +16,3 @@
 - 不含具体流程片段格式：由 flow、codeflow 与 maf 的编解码器解释。
 - 不含 JSON 文本处理。
 - 不含文件存储与任务域。
-
-## 依赖
-
-- Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Shared。

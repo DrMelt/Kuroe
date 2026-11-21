@@ -13,7 +13,3 @@
 - 不含作用域校验规则。
 - 不含图运行期与节点调度。
 - 不含其他节点类型。
-
-## 依赖
-
-- Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Flow.Graph.Shared。

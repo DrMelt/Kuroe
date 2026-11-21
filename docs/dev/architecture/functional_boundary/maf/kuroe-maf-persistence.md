@@ -13,7 +13,3 @@ MAF 流程记录的存档编解码：定义与状态各自成为一段 JSON 片�
 - 不含记录模型与种类常量。
 - 不含运行期与检查点生成。
 - 不含任务存档中央映射与其他流程种类的编解码。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Maf.Records.Shared。

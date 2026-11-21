@@ -13,7 +13,3 @@
 - 不含模板规则与一致性校验。
 - 不含文件读取。
 - 不含进程实现与工具面装配。
-
-## 依赖
-
-- Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Process、Kuroe.Platform。

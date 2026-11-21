@@ -13,7 +13,3 @@
 - 不含协调契约。
 - 不含文件写入与编解码。
 - 不含任务状态读取：捕获来源在运行时。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Persistence.Saving.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

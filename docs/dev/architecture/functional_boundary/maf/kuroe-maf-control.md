@@ -21,7 +21,3 @@ MAF 流程控制：把流程定义构造成工作流运行，由 MAF 运行期�
 - 不含流程记录与编解码。
 - 不含执行实现与任务域。
 - 不依赖图、节点与图流程。
-
-## 依赖
-
-- Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Maf.Records.Shared、Kuroe.Maf.Definition。

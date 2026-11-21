@@ -12,7 +12,3 @@
 - 不含文档形状与字段映射。
 - 不含文件定位与原子替换。
 - 不含流程片段格式与任务域。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Persistence.Serialization.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

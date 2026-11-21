@@ -13,7 +13,3 @@
 - 不含 JSON 实现。
 - 不含描述模型与编译。
 - 不含流程控制与持久化。
-
-## 依赖
-
-- Kuroe.FlowDescription.Description.Shared。

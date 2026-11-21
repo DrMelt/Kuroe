@@ -14,7 +14,3 @@
 - 不含契约。
 - 不含任务域与流程推进。
 - 不做跨进程传输。
-
-## 依赖
-
-- Kuroe.Kernel.Input.Shared、Kuroe.Kernel.Tasks.Shared。

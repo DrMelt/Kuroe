@@ -14,7 +14,3 @@
 - 不含描述模型与库展开。
 - 不含运行期与控制。
 - 不含 MAF 装配。
-
-## 依赖
-
-- Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation、Kuroe.Flow.Graph.Shared、Kuroe.Kernel.Tasks.Shared。

@@ -14,7 +14,3 @@ MAF 流程装配入口：在核心装配之上注册 MAF 流程实现、存档�
 - 不含运行期与检查点。
 - 不含编解码实现。
 - 不含核心装配、图流程与入口项目。
-
-## 依赖
-
-- Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Maf.Compilation、Kuroe.Maf.Compilation.Shared、Kuroe.Maf.Definition、Kuroe.Maf.Control、Kuroe.Maf.Persistence。

@@ -13,7 +13,3 @@
 - 不含编解码实现。
 - 不含流程实现：由使用方以代码给出。
 - 不依赖执行、图、节点与流程控制。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

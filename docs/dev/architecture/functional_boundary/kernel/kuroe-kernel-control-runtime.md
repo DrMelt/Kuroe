@@ -14,7 +14,3 @@
 - 不含控制契约。
 - 不含任务域。
 - 不含具体流程实现，不依赖图、节点与 MAF。
-
-## 依赖
-
-- Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Presentation.Shared、Kuroe.Kernel.Presentation.Shared。

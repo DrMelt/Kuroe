@@ -17,7 +17,3 @@
 - 不含文件格式。
 - 不含图编译、图静态视图与控制。
 - 不含 MAF 投影与 MAF 运行期。
-
-## 依赖
-
-- Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Kernel.Tasks.Shared。

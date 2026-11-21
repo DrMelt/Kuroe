@@ -14,7 +14,3 @@
 - 不含记录模型与种类常量。
 - 不含流程实现与控制。
 - 不含任务存档中央映射与图流程编解码。
-
-## 依赖
-
-- Kuroe.CodeFlow.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

@@ -18,7 +18,3 @@
 - 不含流程库、文件存取与导入。
 - 不含节点类型与执行器实现。
 - 不含 MAF 流程装配。
-
-## 依赖
-
-- Kuroe、Kuroe.Platform、Kuroe.Files.Shared、Kuroe.Process、Kuroe.Flow.Library、Kuroe.Flow.Compilation、Kuroe.Flow.Control、Kuroe.Flow.Graph.Shared、Kuroe.Flow.Records.Shared、Kuroe.Flow.NodeType.Container、Kuroe.Flow.Persistence.Serialization.Graph、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.FlowDescription.Compilation、Kuroe.FlowDescription.Json.Shared、Kuroe.FlowDescription.Json、Kuroe.Node.Llm、Kuroe.Node.File、Kuroe.Node.Command、Kuroe.Node.Input、Kuroe.Node.Approval、Kuroe.Runner.Shared、Kuroe.Runner.Command、Kuroe.Runner.File、Kuroe.Runner.Input、Kuroe.Runner.Approval、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Tool.Implementation.Contract、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Presentation.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Control.Runtime、Kuroe.Kernel.Input.Shared、Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Persistence.Files、Kuroe.Kernel.Presentation.Shared。

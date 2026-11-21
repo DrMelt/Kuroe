@@ -16,7 +16,3 @@
 - 不含任务快照与等待步骤。
 - 不含视图装配：由流程实现捕获流程视图，由任务域装配任务快照。
 - 不含图与节点结构，不含流程控制。
-
-## 依赖
-
-- Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared。

@@ -13,7 +13,3 @@ MAF 文档装配的共享契约：把流程描述装配成 MAF 流程定义的�
 - 不含流程描述形态与静态模型。
 - 不含图编译。
 - 不含流程定义与运行期。
-
-## 依赖
-
-- Kuroe.Maf.Definition、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared。

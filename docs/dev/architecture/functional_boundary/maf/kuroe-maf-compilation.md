@@ -16,7 +16,3 @@ MAF 文档装配实现：把流程描述经共享描述编译投影成 MAF 流�
 - 不含图静态视图与图编译。
 - 不含节点执行器注册。
 - 不含流程定义与运行期。
-
-## 依赖
-
-- Kuroe.Maf.Compilation.Shared、Kuroe.Maf.Definition、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Execution.Shared。

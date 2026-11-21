@@ -13,7 +13,3 @@ MAF 编排流程的存档记录与种类：流程定义记录与流程状态记�
 - 不含流程定义与运行时。
 - 不含编解码实现。
 - 不依赖执行、图、节点与流程控制。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

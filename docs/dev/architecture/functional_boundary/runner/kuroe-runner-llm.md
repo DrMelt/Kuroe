@@ -19,7 +19,3 @@ Llm 执行运行器：按一次执行建立会话与工具集合，发起模型�
 - 不含执行状态机与执行契约。
 - 不含图、流程控制与任务域。
 - 不含工具实现本身。
-
-## 依赖
-
-- Kuroe.Runner.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Tool。

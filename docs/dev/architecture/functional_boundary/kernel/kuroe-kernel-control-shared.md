@@ -22,7 +22,3 @@
 - 不含控制实现。
 - 不含任务聚合与任务注册表。
 - 不含具体流程种类与流程记录，不依赖图与节点。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Presentation.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Execution.Shared。

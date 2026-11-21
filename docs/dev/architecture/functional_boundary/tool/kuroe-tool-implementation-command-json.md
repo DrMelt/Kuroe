@@ -15,7 +15,3 @@
 - 不含模板规则与执行。
 - 不含工具文件注册表实现。
 - 不含工具载体。
-
-## 依赖
-
-- Kuroe.Tool.Json、Kuroe.Tool.Implementation.Command、Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Platform、Kuroe.Files.Shared。

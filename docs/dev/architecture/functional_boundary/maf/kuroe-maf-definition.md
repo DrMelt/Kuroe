@@ -15,7 +15,3 @@ MAF 流程定义：流程名、开始端口、步骤与连接，以及步骤的�
 - 不含运行期。
 - 不含存档记录与编解码。
 - 不依赖图、节点、流程控制与存储。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Execution.Shared。

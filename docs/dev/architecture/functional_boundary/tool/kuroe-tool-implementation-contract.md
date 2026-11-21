@@ -16,7 +16,3 @@
 - 不含执行单元与契约规则。
 - 不含工具载体框架。
 - 不含流程控制与图。
-
-## 依赖
-
-- Kuroe.Tool、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared。

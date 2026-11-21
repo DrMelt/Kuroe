@@ -16,7 +16,3 @@
 - 不含执行装配与输出投影。
 - 不含图运行期与流程推进。
 - 不含其他节点类型。
-
-## 依赖
-
-- Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared。

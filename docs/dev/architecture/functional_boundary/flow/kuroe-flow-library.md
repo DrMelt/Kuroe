@@ -16,7 +16,3 @@
 - 不含图运行期与图控制。
 - 不含描述模型与描述编译。
 - 不含节点类型与执行器实现。
-
-## 依赖
-
-- Kuroe.Flow.Compilation、Kuroe.Flow.Control、Kuroe.Flow.Graph.Shared、Kuroe.Flow.Records.Shared、Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.FlowDescription.Compilation.Shared、Kuroe.FlowDescription.Json.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Files.Shared。

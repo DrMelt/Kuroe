@@ -14,7 +14,3 @@
 - 不含加载契约。
 - 不含任务构造与推进循环。
 - 不含文件格式与写盘。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Persistence.Restoring.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

@@ -15,7 +15,3 @@
 - 不含流程记录模型与种类。
 - 不含图运行期与流程控制。
 - 不含任务存档的中央映射与其他流程种类的编解码。
-
-## 依赖
-
-- Kuroe.Flow.Records.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

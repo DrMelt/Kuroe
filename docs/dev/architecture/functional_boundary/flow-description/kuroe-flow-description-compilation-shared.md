@@ -16,7 +16,3 @@
 - 不含静态模型、端口词汇与语言规则。
 - 不含编译实现。
 - 不含文件格式。
-
-## 依赖
-
-- Kuroe.FlowDescription.Description.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Kernel.Tasks.Shared。

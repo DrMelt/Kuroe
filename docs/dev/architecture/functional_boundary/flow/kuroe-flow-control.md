@@ -22,7 +22,3 @@
 - 不含编译与库展开。
 - 不含执行实现。
 - 不含任务域、输入通道与持久化实现。
-
-## 依赖
-
-- Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Flow.Records.Shared、Kuroe.Flow.Graph.Shared、Kuroe.FlowDescription.Definition.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Records.Shared。

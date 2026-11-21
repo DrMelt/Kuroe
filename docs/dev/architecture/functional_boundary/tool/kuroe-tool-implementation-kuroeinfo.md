@@ -15,7 +15,3 @@ KuroeInfo 工具组：模型目录、流程模板、生效配置、任务与执�
 - 不含任务域与流程控制：查询只读取快照与目录。
 - 不含工具载体框架。
 - 不含宿主装配与入口。
-
-## 依赖
-
-- Kuroe.Platform、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

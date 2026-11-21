@@ -19,7 +19,3 @@
 - 不含图流程与图命名空间。
 - 不含输入实现与工具实现本身。
 - 不含宿主装配与入口。
-
-## 依赖
-
-- Kuroe、Kuroe.Platform、Kuroe.Node.Llm、Kuroe.Runner.Shared、Kuroe.Runner.Llm、Kuroe.Tool、Kuroe.Tool.Json、Kuroe.Tool.Implementation.KuroeInfo、Kuroe.Tool.Implementation.Source、Kuroe.CodeFlow.Persistence、Kuroe.CodeFlow.Records.Shared、Kuroe.Files.Shared、Kuroe.Kernel.Control.Runtime、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Execution.Records.Shared、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Input.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Persistence.Restoring.Shared、Kuroe.Kernel.Tasks.Persistence.Saving.Shared、Kuroe.Kernel.Tasks.Persistence.Serialization.Shared、Kuroe.Kernel.Tasks.Presentation.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Runtime、Kuroe.Kernel.Tasks.Shared。

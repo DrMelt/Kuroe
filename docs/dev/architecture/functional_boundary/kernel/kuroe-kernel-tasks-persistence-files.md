@@ -13,7 +13,3 @@
 - 不含存储契约。
 - 不含存档编解码与目录语义：路径与目录由宿主给出。
 - 不含任务域与写盘调度。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Persistence.Serialization.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Files.Shared。

@@ -17,7 +17,3 @@
 - 不含编译入口、库装配、节点类型扩展契约与参数读取。
 - 不含编译实现。
 - 不含图静态视图、就绪判定与流程控制。
-
-## 依赖
-
-- Kuroe.FlowDescription.Description.Shared、Kuroe.Kernel.Tasks.Shared。

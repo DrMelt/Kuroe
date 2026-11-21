@@ -12,7 +12,3 @@
 - 不含工具载体框架与文件访问契约。
 - 不含工作区文件系统实现。
 - 不含宿主装配与入口。
-
-## 依赖
-
-- Kuroe.Tool、Kuroe.Tool.FileAccess.Shared、Kuroe.Tool.FileAccess、Kuroe.Files.Shared。

@@ -14,7 +14,3 @@
 - 不含加载实现。
 - 不含任务构造与任务域。
 - 不含编解码与文件存储。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

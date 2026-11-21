@@ -13,7 +13,3 @@
 - 不含文件实现。
 - 不含存档文档形状与编解码。
 - 不含任务域。
-
-## 依赖
-
-- Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Shared。

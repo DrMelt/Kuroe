@@ -21,7 +21,3 @@
 - 不含工具文件读写与注册。
 - 不含流程实现、图与节点。
 - 不含模型调用。
-
-## 依赖
-
-- Kuroe.Platform、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Shared。

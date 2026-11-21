@@ -19,7 +19,3 @@
 - 不含 MAF 流程：由宿主另行注册。
 - 不含入口与界面。
 - 不含节点与运行器实现：只做装配接线。
-
-## 依赖
-
-- Kuroe.Tool、Kuroe.Tool.Implementation.Time、Kuroe.Tool.Implementation.File、Kuroe.Tool.Implementation.Git、Kuroe.Tool.Implementation.Dotnet、Kuroe.Tool.Json、Kuroe.Tool.Implementation.Command.Json、Kuroe.Tool.Implementation.Contract、Kuroe.Tool.Implementation.KuroeInfo、Kuroe.Platform、Kuroe.Files.Shared、Kuroe.Files、Kuroe.Kernel.Execution.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Persistence.Serialization.Shared、Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Persistence.Restoring、Kuroe.Kernel.Tasks.Persistence.Restoring.Shared、Kuroe.Kernel.Tasks.Persistence.Saving、Kuroe.Kernel.Tasks.Persistence.Saving.Shared、Kuroe.Kernel.Tasks.Persistence.Files、Kuroe.Kernel.Tasks.Persistence.Serialization.Json、Kuroe.Kernel.Tasks.Runtime、Kuroe.Kernel.Control.Runtime、Kuroe.Kernel.Input.Shared、Kuroe.Kernel.Input.Runtime、Kuroe.Kernel.Execution、Kuroe.Node.Llm、Kuroe.Runner.Shared、Kuroe.Runner.Llm、Kuroe.Kernel.Tasks.Shared、Kuroe.Kernel.Control.Shared、Kuroe.Kernel.Presentation.Shared、Kuroe.Kernel.Tasks.Presentation.Shared。

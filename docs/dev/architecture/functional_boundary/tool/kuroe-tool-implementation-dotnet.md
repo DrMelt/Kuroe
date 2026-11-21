@@ -17,7 +17,3 @@ dotnet 工具组：查看环境、包引用、SDK 与包源，校验格式，以
 - 不含命令模板的执行与装配。
 - 不含进程实现。
 - 不含工具文件配置。
-
-## 依赖
-
-- Kuroe.Tool.Implementation.Command、Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Platform。
