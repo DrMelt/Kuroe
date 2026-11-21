@@ -61,7 +61,7 @@ public sealed class MafFlowAssemblerTests
     public void Document_source_finds_assembled_flows()
     {
         MafFlowAssembler assembler = new(new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander()), Executions());
-        ErrorOr<MafDocumentFlowSource> created = MafDocumentFlowSource.Create(assembler, Chain(), []);
+        ErrorOr<MafDocumentFlowSource> created = MafDocumentFlowSource.Create(assembler, Chain());
 
         Assert.False(created.IsError, Describe(created.ErrorsOrEmptyList));
         Assert.Single(created.Value.All());
@@ -123,7 +123,7 @@ public sealed class MafFlowAssemblerTests
     {
         FlowDescriptionCompiler compiler = new(TestTypeFiles.Registry(), new NodeLibraryExpander());
 
-        return new MafFlowAssembler(compiler, Executions()).Assemble(document, []);
+        return new MafFlowAssembler(compiler, Executions()).Assemble(document);
     }
 
     private static MafNodeExecutions Executions()

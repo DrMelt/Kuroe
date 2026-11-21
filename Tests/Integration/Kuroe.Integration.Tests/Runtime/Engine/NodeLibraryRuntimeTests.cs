@@ -1,8 +1,3 @@
-using Kuroe.Composition.Configuration.Files;
-using Kuroe.FlowDescription.Description.Shared;
-using Kuroe.FlowDescription.Json;
-using Kuroe.FlowDescription.Definition.Shared.Model;
-using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
 using Xunit;
@@ -21,46 +16,6 @@ public sealed class NodeLibraryRuntimeTests
 
         Assert.Equal(TaskState.Done, done.State);
     }
-
-    [Fact(DisplayName = "文件定义自定义节点时，流程仍可引用宿主提供的内置容器；落盘只写文件来源的节点定义")]
-    public void Builtin_definition_stays_usable_and_unwritten_when_file_defines_its_own()
-    {
-        using TestEnvironment environment = TestEnvironment.Create(BuiltinReferenceFlow);
-
-        NodeSpec root = environment.Flows.Find(new FlowName("内置引用")).ThrowIfError().RootNode;
-        Assert.NotNull(root.Nodes);
-        NodeSpec container = Assert.Single(root.Nodes, node => node.Label == new NodeLabel("交付"));
-        Assert.NotNull(container.Nodes);
-        Assert.Single(container.Nodes, node => node.Label == new NodeLabel("实施"));
-
-        IReadOnlyList<NodeDefinitionDescription> nodes = new JsonNodeFormat()
-            .Read(File.ReadAllText(KuroePaths.At(environment.Root).NodesFile)).ThrowIfError();
-        IReadOnlyList<NodeLabel> savedNodes = [.. nodes.Select(node => new NodeLabel(node.Name))];
-        Assert.Equal([new NodeLabel("准备")], savedNodes);
-    }
-
-    /// <summary>文件只定义自己的节点，流程同时引用内置容器。</summary>
-    private const string BuiltinReferenceFlow = """
-        {
-          "Nodes": [
-            { "Name": "准备", "Kind": "Llm", "Parameters": { "Prompt": "写出计划" }, "Outputs": [{ "Name": "计划", "Type": "Text" }] }
-          ],
-          "Flows": [
-            {
-              "Name": "内置引用",
-              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
-              "Root": {
-                "Name": "整体",
-                "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
-                  { "Label": "定计划", "Use": "准备", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
-                  { "Label": "交付", "Use": "交付", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "定计划@计划" } ] }
-                ]
-              }
-            }
-          ]
-        }
-        """;
 
     /// <summary>同一库容器引用两次：两棵实例子树各自保留成员。</summary>
     private const string DualInstanceFlow = """
@@ -90,5 +45,4 @@ public sealed class NodeLibraryRuntimeTests
           ]
         }
         """;
-
 }

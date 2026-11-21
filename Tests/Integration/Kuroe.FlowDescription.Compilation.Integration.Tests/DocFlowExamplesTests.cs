@@ -29,7 +29,7 @@ public sealed class DocFlowExamplesTests
         FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath());
 
         IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
-        return compiler.Compile(document, []);
+        return compiler.Compile(document);
     }
 
     private const string Page = "docs/user/reference/流程示例.md";

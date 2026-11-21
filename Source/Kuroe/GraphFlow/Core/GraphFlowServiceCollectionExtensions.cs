@@ -12,7 +12,6 @@ using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Control.Runtime.Catalog;
 using Kuroe.Flow.Control.Runtime.Engine;
 using Kuroe.Flow.Records.Shared;
-using BuiltinNodeCatalog = Kuroe.GraphFlow.BuiltinNodes.BuiltinNodes;
 using Kuroe.Flow.Library;
 using Kuroe.Flow.Library.Files;
 using Kuroe.GraphFlow.HostInputs;
@@ -123,7 +122,6 @@ public static class GraphFlowServiceCollectionExtensions
                 flowFormat,
                 flowFormat,
                 importFormat),
-            BuiltinNodeCatalog.Create(),
             flowCompiler,
             graphOptions.AllowFlowFailures);
         if (flows.IsError)

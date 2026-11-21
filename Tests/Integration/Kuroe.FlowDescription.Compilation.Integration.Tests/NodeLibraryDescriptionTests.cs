@@ -27,7 +27,7 @@ public sealed class NodeLibraryDescriptionTests
             return document.ErrorsOrEmptyList;
         }
 
-        return GraphCompilerTestHelper.Compile(TestTypeFiles.Registry(), document.Value, []);
+        return GraphCompilerTestHelper.Compile(TestTypeFiles.Registry(), document.Value);
     }
 
     /// <summary>按名字取展开后的流程定义。</summary>
@@ -149,16 +149,6 @@ public sealed class NodeLibraryDescriptionTests
         Assert.NotEmpty(compiled.ErrorsOrEmptyList);
         Assert.All(compiled.ErrorsOrEmptyList,
             error => Assert.StartsWith("流程 节点库", error.Description));
-    }
-
-    [Fact(DisplayName = "文件定义的节点与内置节点同名时覆盖内置定义")]
-    public void File_node_overrides_builtin_definition()
-    {
-        FlowDefinition flow = Find(OverridingBuiltinFlow, new FlowName("默认"));
-        Assert.NotNull(flow.RootNode.Nodes);
-        NodeSpec implement = flow.RootNode.Nodes[0];
-
-        Assert.Equal("文件覆写的指令", Assert.IsType<LlmNodeType>(implement.Type).Parameters?.Prompt);
     }
 
     [Fact(DisplayName = "端口绑定值解析外层成员名")]
@@ -613,22 +603,6 @@ public sealed class NodeLibraryDescriptionTests
         }
         """;
 
-    /// <summary>文件顶层定义与内置「执行」同名的节点，覆盖内置定义。</summary>
-    private const string OverridingBuiltinFlow = """
-        {
-          "Nodes": [
-            { "Name": "执行", "Kind": "Llm", "Parameters": { "Prompt": "文件覆写的指令" } }
-          ],
-          "Flows": [
-            {
-              "Name": "默认",
-              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
-              "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [ { "Label": "实施", "Use": "执行", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] } ] }
-            }
-          ]
-        }
-        """;
-
     private const string MemberNameBindingFlow = """
         {
           "Nodes": [
@@ -886,5 +860,5 @@ public sealed class NodeLibraryDescriptionTests
 
     /// <summary>校验节点库，取错误说明。</summary>
     private static IReadOnlyList<string> LibraryErrors(params NodeSpec[] library) =>
-        [.. new NodeLibraryExpander().Expand([], [], library).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. new NodeLibraryExpander().Expand([], library).ErrorsOrEmptyList.Select(error => error.Description)];
 }

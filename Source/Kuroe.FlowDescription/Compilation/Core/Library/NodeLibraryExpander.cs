@@ -6,17 +6,15 @@ using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.FlowDescription.Compilation.Library;
 
-/// <summary>库装配入口：合并内置与文件定义，校验节点库后逐流程展开。</summary>
+/// <summary>库装配入口：校验文件节点库后逐流程展开。</summary>
 public sealed class NodeLibraryExpander : IFlowExpander
 {
     /// <summary>展开全部流程。节点库不合法时只给节点库错误。</summary>
     public ErrorOr<IReadOnlyList<FlowDefinition>> Expand(
         IReadOnlyList<FlowDefinition> authoringFlows,
-        IReadOnlyList<NodeSpec> builtins,
         IReadOnlyList<NodeSpec> fileNodes)
     {
         NodeLibrary library = new();
-        library.Register(builtins);
 
         List<Error> errors = [.. library.Register(fileNodes)
             .Select(name => NodeScope.Library.Node(name.Value, "节点名重复。"))];

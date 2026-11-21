@@ -22,7 +22,7 @@ public sealed class FlowServiceTests
     {
         WithLibrary((store, compiler) =>
         {
-            FlowService service = FlowService.Create(store, [], compiler, tolerateFailures: true).ThrowIfError();
+            FlowService service = FlowService.Create(store, compiler, tolerateFailures: true).ThrowIfError();
 
             Assert.Contains(service.All(), flow => flow.Name.Value == "可运行");
             FlowFailure failure = Assert.Single(service.Failures);
@@ -37,7 +37,7 @@ public sealed class FlowServiceTests
     {
         WithLibrary((store, compiler) =>
         {
-            var created = FlowService.Create(store, [], compiler, tolerateFailures: false);
+            var created = FlowService.Create(store, compiler, tolerateFailures: false);
 
             Assert.True(created.IsError);
             Assert.Contains(created.ErrorsOrEmptyList, error => error.Description.Contains("Input", StringComparison.Ordinal));

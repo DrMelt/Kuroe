@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.Shared;
-using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Maf.Compilation;
 using Kuroe.Maf.Compilation.Shared;
 using Kuroe.Maf.Definition;
@@ -29,13 +28,11 @@ public static class MafServiceCollectionExtensions
         IFlowTemplateRegistrar registrar,
         IFlowDescriptionCompiler compiler,
         IMafNodeExecutions executions,
-        FlowDescriptionSet document,
-        IReadOnlyList<NodeSpec> builtins)
+        FlowDescriptionSet document)
     {
         ErrorOr<MafDocumentFlowSource> source = MafDocumentFlowSource.Create(
             new MafFlowAssembler(compiler, executions),
-            document,
-            builtins);
+            document);
         if (source.IsError)
         {
             return source.ErrorsOrEmptyList;

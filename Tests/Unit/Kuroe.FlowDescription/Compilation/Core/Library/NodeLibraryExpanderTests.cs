@@ -21,7 +21,7 @@ public sealed class NodeLibraryExpanderTests
         FlowDefinition flow = Flow(Instance, Delivery);
 
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
-            .Expand([flow], [], [Library()]);
+            .Expand([flow], [Library()]);
 
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -38,7 +38,7 @@ public sealed class NodeLibraryExpanderTests
     {
         FlowDefinition flow = Flow(new NodeLabel("缺失"), new NodeName("不存在"));
 
-        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], [], []);
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], []);
 
         Assert.True(expanded.IsError);
         Assert.Contains(expanded.ErrorsOrEmptyList, error => error.Description.Contains("不在节点库", StringComparison.Ordinal));

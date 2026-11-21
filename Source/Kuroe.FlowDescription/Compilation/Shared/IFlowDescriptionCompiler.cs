@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
-using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.FlowDescription.Compilation.Shared;
 
@@ -9,8 +8,6 @@ namespace Kuroe.FlowDescription.Compilation.Shared;
 /// 输出展开后的流程定义，不包含图静态模型。</summary>
 public interface IFlowDescriptionCompiler
 {
-    /// <summary>编译一份流程描述。内置定义由调用方给出，文件定义来自描述。</summary>
-    ErrorOr<IReadOnlyList<FlowDefinition>> Compile(
-        FlowDescriptionSet descriptionSet,
-        IReadOnlyList<NodeSpec> builtins);
+    /// <summary>编译一份流程描述，节点库来自描述。</summary>
+    ErrorOr<IReadOnlyList<FlowDefinition>> Compile(FlowDescriptionSet descriptionSet);
 }

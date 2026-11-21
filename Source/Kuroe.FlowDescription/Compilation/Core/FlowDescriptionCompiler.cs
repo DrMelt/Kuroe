@@ -18,8 +18,7 @@ public sealed class FlowDescriptionCompiler(
 {
     /// <summary>编译一份流程描述。任一条流程失败时返回全部错误。</summary>
     ErrorOr<IReadOnlyList<FlowDefinition>> IFlowDescriptionCompiler.Compile(
-        FlowDescriptionSet descriptionSet,
-        IReadOnlyList<NodeSpec> builtins)
+        FlowDescriptionSet descriptionSet)
     {
         FlowModelBuilder builder = new(types);
         ErrorOr<IReadOnlyList<FlowDefinition>> authoring = builder.Build(descriptionSet);
@@ -46,7 +45,7 @@ public sealed class FlowDescriptionCompiler(
             return errors;
         }
 
-        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = expander.Expand(authoring.Value, builtins, fileNodes.Value);
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = expander.Expand(authoring.Value, fileNodes.Value);
         if (expanded.IsError)
         {
             return expanded.ErrorsOrEmptyList;

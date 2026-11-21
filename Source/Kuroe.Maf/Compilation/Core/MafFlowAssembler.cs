@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
-using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Maf.Compilation.Projection;
 using Kuroe.Maf.Compilation.Shared;
 using Kuroe.Maf.Definition;
@@ -15,11 +14,9 @@ public sealed class MafFlowAssembler(
     IMafNodeExecutions executions) : IMafFlowAssembler
 {
     /// <inheritdoc/>
-    public ErrorOr<IReadOnlyList<MafFlowDefinition>> Assemble(
-        FlowDescriptionSet document,
-        IReadOnlyList<NodeSpec> builtins)
+    public ErrorOr<IReadOnlyList<MafFlowDefinition>> Assemble(FlowDescriptionSet document)
     {
-        ErrorOr<IReadOnlyList<FlowDefinition>> compiled = compiler.Compile(document, builtins);
+        ErrorOr<IReadOnlyList<FlowDefinition>> compiled = compiler.Compile(document);
         if (compiled.IsError)
         {
             return compiled.ErrorsOrEmptyList;

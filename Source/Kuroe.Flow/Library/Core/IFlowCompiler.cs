@@ -4,7 +4,6 @@ using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
-using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.Flow.Library;
 
@@ -12,9 +11,7 @@ namespace Kuroe.Flow.Library;
 public interface IFlowCompiler
 {
     /// <summary>编译一份流程描述为图流程。</summary>
-    ErrorOr<IReadOnlyList<FlowGraph>> Compile(
-        FlowDescriptionSet descriptionSet,
-        IReadOnlyList<NodeSpec> builtins);
+    ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDescriptionSet descriptionSet);
 }
 
 /// <summary>描述编译与图编译的组合。</summary>
@@ -23,11 +20,9 @@ public sealed class FlowCompilation(
     IFlowGraphCompiler graphs) : IFlowCompiler
 {
     /// <inheritdoc/>
-    public ErrorOr<IReadOnlyList<FlowGraph>> Compile(
-        FlowDescriptionSet descriptionSet,
-        IReadOnlyList<NodeSpec> builtins)
+    public ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDescriptionSet descriptionSet)
     {
-        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = descriptions.Compile(descriptionSet, builtins);
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = descriptions.Compile(descriptionSet);
         if (expanded.IsError)
         {
             return expanded.ErrorsOrEmptyList;

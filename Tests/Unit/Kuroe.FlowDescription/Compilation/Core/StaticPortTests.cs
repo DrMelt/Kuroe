@@ -32,7 +32,7 @@ public sealed class StaticPortTests
         FlowDefinition flow = FlowWithStaticOutput();
 
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
-            .Expand([flow], [], [library, executable]);
+            .Expand([flow], [library, executable]);
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
         FlowDefinition tree = Assert.Single(expanded.Value);
@@ -56,7 +56,7 @@ public sealed class StaticPortTests
         FlowDefinition flow = FlowWithStaticOutput();
 
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
-            .Expand([flow], [], [library, executable]);
+            .Expand([flow], [library, executable]);
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
@@ -168,7 +168,7 @@ public sealed class StaticPortTests
             });
 
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
-            .Expand([flow], [], []);
+            .Expand([flow], []);
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
@@ -239,7 +239,7 @@ public sealed class StaticPortTests
             });
 
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
-            .Expand([flow], [], []);
+            .Expand([flow], []);
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
@@ -349,7 +349,7 @@ public sealed class StaticPortTests
             });
 
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
-            .Expand([flow], [], []);
+            .Expand([flow], []);
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
@@ -671,7 +671,7 @@ public sealed class StaticPortTests
                 ],
             });
 
-        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], [], []);
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], []);
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
@@ -730,7 +730,7 @@ public sealed class StaticPortTests
                 ],
             });
 
-        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], [], []);
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], []);
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 

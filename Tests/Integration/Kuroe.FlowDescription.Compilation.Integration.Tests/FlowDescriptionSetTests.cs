@@ -19,8 +19,8 @@ public sealed class FlowDescriptionSetTests
 {
     private static class GraphTestCompiler
     {
-        public static ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDescriptionSet document, IReadOnlyList<NodeSpec> builtins) =>
-            GraphCompilerTestHelper.Compile(TestTypeFiles.Registry(), document, builtins);
+        public static ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDescriptionSet document) =>
+            GraphCompilerTestHelper.Compile(TestTypeFiles.Registry(), document);
     }
 
     [Fact(DisplayName = "没有根节点的流程被拒绝")]
@@ -66,7 +66,7 @@ public sealed class FlowDescriptionSetTests
             FlowDescriptionSetSource.Read(StartDefaultFlow).ThrowIfError()).ThrowIfError();
 
         Assert.Contains("\"Default\": \"main\"", written);
-        Assert.Empty(GraphTestCompiler.Compile(FlowDescriptionSetSource.Read(written).ThrowIfError(), []).ErrorsOrEmptyList);
+        Assert.Empty(GraphTestCompiler.Compile(FlowDescriptionSetSource.Read(written).ThrowIfError()).ErrorsOrEmptyList);
     }
 
     [Fact(DisplayName = "审批节点派生的输出端口只转发内容，不声明触发模式")]
@@ -74,7 +74,7 @@ public sealed class FlowDescriptionSetTests
     {
         ErrorOr<IReadOnlyList<FlowGraph>> compiled = GraphTestCompiler.Compile(FlowDescriptionSetSource.Read("""
             { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Signal", "Mode": "Plain" }], "Root": { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "@目标" } ] } } ] }
-            """).Value, []);
+            """).Value);
 
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
         Assert.Equal(
@@ -243,7 +243,7 @@ public sealed class FlowDescriptionSetTests
         try
         {
             FlowDescriptionSet document = FlowDescriptionSetSource.Read(File.ReadAllText(file)).ThrowIfError();
-            GraphTestCompiler.Compile(document, []).ThrowIfError();
+            GraphTestCompiler.Compile(document).ThrowIfError();
             File.WriteAllText(file, FlowDescriptionSetSource.WriteFlows(document).ThrowIfError());
             string once = File.ReadAllText(file);
 
@@ -271,7 +271,7 @@ public sealed class FlowDescriptionSetTests
         try
         {
             FlowDescriptionSet document = FlowDescriptionSetSource.Read(File.ReadAllText(file)).ThrowIfError();
-            GraphTestCompiler.Compile(document, []).ThrowIfError();
+            GraphTestCompiler.Compile(document).ThrowIfError();
             File.WriteAllText(file, FlowDescriptionSetSource.WriteFlows(document).ThrowIfError());
             string text = File.ReadAllText(file);
 
@@ -1008,7 +1008,7 @@ public sealed class FlowDescriptionSetTests
             return document.ErrorsOrEmptyList;
         }
 
-        return GraphCompilerTestHelper.Compile(files, document.Value, []);
+        return GraphCompilerTestHelper.Compile(files, document.Value);
     }
 
     /// <summary>类型给出输出端口的测试类型：Output 承载文本，Completed 表示完成。</summary>
@@ -1053,6 +1053,6 @@ public sealed class FlowDescriptionSetTests
             return [.. content.ErrorsOrEmptyList.Select(error => error.Description)];
         }
 
-        return [.. GraphTestCompiler.Compile(content.Value, []).ErrorsOrEmptyList.Select(error => error.Description)];
+        return [.. GraphTestCompiler.Compile(content.Value).ErrorsOrEmptyList.Select(error => error.Description)];
     }
 }

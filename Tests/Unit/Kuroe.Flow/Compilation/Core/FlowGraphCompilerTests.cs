@@ -42,7 +42,7 @@ public sealed class FlowGraphCompilerTests
             [new Port(LlmNodeTypes.ModelPort, PortTypes.Text, mode: PortMode.Constant)],
             root);
 
-        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], [], []);
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], []);
         Assert.False(expanded.IsError, string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ErrorOr<FlowGraph> compiled = new FlowGraphCompiler().Compile(expanded.Value[0]);

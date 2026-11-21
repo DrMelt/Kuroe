@@ -6,7 +6,6 @@ using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
-using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
 namespace Kuroe.FlowDescription.Compilation.Integration.Tests;
 
@@ -16,11 +15,10 @@ internal static class GraphCompilerTestHelper
     /// <summary>按类型注册表编译文档并建立图执行视图。</summary>
     public static ErrorOr<IReadOnlyList<FlowGraph>> Compile(
         INodeTypeDescriptionRegistry types,
-        FlowDescriptionSet document,
-        IReadOnlyList<NodeSpec> builtins)
+        FlowDescriptionSet document)
     {
         IFlowDescriptionCompiler descriptions = new FlowDescriptionCompiler(types, new NodeLibraryExpander());
-        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = descriptions.Compile(document, builtins);
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = descriptions.Compile(document);
         if (expanded.IsError)
         {
             return expanded.ErrorsOrEmptyList;

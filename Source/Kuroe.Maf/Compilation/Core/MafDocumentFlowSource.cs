@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.FlowDescription.Description.Shared;
-using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.Maf.Compilation.Shared;
 using Kuroe.Maf.Definition;
 using Kuroe.Kernel.Tasks.Shared;
@@ -22,10 +21,9 @@ public sealed class MafDocumentFlowSource : IMafFlowSource
     /// <summary>装配文档并建立流程来源，流程不合法时给出全部错误。</summary>
     public static ErrorOr<MafDocumentFlowSource> Create(
         IMafFlowAssembler assembler,
-        FlowDescriptionSet document,
-        IReadOnlyList<NodeSpec> builtins)
+        FlowDescriptionSet document)
     {
-        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = assembler.Assemble(document, builtins);
+        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = assembler.Assemble(document);
         if (assembled.IsError)
         {
             return assembled.ErrorsOrEmptyList;
