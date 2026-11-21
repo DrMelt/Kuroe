@@ -19,7 +19,7 @@ public sealed class CatalogCommandsTests
         int exported = command.Export("exported.json");
 
         Assert.Equal(ExitCodes.Success, exported);
-        Assert.True(File.Exists(Path.Combine(environment.Root, "exported.json")), $"{Path.Combine(environment.Root, "exported.json")} 不存在。");
+        Assert.True(environment.Files.FileExists(Path.Combine(environment.Root, "exported.json")), $"{Path.Combine(environment.Root, "exported.json")} 不存在。");
         Assert.Contains("已导出到", output.ToString());
 
         int imported = command.Import("exported.json");
@@ -90,51 +90,38 @@ public sealed class CatalogCommandsTests
     [Fact(DisplayName = "提供方凭据回退到环境变量")]
     public async Task Provider_credential_falls_back_to_environment()
     {
-        string? previous = Environment.GetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable);
-        Environment.SetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable, "env-key");
-        try
-        {
-            await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-            (ProviderCommands providers, _, _, _) = Build(environment);
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
+        (ProviderCommands providers, _, _, _) = Build(environment, () => "env-key");
 
-            Assert.Equal(ExitCodes.Success, providers.Add("p3", "https://example.invalid/v3", null));
-            Assert.Equal("env-key", environment.Session.Catalog.Snapshot().Providers
-                .Single(provider => provider.ProviderName.Value == "p3").ApiKey.Value);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable, previous);
-        }
+        Assert.Equal(ExitCodes.Success, providers.Add("p3", "https://example.invalid/v3", null));
+        Assert.Equal("env-key", environment.Session.Catalog.Snapshot().Providers
+            .Single(provider => provider.ProviderName.Value == "p3").ApiKey.Value);
     }
 
     [Fact(DisplayName = "缺少提供方凭据被拒绝")]
     public async Task Missing_provider_credential_is_rejected()
     {
-        string? previous = Environment.GetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable);
-        Environment.SetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable, null);
-        try
-        {
-            await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-            (ProviderCommands providers, _, _, StringWriter error) = Build(environment);
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
+        (ProviderCommands providers, _, _, StringWriter error) = Build(environment);
 
-            int code = providers.Add("p4", "https://example.invalid/v4", null);
+        int code = providers.Add("p4", "https://example.invalid/v4", null);
 
-            Assert.Equal(ExitCodes.Failure, code);
-            Assert.Contains("Cli.CredentialMissing", error.ToString());
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable, previous);
-        }
+        Assert.Equal(ExitCodes.Failure, code);
+        Assert.Contains("Cli.CredentialMissing", error.ToString());
     }
 
     private static (ProviderCommands Providers, ModelCommands Models, StringWriter Output, StringWriter Error) Build(
-        CliEnvironment environment)
+        CliEnvironment environment,
+        Func<string?>? credentialEnvironment = null)
     {
         StringWriter output = new();
         StringWriter error = new();
         CliOutput cli = new(output, error);
 
-        return (new ProviderCommands(environment.Session, cli), new ModelCommands(environment.Session, cli), output, error);
+        return (
+            new ProviderCommands(environment.Session, cli, credentialEnvironment ?? (() => null)),
+            new ModelCommands(environment.Session, cli),
+            output,
+            error);
     }
 }

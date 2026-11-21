@@ -42,6 +42,7 @@ public sealed class RecordPersistenceTests
         string executionContracts = Path.Combine(KernelRoot, "Execution", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
+        string filesShared = Path.Combine(SourceRoot, "Kuroe.Files", "Shared");
 
         foreach (string project in ProjectFiles(persistence))
         {
@@ -55,7 +56,8 @@ public sealed class RecordPersistenceTests
                         || IsUnder(reference, taskPresentation)
                         || IsUnder(reference, executionContracts)
                         || IsUnder(reference, executionRecords)
-                        || IsUnder(reference, taskRecords),
+                        || IsUnder(reference, taskRecords)
+                        || IsUnder(reference, filesShared),
                     $"{Path.GetFileName(project)} 引用了持久化边界之外的 {reference}。"));
         }
     }

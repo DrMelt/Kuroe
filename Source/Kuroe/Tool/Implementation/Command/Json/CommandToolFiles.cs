@@ -1,3 +1,4 @@
+using Kuroe.Files.Shared;
 using Kuroe.Tool.Json;
 
 namespace Kuroe.Tool.Implementation.Command.Json;
@@ -6,5 +7,5 @@ namespace Kuroe.Tool.Implementation.Command.Json;
 public static class CommandToolFiles
 {
     /// <summary>把命令工具的文件形状注册进注册表。</summary>
-    public static void RegisterInto(ToolFileRegistry files) => files.Register(new CommandToolFile());
+    public static void RegisterInto(ToolFileRegistry registry, IWorkspaceFiles files) => registry.Register(new CommandToolFile(files));
 }

@@ -236,10 +236,10 @@ public sealed class MenuRouteTests
 
         cli.Catalogs.Export(target);
 
-        Assert.True(File.Exists(target), $"{target} 不存在。");
+        Assert.True(cli.Environment.Files.FileExists(target), $"{target} 不存在。");
         Assert.Contains("凭据已替换为占位符", cli.Output.Output);
-        Assert.DoesNotContain("key", File.ReadAllText(target));
-        Assert.Contains("***", File.ReadAllText(target));
+        Assert.DoesNotContain("key", cli.Environment.Files.ReadText(target));
+        Assert.Contains("***", cli.Environment.Files.ReadText(target));
     }
 
     [Fact(DisplayName = "目录导入合并掩码目录")]
@@ -250,6 +250,7 @@ public sealed class MenuRouteTests
         cli.Catalogs.Export(source);
 
         using ConsoleSession fresh = new(seedCatalog: false);
+        fresh.Environment.Files.AddFile(source, cli.Environment.Files.ReadText(source));
         fresh.Catalogs.Import(source);
 
         Assert.Contains("已从", fresh.Output.Output);
@@ -343,7 +344,7 @@ public sealed class MenuRouteTests
     {
         using ConsoleSession cli = new();
         string file = Path.Combine(cli.Environment.Root, "extra.json");
-        File.WriteAllText(file, ImportedFlow);
+        cli.Environment.Files.AddFile(file, ImportedFlow);
 
         cli.Flows.Import(file);
 
@@ -360,7 +361,7 @@ public sealed class MenuRouteTests
     {
         using ConsoleSession cli = new();
         string file = Path.Combine(cli.Environment.Root, "extra.json");
-        File.WriteAllText(file, ImportedFlow);
+        cli.Environment.Files.AddFile(file, ImportedFlow);
 
         // 流程库非空时依次是刷新、查看详情与导入
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
@@ -568,22 +569,14 @@ public sealed class MenuRouteTests
             }
             """)[0];
 
-    /// <summary>把给出的命令工具文件内容写到临时目录并装载，取回配置工具记录。</summary>
+    /// <summary>把给出的命令工具文件内容写进内存文件访问并装载，取回配置工具记录。</summary>
     private static IReadOnlyList<ConfiguredTool> Configured(string json)
     {
         string directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        Kuroe.TestSupport.InMemoryWorkspaceFiles files = new();
+        files.AddFile(Path.Combine(directory, "tools.json"), json);
 
-        try
-        {
-            File.WriteAllText(Path.Combine(directory, "tools.json"), json);
-
-            return new CommandToolFile().Load(directory, Path.GetTempPath()).Value;
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        return new CommandToolFile(files).Load(directory, Path.GetTempPath()).Value;
     }
 
     /// <summary>导入用的流程文件：与基线库无交叉，可独立装配。</summary>

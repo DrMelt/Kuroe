@@ -18,6 +18,6 @@
         <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Json\Shared\Kuroe.FlowDescription.Json.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Persistence\Files\Core\Kuroe.Kernel.Tasks.Persistence.Files.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
     </ItemGroup>
 </Project>

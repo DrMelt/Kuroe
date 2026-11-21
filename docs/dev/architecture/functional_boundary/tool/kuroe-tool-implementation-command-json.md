@@ -18,4 +18,4 @@
 
 ## 依赖
 
-- Kuroe.Tool.Json、Kuroe.Tool.Implementation.Command、Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Platform。
+- Kuroe.Tool.Json、Kuroe.Tool.Implementation.Command、Kuroe.Tool.Implementation.Command.Shared、Kuroe.Tool、Kuroe.Platform、Kuroe.Files.Shared。

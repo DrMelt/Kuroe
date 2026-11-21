@@ -17,7 +17,7 @@ public sealed class TaskRecordCleanupTests : IDisposable
         TaskId id = _environment.Submit("清理任务");
         await _environment.SettleAsync(id);
         string directory = Path.Combine(_environment.Root, ".kuroe_tasks", ".records");
-        FileTaskRecordStore store = new(directory, Codec);
+        FileTaskRecordStore store = new(directory, Codec, Kuroe.Files.SystemWorkspaceFiles.Instance);
         await _environment.Records.FlushAsync(id);
         Assert.Contains(store.ReadAll().Records, record => record.Identity.Id == id);
 

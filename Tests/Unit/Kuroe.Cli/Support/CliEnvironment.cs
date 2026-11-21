@@ -1,8 +1,10 @@
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Composition;
 using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.GraphFlow;
+using Kuroe.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using NeutralExecutionOutput = Kuroe.Kernel.Execution.Shared.Ports.ExecutionOutput;
 using NeutralExecutionRunner = Kuroe.Kernel.Execution.Shared.Runtime.IExecutionRunner;
@@ -13,18 +15,26 @@ using NeutralExecutionUsageSource = Kuroe.Kernel.Execution.Shared.Runtime.IExecu
 
 namespace Kuroe.Cli.Tests.Support;
 
-/// <summary>在临时工作目录里装配一次 CLI 会话，用替身执行器驱动流程。</summary>
+/// <summary>在内存文件访问上装配一次 CLI 会话，用替身执行器驱动流程。</summary>
 internal sealed class CliEnvironment : IAsyncDisposable
 {
-    private CliEnvironment(string root, CliSession session, StubRunner runner)
+    private CliEnvironment(string root, InMemoryWorkspaceFiles files, InMemoryTaskLeaseStores leases, CliSession session, StubRunner runner)
     {
         Root = root;
+        Files = files;
+        Leases = leases;
         Session = session;
         Runner = runner;
     }
 
-    /// <summary>临时工作目录。</summary>
+    /// <summary>工作目录根。</summary>
     public string Root { get; }
+
+    /// <summary>内存文件访问，用例经它读写工作目录内的文件。</summary>
+    public InMemoryWorkspaceFiles Files { get; }
+
+    /// <summary>内存任务租约，用例经它探测租约占用。</summary>
+    public InMemoryTaskLeaseStores Leases { get; }
 
     /// <summary>本次测试的 CLI 会话。</summary>
     public CliSession Session { get; }
@@ -37,8 +47,10 @@ internal sealed class CliEnvironment : IAsyncDisposable
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-cli-tests", Guid.NewGuid().ToString("N"));
         string config = Path.Combine(root, ".kuroe");
-        Directory.CreateDirectory(config);
-        WriteFlowFiles(config, flowsJson);
+        InMemoryWorkspaceFiles files = new();
+        files.AddDirectory(config);
+        WriteFlowFiles(files, config, flowsJson);
+        InMemoryTaskLeaseStores leases = new();
 
         StubRunner runner = new();
         ErrorOr<CliSession> created = CliSession.Create(
@@ -55,7 +67,8 @@ internal sealed class CliEnvironment : IAsyncDisposable
 
                 services.AddSingleton<IExecutionRunnerFactory>(runner);
             },
-            new GraphFlowOptions { LlmRunnerFactory = runner });
+            new GraphFlowOptions { LlmRunnerFactory = runner },
+            new KuroeCompositionOptions { Files = files, LeaseStores = leases.Create });
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join('；', created.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -69,11 +82,11 @@ internal sealed class CliEnvironment : IAsyncDisposable
             ProviderModelName.Create("fake").Value).ThrowIfError();
         session.Models.Select(ModelName.Create("fake").Value).ThrowIfError();
 
-        return new CliEnvironment(root, session, runner);
+        return new CliEnvironment(root, files, leases, session, runner);
     }
 
     /// <summary>把测试夹具按顶层字段写成流程文件与宿主开始输入表，其余内容整体写进流程文件。</summary>
-    private static void WriteFlowFiles(string config, string text)
+    private static void WriteFlowFiles(InMemoryWorkspaceFiles files, string config, string text)
     {
         string flowsFile = Path.Combine(config, "flows.json");
         try
@@ -91,12 +104,12 @@ internal sealed class CliEnvironment : IAsyncDisposable
                 {
                     if (string.Equals(property.Name, "Flows", StringComparison.OrdinalIgnoreCase))
                     {
-                        File.WriteAllText(flowsFile, $"{{\"Flows\":{property.Value.GetRawText()}}}");
+                        files.WriteTextAtomic(flowsFile, $"{{\"Flows\":{property.Value.GetRawText()}}}");
                         written = true;
                     }
                     else if (string.Equals(property.Name, "HostStartInputs", StringComparison.OrdinalIgnoreCase))
                     {
-                        File.WriteAllText(
+                        files.WriteTextAtomic(
                             Path.Combine(config, "hostStartInputs.json"),
                             $"{{\"HostStartInputs\":{property.Value.GetRawText()}}}");
                         written = true;
@@ -106,27 +119,18 @@ internal sealed class CliEnvironment : IAsyncDisposable
 
             if (!written)
             {
-                File.WriteAllText(flowsFile, text);
+                files.WriteTextAtomic(flowsFile, text);
             }
         }
         catch (JsonException)
         {
-            File.WriteAllText(flowsFile, text);
+            files.WriteTextAtomic(flowsFile, text);
         }
     }
 
     public async ValueTask DisposeAsync()
     {
         await Session.DisposeAsync();
-
-        try
-        {
-            Directory.Delete(Root, recursive: true);
-        }
-        catch (IOException)
-        {
-            // 临时目录可能已被清理或占用，收尾不再上报
-        }
     }
 }
 

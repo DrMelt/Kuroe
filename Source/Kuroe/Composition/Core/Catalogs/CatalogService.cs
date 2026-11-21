@@ -192,7 +192,7 @@ public sealed class CatalogService : IModelAccess
                 return masked.ErrorsOrEmptyList;
             }
 
-            ErrorOr<Success> written = CatalogStore.Write(path, masked.Value);
+            ErrorOr<Success> written = _store.Write(path, masked.Value);
 
             return written.IsError ? written.ErrorsOrEmptyList : path;
         }
@@ -208,7 +208,7 @@ public sealed class CatalogService : IModelAccess
         }
 
         string path = resolved.Value;
-        ErrorOr<CatalogContents> parsed = CatalogStore.Read(path);
+        ErrorOr<CatalogContents> parsed = _store.Read(path);
         if (parsed.IsError)
         {
             return parsed.ErrorsOrEmptyList;

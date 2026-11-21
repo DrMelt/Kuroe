@@ -3,13 +3,14 @@ using static Kuroe.Architecture.Tests.Support.RepositoryLayout;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>Kernel 区域整体约束：工程只引 Kernel，Input 模块只依赖 Kernel 契约。</summary>
+/// <summary>Kernel 区域整体约束：工程只引 Kernel 与文件访问契约，Input 模块只依赖 Kernel 契约。</summary>
 public sealed class KernelAreaTests
 {
-    [Fact(DisplayName = "Kernel 项目只引用 Kernel")]
-    public void Kernel_projects_reference_only_kernel()
+    [Fact(DisplayName = "Kernel 项目只引用 Kernel 与文件访问契约")]
+    public void Kernel_projects_reference_only_kernel_and_file_contracts()
     {
         IReadOnlyList<string> projects = [.. ProjectFiles(KernelRoot)];
+        string filesShared = Path.Combine(SourceRoot, "Kuroe.Files", "Shared");
 
         Assert.NotEmpty(projects);
         foreach (string project in projects)
@@ -17,7 +18,7 @@ public sealed class KernelAreaTests
             foreach (string reference in ProjectReferences(project))
             {
                 Assert.True(
-                    IsUnder(reference, KernelRoot),
+                    IsUnder(reference, KernelRoot) || IsUnder(reference, filesShared),
                     $"{Path.GetFileName(project)} 引用了 Kernel 之外的 {reference}。");
             }
         }

@@ -4,18 +4,20 @@ using Kuroe.Kernel.Tasks.Persistence.Serialization.Json;
 using Kuroe.Kernel.Tasks.Records.Shared;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Flow.TestSupport;
+using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Kernel.Tasks.Persistence.Files.Tests;
 
 /// <summary>文件存档存储的契约实现，失败注入只在测试侧包装。</summary>
-public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDisposable
+public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests
 {
     private static readonly TaskRecordCodec Codec = TaskRecordCodecs.Codec();
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+    private readonly InMemoryWorkspaceFiles _files = new();
 
     protected override ITaskRecordStore CreateStore() =>
-        new InjectableStore(new FileTaskRecordStore(_root, Codec));
+        new InjectableStore(new FileTaskRecordStore(_root, Codec, _files));
 
     protected override void InjectReadFailure(ITaskRecordStore store, TaskStoreFailure failure) =>
         Assert.IsType<InjectableStore>(store).Inject(failure);
@@ -23,10 +25,9 @@ public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDi
     [Fact(DisplayName = "读取报告格式错误的文件")]
     public void Read_reports_malformed_file()
     {
-        Directory.CreateDirectory(_root);
         string file = Path.Combine(_root, $"broken{Codec.FileExtension}");
-        File.WriteAllText(file, "{");
-        FileTaskRecordStore store = new(_root, Codec);
+        _files.AddFile(file, "{");
+        FileTaskRecordStore store = new(_root, Codec, _files);
 
         TaskStoreReadResult result = store.ReadAll();
 
@@ -38,10 +39,9 @@ public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDi
     [Fact(DisplayName = "读取报告不支持的版本")]
     public void Read_reports_unsupported_version()
     {
-        Directory.CreateDirectory(_root);
         string file = Path.Combine(_root, $"old{Codec.FileExtension}");
-        File.WriteAllText(file, """{"Version":1,"Task":{}}""");
-        FileTaskRecordStore store = new(_root, Codec);
+        _files.AddFile(file, """{"Version":1,"Task":{}}""");
+        FileTaskRecordStore store = new(_root, Codec, _files);
 
         TaskStoreReadResult result = store.ReadAll();
 
@@ -53,29 +53,13 @@ public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDi
     [Fact(DisplayName = "读取忽略其他扩展名的文件")]
     public void Read_ignores_files_with_other_extensions()
     {
-        Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, "ignored.txt"), "不是存档");
-        FileTaskRecordStore store = new(_root, Codec);
+        _files.AddFile(Path.Combine(_root, "ignored.txt"), "不是存档");
+        FileTaskRecordStore store = new(_root, Codec, _files);
 
         TaskStoreReadResult result = store.ReadAll();
 
         Assert.Empty(result.Records);
         Assert.Empty(result.Failures);
-    }
-
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(_root))
-            {
-                Directory.Delete(_root, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // 临时目录可能已被清理或占用，收尾不再上报
-        }
     }
 
     private sealed class InjectableStore(ITaskRecordStore inner) : ITaskRecordStore

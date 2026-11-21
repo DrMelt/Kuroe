@@ -13,7 +13,7 @@ public sealed class ToolCatalogViewTests
     [Fact(DisplayName = "读取报告提供方模型与选择且不含凭据")]
     public void Read_reports_providers_models_and_selection_without_credentials()
     {
-        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        ModelServiceFixture fixture = ModelServiceFixture.Create();
         ToolCatalogView view = new(fixture.Catalog, fixture.Models);
 
         CatalogSummary summary = view.Read();

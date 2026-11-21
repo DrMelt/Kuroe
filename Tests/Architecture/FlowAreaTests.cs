@@ -92,8 +92,8 @@ public sealed class FlowAreaTests
         }
     }
 
-    [Fact(DisplayName = "流程库只引用流程与内核契约")]
-    public void Flow_library_references_only_flow_and_kernel_contracts()
+    [Fact(DisplayName = "流程库不引用宿主、节点、运行器与工具")]
+    public void Flow_library_stays_free_of_host_node_runner_and_tool()
     {
         string project = Path.Combine(
             SourceRoot,

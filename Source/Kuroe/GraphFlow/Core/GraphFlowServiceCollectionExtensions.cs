@@ -69,7 +69,7 @@ public static class GraphFlowServiceCollectionExtensions
         KuroePaths paths = composition.Paths;
 
         ErrorOr<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> hostForms =
-            new HostStartInputsStore(paths.HostStartInputsFile).Load();
+            new HostStartInputsStore(paths.HostStartInputsFile, composition.Files).Load();
         if (hostForms.IsError)
         {
             return hostForms.ErrorsOrEmptyList;
@@ -81,7 +81,7 @@ public static class GraphFlowServiceCollectionExtensions
             return hostStartInputs.ErrorsOrEmptyList;
         }
 
-        ErrorOr<TaskDirectory> taskDirectory = TaskDirectory.Create(paths.TasksDirectory);
+        ErrorOr<TaskDirectory> taskDirectory = TaskDirectory.Create(paths.TasksDirectory, composition.Files);
         if (taskDirectory.IsError)
         {
             return taskDirectory.ErrorsOrEmptyList;
@@ -121,7 +121,8 @@ public static class GraphFlowServiceCollectionExtensions
                 nodeFormat,
                 flowFormat,
                 flowFormat,
-                importFormat),
+                importFormat,
+                composition.Files),
             flowCompiler,
             graphOptions.AllowFlowFailures);
         if (flows.IsError)

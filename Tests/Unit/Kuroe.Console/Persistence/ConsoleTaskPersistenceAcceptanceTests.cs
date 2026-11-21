@@ -1,26 +1,27 @@
+using System.Collections.Concurrent;
+using Kuroe.TestSupport;
+
 namespace Kuroe.Console.Tests.Persistence;
 
-/// <summary>Console 宿主的任务持久化验收：真实工作目录里跨会话重载任务。</summary>
+/// <summary>Console 宿主的任务持久化验收：共享的内存文件访问里跨会话重载任务。</summary>
 public sealed class ConsoleTaskPersistenceAcceptanceTests : TaskPersistenceAcceptanceTests
 {
-    protected override string CreateRoot() =>
-        Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+    private readonly ConcurrentDictionary<string, (InMemoryWorkspaceFiles Files, InMemoryTaskLeaseStores Leases)> _workspaces = new();
 
-    protected override void DeleteRoot(string root)
+    protected override string CreateRoot()
     {
-        try
-        {
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // 临时目录可能已被清理或占用，收尾不再上报
-        }
+        string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+        _workspaces[root] = (new InMemoryWorkspaceFiles(), new InMemoryTaskLeaseStores());
+
+        return root;
     }
 
-    protected override Task<ITaskPersistenceSession> CreateSessionAsync(string root) =>
-        ConsoleTaskPersistenceSession.CreateAsync(root);
+    protected override void DeleteRoot(string root) => _workspaces.TryRemove(root, out _);
+
+    protected override Task<ITaskPersistenceSession> CreateSessionAsync(string root)
+    {
+        (InMemoryWorkspaceFiles files, InMemoryTaskLeaseStores leases) = _workspaces[root];
+
+        return ConsoleTaskPersistenceSession.CreateAsync(root, files, leases);
+    }
 }

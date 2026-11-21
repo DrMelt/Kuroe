@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using ErrorOr;
 using Kuroe.Composition.Configuration.Files;
 using Kuroe.Composition.Configuration.Model;
+using Kuroe.Files.Shared;
 using Kuroe.Platform.Configuration;
 
 namespace Kuroe.Composition.Configuration;
@@ -31,12 +32,12 @@ public sealed class SettingsProvider : ISettingsView
     public string AssistantLanguage => Current.Assistant.Language;
 
     /// <summary>规范化用户层并绑定校验，失败时一次给出全部错误。装配统一由 AddKuroeComposition 完成。</summary>
-    internal static ErrorOr<SettingsProvider> Create(KuroePaths paths)
+    internal static ErrorOr<SettingsProvider> Create(KuroePaths paths, IWorkspaceFiles files)
     {
         UserSettingsStore store;
         try
         {
-            store = new UserSettingsStore(paths.UserSettingsFile);
+            store = new UserSettingsStore(paths.UserSettingsFile, files);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {

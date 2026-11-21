@@ -1,7 +1,8 @@
+using System.Text;
 using ErrorOr;
+using Kuroe.Files.Shared;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Json.Shared;
-using Kuroe.Kernel.Tasks.Persistence.Files;
 
 namespace Kuroe.Flow.Library.Files;
 
@@ -14,11 +15,13 @@ public sealed class FlowStore(
     INodeFormatWriter nodeWriter,
     IFlowFormatReader flowReader,
     IFlowFormatWriter flowWriter,
-    IFlowImportReader importReader)
+    IFlowImportReader importReader,
+    IWorkspaceFiles files)
 {
     private readonly string _nodesFile = Path.GetFullPath(nodesFile);
     private readonly string _flowsFile = Path.GetFullPath(flowsFile);
     private readonly string _baseDirectory = Path.GetFullPath(baseDirectory);
+    private readonly IWorkspaceFiles _files = files;
 
     /// <summary>工作目录根，用户给出的文件参数以此为基准。</summary>
     public string BaseDirectory => _baseDirectory;
@@ -39,8 +42,8 @@ public sealed class FlowStore(
     /// <summary>读取节点库与流程文件，两个文件都不存在时为空。</summary>
     public ErrorOr<FlowDescriptionSet?> Load()
     {
-        bool hasNodes = File.Exists(_nodesFile);
-        bool hasFlows = File.Exists(_flowsFile);
+        bool hasNodes = _files.FileExists(_nodesFile);
+        bool hasFlows = _files.FileExists(_flowsFile);
         if (!hasNodes && !hasFlows)
         {
             return (FlowDescriptionSet?)null;
@@ -125,7 +128,7 @@ public sealed class FlowStore(
             : new FlowDefinitionsImportFile(path, content.Value.Flows);
     }
 
-    private static ErrorOr<Success> Save(string file, ErrorOr<string> rendered)
+    private ErrorOr<Success> Save(string file, ErrorOr<string> rendered)
     {
         if (rendered.IsError)
         {
@@ -134,7 +137,7 @@ public sealed class FlowStore(
 
         try
         {
-            AtomicFile.WriteText(file, rendered.Value);
+            _files.WriteTextAtomic(file, rendered.Value);
 
             return Result.Success;
         }
@@ -144,11 +147,13 @@ public sealed class FlowStore(
         }
     }
 
-    private static ErrorOr<string> ReadText(string path)
+    private ErrorOr<string> ReadText(string path)
     {
         try
         {
-            return File.ReadAllText(path);
+            using StreamReader reader = new(_files.OpenRead(path), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+
+            return reader.ReadToEnd();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.TestSupport;
 using Kuroe.Tool.Json;
 using Xunit;
 
@@ -7,16 +8,20 @@ namespace Kuroe.Tool.Implementation.Command.Json.Tests;
 /// <summary>命令工具文件：读入与装配校验，条目不合法时一次给出全部错误。</summary>
 public sealed class CommandToolFileTests
 {
-    private static readonly CommandToolFile ToolFile = new();
     private static readonly string[] values = ["src/secret/token.txt"];
 
+    private readonly InMemoryWorkspaceFiles _files = new();
+    private readonly CommandToolFile _toolFile;
+
+    public CommandToolFileTests() => _toolFile = new CommandToolFile(_files);
+
     [Fact(DisplayName = "文件名固定为 tools.json")]
-    public void File_name_is_tools_json() => Assert.Equal("tools.json", ToolFile.FileName);
+    public void File_name_is_tools_json() => Assert.Equal("tools.json", _toolFile.FileName);
 
     [Fact(DisplayName = "文件缺失时加载返回空")]
     public void Load_returns_empty_when_file_missing()
     {
-        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = ToolFile.Load(ConfigDirectory(null), Path.GetTempPath());
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = _toolFile.Load(ConfigDirectory(null), Path.GetTempPath());
 
         Assert.False(loaded.IsError);
         Assert.Empty(loaded.Value);
@@ -360,19 +365,18 @@ public sealed class CommandToolFileTests
         Assert.Empty(loaded.Value);
     }
 
-    /// <summary>把 json 写成配置目录下的 tools.json 后装载，配置目录为临时新建。</summary>
-    private static ErrorOr<IReadOnlyList<ConfiguredTool>> Load(string json) =>
-        ToolFile.Load(ConfigDirectory(json), Path.GetTempPath());
+    /// <summary>把 json 写成配置目录下的 tools.json 后装载，配置目录为新建路径。</summary>
+    private ErrorOr<IReadOnlyList<ConfiguredTool>> Load(string json) =>
+        _toolFile.Load(ConfigDirectory(json), Path.GetTempPath());
 
-    /// <summary>新建临时配置目录，json 非空时写成其中的 tools.json。</summary>
-    private static string ConfigDirectory(string? json)
+    /// <summary>新建配置目录路径，json 非空时写成其中的 tools.json。</summary>
+    private string ConfigDirectory(string? json)
     {
         string directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
 
         if (json is not null)
         {
-            File.WriteAllText(Path.Combine(directory, "tools.json"), json);
+            _files.AddFile(Path.Combine(directory, "tools.json"), json);
         }
 
         return directory;

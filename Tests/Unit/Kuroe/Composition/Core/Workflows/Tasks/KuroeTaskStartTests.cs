@@ -14,7 +14,7 @@ public sealed class KuroeTaskStartTests
     [Fact(DisplayName = "模型输入采用当前选择")]
     public void Model_input_takes_the_current_selection()
     {
-        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        ModelServiceFixture fixture = ModelServiceFixture.Create();
 
         ErrorOr<IPortTexts> values = Start(fixture).Prepare(
             new TaskId(1),
@@ -27,7 +27,7 @@ public sealed class KuroeTaskStartTests
     [Fact(DisplayName = "没有选择时模型输入被拒绝")]
     public void Model_input_without_a_selection_is_rejected()
     {
-        using ModelServiceFixture fixture = ModelServiceFixture.Create(selectModel: false);
+        ModelServiceFixture fixture = ModelServiceFixture.Create(selectModel: false);
 
         ErrorOr<IPortTexts> values = Start(fixture).Prepare(
             new TaskId(1),
@@ -40,7 +40,7 @@ public sealed class KuroeTaskStartTests
     [Fact(DisplayName = "未知的宿主输入名返回错误，不抛异常")]
     public void Unknown_host_input_is_rejected()
     {
-        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        ModelServiceFixture fixture = ModelServiceFixture.Create();
 
         ErrorOr<IPortTexts> values = Start(fixture).Prepare(
             new TaskId(1),

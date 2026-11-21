@@ -1,5 +1,7 @@
+using System.Text;
 using System.Text.Json;
 using ErrorOr;
+using Kuroe.Files.Shared;
 using Kuroe.Platform;
 using Kuroe.Tool.Implementation.Command.Shared;
 using Kuroe.Tool.Json;
@@ -7,8 +9,10 @@ using Kuroe.Tool.Json;
 namespace Kuroe.Tool.Implementation.Command.Json;
 
 /// <summary>命令工具文件的读入与装配。文件不存在时为空；条目不合法时一次给出全部错误。</summary>
-public sealed class CommandToolFile : IToolFile
+public sealed class CommandToolFile(IWorkspaceFiles files) : IToolFile
 {
+    private readonly IWorkspaceFiles _files = files;
+
     /// <summary>本文件层的文件名，位于配置目录下。</summary>
     public string FileName => "tools.json";
 
@@ -16,7 +20,7 @@ public sealed class CommandToolFile : IToolFile
     public ErrorOr<IReadOnlyList<ConfiguredTool>> Load(string configDirectory, string workDirectory)
     {
         string file = Path.Combine(configDirectory, FileName);
-        if (!File.Exists(file))
+        if (!_files.FileExists(file))
         {
             return new List<ConfiguredTool>();
         }
@@ -24,7 +28,8 @@ public sealed class CommandToolFile : IToolFile
         string text;
         try
         {
-            text = File.ReadAllText(file);
+            using StreamReader reader = new(_files.OpenRead(file), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            text = reader.ReadToEnd();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

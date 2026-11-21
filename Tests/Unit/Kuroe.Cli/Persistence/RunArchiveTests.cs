@@ -3,7 +3,7 @@ using Kuroe.Cli.Tests.Support;
 using Kuroe.Composition.Configuration.Files;
 using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Graph.Shared.Graph.Records;
-using Kuroe.Kernel.Tasks.Persistence.Files;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
 using Kuroe.Kernel.Tasks.Records.Shared;
 using Kuroe.Kernel.Tasks.Shared;
 using Xunit;
@@ -25,17 +25,15 @@ public sealed class RunArchiveTests
         TaskId id = Assert.Single(environment.Session.Registry.Snapshots()).Id;
         string records = KuroePaths.At(environment.Root).RecordsDirectory;
         string recordFile = Path.Combine(records, $"{id.Value}.json");
-        string lockFile = Path.Combine(records, $"{id.Value}.lock");
-        Assert.True(File.Exists(recordFile), $"{recordFile} 不存在。");
-        Assert.True(File.Exists(lockFile), $"{lockFile} 不存在。");
+        Assert.True(environment.Files.FileExists(recordFile), $"{recordFile} 不存在。");
 
-        using FileTaskLeaseStore probe = new(records);
+        ITaskLeaseStore probe = environment.Leases.Create(records);
         Assert.True(probe.TryAcquire(id).IsError);
 
         await environment.Session.Tasks.ShutdownAsync();
 
         Assert.False(probe.TryAcquire(id).IsError);
-        TaskRecord record = Kuroe.Flow.TestSupport.TaskRecordCodecs.Codec().Read(await File.ReadAllTextAsync(recordFile, TestContext.Current.CancellationToken)).ThrowIfError();
+        TaskRecord record = Kuroe.Flow.TestSupport.TaskRecordCodecs.Codec().Read(environment.Files.ReadText(recordFile)).ThrowIfError();
         Assert.Equal(id, record.Identity.Id);
         Assert.True(record.Completed);
     }
@@ -52,7 +50,7 @@ public sealed class RunArchiveTests
         TaskId id = Assert.Single(environment.Session.Registry.Snapshots()).Id;
         await environment.Session.Tasks.ShutdownAsync();
         string recordFile = Path.Combine(KuroePaths.At(environment.Root).RecordsDirectory, $"{id.Value}.json");
-        TaskRecord record = Kuroe.Flow.TestSupport.TaskRecordCodecs.Codec().Read(await File.ReadAllTextAsync(recordFile, TestContext.Current.CancellationToken)).ThrowIfError();
+        TaskRecord record = Kuroe.Flow.TestSupport.TaskRecordCodecs.Codec().Read(environment.Files.ReadText(recordFile)).ThrowIfError();
 
         Assert.False(record.Completed);
         Assert.Contains(State(record).Nodes, node => node is ExecutableNodeRecord { Block: not null });

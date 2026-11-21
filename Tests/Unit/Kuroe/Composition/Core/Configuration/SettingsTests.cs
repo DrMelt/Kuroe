@@ -5,21 +5,23 @@ using Kuroe.Composition.Configuration;
 using Kuroe.Composition.Configuration.Files;
 using Kuroe.Platform.Configuration;
 using Kuroe.Composition.Tests.Support;
+using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Composition.Tests.Configuration;
 
 /// <summary>偏好路径、声明表与用户层形状的一致性。</summary>
-public sealed class SettingsTests : IDisposable
+public sealed class SettingsTests
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+    private readonly InMemoryWorkspaceFiles _files = new();
     private readonly SettingsProvider _settings;
 
     public SettingsTests()
     {
         KuroePaths paths = KuroePaths.At(_root);
-        Directory.CreateDirectory(paths.ConfigDirectory);
-        _settings = SettingsProvider.Create(paths).ThrowIfError();
+        _files.AddDirectory(paths.ConfigDirectory);
+        _settings = SettingsProvider.Create(paths, _files).ThrowIfError();
     }
     [Fact(DisplayName = "列出的节与项来自声明表，路径与设置项同源")]
     public void Listing_comes_from_the_declared_items()
@@ -111,11 +113,11 @@ public sealed class SettingsTests : IDisposable
     [Fact(DisplayName = "创建提供方应用配置的代理")]
     public void Provider_creation_applies_the_configured_proxy()
     {
-        File.WriteAllText(_settings.UserSettingsFile, """{"Network":{"Proxy":"http://127.0.0.1:7890"}}""");
+        _files.AddFile(_settings.UserSettingsFile, """{"Network":{"Proxy":"http://127.0.0.1:7890"}}""");
         IWebProxy original = HttpClient.DefaultProxy;
         try
         {
-            SettingsProvider.Create(KuroePaths.At(_root)).ThrowIfError();
+            SettingsProvider.Create(KuroePaths.At(_root), _files).ThrowIfError();
 
             WebProxy applied = Assert.IsType<WebProxy>(HttpClient.DefaultProxy);
 
@@ -132,23 +134,8 @@ public sealed class SettingsTests : IDisposable
     {
         _settings.Set("Runtime:LogLevel", "Warning").ThrowIfError();
 
-        JsonObject root = Assert.IsType<JsonObject>(JsonNode.Parse(File.ReadAllText(_settings.UserSettingsFile)));
+        JsonObject root = Assert.IsType<JsonObject>(JsonNode.Parse(_files.ReadText(_settings.UserSettingsFile)));
 
         Assert.False(root.ContainsKey("Version"));
-    }
-
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(_root))
-            {
-                Directory.Delete(_root, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // 临时目录可能已被清理或占用，收尾不再上报
-        }
     }
 }

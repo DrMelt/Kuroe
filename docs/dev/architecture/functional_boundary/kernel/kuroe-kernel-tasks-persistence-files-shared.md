@@ -10,7 +10,7 @@
 
 ## 边界外
 
-- 不含文件实现：原子替换与租约文件句柄在 Kuroe.Kernel.Tasks.Persistence.Files。
+- 不含文件实现：存档读写与租约文件句柄在 Kuroe.Kernel.Tasks.Persistence.Files，原子替换在 Kuroe.Files。
 - 不含存档文档形状与编解码：在 Kuroe.Kernel.Tasks.Persistence.Serialization.Shared。
 - 不含任务域。
 

@@ -3,6 +3,7 @@ using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json.Nodes;
 using ErrorOr;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
+using Kuroe.TestSupport;
 
 namespace Kuroe.Console.Tests.Persistence;
 
@@ -15,10 +16,10 @@ internal sealed class ConsoleTaskPersistenceSession : ITaskPersistenceSession
 
     private ConsoleTaskPersistenceSession(TestEnvironment environment) => _environment = environment;
 
-    public static Task<ITaskPersistenceSession> CreateAsync(string root)
+    public static Task<ITaskPersistenceSession> CreateAsync(string root, InMemoryWorkspaceFiles files, InMemoryTaskLeaseStores leases)
     {
-        bool seedCatalog = !File.Exists(Path.Combine(root, ".kuroe", "catalog.json"));
-        TestEnvironment environment = TestEnvironment.CreateAt(root, SessionFlows, seedCatalog);
+        bool seedCatalog = !files.FileExists(Path.Combine(root, ".kuroe", "catalog.json"));
+        TestEnvironment environment = TestEnvironment.CreateAt(root, SessionFlows, seedCatalog, files, leases);
         environment.Runner.SubmitsPorts = false;
 
         return Task.FromResult<ITaskPersistenceSession>(

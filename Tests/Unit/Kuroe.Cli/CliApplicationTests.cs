@@ -46,27 +46,27 @@ public sealed class CliApplicationTests
     public async Task Flow_list_runs_through_the_command_tree()
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-cli-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(root, ".kuroe"));
-        await File.WriteAllTextAsync(Path.Combine(root, ".kuroe", "flows.json"), CliFlows.Done, TestContext.Current.CancellationToken);
-        try
-        {
-            StringWriter output = new();
-            StringWriter error = new();
-            CliApplication application = new(
-                output,
-                error,
-                directory => CliSession.Create(directory));
+        Kuroe.TestSupport.InMemoryWorkspaceFiles files = new();
+        files.AddFile(Path.Combine(root, ".kuroe", "flows.json"), CliFlows.Done);
 
-            RootCommand rootCommand = CliCommandLine.Build(application);
-            int code = await rootCommand.Parse(["flow", "list", "-d", root]).InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+        StringWriter output = new();
+        StringWriter error = new();
+        CliApplication application = new(
+            output,
+            error,
+            directory => CliSession.Create(
+                directory,
+                compositionOptions: new Kuroe.Composition.KuroeCompositionOptions
+                {
+                    Files = files,
+                    LeaseStores = new Kuroe.TestSupport.InMemoryTaskLeaseStores().Create,
+                }));
 
-            Assert.Equal(ExitCodes.Success, code);
-            Assert.Contains("默认", output.ToString());
-            Assert.Empty(error.ToString());
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        RootCommand rootCommand = CliCommandLine.Build(application);
+        int code = await rootCommand.Parse(["flow", "list", "-d", root]).InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(ExitCodes.Success, code);
+        Assert.Contains("默认", output.ToString());
+        Assert.Empty(error.ToString());
     }
 }

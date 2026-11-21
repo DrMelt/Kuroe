@@ -2,9 +2,11 @@ using Kuroe.Assistant.Dialogue.Flow;
 using Kuroe.Composition.Catalogs;
 using Kuroe.Composition.Configuration;
 using Kuroe.Composition.Configuration.Files;
+using Kuroe.Files.Shared;
 using Kuroe.Kernel.Control.Runtime;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Input.Shared;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Kernel.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +52,9 @@ internal static class DialogueHostFactory
             new GuidTaskIdSource(),
             persistTasks,
             persistTasks ? paths.AssistantRecordsDirectory : null,
-            persistTasks ? services.GetRequiredService<ITaskRecordCodec>() : null);
+            persistTasks ? services.GetRequiredService<ITaskRecordCodec>() : null,
+            services.GetRequiredService<IWorkspaceFiles>(),
+            services.GetRequiredService<Func<string, ITaskLeaseStore>>());
 
         DialogueRound round = new(registry, domain.Pendings);
         DialogueTurns turns = new(registry, round);

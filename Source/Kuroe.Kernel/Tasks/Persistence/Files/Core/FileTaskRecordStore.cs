@@ -1,3 +1,4 @@
+using Kuroe.Files.Shared;
 using Kuroe.Kernel.Tasks.Shared;
 using System.Text;
 using ErrorOr;
@@ -10,25 +11,32 @@ namespace Kuroe.Kernel.Tasks.Persistence.Files;
 /// <summary>任务存档的文件存储：每个任务一个文件，写入走原子替换，读取逐文件报告失败。</summary>
 public sealed class FileTaskRecordStore(
     string directory,
-    ITaskRecordCodec codec) : ITaskRecordStore
+    ITaskRecordCodec codec,
+    IWorkspaceFiles files) : ITaskRecordStore
 {
     private readonly string _directory = Path.GetFullPath(directory);
     private readonly ITaskRecordCodec _codec = codec;
+    private readonly IWorkspaceFiles _files = files;
 
     /// <inheritdoc/>
     public TaskStoreReadResult ReadAll()
     {
         List<TaskRecord> records = [];
         List<TaskStoreFailure> failures = [];
-        if (!Directory.Exists(_directory))
+        if (!_files.DirectoryExists(_directory))
         {
             return new TaskStoreReadResult(records, failures);
         }
 
-        string[] files;
+        string[] candidates;
         try
         {
-            files = [.. Directory.EnumerateFiles(_directory, $"*{_codec.FileExtension}").OrderBy(Path.GetFileName, StringComparer.Ordinal)];
+            candidates =
+            [
+                .. _files.Files(_directory)
+                    .Where(file => file.EndsWith(_codec.FileExtension, StringComparison.Ordinal))
+                    .OrderBy(Path.GetFileName, StringComparer.Ordinal),
+            ];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -37,7 +45,7 @@ public sealed class FileTaskRecordStore(
             return new TaskStoreReadResult(records, failures);
         }
 
-        foreach (string file in files)
+        foreach (string file in candidates)
         {
             string text;
             try
@@ -63,15 +71,10 @@ public sealed class FileTaskRecordStore(
         return new TaskStoreReadResult(records, failures);
     }
 
-    /// <summary>读取一个存档文件。共享读写与删除，使读取与另一次原子替换可以并行。</summary>
-    private static string ReadText(string file)
+    /// <summary>读取一个存档文件。读取流共享读写与删除，使读取与另一次原子替换可以并行。</summary>
+    private string ReadText(string file)
     {
-        using FileStream stream = new(
-            file,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite | FileShare.Delete);
-        using StreamReader reader = new(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        using StreamReader reader = new(_files.OpenRead(file), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
 
         return reader.ReadToEnd();
     }
@@ -88,7 +91,7 @@ public sealed class FileTaskRecordStore(
         string path = Path.Combine(_directory, $"{record.Identity.Id.Value}{_codec.FileExtension}");
         try
         {
-            AtomicFile.WriteText(path, text.Value);
+            _files.WriteTextAtomic(path, text.Value);
 
             return Result.Success;
         }
@@ -104,10 +107,7 @@ public sealed class FileTaskRecordStore(
         string path = Path.Combine(_directory, $"{id.Value}{_codec.FileExtension}");
         try
         {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+            _files.DeleteFile(path);
 
             return Result.Success;
         }

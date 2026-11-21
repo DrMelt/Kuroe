@@ -55,7 +55,8 @@ internal sealed class CliSession : IAsyncDisposable
     public static ErrorOr<CliSession> Create(
         string? workDirectory,
         Action<IServiceCollection>? configure = null,
-        GraphFlowOptions? graphOptions = null)
+        GraphFlowOptions? graphOptions = null,
+        KuroeCompositionOptions? compositionOptions = null)
     {
         ErrorOr<KuroePaths> paths = KuroePaths.Resolve(workDirectory);
         if (paths.IsError)
@@ -66,7 +67,7 @@ internal sealed class CliSession : IAsyncDisposable
         var services = new ServiceCollection();
         ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(
             paths.Value,
-            new KuroeCompositionOptions { PersistTasks = true });
+            (compositionOptions ?? new KuroeCompositionOptions()) with { PersistTasks = true });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;

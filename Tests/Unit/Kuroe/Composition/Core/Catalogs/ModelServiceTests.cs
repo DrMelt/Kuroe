@@ -12,7 +12,7 @@ public sealed class ModelServiceTests
     [Fact(DisplayName = "选择未注册模型被拒绝")]
     public void Selecting_an_unregistered_model_is_rejected()
     {
-        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        ModelServiceFixture fixture = ModelServiceFixture.Create();
 
         ErrorOr<ModelSelection> selected = fixture.Models.Select(ModelName.Create("nope").Value);
 
@@ -23,7 +23,7 @@ public sealed class ModelServiceTests
     [Fact(DisplayName = "没有选择时取消不改变状态")]
     public void Unselect_without_a_selection_changes_nothing()
     {
-        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        ModelServiceFixture fixture = ModelServiceFixture.Create();
         Assert.False(fixture.Models.Unselect().IsError);
 
         ErrorOr<ModelSelection> again = fixture.Models.Unselect();
@@ -35,7 +35,7 @@ public sealed class ModelServiceTests
     [Fact(DisplayName = "删除当前模型取消选择")]
     public void Removing_the_current_model_cancels_the_selection()
     {
-        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        ModelServiceFixture fixture = ModelServiceFixture.Create();
 
         ErrorOr<ModelRemoval> removal = fixture.Models.Remove(ModelName.Create("fake").Value);
 
@@ -49,7 +49,7 @@ public sealed class ModelServiceTests
     [Fact(DisplayName = "删除未选模型保留选择")]
     public void Removing_an_unselected_model_keeps_the_selection()
     {
-        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        ModelServiceFixture fixture = ModelServiceFixture.Create();
         Assert.False(fixture.Catalog.AddModel(
             ModelName.Create("m2").Value,
             ProviderName.Create("test").Value,

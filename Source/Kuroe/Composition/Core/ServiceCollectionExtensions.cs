@@ -16,6 +16,8 @@ using Kuroe.Runner.Llm.Executions;
 using Kuroe.Runner.Llm.Sessions;
 using Kuroe.Runner.Llm.Tools;
 using Kuroe.Platform;
+using Kuroe.Kernel.Tasks.Persistence.Files;
+using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Serialization.Json;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
@@ -54,21 +56,23 @@ public static class ServiceCollectionExtensions
         KuroeCompositionOptions? options = null)
     {
         KuroeCompositionOptions coreOptions = options ?? new KuroeCompositionOptions();
-        IWorkspaceFiles files = SystemWorkspaceFiles.Instance;
-        ErrorOr<SettingsProvider> settings = SettingsProvider.Create(paths);
+        IWorkspaceFiles files = coreOptions.Files ?? SystemWorkspaceFiles.Instance;
+        Func<string, ITaskLeaseStore> leaseStores =
+            coreOptions.LeaseStores ?? (directory => new FileTaskLeaseStore(directory));
+        ErrorOr<SettingsProvider> settings = SettingsProvider.Create(paths, files);
         if (settings.IsError)
         {
             return settings.ErrorsOrEmptyList;
         }
 
-        ErrorOr<CatalogService> catalog = CatalogService.Create(new CatalogStore(paths.CatalogFile, paths.WorkingDirectory));
+        ErrorOr<CatalogService> catalog = CatalogService.Create(new CatalogStore(paths.CatalogFile, paths.WorkingDirectory, files));
         if (catalog.IsError)
         {
             return catalog.ErrorsOrEmptyList;
         }
 
         ToolFileRegistry toolFiles = new();
-        CommandToolFiles.RegisterInto(toolFiles);
+        CommandToolFiles.RegisterInto(toolFiles, files);
 
         ErrorOr<IReadOnlyList<ConfiguredTool>> configuredTools =
             ToolFiles.Load(toolFiles, paths.ConfigDirectory, paths.WorkingDirectory);
@@ -104,6 +108,8 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton(paths);
+        services.AddSingleton(files);
+        services.AddSingleton(leaseStores);
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
         services.AddSingleton<IModelAccess>(catalog.Value);
@@ -171,7 +177,9 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ITaskIdSource>(),
             coreOptions.PersistTasks,
             coreOptions.PersistTasks ? paths.RecordsDirectory : null,
-            coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCodec>() : null));
+            coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCodec>() : null,
+            files,
+            leaseStores));
         services.AddSingleton(sp => sp.GetRequiredService<TaskDomain>().Pendings);
         if (coreOptions.PersistTasks)
         {

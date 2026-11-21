@@ -1,7 +1,8 @@
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Kuroe.Kernel.Tasks.Persistence.Files;
+using Kuroe.Files.Shared;
 
 namespace Kuroe.Composition.Configuration.Files;
 
@@ -21,11 +22,13 @@ sealed class UserSettingsStore
     };
 
     private readonly string _file;
+    private readonly IWorkspaceFiles _files;
     private JsonObject _root;
 
-    public UserSettingsStore(string file)
+    public UserSettingsStore(string file, IWorkspaceFiles files)
     {
         _file = file;
+        _files = files;
         _root = Load();
     }
 
@@ -73,7 +76,7 @@ sealed class UserSettingsStore
     /// <summary>写盘并接受该节点树。</summary>
     public void Commit(JsonObject root)
     {
-        AtomicFile.WriteText(_file, Serialize(root));
+        _files.WriteTextAtomic(_file, Serialize(root));
 
         _root = root;
     }
@@ -127,12 +130,17 @@ sealed class UserSettingsStore
 
     private JsonObject Load()
     {
-        if (!File.Exists(_file))
+        if (!_files.FileExists(_file))
         {
             return [];
         }
 
-        string text = File.ReadAllText(_file);
+        string text;
+        using (StreamReader reader = new(_files.OpenRead(_file), Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+        {
+            text = reader.ReadToEnd();
+        }
+
         if (string.IsNullOrWhiteSpace(text))
         {
             return [];

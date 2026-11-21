@@ -5,7 +5,7 @@ using Kuroe.Platform;
 namespace Kuroe.Cli.Commands;
 
 /// <summary>provider 命令族：列出、新增、更换凭据与删除提供商。</summary>
-internal sealed class ProviderCommands(CliSession session, CliOutput output)
+internal sealed class ProviderCommands(CliSession session, CliOutput output, Func<string?> credentialEnvironment)
 {
     /// <summary>未给出凭据参数时读取的环境变量。</summary>
     internal const string CredentialEnvironmentVariable = "KUROE_PROVIDER_KEY";
@@ -78,11 +78,11 @@ internal sealed class ProviderCommands(CliSession session, CliOutput output)
         return ExitCodes.Success;
     }
 
-    /// <summary>凭据参数为空时读环境变量，两者都为空时返回空。</summary>
-    private static string? ResolveCredential(string? apiKey)
+    /// <summary>凭据参数为空时读环境凭据，两者都为空时返回空。</summary>
+    private string? ResolveCredential(string? apiKey)
     {
         string? value = string.IsNullOrWhiteSpace(apiKey)
-            ? Environment.GetEnvironmentVariable(CredentialEnvironmentVariable)
+            ? credentialEnvironment()
             : apiKey;
 
         return string.IsNullOrWhiteSpace(value) ? null : value;

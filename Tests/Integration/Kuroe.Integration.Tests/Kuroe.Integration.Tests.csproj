@@ -18,6 +18,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\Source\Kuroe\Composition\Core\Kuroe.Composition.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Files\Core\Kuroe.Files.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Assistant\Core\Kuroe.Assistant.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Node\Command\Core\Kuroe.Node.Command.csproj" />

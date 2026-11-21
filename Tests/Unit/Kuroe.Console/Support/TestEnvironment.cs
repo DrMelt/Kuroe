@@ -22,27 +22,27 @@ using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Kernel.Tasks.Runtime;
 using Kuroe.Composition.Pending;
+using Kuroe.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Console.Tests.Support;
 
-/// <summary>在临时工作目录里装配一套 Kuroe，用假执行器驱动流程。</summary>
+/// <summary>在内存文件访问上装配一套 Kuroe，用假执行器驱动流程。</summary>
 public sealed class TestEnvironment : IDisposable
 {
     private readonly ServiceProvider _provider;
-    private readonly bool _deleteOnDispose;
     private readonly NotifiedTaskWaiter _waiter;
 
     private TestEnvironment(
         string root,
+        InMemoryWorkspaceFiles files,
         ServiceProvider provider,
         FakeRunner runner,
-        bool deleteOnDispose,
         TaskLoadReport loaded)
     {
         Root = root;
+        Files = files;
         _provider = provider;
-        _deleteOnDispose = deleteOnDispose;
         Loaded = loaded;
         Runner = runner;
         Registry = provider.GetRequiredService<TaskRegistry>();
@@ -54,8 +54,11 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<ITaskChangeSource>());
     }
 
-    /// <summary>临时工作目录。</summary>
+    /// <summary>工作目录根。</summary>
     public string Root { get; }
+
+    /// <summary>内存文件访问，用例经它读写工作目录内的文件。</summary>
+    public InMemoryWorkspaceFiles Files { get; }
 
     /// <summary>启动加载的报告，被其他实例占用的任务在这里列出。</summary>
     public TaskLoadReport Loaded { get; }
@@ -151,29 +154,32 @@ public sealed class TestEnvironment : IDisposable
         TryCreateAt(
             Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N")),
             flowsJson,
-            seedCatalog);
+            seedCatalog,
+            new InMemoryWorkspaceFiles(),
+            new InMemoryTaskLeaseStores());
 
-    /// <summary>在指定工作目录装配，用于跨会话重载存档。</summary>
+    /// <summary>在指定工作目录与共享的内存文件访问上装配，用于跨会话重载存档。</summary>
     public static ErrorOr<TestEnvironment> TryCreateAt(
         string root,
-        string? flowsJson = null,
-        bool seedCatalog = true,
-        bool deleteOnDispose = true)
+        string? flowsJson,
+        bool seedCatalog,
+        InMemoryWorkspaceFiles files,
+        InMemoryTaskLeaseStores leases)
     {
-        System.IO.Directory.CreateDirectory(root);
-
         KuroePaths paths = KuroePaths.At(root);
         string? flowsText = flowsJson ?? TestFlowFile;
         if (flowsText is not null)
         {
-            WriteFlowFiles(paths, flowsText);
+            WriteFlowFiles(files, paths, flowsText);
         }
 
         var services = new ServiceCollection();
         services.AddLogging();
         var runner = new FakeRunner();
 
-        ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(paths, new KuroeCompositionOptions());
+        ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(
+            paths,
+            new KuroeCompositionOptions { Files = files, LeaseStores = leases.Create });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;
@@ -225,22 +231,24 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<ModelService>().Select(ModelName.Create("fake").Value).ThrowIfError();
         }
 
-        return new TestEnvironment(root, provider, runner, deleteOnDispose, loaded);
+        return new TestEnvironment(root, files, provider, runner, loaded);
     }
 
     public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true) =>
         TryCreate(flowsJson, seedCatalog).ThrowIfError();
 
-    /// <summary>在指定工作目录装配，用于跨会话重载存档。</summary>
-    public static TestEnvironment CreateAt(string root, string? flowsJson = null, bool seedCatalog = true) =>
-        TryCreateAt(root, flowsJson, seedCatalog, deleteOnDispose: false).ThrowIfError();
+    /// <summary>在指定工作目录与共享的内存文件访问上装配，用于跨会话重载存档。</summary>
+    public static TestEnvironment CreateAt(
+        string root,
+        string? flowsJson,
+        bool seedCatalog,
+        InMemoryWorkspaceFiles files,
+        InMemoryTaskLeaseStores leases) =>
+        TryCreateAt(root, flowsJson, seedCatalog, files, leases).ThrowIfError();
 
     /// <summary>把测试夹具按顶层字段写成节点库、流程与宿主开始输入表，空对象不写文件。</summary>
-    private static void WriteFlowFiles(KuroePaths paths, string text)
+    private static void WriteFlowFiles(InMemoryWorkspaceFiles files, KuroePaths paths, string text)
     {
-        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)
-            ?? throw new InvalidOperationException($"流程文件 {paths.FlowsFile} 没有所在目录。"));
-
         try
         {
             using JsonDocument document = JsonDocument.Parse(text, new JsonDocumentOptions
@@ -256,17 +264,17 @@ public sealed class TestEnvironment : IDisposable
                 {
                     if (string.Equals(property.Name, "Nodes", StringComparison.OrdinalIgnoreCase))
                     {
-                        File.WriteAllText(paths.NodesFile, $"{{\"Nodes\":{property.Value.GetRawText()}}}");
+                        files.WriteTextAtomic(paths.NodesFile, $"{{\"Nodes\":{property.Value.GetRawText()}}}");
                         written = true;
                     }
                     else if (string.Equals(property.Name, "Flows", StringComparison.OrdinalIgnoreCase))
                     {
-                        File.WriteAllText(paths.FlowsFile, $"{{\"Flows\":{property.Value.GetRawText()}}}");
+                        files.WriteTextAtomic(paths.FlowsFile, $"{{\"Flows\":{property.Value.GetRawText()}}}");
                         written = true;
                     }
                     else if (string.Equals(property.Name, "HostStartInputs", StringComparison.OrdinalIgnoreCase))
                     {
-                        File.WriteAllText(paths.HostStartInputsFile, $"{{\"HostStartInputs\":{property.Value.GetRawText()}}}");
+                        files.WriteTextAtomic(paths.HostStartInputsFile, $"{{\"HostStartInputs\":{property.Value.GetRawText()}}}");
                         written = true;
                     }
                 }
@@ -274,12 +282,12 @@ public sealed class TestEnvironment : IDisposable
 
             if (!written && text.Trim() is not "{}")
             {
-                File.WriteAllText(paths.FlowsFile, text);
+                files.WriteTextAtomic(paths.FlowsFile, text);
             }
         }
         catch (JsonException)
         {
-            File.WriteAllText(paths.FlowsFile, text);
+            files.WriteTextAtomic(paths.FlowsFile, text);
         }
     }
 
@@ -314,18 +322,6 @@ public sealed class TestEnvironment : IDisposable
         _waiter.Dispose();
         Tasks.ShutdownAsync().GetAwaiter().GetResult();
         _provider.Dispose();
-
-        try
-        {
-            if (_deleteOnDispose)
-            {
-                System.IO.Directory.Delete(Root, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // 临时目录可能已被清理或占用，收尾不再上报
-        }
     }
 }
 

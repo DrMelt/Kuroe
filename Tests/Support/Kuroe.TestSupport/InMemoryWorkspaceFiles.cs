@@ -165,6 +165,24 @@ public sealed class InMemoryWorkspaceFiles : IWorkspaceFiles
     }
 
     /// <inheritdoc/>
+    public void WriteTextAtomic(string path, string text)
+    {
+        string file = Full(path);
+        lock (_gate)
+        {
+            if (_directories.Contains(file))
+            {
+                throw new IOException($"目标是目录：{path}");
+            }
+
+            RejectFileAncestors(file);
+            AddParentDirectories(file);
+            _facts.Remove(file);
+            _files[file] = Encoding.UTF8.GetBytes(text);
+        }
+    }
+
+    /// <inheritdoc/>
     public void CreateDirectory(string path)
     {
         string directory = Full(path);
@@ -175,6 +193,7 @@ public sealed class InMemoryWorkspaceFiles : IWorkspaceFiles
                 throw new IOException($"目标是文件：{path}");
             }
 
+            RejectFileAncestors(directory);
             AddDirectoryCore(directory);
         }
     }
@@ -315,6 +334,27 @@ public sealed class InMemoryWorkspaceFiles : IWorkspaceFiles
         while (!string.IsNullOrEmpty(current))
         {
             _directories.Add(current);
+            string? parent = Path.GetDirectoryName(current);
+            if (string.IsNullOrEmpty(parent) || _comparer.Equals(parent, current))
+            {
+                break;
+            }
+
+            current = parent;
+        }
+    }
+
+    /// <summary>要求祖先路径没有被文件占用，占用时失败。目标自身不在检查内。调用方持有锁。</summary>
+    private void RejectFileAncestors(string path)
+    {
+        string? current = Path.GetDirectoryName(path);
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (_files.ContainsKey(current))
+            {
+                throw new IOException($"祖先路径是文件：{current}");
+            }
+
             string? parent = Path.GetDirectoryName(current);
             if (string.IsNullOrEmpty(parent) || _comparer.Equals(parent, current))
             {

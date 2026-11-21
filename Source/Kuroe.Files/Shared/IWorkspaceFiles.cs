@@ -23,7 +23,7 @@ public interface IWorkspaceFiles
     /// <summary>取文件的文件系统事实。文件不存在或不可访问时失败。</summary>
     FileFacts Inspect(string file);
 
-    /// <summary>打开文件读取流，调用方负责释放。文件不存在或不可访问时失败。</summary>
+    /// <summary>打开文件读取流，共享读写与删除，读取期间文件可被替换。调用方负责释放。文件不存在或不可访问时失败。</summary>
     Stream OpenRead(string file);
 
     /// <summary>读取文件全部字节。文件不存在或不可访问时失败。</summary>
@@ -31,6 +31,9 @@ public interface IWorkspaceFiles
 
     /// <summary>按编码写入文本，编码的前导字节一并写入。父目录必须存在。</summary>
     void WriteText(string path, string text, Encoding encoding);
+
+    /// <summary>按 UTF-8 无 BOM 原子写入文本，中断不会留下半份文件。父目录缺失时一并建立。</summary>
+    void WriteTextAtomic(string path, string text);
 
     /// <summary>建立目录，父目录缺失时一并建立。</summary>
     void CreateDirectory(string path);

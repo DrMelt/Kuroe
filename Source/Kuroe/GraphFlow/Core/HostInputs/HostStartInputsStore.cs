@@ -1,15 +1,18 @@
+using System.Text;
 using System.Text.Json;
 using ErrorOr;
+using Kuroe.Files.Shared;
 
 namespace Kuroe.GraphFlow.HostInputs;
 
 /// <summary>hostStartInputs.json 的读取：文本形状是流程名到开始端口到宿主输入名的两层表。
 /// 文件不存在时没有表项，结构不符、名字为空与重复一次给全。</summary>
-public sealed class HostStartInputsStore(string file)
+public sealed class HostStartInputsStore(string file, IWorkspaceFiles files)
 {
     private const string Section = "HostStartInputs";
 
     private readonly string _file = Path.GetFullPath(file);
+    private readonly IWorkspaceFiles _files = files;
 
     /// <summary>读入输入表，文件里没有出现的流程没有表项。</summary>
     public ErrorOr<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> Load()
@@ -17,12 +20,13 @@ public sealed class HostStartInputsStore(string file)
         string text;
         try
         {
-            if (!File.Exists(_file))
+            if (!_files.FileExists(_file))
             {
                 return new Dictionary<string, IReadOnlyDictionary<string, string>>();
             }
 
-            text = File.ReadAllText(_file);
+            using StreamReader reader = new(_files.OpenRead(_file), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            text = reader.ReadToEnd();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

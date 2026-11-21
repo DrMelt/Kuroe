@@ -90,6 +90,29 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
         Assert.False(SystemWorkspaceFiles.Instance.IsReparsePoint(_root));
     }
 
+    [Fact(DisplayName = "原子写入建立缺失的父目录且不带 BOM")]
+    public void Atomic_write_creates_missing_parents_without_a_bom()
+    {
+        string path = Path.Combine(_root, "nested", "deep", "a.json");
+
+        SystemWorkspaceFiles.Instance.WriteTextAtomic(path, "内容");
+
+        byte[] bytes = SystemWorkspaceFiles.Instance.ReadBytes(path);
+        Assert.Equal("内容", Encoding.UTF8.GetString(bytes));
+    }
+
+    [Fact(DisplayName = "原子写入替换已有目标且不残留临时文件")]
+    public void Atomic_write_replaces_an_existing_target_without_leftovers()
+    {
+        string path = Path.Combine(_root, "a.json");
+        SystemWorkspaceFiles.Instance.WriteTextAtomic(path, "旧");
+
+        SystemWorkspaceFiles.Instance.WriteTextAtomic(path, "新");
+
+        Assert.Equal("新", Encoding.UTF8.GetString(SystemWorkspaceFiles.Instance.ReadBytes(path)));
+        Assert.Equal([path], SystemWorkspaceFiles.Instance.Files(_root));
+    }
+
     public void Dispose()
     {
         try

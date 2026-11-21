@@ -10,7 +10,7 @@
 ## 边界外
 
 - 不含文档形状与字段映射：在 Kuroe.Kernel.Tasks.Persistence.Serialization.Shared。
-- 不含文件定位与原子替换：在 Kuroe.Kernel.Tasks.Persistence.Files。
+- 不含文件定位与原子替换：文件定位在 Kuroe.Kernel.Tasks.Persistence.Files，原子替换在 Kuroe.Files。
 - 不含流程片段格式与任务域。
 
 ## 依赖

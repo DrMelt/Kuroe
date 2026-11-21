@@ -4,8 +4,7 @@
 
 ## 职责
 
-- 存档文件读写：按任务键定位文件，列出全部存档。
-- 写入原子性：先写临时文件再替换，中断不会留下半份文件，IO 异常交给调用方。
+- 存档文件读写：按任务键定位文件，列出全部存档，写入走文件访问的原子写入。存档按扩展名的序数后缀比较识别，大小写敏感。
 - 任务租约：按任务键打开独占文件句柄，进程退出时由系统释放，锁文件保留。
 - 逐文件读取失败报告。
 
@@ -17,4 +16,4 @@
 
 ## 依赖
 
-- Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Persistence.Serialization.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Shared。
+- Kuroe.Kernel.Tasks.Persistence.Files.Shared、Kuroe.Kernel.Tasks.Persistence.Serialization.Shared、Kuroe.Kernel.Tasks.Records.Shared、Kuroe.Kernel.Tasks.Shared、Kuroe.Files.Shared。

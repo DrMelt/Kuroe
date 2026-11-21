@@ -1,3 +1,4 @@
+using Kuroe.Files.Shared;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Composition.Pending;
 using Kuroe.Kernel.Tasks.Persistence.Files;
@@ -25,7 +26,7 @@ public sealed record TaskDomain(
 /// <summary>任务域装配：按存档目录建立独立的注册表、存档、租约、写盘协调与恢复服务。</summary>
 public static class TaskDomainComposition
 {
-    /// <summary>建立一个任务域。不写存档时不建立存档与恢复。</summary>
+    /// <summary>建立一个任务域。不写存档时不建立存档与恢复。租约按存档目录经工厂建立。</summary>
     public static TaskDomain Create(
         TaskRegistry registry,
         IExecutionRuntime executions,
@@ -34,7 +35,9 @@ public static class TaskDomainComposition
         ITaskIdSource ids,
         bool persist,
         string? recordsDirectory,
-        ITaskRecordCodec? codec)
+        ITaskRecordCodec? codec,
+        IWorkspaceFiles files,
+        Func<string, ITaskLeaseStore> leaseStores)
     {
         PendingService pendings = new(registry);
         if (!persist)
@@ -52,8 +55,8 @@ public static class TaskDomainComposition
             throw new InvalidOperationException("写任务存档需要存档目录与存档编解码。");
         }
 
-        ITaskRecordStore records = new FileTaskRecordStore(recordsDirectory, codec);
-        ITaskLeaseStore leases = new FileTaskLeaseStore(recordsDirectory);
+        ITaskRecordStore records = new FileTaskRecordStore(recordsDirectory, codec, files);
+        ITaskLeaseStore leases = leaseStores(recordsDirectory);
         TaskRecordCoordinator coordinator = new(new TaskRecordSource(registry), records);
         TaskRestoreRuntime restoreRuntime = new(registry, executions, providers, flow);
 

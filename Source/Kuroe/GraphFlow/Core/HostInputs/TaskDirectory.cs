@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Files.Shared;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Platform;
 
@@ -9,18 +10,23 @@ public sealed class TaskDirectory
 {
     private readonly Lock _gate = new();
     private readonly string _root;
+    private readonly IWorkspaceFiles _files;
 
-    private TaskDirectory(string root) => _root = root;
+    private TaskDirectory(string root, IWorkspaceFiles files)
+    {
+        _root = root;
+        _files = files;
+    }
 
     /// <summary>任务目录的根。</summary>
     public string Root => _root;
 
     /// <summary>按根目录建立任务目录服务，目录不存在时按需建立。</summary>
-    public static ErrorOr<TaskDirectory> Create(string directory)
+    public static ErrorOr<TaskDirectory> Create(string directory, IWorkspaceFiles files)
     {
         try
         {
-            return new TaskDirectory(Path.GetFullPath(directory));
+            return new TaskDirectory(Path.GetFullPath(directory), files);
         }
         catch (Exception ex) when (ex is ArgumentException or IOException)
         {
@@ -37,12 +43,12 @@ public sealed class TaskDirectory
         {
             try
             {
-                if (Directory.Exists(path) || File.Exists(path))
+                if (_files.DirectoryExists(path) || _files.FileExists(path))
                 {
                     return Error.Conflict(ErrorCodes.TaskWorkspaceConflict, $"任务目录已存在：{path}");
                 }
 
-                Directory.CreateDirectory(path);
+                _files.CreateDirectory(path);
 
                 return path;
             }
@@ -62,7 +68,7 @@ public sealed class TaskDirectory
             {
                 string path = Path.Combine(_root, id.Value);
 
-                return Directory.Exists(path) ? path : null;
+                return _files.DirectoryExists(path) ? path : null;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -79,9 +85,9 @@ public sealed class TaskDirectory
             try
             {
                 string path = Path.Combine(_root, id.Value);
-                if (Directory.Exists(path))
+                if (_files.DirectoryExists(path))
                 {
-                    Directory.Delete(path, recursive: true);
+                    _files.DeleteDirectory(path, recursive: true);
                 }
 
                 return Result.Success;

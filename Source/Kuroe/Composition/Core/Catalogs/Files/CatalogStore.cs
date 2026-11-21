@@ -1,15 +1,17 @@
+using System.Text;
 using ApiHub.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Kernel.Tasks.Persistence.Files;
+using Kuroe.Files.Shared;
 
 namespace Kuroe.Composition.Catalogs.Files;
 
 /// <summary>目录文件的读写，内容与 JSON 文本的转换交给 ApiHub。</summary>
-sealed class CatalogStore(string file, string baseDirectory)
+sealed class CatalogStore(string file, string baseDirectory, IWorkspaceFiles files)
 {
     private readonly string _file = Path.GetFullPath(file);
     private readonly string _baseDirectory = Path.GetFullPath(baseDirectory);
+    private readonly IWorkspaceFiles _files = files;
 
     /// <summary>工作目录根，用户给出的文件参数以此为基准。</summary>
     public string BaseDirectory => _baseDirectory;
@@ -20,17 +22,19 @@ sealed class CatalogStore(string file, string baseDirectory)
 
     /// <summary>读取目录文件，文件不存在时得到空目录。</summary>
     public ErrorOr<CatalogContents> Load() =>
-        File.Exists(_file) ? Read(_file) : CatalogContents.Create([], []);
+        _files.FileExists(_file) ? Read(_file) : CatalogContents.Create([], []);
 
     /// <summary>把内容写入目录文件。</summary>
     public ErrorOr<Success> Save(CatalogContents contents) => Write(_file, contents);
 
     /// <summary>读取指定文件的内容。</summary>
-    public static ErrorOr<CatalogContents> Read(string path)
+    public ErrorOr<CatalogContents> Read(string path)
     {
         try
         {
-            return CatalogJson.Parse(File.ReadAllText(path));
+            using StreamReader reader = new(_files.OpenRead(path), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+
+            return CatalogJson.Parse(reader.ReadToEnd());
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -39,11 +43,11 @@ sealed class CatalogStore(string file, string baseDirectory)
     }
 
     /// <summary>把内容写入指定文件。</summary>
-    public static ErrorOr<Success> Write(string path, CatalogContents contents)
+    public ErrorOr<Success> Write(string path, CatalogContents contents)
     {
         try
         {
-            AtomicFile.WriteText(path, contents.ToJson());
+            _files.WriteTextAtomic(path, contents.ToJson());
 
             return Result.Success;
         }

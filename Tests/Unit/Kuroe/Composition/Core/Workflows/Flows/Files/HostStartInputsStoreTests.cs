@@ -1,16 +1,16 @@
 using ErrorOr;
 using Kuroe.Composition.Tests.Support;
 using Kuroe.GraphFlow.HostInputs;
+using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Composition.Tests.Workflows.Flows.Files;
 
 /// <summary>hostStartInputs.json 的读取：文件不存在或空对象没有表项，结构、名字与值的问题一次给全。</summary>
-public sealed class HostStartInputsStoreTests : IDisposable
+public sealed class HostStartInputsStoreTests
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
-
-    public HostStartInputsStoreTests() => Directory.CreateDirectory(_root);
+    private readonly InMemoryWorkspaceFiles _files = new();
 
     private string FilePath => Path.Combine(_root, "hostStartInputs.json");
 
@@ -103,30 +103,18 @@ public sealed class HostStartInputsStoreTests : IDisposable
     {
         if (json is not null)
         {
-            File.WriteAllText(FilePath, json);
+            _files.WriteTextAtomic(FilePath, json);
         }
 
-        return new HostStartInputsStore(FilePath).Load().ThrowIfError();
+        return new HostStartInputsStore(FilePath, _files).Load().ThrowIfError();
     }
 
     private ErrorOr<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> TryLoad(string json)
     {
-        File.WriteAllText(FilePath, json);
+        _files.WriteTextAtomic(FilePath, json);
 
-        return new HostStartInputsStore(FilePath).Load();
+        return new HostStartInputsStore(FilePath, _files).Load();
     }
 
     private List<Error> Errors(string json) => TryLoad(json).ErrorsOrEmptyList;
-
-    public void Dispose()
-    {
-        try
-        {
-            Directory.Delete(_root, recursive: true);
-        }
-        catch (IOException)
-        {
-            // 临时目录可能已被清理或占用，收尾不再上报
-        }
-    }
 }

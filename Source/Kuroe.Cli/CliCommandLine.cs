@@ -181,7 +181,7 @@ internal static class CliCommandLine
         Command list = new("list", "列出提供商。");
         list.SetAction(parseResult => application.ExecuteAsync(
             parseResult.GetValue(workDirectory),
-            (session, output) => new ProviderCommands(session, output).List()));
+            (session, output) => Providers(session, output).List()));
 
         Command add = new("add", "新增提供商。");
         Argument<string> name = new("名") { Description = "提供商名" };
@@ -196,7 +196,7 @@ internal static class CliCommandLine
         add.Arguments.Add(key);
         add.SetAction(parseResult => application.ExecuteAsync(
             parseResult.GetValue(workDirectory),
-            (session, output) => new ProviderCommands(session, output).Add(
+            (session, output) => Providers(session, output).Add(
                 parseResult.GetValue(name) ?? string.Empty,
                 parseResult.GetValue(endpoint) ?? string.Empty,
                 parseResult.GetValue(key))));
@@ -212,7 +212,7 @@ internal static class CliCommandLine
         replaceKey.Arguments.Add(keyValue);
         replaceKey.SetAction(parseResult => application.ExecuteAsync(
             parseResult.GetValue(workDirectory),
-            (session, output) => new ProviderCommands(session, output).Key(
+            (session, output) => Providers(session, output).Key(
                 parseResult.GetValue(keyProvider) ?? string.Empty,
                 parseResult.GetValue(keyValue))));
 
@@ -221,7 +221,7 @@ internal static class CliCommandLine
         remove.Arguments.Add(removed);
         remove.SetAction(parseResult => application.ExecuteAsync(
             parseResult.GetValue(workDirectory),
-            (session, output) => new ProviderCommands(session, output).Remove(parseResult.GetValue(removed) ?? string.Empty)));
+            (session, output) => Providers(session, output).Remove(parseResult.GetValue(removed) ?? string.Empty)));
 
         group.Subcommands.Add(list);
         group.Subcommands.Add(add);
@@ -229,10 +229,14 @@ internal static class CliCommandLine
         group.Subcommands.Add(remove);
         group.SetAction(parseResult => application.ExecuteAsync(
             parseResult.GetValue(workDirectory),
-            (session, output) => new ProviderCommands(session, output).List()));
+            (session, output) => Providers(session, output).List()));
 
         return group;
     }
+
+    /// <summary>建立 provider 命令族，环境凭据从进程环境变量读取。</summary>
+    private static ProviderCommands Providers(CliSession session, CliOutput output) =>
+        new(session, output, () => Environment.GetEnvironmentVariable(ProviderCommands.CredentialEnvironmentVariable));
 
     private static Command Catalog(CliApplication application, Option<string?> workDirectory)
     {

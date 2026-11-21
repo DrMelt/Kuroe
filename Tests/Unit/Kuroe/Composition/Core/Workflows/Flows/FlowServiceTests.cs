@@ -47,37 +47,32 @@ public sealed class FlowServiceTests
     private static void WithLibrary(Action<FlowStore, IFlowCompiler> check)
     {
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-isolation-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(root);
         string nodesFile = Path.Combine(root, "nodes.json");
         string flowsFile = Path.Combine(root, "flows.json");
-        File.WriteAllText(flowsFile, Mixed);
-        try
-        {
-            NodeTypeDescriptionRegistry types = new();
-            ContainerNodeTypeDescriptions.RegisterInto(types);
-            LlmNodeTypeDescriptions.RegisterInto(types);
-            Kuroe.Flow.Library.FlowCompilation compiler = new(
-                new FlowDescriptionCompiler(types, new NodeLibraryExpander()),
-                new FlowGraphCompiler());
-            JsonNodeFormat nodeFormat = new();
-            JsonFlowFormat flowFormat = new();
-            JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
-            FlowStore store = new(
-                nodesFile,
-                flowsFile,
-                root,
-                nodeFormat,
-                nodeFormat,
-                flowFormat,
-                flowFormat,
-                importFormat);
+        Kuroe.TestSupport.InMemoryWorkspaceFiles files = new();
+        files.AddFile(flowsFile, Mixed);
 
-            check(store, compiler);
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        NodeTypeDescriptionRegistry types = new();
+        ContainerNodeTypeDescriptions.RegisterInto(types);
+        LlmNodeTypeDescriptions.RegisterInto(types);
+        Kuroe.Flow.Library.FlowCompilation compiler = new(
+            new FlowDescriptionCompiler(types, new NodeLibraryExpander()),
+            new FlowGraphCompiler());
+        JsonNodeFormat nodeFormat = new();
+        JsonFlowFormat flowFormat = new();
+        JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
+        FlowStore store = new(
+            nodesFile,
+            flowsFile,
+            root,
+            nodeFormat,
+            nodeFormat,
+            flowFormat,
+            flowFormat,
+            importFormat,
+            files);
+
+        check(store, compiler);
     }
 
     private const string Mixed = """
