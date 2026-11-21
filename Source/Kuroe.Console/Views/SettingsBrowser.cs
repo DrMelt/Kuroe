@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Configuration;
+using Kuroe.Composition.Configuration;
 using Kuroe.Shared.Configuration;
 using Spectre.Console;
 

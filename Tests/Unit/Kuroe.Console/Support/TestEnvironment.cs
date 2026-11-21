@@ -1,3 +1,4 @@
+using Kuroe.Composition;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
@@ -5,9 +6,9 @@ using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition.Catalogs;
+using Kuroe.Composition.Configuration;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.GraphFlow;
 using Kuroe.Flow.Library;
 using Kuroe.FlowDescription.Definition.Shared.Model;
@@ -20,7 +21,7 @@ using Kuroe.Assistant;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Kernel.Tasks.Runtime;
-using Kuroe.Pending;
+using Kuroe.Composition.Pending;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Console.Tests.Support;
@@ -172,7 +173,7 @@ public sealed class TestEnvironment : IDisposable
         services.AddLogging();
         var runner = new FakeRunner();
 
-        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(paths, new KuroeCoreOptions());
+        ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(paths, new KuroeCompositionOptions());
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;

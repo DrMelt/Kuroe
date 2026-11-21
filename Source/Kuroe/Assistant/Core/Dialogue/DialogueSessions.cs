@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Assistant.Dialogue.Flow;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
+using Kuroe.Composition.Catalogs;
+using Kuroe.Composition.Configuration;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Runner;
 using Kuroe.Kernel.Tasks.Presentation.Shared;

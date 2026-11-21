@@ -1,3 +1,4 @@
+using Kuroe.Composition;
 using Kuroe.Flow.Control.Runtime.Graph;
 using Kuroe.Flow.Control.Runtime;
 using Kuroe.Kernel.Control.Shared;
@@ -7,9 +8,9 @@ using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition.Catalogs;
+using Kuroe.Composition.Configuration;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.GraphFlow;
 using Kuroe.GraphFlow.NodeExecution;
 using Kuroe.Flow.Library;
@@ -24,7 +25,7 @@ using Kuroe.Assistant;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Kernel.Control.Runtime;
 using Kuroe.Kernel.Tasks.Runtime;
-using Kuroe.Pending;
+using Kuroe.Composition.Pending;
 using Kuroe.Process;
 using Kuroe.Tool;
 using Kuroe.Tool.Implementation.Contract;
@@ -211,7 +212,7 @@ public sealed class TestEnvironment : IDisposable
         """;
 
     /// <summary>完整装配的核心选项。默认不写存档，持久化用例显式打开。</summary>
-    internal static KuroeCoreOptions Options => new() { PersistTasks = false };
+    internal static KuroeCompositionOptions Options => new() { PersistTasks = false };
 
     private static GraphFlowOptions CreateGraphOptions(
         IProcessRunner? process,
@@ -249,9 +250,9 @@ public sealed class TestEnvironment : IDisposable
         services.AddLogging();
         var runner = new FakeRunner();
 
-        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
+        ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(
             paths,
-            new KuroeCoreOptions { PersistTasks = persistTasks });
+            new KuroeCompositionOptions { PersistTasks = persistTasks });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;

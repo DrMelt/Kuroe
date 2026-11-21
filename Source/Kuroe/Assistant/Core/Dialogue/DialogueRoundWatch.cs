@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Pending;
+using Kuroe.Composition.Pending;
 using Kuroe.Kernel.Tasks.Runtime;
 using Kuroe.Kernel.Execution.Shared.State;
 

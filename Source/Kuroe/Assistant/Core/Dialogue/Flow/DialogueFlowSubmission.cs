@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Catalogs;
+using Kuroe.Composition.Catalogs;
 using Kuroe.CodeFlow.Records.Shared;
-using Kuroe.Configuration;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition.Configuration;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Execution.Records.Shared;
 using Kuroe.Kernel.Tasks.Records.Shared;

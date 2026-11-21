@@ -1,6 +1,7 @@
 using ErrorOr;
-using Kuroe.Catalogs;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition;
+using Kuroe.Composition.Catalogs;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.FlowDescription.Compilation;
 using Kuroe.FlowDescription.Compilation.NodeTypes;

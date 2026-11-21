@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ApiHub.Shared" />
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Composition\Core\Kuroe.Composition.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\GraphFlow\Core\Kuroe.GraphFlow.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Compilation\Core\Kuroe.FlowDescription.Compilation.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Json\Core\Kuroe.FlowDescription.Json.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Json\Shared\Kuroe.FlowDescription.Json.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.Implementation.KuroeInfo.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Control\Shared\Kuroe.Kernel.Control.Shared.csproj" />
+    <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Presentation\Shared\Kuroe.Kernel.Presentation.Shared.csproj" />
+    <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Kernel.Tasks.Presentation.Shared.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
+    </ItemGroup>
+
+</Project>

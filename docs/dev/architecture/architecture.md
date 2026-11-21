@@ -111,7 +111,7 @@ graph TD
     end
 
     subgraph DHost["host：宿主装配与入口"]
-        Core["Kuroe<br>核心装配与任务域组合"]
+        Composition["Kuroe.Composition<br>装配与任务域组合"]
         GraphFlow["GraphFlow<br>图流程装配与宿主输入"]
         Console["Console<br>交互终端入口"]
         Cli["Cli<br>命令行入口"]
@@ -234,7 +234,7 @@ graph TD
     FlowRecordsShared --> TasksRecordsShared
     FlowRecordsShared --> ExecutionShared
     FlowRecordsShared --> FlowGraphShared
-    GraphFlow --> Core
+    GraphFlow --> Composition
     GraphFlow --> Shared
     GraphFlow --> FilesShared
     GraphFlow --> Process
@@ -441,7 +441,7 @@ graph TD
     ToolJson --> Shared
 
     %% assistant 与 host 域：装配根向下依赖各域实现
-    Assistant --> Core
+    Assistant --> Composition
     Assistant --> Shared
     Assistant --> NodeLlm
     Assistant --> RunnerShared
@@ -467,7 +467,7 @@ graph TD
     Assistant --> TasksRecordsShared
     Assistant --> TasksRuntime
     Assistant --> TasksShared
-    Cli --> Core
+    Cli --> Composition
     Cli --> Shared
     Cli --> ExecutionShared
     Cli --> GraphFlow
@@ -478,7 +478,7 @@ graph TD
     Cli --> ControlShared
     Cli --> PresentationShared
     Cli --> TasksPresentationShared
-    Console --> Core
+    Console --> Composition
     Console --> Assistant
     Console --> NodeLlm
     Console --> RunnerLlm
@@ -501,40 +501,40 @@ graph TD
     Console --> ControlShared
     Console --> PresentationShared
     Console --> TasksPresentationShared
-    Core --> Tool
-    Core --> ToolTime
-    Core --> ToolFile
-    Core --> ToolGit
-    Core --> ToolDotnet
-    Core --> ToolJson
-    Core --> ToolCommandJson
-    Core --> ToolContract
-    Core --> ToolKuroeInfo
-    Core --> Shared
-    Core --> FilesShared
-    Core --> Files
-    Core --> ExecutionShared
-    Core --> TasksRecordsShared
-    Core --> TasksPersistenceSerializationShared
-    Core --> TasksPersistenceFilesShared
-    Core --> TasksPersistenceRestoring
-    Core --> TasksPersistenceRestoringShared
-    Core --> TasksPersistenceSaving
-    Core --> TasksPersistenceSavingShared
-    Core --> TasksPersistenceFiles
-    Core --> TasksPersistenceJson
-    Core --> TasksRuntime
-    Core --> ControlRuntime
-    Core --> InputShared
-    Core --> InputRuntime
-    Core --> Execution
-    Core --> NodeLlm
-    Core --> RunnerShared
-    Core --> RunnerLlm
-    Core --> TasksShared
-    Core --> ControlShared
-    Core --> PresentationShared
-    Core --> TasksPresentationShared
+    Composition --> Tool
+    Composition --> ToolTime
+    Composition --> ToolFile
+    Composition --> ToolGit
+    Composition --> ToolDotnet
+    Composition --> ToolJson
+    Composition --> ToolCommandJson
+    Composition --> ToolContract
+    Composition --> ToolKuroeInfo
+    Composition --> Shared
+    Composition --> FilesShared
+    Composition --> Files
+    Composition --> ExecutionShared
+    Composition --> TasksRecordsShared
+    Composition --> TasksPersistenceSerializationShared
+    Composition --> TasksPersistenceFilesShared
+    Composition --> TasksPersistenceRestoring
+    Composition --> TasksPersistenceRestoringShared
+    Composition --> TasksPersistenceSaving
+    Composition --> TasksPersistenceSavingShared
+    Composition --> TasksPersistenceFiles
+    Composition --> TasksPersistenceJson
+    Composition --> TasksRuntime
+    Composition --> ControlRuntime
+    Composition --> InputShared
+    Composition --> InputRuntime
+    Composition --> Execution
+    Composition --> NodeLlm
+    Composition --> RunnerShared
+    Composition --> RunnerLlm
+    Composition --> TasksShared
+    Composition --> ControlShared
+    Composition --> PresentationShared
+    Composition --> TasksPresentationShared
 
     %% platform 域：路径、文件与进程是依赖叶子
     Files --> FilesShared
@@ -617,7 +617,7 @@ graph TD
 | `Kuroe.Tool.Implementation.Source` | tool | [kuroe-tool-implementation-source](functional_boundary/tool/kuroe-tool-implementation-source.md) |
 | `Kuroe.Tool.Implementation.Time` | tool | [kuroe-tool-implementation-time](functional_boundary/tool/kuroe-tool-implementation-time.md) |
 | `Kuroe.Assistant` | assistant | [kuroe-assistant](functional_boundary/assistant/kuroe-assistant.md) |
-| `Kuroe` | host | [kuroe](functional_boundary/host/kuroe.md) |
+| `Kuroe.Composition` | host | [kuroe-composition](functional_boundary/host/kuroe-composition.md) |
 | `Kuroe.GraphFlow` | host | [kuroe-graph-flow](functional_boundary/host/kuroe-graph-flow.md) |
 | `Kuroe.Console` | host | [kuroe-console](functional_boundary/host/kuroe-console.md) |
 | `Kuroe.Cli` | host | [kuroe-cli](functional_boundary/host/kuroe-cli.md) |

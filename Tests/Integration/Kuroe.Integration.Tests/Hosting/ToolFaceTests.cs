@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Assistant;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.Runner.Llm.Tools;
 using Kuroe.Tool;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,7 +61,7 @@ public sealed class ToolFaceTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
+        ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(KuroePaths.At(_root), TestEnvironment.Options);
         Assert.False(composition.IsError, composition.ErrorsText());
 
         ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(_root, "source"));

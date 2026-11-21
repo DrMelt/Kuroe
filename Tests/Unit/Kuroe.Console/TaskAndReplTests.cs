@@ -4,7 +4,7 @@ using Kuroe.Console.Views;
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Pending;
+using Kuroe.Composition.Pending;
 using Spectre.Console.Testing;
 using Xunit;
 

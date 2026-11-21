@@ -1,4 +1,4 @@
-using Kuroe.Configuration;
+using Kuroe.Composition.Configuration;
 using Kuroe.Shared.Configuration;
 
 namespace Kuroe.Cli.Views;

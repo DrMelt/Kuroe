@@ -1,12 +1,13 @@
 using ErrorOr;
 using Kuroe.Assistant;
+using Kuroe.Composition;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.Runner.Llm.Sessions;
 using Kuroe.Runner.Llm.Tools;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition.Catalogs;
+using Kuroe.Composition.Configuration;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.Tool;
 using Kuroe.Kernel.Tasks.Runtime;
 using Kuroe.GraphFlow;
@@ -68,7 +69,7 @@ public sealed class WiringTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeComposition> startup = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
+        ErrorOr<KuroeComposition> startup = services.AddKuroeComposition(KuroePaths.At(_root), TestEnvironment.Options);
 
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList, error => error.Description.Contains("重复", StringComparison.Ordinal));
@@ -90,7 +91,7 @@ public sealed class WiringTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeComposition> startup = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
+        ErrorOr<KuroeComposition> startup = services.AddKuroeComposition(KuroePaths.At(_root), TestEnvironment.Options);
 
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList,
@@ -160,7 +161,7 @@ public sealed class WiringTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
+        ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(KuroePaths.At(_root), TestEnvironment.Options);
         Assert.False(composition.IsError, composition.ErrorsText());
 
         ErrorOr<Success> graph = services.AddKuroeGraphFlows(composition.Value);

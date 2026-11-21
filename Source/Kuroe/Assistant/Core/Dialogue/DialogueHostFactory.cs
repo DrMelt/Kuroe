@@ -1,7 +1,7 @@
 using Kuroe.Assistant.Dialogue.Flow;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition.Catalogs;
+using Kuroe.Composition.Configuration;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.Kernel.Control.Runtime;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Input.Shared;
@@ -10,7 +10,7 @@ using Kuroe.Kernel.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Kuroe.Kernel.Execution.Shared.Conversation;
 using Kuroe.Kernel.Execution.Shared.Runtime;
-using Kuroe.Tasks;
+using Kuroe.Composition.Tasks;
 
 namespace Kuroe.Assistant.Dialogue;
 

@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.Kernel.Tasks.Persistence.Files;
 using Kuroe.Kernel.Tasks.Shared;
 using Xunit;

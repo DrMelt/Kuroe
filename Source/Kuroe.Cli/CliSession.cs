@@ -1,7 +1,8 @@
 using ErrorOr;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition;
+using Kuroe.Composition.Catalogs;
+using Kuroe.Composition.Configuration;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.GraphFlow;
 using Kuroe.Flow.Library;
@@ -63,9 +64,9 @@ internal sealed class CliSession : IAsyncDisposable
         }
 
         var services = new ServiceCollection();
-        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
+        ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(
             paths.Value,
-            new KuroeCoreOptions { PersistTasks = true });
+            new KuroeCompositionOptions { PersistTasks = true });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;

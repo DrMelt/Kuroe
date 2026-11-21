@@ -1,4 +1,4 @@
-using Kuroe.Configuration.Files;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Json;
 using Kuroe.FlowDescription.Definition.Shared.Model;

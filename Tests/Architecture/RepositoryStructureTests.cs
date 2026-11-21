@@ -52,7 +52,7 @@ public sealed class RepositoryStructureTests
 
             Assert.NotEmpty(references);
             Assert.DoesNotContain(references, reference =>
-                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe", "Core")));
+                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe", "Composition", "Core")));
             Assert.DoesNotContain(references, reference =>
                 IsUnder(reference, Path.Combine(SourceRoot, "Kuroe", "Assistant")));
         }

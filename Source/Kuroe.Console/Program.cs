@@ -1,11 +1,11 @@
 using System.CommandLine;
 using ErrorOr;
-using Kuroe;
+using Kuroe.Composition;
 using Kuroe.Assistant;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Console;
 using Kuroe.Console.Views;
-using Kuroe.Configuration.Files;
+using Kuroe.Composition.Configuration.Files;
 using Kuroe.GraphFlow;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,9 +44,9 @@ static async Task<int> RunAsync(string? workDirectory)
     var services = new ServiceCollection();
     services.AddSingleton(terminal);
     services.AddSingleton(errors);
-    ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
+    ErrorOr<KuroeComposition> composition = services.AddKuroeComposition(
         paths.Value,
-        new KuroeCoreOptions());
+        new KuroeCompositionOptions());
     if (composition.IsError)
     {
         errors.Report(composition.ErrorsOrEmptyList);

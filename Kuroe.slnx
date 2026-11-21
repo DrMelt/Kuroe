@@ -74,12 +74,12 @@
     <Project Path="Source/Kuroe/Assistant/Core/Kuroe.Assistant.csproj" />
     <Project Path="Source/Kuroe.Maf/Core/Kuroe.Maf.csproj" />
     <Project Path="Source/Kuroe.Maf/NodeExecution/Core/Kuroe.Maf.NodeExecution.csproj" />
-    <Project Path="Source/Kuroe/Core/Kuroe.csproj" />
+    <Project Path="Source/Kuroe/Composition/Core/Kuroe.Composition.csproj" />
     <Project Path="Source/Kuroe.Console/Kuroe.Console.csproj" />
     <Project Path="Source/Kuroe.Cli/Kuroe.Cli.csproj" />
     <Project Path="Tests/Architecture/Kuroe.Architecture.Tests.csproj" />
     <Project Path="Tests/Integration/Kuroe.Integration.Tests/Kuroe.Integration.Tests.csproj" />
-    <Project Path="Tests/Unit/Kuroe/Core/Kuroe.Tests.csproj" />
+    <Project Path="Tests/Unit/Kuroe/Composition/Core/Kuroe.Composition.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe/Shared/Kuroe.Shared.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe.Files/Core/Kuroe.Files.Tests.csproj" />
     <Project Path="Tests/Support/Kuroe.TestSupport/Kuroe.TestSupport.csproj" />

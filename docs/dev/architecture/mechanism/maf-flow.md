@@ -4,7 +4,7 @@ MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，步骤的�
 
 ## 宿主装配
 
-宿主在核心装配之后注册流程定义。`composition` 是 `AddKuroeCore` 的返回值，`FlowTemplates` 用于登记流程模板，`LlmRunner` 是核心预建的 Llm 执行运行器工厂：
+宿主在 `Kuroe.Composition` 装配之后注册流程定义。`composition` 是 `AddKuroeComposition` 的返回值，`FlowTemplates` 用于登记流程模板，`LlmRunner` 是由 `Kuroe.Composition` 预建的 Llm 执行运行器工厂：
 
 ```csharp
 services.AddKuroeMafFlows(
@@ -65,4 +65,4 @@ MAF 流程不提供停驻面，不能等待外部输入或批准，其任务没�
 
 ## 区域约束
 
-MAF 运行期项目位于 `Source/Kuroe.Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，只引用 `Kuroe.FlowDescription.Description.Shared`、`Kuroe.FlowDescription.Definition.Shared` 与 MAF 定义，不引用图流程实现。Workflows 包只出现在 `Kuroe.Maf.Control`，核心装配不引用 MAF 运行期。步骤推进与检查点的库机制见[Agent Framework 工作流](../../libraries/agent-framework-workflows.md)。
+MAF 运行期项目位于 `Source/Kuroe.Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，只引用 `Kuroe.FlowDescription.Description.Shared`、`Kuroe.FlowDescription.Definition.Shared` 与 MAF 定义，不引用图流程实现。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Composition` 不引用 MAF 运行期。步骤推进与检查点的库机制见[Agent Framework 工作流](../../libraries/agent-framework-workflows.md)。
