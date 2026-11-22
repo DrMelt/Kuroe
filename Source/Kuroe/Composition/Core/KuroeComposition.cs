@@ -28,7 +28,8 @@ public sealed class KuroeComposition
         KuroePaths paths,
         bool persistTasks,
         IInputChannel inputChannel,
-        FlowTemplateCatalog flowTemplates)
+        FlowTemplateCatalog flowTemplates,
+        TimeProvider time)
     {
         _services = services;
         ConfiguredTools = configuredTools;
@@ -38,6 +39,7 @@ public sealed class KuroeComposition
         PersistTasks = persistTasks;
         InputChannel = inputChannel;
         FlowTemplates = flowTemplates;
+        Time = time;
     }
 
     /// <summary>启动信息，其中的日志级别用于宿主注册日志输出。</summary>
@@ -57,6 +59,9 @@ public sealed class KuroeComposition
 
     /// <summary>流程模板目录，流程实现装配时登记来源。</summary>
     public FlowTemplateCatalog FlowTemplates { get; }
+
+    /// <summary>本次装配使用的时钟，容器注册与后续流程装配共用同一实例。</summary>
+    public TimeProvider Time { get; }
 
     /// <summary>全部工具源，装配期加入后由工具工厂共用。</summary>
     public IReadOnlyList<IToolSource> ToolSources => _sources;

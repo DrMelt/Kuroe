@@ -101,9 +101,9 @@ internal sealed class NodeMaterializer(
         graph[path] switch
         {
             ExecutableNode executable when executable.Type.Shape.DispatchesExecutions =>
-                new RuntimeExecutable(executable, capabilities),
+                new RuntimeExecutable(executable, capabilities, context.Time),
             ContainerNode container when container.Type.Shape.Organizes =>
-                new RuntimeContainer(container, context),
+                new RuntimeContainer(container, context, context.Time),
             ContainerNode container => Factory(container.Type, container.Path).Create(container, context),
             ExecutableNode executable => Factory(executable.Type, executable.Path).Create(executable, context),
             _ => throw new InvalidOperationException($"节点 {path} 没有类型，无法建立运行期对象。"),

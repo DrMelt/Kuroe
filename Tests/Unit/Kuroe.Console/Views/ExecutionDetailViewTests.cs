@@ -28,7 +28,7 @@ public sealed class ExecutionDetailViewTests
                 new ExecutionOutputPort(new ExecutionPortName("报告"), ExecutionPortKind.Text, true, false, "返工问题清单"),
             ]);
 
-        new ExecutionDetailView(terminal).Print(task, execution);
+        new ExecutionDetailView(terminal, TimeProvider.System).Print(task, execution);
 
         Assert.Multiple(
             () => Assert.Contains("契约端口 3 个", output.Output),
@@ -51,7 +51,7 @@ public sealed class ExecutionDetailViewTests
     {
         Terminal terminal = NewTerminal(out TestConsole output);
 
-        new ExecutionDetailView(terminal).Print(SnapshotTask(), Snapshot([]));
+        new ExecutionDetailView(terminal, TimeProvider.System).Print(SnapshotTask(), Snapshot([]));
 
         Assert.Contains("契约端口 0 个", output.Output);
         Assert.Contains("本次执行没有需要交回的端口。", output.Output);
@@ -64,7 +64,7 @@ public sealed class ExecutionDetailViewTests
         ExecutionSnapshot execution = Snapshot(
             [new ExecutionOutputPort(new ExecutionPortName("结论"), ExecutionPortKind.Text, true, false)]);
 
-        new ExecutionDetailView(terminal).Print(SnapshotTask(), execution);
+        new ExecutionDetailView(terminal, TimeProvider.System).Print(SnapshotTask(), execution);
 
         Assert.Contains("契约端口 1 个", output.Output);
         Assert.Contains("结论", output.Output);
@@ -89,7 +89,7 @@ public sealed class ExecutionDetailViewTests
                     "节点「节点」的端口「检查报告」默认值"),
             ]);
 
-        new ExecutionDetailView(terminal).Print(SnapshotTask(), execution);
+        new ExecutionDetailView(terminal, TimeProvider.System).Print(SnapshotTask(), execution);
 
         Assert.Contains("来源", output.Output);
         Assert.Contains("端口", output.Output);

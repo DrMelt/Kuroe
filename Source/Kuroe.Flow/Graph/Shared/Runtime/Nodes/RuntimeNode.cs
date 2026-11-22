@@ -5,7 +5,7 @@ using Kuroe.Flow.Graph.Shared.StaticGraph;
 namespace Kuroe.Flow.Graph.Shared.Runtime.Nodes;
 
 /// <summary>带持久记录的运行时节点基类。节点状态由节点实现捕获与恢复。</summary>
-public abstract class RuntimeNode(GraphNode node) : NodeRuntime(node), INodeRecordSource, IPortRecordSource
+public abstract class RuntimeNode(GraphNode node, TimeProvider time) : NodeRuntime(node, time), INodeRecordSource, IPortRecordSource
 {
     /// <inheritdoc/>
     public abstract NodeRecord? CaptureRecord();

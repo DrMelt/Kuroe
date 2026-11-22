@@ -29,5 +29,5 @@ public static class InputNodeExecution
         capabilities.Register(
             InputNodeTypes.Name,
             type => Bind(type, runnerFactory),
-            type => type is InputNodeType ? InputNodeOutputProjection.Instance : null);
+            type => type is InputNodeType ? new InputNodeOutputProjection() : null);
 }

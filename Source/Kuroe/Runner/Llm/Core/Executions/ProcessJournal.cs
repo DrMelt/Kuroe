@@ -4,7 +4,7 @@ namespace Kuroe.Runner.Llm.Executions;
 
 /// <summary>一次执行的过程记录：条目由共享存储保留且不按条数丢弃，同标签文本增量与末尾同类条目合并。
 /// 产出内容、需要即时呈现的条目与进度变化经事件播发。</summary>
-internal sealed class ProcessJournal : IProcessJournal
+internal sealed class ProcessJournal(TimeProvider time) : IProcessJournal
 {
     /// <summary>同标签内容的合并上限，超出后另起一条。</summary>
     private const int SegmentLimit = 4096;
@@ -17,7 +17,7 @@ internal sealed class ProcessJournal : IProcessJournal
     private const string DiscardedText = "本轮未计入上下文。";
     private const string RestoreLabel = "恢复";
 
-    private readonly ProcessJournalStore _store = new(segmentLimit: SegmentLimit);
+    private readonly ProcessJournalStore _store = new(time, segmentLimit: SegmentLimit);
     private readonly Lock _progressGate = new();
     private string _progress = string.Empty;
 
@@ -33,7 +33,7 @@ internal sealed class ProcessJournal : IProcessJournal
     /// <summary>追加一条发给模型的输入，随后清空当前活动。</summary>
     public void AppendPrompt(string input)
     {
-        _store.Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, PromptLabel, input));
+        _store.Append(new JournalEntry(time.GetUtcNow(), JournalLevel.Information, PromptLabel, input));
         ReportProgress(string.Empty);
     }
 
@@ -54,7 +54,7 @@ internal sealed class ProcessJournal : IProcessJournal
             ? call.Name
             : $"{call.Name} {call.Arguments}";
         JournalEntry entry = new(
-            DateTimeOffset.UtcNow,
+            time.GetUtcNow(),
             call.Failed ? JournalLevel.Warning : JournalLevel.Information,
             ToolLabel,
             $"{invocation}\n{call.Outcome}");
@@ -81,13 +81,13 @@ internal sealed class ProcessJournal : IProcessJournal
 
     /// <summary>追加一条本轮未计入上下文的说明。</summary>
     public void AppendDiscarded() =>
-        _store.Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Warning, DiscardedLabel, DiscardedText));
+        _store.Append(new JournalEntry(time.GetUtcNow(), JournalLevel.Warning, DiscardedLabel, DiscardedText));
 
     /// <summary>追加一条从恢复数据继续的说明。</summary>
     public void AppendRestored()
     {
         JournalEntry entry = new(
-            DateTimeOffset.UtcNow,
+            time.GetUtcNow(),
             JournalLevel.Information,
             RestoreLabel,
             "从上次中断处恢复。");

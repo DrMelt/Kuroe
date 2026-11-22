@@ -24,7 +24,7 @@ public sealed class SessionFactoryTests
         ErrorOr<IConversation> created = await factory.ForExecutionAsync(
             new Entry(Request()),
             Parameters(null),
-            new ProcessJournal(),
+            new ProcessJournal(TimeProvider.System),
             null,
             null,
             CancellationToken.None);
@@ -41,7 +41,7 @@ public sealed class SessionFactoryTests
         ErrorOr<IConversation> created = await factory.ForExecutionAsync(
             new Entry(Request()),
             Parameters("fake"),
-            new ProcessJournal(),
+            new ProcessJournal(TimeProvider.System),
             null,
             null,
             CancellationToken.None);
@@ -55,7 +55,7 @@ public sealed class SessionFactoryTests
     {
         InMemoryChatHistoryProvider provider = new(new InMemoryChatHistoryProviderOptions());
         ChatClientAgent agent = SessionFactory.CreateAgent(
-            new ExecutionChatClient(new StubClient(), new ProcessJournal()),
+            new ExecutionChatClient(new StubClient(), new ProcessJournal(TimeProvider.System)),
             provider,
             systemPrompt: null,
             functions: []);

@@ -1,8 +1,9 @@
 namespace Kuroe.Kernel.Execution.Shared.Journal;
 
 /// <summary>过程记录的共享存储：追加、同标签增量合并与快照。条目不按条数丢弃。</summary>
+/// <param name="time">打时间戳用的时钟。</param>
 /// <param name="segmentLimit">同标签文本增量合并的单条上限。</param>
-public sealed class ProcessJournalStore(int segmentLimit = 4096)
+public sealed class ProcessJournalStore(TimeProvider time, int segmentLimit = 4096)
 {
     private readonly Lock _gate = new();
     private readonly List<JournalEntry> _entries = [];
@@ -60,7 +61,7 @@ public sealed class ProcessJournalStore(int segmentLimit = 4096)
             }
             else
             {
-                Add(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, label, delta));
+                Add(new JournalEntry(time.GetUtcNow(), JournalLevel.Information, label, delta));
             }
         }
 

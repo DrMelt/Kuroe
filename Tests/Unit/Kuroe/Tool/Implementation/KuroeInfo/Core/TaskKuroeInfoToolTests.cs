@@ -13,7 +13,7 @@ public sealed class TaskKuroeInfoToolTests
     [Fact(DisplayName = "没有任务时任务清单打印提示")]
     public void ListTasks_without_tasks_prints_a_hint()
     {
-        TaskKuroeInfoTool tool = new(new FakeTaskReader());
+        TaskKuroeInfoTool tool = new(new FakeTaskReader(), TimeProvider.System);
 
         Assert.Contains("还没有任务", Call(tool, "ListTasks"), StringComparison.Ordinal);
     }
@@ -21,7 +21,7 @@ public sealed class TaskKuroeInfoToolTests
     [Fact(DisplayName = "任务查询报告缺失任务")]
     public void GetTask_reports_a_missing_task()
     {
-        TaskKuroeInfoTool tool = new(new FakeTaskReader());
+        TaskKuroeInfoTool tool = new(new FakeTaskReader(), TimeProvider.System);
 
         Assert.Contains("没有任务 x", Call(tool, "GetTask", ("taskId", "x")), StringComparison.Ordinal);
         Assert.Contains("没有任务 99", Call(tool, "GetTask", ("taskId", "99")), StringComparison.Ordinal);
@@ -30,7 +30,7 @@ public sealed class TaskKuroeInfoToolTests
     [Fact(DisplayName = "执行查询报告实参错误")]
     public void GetExecution_reports_bad_arguments()
     {
-        TaskKuroeInfoTool tool = new(new FakeTaskReader());
+        TaskKuroeInfoTool tool = new(new FakeTaskReader(), TimeProvider.System);
 
         Assert.Contains("执行号要写成数字", Call(tool, "GetExecution", ("executionId", "x")), StringComparison.Ordinal);
         Assert.Contains("没有执行", Call(tool, "GetExecution", ("executionId", "99")), StringComparison.Ordinal);

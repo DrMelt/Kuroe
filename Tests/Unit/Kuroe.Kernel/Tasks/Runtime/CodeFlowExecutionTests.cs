@@ -108,7 +108,7 @@ public sealed class CodeFlowExecutionTests
         public static Harness Create()
         {
             ExecutionIndex index = new();
-            ExecutionRuntime runtime = new(new ExecutionDispatcher());
+            ExecutionRuntime runtime = new(new ExecutionDispatcher(), TimeProvider.System);
             StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
             FlowProvider provider = new(
                 new CodeIdentity(),
@@ -127,7 +127,7 @@ public sealed class CodeFlowExecutionTests
                 provider,
                 new CodeState(inputs),
                 definition: null,
-                observer: null);
+                observer: null, time: TimeProvider.System);
 
             return new Harness(task, index, runtime);
         }
@@ -155,7 +155,7 @@ public sealed class CodeFlowExecutionTests
         public static Task<ErrorOr<Success>> RunAsync(
             IExecution execution,
             IExecutionRunnerFactory factory) =>
-            new ExecutionRuntime(new ExecutionDispatcher())
+            new ExecutionRuntime(new ExecutionDispatcher(), TimeProvider.System)
                 .RunAsync(
                     execution,
                     new ExecutionInvocation(
@@ -249,7 +249,7 @@ internal sealed class PortRunnerFactory(
         ExecutionPortName port,
         string text) : IExecutionRunner
     {
-        public IProcessJournal Journal { get; } = new ExecutionJournal();
+        public IProcessJournal Journal { get; } = new ExecutionJournal(TimeProvider.System);
 
         public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(CancellationToken cancellationToken)
         {
@@ -285,7 +285,7 @@ internal sealed class CannotCompleteRunnerFactory : IExecutionRunnerFactory
 
     private sealed class Runner(IExecutionRequestEntry requests) : IExecutionRunner
     {
-        public IProcessJournal Journal { get; } = new ExecutionJournal();
+        public IProcessJournal Journal { get; } = new ExecutionJournal(TimeProvider.System);
 
         public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(CancellationToken cancellationToken)
         {

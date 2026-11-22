@@ -9,9 +9,6 @@ namespace Kuroe.GraphFlow.NodeExecution;
 /// <summary>审批节点的输出投影：把停驻输入按同名输出端口投影为节点发布，保留出处与多段内容，不携带触发。</summary>
 public sealed class ApprovalNodeOutputProjection : INodeOutputProjection
 {
-    /// <summary>共享实例。</summary>
-    public static ApprovalNodeOutputProjection Instance { get; } = new();
-
     /// <inheritdoc/>
     public Publication Project(ExecutionId execution, GraphExecutionInput input, ExecutionOutput output)
     {

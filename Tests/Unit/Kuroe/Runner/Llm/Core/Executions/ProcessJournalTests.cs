@@ -11,7 +11,7 @@ public sealed class ProcessJournalTests
     {
         List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         journal.ContentAppended += contents.Add;
         journal.EntryAppended += entries.Add;
 
@@ -31,7 +31,7 @@ public sealed class ProcessJournalTests
     [Fact(DisplayName = "文本片段在上限处切分")]
     public void Text_segment_splits_at_the_limit()
     {
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
 
         journal.AppendContent(ProcessContentKind.Reply, new string('长', 4096));
         journal.AppendContent(ProcessContentKind.Reply, "尾");
@@ -46,7 +46,7 @@ public sealed class ProcessJournalTests
     public void Reasoning_content_merges_separately_from_reply_content()
     {
         List<ProcessContent> contents = [];
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         journal.ContentAppended += contents.Add;
 
         journal.AppendContent(ProcessContentKind.Reasoning, string.Empty);
@@ -72,7 +72,7 @@ public sealed class ProcessJournalTests
     {
         List<JournalEntry> entries = [];
         List<string> progress = [];
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         journal.EntryAppended += entries.Add;
         journal.ProgressReported += progress.Add;
         ToolCallRecord call = new("GetLocalTime", "{}", "2026-10-18 19:10:48", false);
@@ -91,7 +91,7 @@ public sealed class ProcessJournalTests
     public void Progress_is_broadcast_only_when_it_changes()
     {
         List<string> progress = [];
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         journal.ProgressReported += progress.Add;
 
         journal.ReportProgress("调用工具 GetLocalTime");
@@ -106,7 +106,7 @@ public sealed class ProcessJournalTests
     public void Reply_and_reasoning_content_report_progress()
     {
         List<string> progress = [];
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         journal.ProgressReported += progress.Add;
 
         journal.AppendContent(ProcessContentKind.Reply, "甲");
@@ -120,7 +120,7 @@ public sealed class ProcessJournalTests
     [Fact(DisplayName = "失败工具调用记录为警告")]
     public void Failed_tool_call_is_recorded_as_warning()
     {
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         ToolCallRecord call = new("file/ReadFile", "{}", "不存在", true);
 
         journal.AppendToolCall(call);
@@ -136,7 +136,7 @@ public sealed class ProcessJournalTests
         List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
         List<string> progress = [];
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         journal.ContentAppended += contents.Add;
         journal.EntryAppended += entries.Add;
         journal.ProgressReported += progress.Add;
@@ -161,7 +161,7 @@ public sealed class ProcessJournalTests
     public void Prompt_clears_progress()
     {
         List<string> progress = [];
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         journal.ProgressReported += progress.Add;
 
         journal.AppendContent(ProcessContentKind.Reply, "答复");
@@ -174,7 +174,7 @@ public sealed class ProcessJournalTests
     public void Empty_content_delta_is_ignored()
     {
         int broadcasts = 0;
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         journal.ContentAppended += _ => broadcasts++;
 
         journal.AppendContent(ProcessContentKind.Reply, string.Empty);
@@ -186,7 +186,7 @@ public sealed class ProcessJournalTests
     [Fact(DisplayName = "进程记录条目无数量上限保留")]
     public void Entries_are_retained_without_a_count_limit()
     {
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
 
         for (int index = 0; index <= 400; index++)
         {

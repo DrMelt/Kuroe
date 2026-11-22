@@ -10,7 +10,8 @@ namespace Kuroe.Maf.Control;
 internal sealed class MafFlowControl(
     ITaskFlowContext task,
     ITaskExecutionGateway gateway,
-    MafFlowState state) : IFlowControl, IFlowRerun
+    MafFlowState state,
+    ICheckpointIdSource ids) : IFlowControl, IFlowRerun
 {
     private readonly MafFlowCheckpoints _checkpoints = new(task, state);
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -270,6 +271,7 @@ internal sealed class MafFlowControl(
                 task.Id.Value,
                 step => Handler(run, step),
                 _checkpoints,
+                ids,
                 cancel.Token).ConfigureAwait(false);
 
             await foreach (MafWorkflowEvent update in runHandle.WatchAsync(cancel.Token).ConfigureAwait(false))

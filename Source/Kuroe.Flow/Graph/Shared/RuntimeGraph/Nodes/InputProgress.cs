@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 
 /// <summary>节点输入侧的运行期进展：已消费版本、执行次数、上次启动组、重跑意图、当前发布与发布历史。
 /// 发布是不可变快照，进展由节点在发布与作废点改动，读写都要求持有任务串行锁。</summary>
-public sealed class InputProgress : IInputProgress
+public sealed class InputProgress(TimeProvider time) : IInputProgress
 {
     private readonly Dictionary<ConsumptionKey, long> _consumed = [];
     private readonly List<PublishedPorts> _history = [];
@@ -51,7 +51,7 @@ public sealed class InputProgress : IInputProgress
     {
         Revision = publication.Revision;
         Publication = publication;
-        _history.Add(new PublishedPorts(publication, DateTimeOffset.UtcNow));
+        _history.Add(new PublishedPorts(publication, time.GetUtcNow()));
     }
 
     /// <summary>作废发布，版本与执行次数保持不变。</summary>

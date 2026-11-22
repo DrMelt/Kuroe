@@ -7,10 +7,11 @@ using Spectre.Console.Rendering;
 namespace Kuroe.Console.Views;
 
 /// <summary>任务概览：任务字段、待处理节点与执行清单，不展开节点层级。</summary>
-internal sealed class TaskOverviewView(Terminal terminal, PendingService pendings)
+internal sealed class TaskOverviewView(Terminal terminal, PendingService pendings, TimeProvider time)
 {
     private readonly Terminal _terminal = terminal;
     private readonly PendingService _pendings = pendings;
+    private readonly TimeProvider _time = time;
 
     public void Print(TaskSnapshot task)
     {
@@ -112,7 +113,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
         {
             foreach (FlowExecutionView execution in node.Executions.OrderBy(execution => execution.Id))
             {
-                (string id, string round, string state, string elapsed, string? failures) = ViewLabels.ExecutionParts(execution);
+                (string id, string round, string state, string elapsed, string? failures) = ViewLabels.ExecutionParts(execution, _time.GetUtcNow());
                 table.AddRow(
                     new Text(id, Styles.Key),
                     new Text(node.Path),

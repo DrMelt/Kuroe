@@ -15,7 +15,7 @@ public sealed class WorkTaskTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
     private static Execution.ExecutionRuntime Runtime() =>
-        new(new Execution.ExecutionDispatcher());
+        new(new Execution.ExecutionDispatcher(), TimeProvider.System);
     [Fact(DisplayName = "暂停接受瞬时完成快照")]
     public void Pause_accepts_transient_done_snapshot()
     {
@@ -86,7 +86,7 @@ public sealed class WorkTaskTests
             provider.Provider,
             new TestState(inputs),
             null,
-            observer: null);
+            observer: null, time: TimeProvider.System);
 
         Assert.Equal(1, provider.Binder.Binds);
     }
@@ -134,6 +134,35 @@ public sealed class WorkTaskTests
             () => Assert.Equal("确认", step.Question));
     }
 
+    [Fact(DisplayName = "任务时间戳跟随注入时钟")]
+    public void Task_timestamps_follow_the_injected_clock()
+    {
+        StubTimeProvider time = new(TestTime.At);
+        StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
+        WorkTask task = new(
+            new TaskRegistry(new ExecutionIndex()),
+            Runtime(),
+            new TaskId(1),
+            inputs,
+            FlowTexts.Empty,
+            "测试任务",
+            new TestProvider().Provider,
+            new TestState(inputs),
+            null,
+            observer: null, time: time);
+
+        Assert.Equal(TestTime.At, task.CreatedAt);
+        Assert.Equal(TestTime.At, task.LastActivityAt);
+
+        DateTimeOffset later = TestTime.At.AddMinutes(5);
+        time.Set(later);
+        ErrorOr<Success> paused = task.UnderLock(() => task.Pause());
+
+        Assert.False(paused.IsError);
+        Assert.Equal(later, task.LastActivityAt);
+        Assert.Equal(later, task.JournalEntries[^1].At);
+    }
+
     private static WorkTask CreateTask(TaskRegistry? registry = null)
     {
         StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
@@ -149,7 +178,7 @@ public sealed class WorkTaskTests
             provider.Provider,
             new TestState(inputs),
             null,
-            observer: null);
+            observer: null, time: TimeProvider.System);
     }
 
     private static void MarkCompleted(WorkTask task) =>

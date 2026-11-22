@@ -9,7 +9,7 @@ namespace Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 
 /// <summary>一个节点在任务内的运行期对象：节点定义与自身状态的合体。
 /// 最近一次发布不可变，放行、版本、触发与端口取值都取自该发布。状态改动要求持有任务串行锁。</summary>
-public abstract class NodeRuntime(GraphNode node) : ISourceState, IInputProgress
+public abstract class NodeRuntime(GraphNode node, TimeProvider time) : ISourceState, IInputProgress
 {
     /// <summary>提交时锁定的节点定义，不可变。</summary>
     public GraphNode Node { get; } = node;
@@ -18,7 +18,7 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState, IInputProgress
     public NodePath Path => Node.Path;
 
     /// <summary>输入侧进展与最近一次发布。</summary>
-    public InputProgress Progress { get; } = new();
+    public InputProgress Progress { get; } = new(time);
 
     /// <summary>产出已放行：有已发布产出且当前可消费。</summary>
     public bool Released => Progress.Published && Consumable;

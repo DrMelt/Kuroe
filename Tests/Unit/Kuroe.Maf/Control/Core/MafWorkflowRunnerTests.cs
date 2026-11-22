@@ -7,19 +7,22 @@ namespace Kuroe.Maf.Control.Tests;
 /// <summary>运行器：按定义构建 workflow，运行步骤并交出运行事件。</summary>
 public sealed class MafWorkflowRunnerTests
 {
-    [Fact(DisplayName = "运行器运行定义并报告步骤事件")]
+    [Fact(DisplayName = "运行器运行定义报告步骤事件并按给定键保存检查点")]
     public async Task Runner_runs_the_definition_and_reports_step_events()
     {
         MafFlowDefinition definition = Definition();
         MafStep entry = definition.Entry().Value;
         List<MafWorkflowEvent> events = [];
+        MemoryCheckpoints checkpoints = new();
+        SequenceCheckpointIds ids = new();
 
         await using IMafWorkflowRun run = await MafWorkflowRunner.StartAsync(
             definition,
             new MafStepMessage(entry.Id, []),
             "test",
             Handlers,
-            new MemoryCheckpoints(),
+            checkpoints,
+            ids,
             CancellationToken.None);
 
         await foreach (MafWorkflowEvent update in run.WatchAsync(CancellationToken.None))
@@ -31,6 +34,10 @@ public sealed class MafWorkflowRunnerTests
         Assert.Contains(events, update => update is MafStepCompleted completed && completed.Step.Id.Value == "第一步");
         Assert.Contains(events, update => update is MafStepStarted started && started.Step.Id.Value == "第二步");
         Assert.Contains(events, update => update is MafStepCompleted completed && completed.Step.Id.Value == "第二步");
+
+        MafWorkflowCheckpoint? saved = checkpoints.Load();
+        Assert.NotNull(saved);
+        Assert.Equal(ids.Issued[^1], saved.Id);
     }
 
     private static MafStepHandler Handlers(MafStep step) =>
@@ -58,5 +65,18 @@ public sealed class MafWorkflowRunnerTests
         public MafWorkflowCheckpoint? Load() => _checkpoint;
 
         public void Save(MafWorkflowCheckpoint checkpoint) => _checkpoint = checkpoint;
+    }
+
+    /// <summary>按序给出检查点键并记录已发出的键。</summary>
+    private sealed class SequenceCheckpointIds : ICheckpointIdSource
+    {
+        public List<string> Issued { get; } = [];
+
+        public string Next()
+        {
+            string key = $"检查点-{Issued.Count + 1}";
+            Issued.Add(key);
+            return key;
+        }
     }
 }

@@ -10,9 +10,10 @@ namespace Kuroe.Runner.Command;
 internal sealed class CommandExecutionRunner(
     CommandExecutionParameters parameters,
     IProcessRunner process,
-    IExecutionRequestEntry requests) : IExecutionRunner
+    IExecutionRequestEntry requests,
+    TimeProvider time) : IExecutionRunner
 {
-    private readonly ExecutionJournal _journal = new();
+    private readonly ExecutionJournal _journal = new(time);
     private readonly IExecutionRequestEntry _requests = requests;
 
     /// <summary>本次执行的过程记录。</summary>

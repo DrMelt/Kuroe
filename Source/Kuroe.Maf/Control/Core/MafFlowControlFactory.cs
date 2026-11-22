@@ -4,9 +4,10 @@ namespace Kuroe.Maf.Control;
 
 /// <summary>为 MAF 流程任务建立控制实例。</summary>
 public sealed class MafFlowControlFactory(
-    ITaskExecutionGateway gateway) : IFlowControlFactory
+    ITaskExecutionGateway gateway,
+    ICheckpointIdSource ids) : IFlowControlFactory
 {
     /// <inheritdoc/>
     public IFlowControl CreateControl(ITaskFlowContext task) =>
-        new MafFlowControl(task, gateway, MafFlowAccess.State(task));
+        new MafFlowControl(task, gateway, MafFlowAccess.State(task), ids);
 }

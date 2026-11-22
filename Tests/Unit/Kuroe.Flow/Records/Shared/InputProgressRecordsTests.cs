@@ -20,7 +20,7 @@ public sealed class InputProgressRecordsTests
         NodePath source = NodePath.Of("来源");
         PortName port = new("结论");
         ConsumptionKey key = new(source, port);
-        InputProgress original = new();
+        InputProgress original = new(TimeProvider.System);
         original.Started();
         original.RecordGroup(2);
         original.RequestRerun();
@@ -41,7 +41,7 @@ public sealed class InputProgressRecordsTests
 
         NodePath node = NodePath.Of("来源");
         NodeCommonRecord record = InputProgressRecords.Capture(original);
-        InputProgress restored = new();
+        InputProgress restored = new(TimeProvider.System);
         InputProgressRecords.RestorePorts(restored, PortPublicationRecords.Capture(node, original.History));
         InputProgressRecords.Restore(restored, record);
 

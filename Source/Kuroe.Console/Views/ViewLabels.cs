@@ -78,17 +78,18 @@ internal static class ViewLabels
 
     /// <summary>执行在一行里的字段与顺序，树行、菜单项与执行清单共用。</summary>
     public static (string Id, string Round, string State, string Elapsed, string? Failures) ExecutionParts(
-        FlowExecutionView execution) => (
+        FlowExecutionView execution,
+        DateTimeOffset now) => (
         $"执行 #{execution.Id}",
         $"第 {execution.Round} 轮",
         State(execution),
-        Elapsed(execution.Elapsed),
+        Elapsed(execution.ElapsedAt(now)),
         execution.Failures.Count > 0 ? $"失败 {execution.Failures.Count} 条" : null);
 
     /// <summary>执行概况一行。</summary>
-    public static string ExecutionLabel(FlowExecutionView execution)
+    public static string ExecutionLabel(FlowExecutionView execution, DateTimeOffset now)
     {
-        (string id, string round, string state, string elapsed, string? failures) = ExecutionParts(execution);
+        (string id, string round, string state, string elapsed, string? failures) = ExecutionParts(execution, now);
         List<string> parts = [id, round, state, elapsed];
         if (failures is not null)
         {

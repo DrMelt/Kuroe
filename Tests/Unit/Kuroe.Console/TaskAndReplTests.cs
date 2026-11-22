@@ -207,7 +207,7 @@ public sealed partial class TaskAndReplTests
         cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count == 1);
 
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(cli.Environment.Snapshot(new TaskId(1)));
+        new TaskTreeView(terminal, cli.Environment.Pendings, TimeProvider.System).Print(cli.Environment.Snapshot(new TaskId(1)));
 
         Assert.Contains("├", output.Output);
         Assert.Contains("└", output.Output);
@@ -481,7 +481,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.TwoInputFlow);
         cli.Tasks.Submit(new FlowName("默认"), "目标");
-        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count == 2);
 
         cli.Tasks.Answer(new TaskId(1), null, "内容");
         Assert.Contains("有 2 个输入节点等待回答", cli.ErrorsOut.Output);

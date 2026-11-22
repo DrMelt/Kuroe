@@ -264,7 +264,8 @@ public sealed class MafFlowControlTests
             MafFlowCatalog flows = new([flow]);
             ExecutionIndex index = new();
             IExecutionRuntime executions = new ExecutionRuntime(
-                new ExecutionDispatcher());
+                new ExecutionDispatcher(),
+                TimeProvider.System);
             Registry = new TaskRegistry(index, pauseOnRestore: false);
             Gateway = new TaskExecutionGateway(index, executions);
             Flow = new FlowRuntime(executions);
@@ -272,7 +273,7 @@ public sealed class MafFlowControlTests
                 new MafFlowIdentity(flows),
                 new MafFlowSubmission(flows, Gateway),
                 null,
-                new MafFlowControlFactory(Gateway),
+                new MafFlowControlFactory(Gateway, new GuidCheckpointIdSource()),
                 new MafFlowPresentation(),
                 new MafFlowRecordSource());
 
@@ -289,7 +290,8 @@ public sealed class MafFlowControlTests
                 provider,
                 submission.State,
                 submission.Definition,
-                observer: null);
+                observer: null,
+                time: TimeProvider.System);
             Registry.Adopt(Work);
         }
 

@@ -194,14 +194,14 @@ internal static class FlowRuntimeTestDoubles
             provider,
             new TestState(inputs),
             null,
-            observer: null);
+            observer: null, time: TimeProvider.System);
         control.Owner = task;
 
         return task;
     }
 
     internal static IExecutionRuntime Runtime() =>
-        new ExecutionRuntime(new ExecutionDispatcher());
+        new ExecutionRuntime(new ExecutionDispatcher(), TimeProvider.System);
 }
 
 internal sealed class TestControl : IFlowControl, IFlowRerun

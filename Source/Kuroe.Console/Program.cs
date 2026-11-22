@@ -25,7 +25,7 @@ static async Task<int> RunAsync(string? workDirectory)
     ErrorView errors = new(terminal);
 
     // 任务浏览与逐级下钻要读键盘，没有输入环境时不再降级呈现
-    if (!Terminal.Interactive)
+    if (!terminal.Interactive)
     {
         errors.Report([Error.Failure("Terminal.NotInteractive", "需要可交互的终端，当前无法读键盘。")]);
         return 1;

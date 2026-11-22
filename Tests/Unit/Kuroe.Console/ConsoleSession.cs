@@ -31,22 +31,22 @@ internal sealed class ConsoleSession : IDisposable
 
     public CatalogView Printer { get; }
 
-    public TaskOverviewView Overview => new(Terminal, Environment.Pendings);
+    public TaskOverviewView Overview => new(Terminal, Environment.Pendings, TimeProvider.System);
 
-    public ExecutionDetailView ExecutionDetail => new(Terminal);
+    public ExecutionDetailView ExecutionDetail => new(Terminal, TimeProvider.System);
 
     public TaskBrowser Tasks
     {
         get
         {
             TaskListView list = new(Terminal, Environment.Pendings);
-            TaskOverviewView overview = new(Terminal, Environment.Pendings);
-            TaskTreeView tree = new(Terminal, Environment.Pendings);
-            ExecutionDetailView execution = new(Terminal);
+            TaskOverviewView overview = new(Terminal, Environment.Pendings, TimeProvider.System);
+            TaskTreeView tree = new(Terminal, Environment.Pendings, TimeProvider.System);
+            ExecutionDetailView execution = new(Terminal, TimeProvider.System);
 
             return new TaskBrowser(
                 Environment.Registry, Environment.Tasks, Environment.Pendings, Environment.Templates,
-                list, overview, tree, execution, Terminal, Results);
+                list, overview, tree, execution, Terminal, Results, TimeProvider.System);
         }
     }
 

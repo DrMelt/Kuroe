@@ -16,6 +16,7 @@ internal sealed class ExecutionInstance : IExecution
     private readonly Lock _gate = new();
     private readonly CancellationTokenSource _cancellation = new();
     private readonly ProcessBroadcast _process = new();
+    private readonly TimeProvider _time;
     private IProcessJournal? _journal;
     private ExecutionState _state = ExecutionState.Queued;
     private string _progress = string.Empty;
@@ -33,17 +34,18 @@ internal sealed class ExecutionInstance : IExecution
     private bool _startedNotified;
 
     /// <summary>建立一次排队中的执行。</summary>
-    internal ExecutionInstance(ExecutionId id, ExecutionRequest request)
-        : this(id, request, DateTimeOffset.UtcNow)
+    internal ExecutionInstance(ExecutionId id, ExecutionRequest request, TimeProvider time)
+        : this(id, request, time.GetUtcNow(), time)
     {
     }
 
     /// <summary>建立一次指定创建时刻的排队执行。</summary>
-    internal ExecutionInstance(ExecutionId id, ExecutionRequest request, DateTimeOffset createdAt)
+    internal ExecutionInstance(ExecutionId id, ExecutionRequest request, DateTimeOffset createdAt, TimeProvider time)
     {
         Id = id;
         Request = request;
         CreatedAt = createdAt;
+        _time = time;
     }
 
     /// <inheritdoc/>
@@ -108,7 +110,7 @@ internal sealed class ExecutionInstance : IExecution
             }
 
             _state = ExecutionState.Running;
-            _startedAt ??= DateTimeOffset.UtcNow;
+            _startedAt ??= _time.GetUtcNow();
             started = !_startedNotified;
             _startedNotified = true;
         }
@@ -449,14 +451,15 @@ internal sealed class ExecutionInstance : IExecution
         ExecutionUsage usage,
         ExecutionRestoreState? restoreData,
         ExecutionContract contract,
-        ExecutionId? continuedFrom)
+        ExecutionId? continuedFrom,
+        TimeProvider time)
     {
-        ExecutionInstance unit = new(id, request, createdAt);
+        ExecutionInstance unit = new(id, request, createdAt, time);
         bool live = state.IsLive();
         unit._state = live ? ExecutionState.Interrupted : state;
         unit._progress = progress;
         unit._startedAt = startedAt;
-        unit._finishedAt = live ? DateTimeOffset.UtcNow : finishedAt;
+        unit._finishedAt = live ? time.GetUtcNow() : finishedAt;
         unit._failures.AddRange(failures);
         if (live)
         {
@@ -530,7 +533,7 @@ internal sealed class ExecutionInstance : IExecution
 
             _state = state;
             _failures.AddRange(failures);
-            _finishedAt = DateTimeOffset.UtcNow;
+            _finishedAt = _time.GetUtcNow();
             journal = _journal;
         }
 

@@ -18,7 +18,8 @@ internal sealed class GraphFlowState(
     StartPortValues startPorts,
     GraphFlowDefinitionRecord? definition,
     ITaskExecutionGateway executions,
-    IGraphNodeCapabilities capabilities) : IGraphFlowState
+    IGraphNodeCapabilities capabilities,
+    TimeProvider time) : IGraphFlowState
 {
     private readonly Dictionary<ExecutionId, GraphExecutionContext> _executions = [];
     private ITaskFlowContext? _task;
@@ -41,6 +42,9 @@ internal sealed class GraphFlowState(
 
     /// <summary>图节点能力映射。</summary>
     public IGraphNodeCapabilities Capabilities { get; } = capabilities;
+
+    /// <summary>打时间戳用的时钟。</summary>
+    internal TimeProvider Time { get; } = time;
 
     /// <summary>图运行期的执行，按提交顺序从任务的中性执行列表投影。</summary>
     internal IReadOnlyList<GraphExecution> Executions => Project();
@@ -94,7 +98,7 @@ internal sealed class GraphFlowState(
     public FlowSeed Seed { get; init; } = FlowSeed.Empty;
 
     /// <summary>存档保存时刻。</summary>
-    public DateTimeOffset SavedAt { get; init; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset SavedAt { get; init; } = time.GetUtcNow();
 
     /// <summary>把任务上下文接到图运行期。</summary>
     public void Attach(ITaskFlowContext task)

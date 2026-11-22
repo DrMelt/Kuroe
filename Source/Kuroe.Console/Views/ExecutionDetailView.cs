@@ -7,16 +7,17 @@ using Kuroe.Kernel.Execution.Shared.State;
 namespace Kuroe.Console.Views;
 
 /// <summary>执行详情：头部字段、输入取值及其出处、契约端口与过程记录。</summary>
-internal sealed class ExecutionDetailView(Terminal terminal)
+internal sealed class ExecutionDetailView(Terminal terminal, TimeProvider time)
 {
     /// <summary>取值内容保留的字符数。</summary>
     private const int ValueLimit = 70;
 
     private readonly Terminal _terminal = terminal;
+    private readonly TimeProvider _time = time;
 
     public void Print(TaskSnapshot task, ExecutionSnapshot execution)
     {
-        TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
+        TimeSpan elapsed = (execution.FinishedAt ?? _time.GetUtcNow()) - (execution.StartedAt ?? execution.CreatedAt);
         List<(string Label, IRenderable Value)> fields =
         [
             ("任务", new Text($"{task.Id} {task.Title}")),

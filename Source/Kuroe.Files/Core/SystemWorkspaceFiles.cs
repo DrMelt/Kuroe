@@ -6,13 +6,6 @@ namespace Kuroe.Files;
 /// <summary>工作区文件访问的系统实现，全部操作交给 System.IO。</summary>
 public sealed class SystemWorkspaceFiles : IWorkspaceFiles
 {
-    /// <summary>无状态的共享实例。</summary>
-    public static SystemWorkspaceFiles Instance { get; } = new();
-
-    private SystemWorkspaceFiles()
-    {
-    }
-
     /// <inheritdoc/>
     public bool FileExists(string path) => File.Exists(path);
 

@@ -21,7 +21,6 @@ using NeutralExecutionRestorer = Kuroe.Kernel.Execution.Shared.Restore.IExecutio
 using NeutralExecutionUsage = Kuroe.Kernel.Execution.Shared.Usage.ExecutionUsage;
 using NeutralExecutionUsageSource = Kuroe.Kernel.Execution.Shared.Runtime.IExecutionUsageSource;
 using NeutralPortKind = Kuroe.Kernel.Execution.Shared.Ports.ExecutionPortKind;
-using Kuroe.Kernel.Execution.Shared.Ports;
 using Kuroe.Kernel.Execution.Shared.Runtime;
 
 namespace Kuroe.Integration.Tests.Support;

@@ -12,9 +12,10 @@ namespace Kuroe.Runner.Approval;
 internal sealed class ApprovalExecutionRunner(
     IInputChannel channel,
     ApprovalExecutionParameters parameters,
-    IExecutionRequestEntry requests) : IExecutionRunner
+    IExecutionRequestEntry requests,
+    TimeProvider time) : IExecutionRunner
 {
-    private readonly ExecutionJournal _journal = new();
+    private readonly ExecutionJournal _journal = new(time);
     private readonly IExecutionRequestEntry _requests = requests;
 
     /// <inheritdoc/>

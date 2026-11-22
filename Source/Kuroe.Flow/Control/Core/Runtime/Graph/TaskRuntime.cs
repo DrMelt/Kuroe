@@ -70,6 +70,9 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>所属任务的标识。</summary>
     public TaskId Id => _task.Id;
 
+    /// <summary>打时间戳用的时钟。</summary>
+    public TimeProvider Time => _state.Time;
+
     /// <summary>任务锁定的流程执行视图。</summary>
     public NodeGraph Graph => _state.Flow.Graph;
 
@@ -448,7 +451,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 _ => "执行未成功收口。",
             };
         _task.AppendError($"{node.Path}：{summary}");
-        node.EnterBlocked([node.Path], new NodeBlock(summary, execution.Id, DateTimeOffset.UtcNow));
+        node.EnterBlocked([node.Path], new NodeBlock(summary, execution.Id, _state.Time.GetUtcNow()));
         NoteLimitReached(node);
 
         RestorePlan? restore = CreateRestorePlan(node);

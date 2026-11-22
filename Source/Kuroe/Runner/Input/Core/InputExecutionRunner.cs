@@ -12,9 +12,10 @@ namespace Kuroe.Runner.Input;
 internal sealed class InputExecutionRunner(
     IInputChannel channel,
     InputExecutionParameters parameters,
-    IExecutionRequestEntry requests) : IExecutionRunner
+    IExecutionRequestEntry requests,
+    TimeProvider time) : IExecutionRunner
 {
-    private readonly ExecutionJournal _journal = new();
+    private readonly ExecutionJournal _journal = new(time);
     private readonly IExecutionRequestEntry _requests = requests;
 
     /// <inheritdoc/>

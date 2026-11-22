@@ -29,5 +29,5 @@ public static class ApprovalNodeExecution
         capabilities.Register(
             ApprovalNodeTypes.Name,
             type => Bind(type, runnerFactory),
-            type => type is ApprovalNodeType ? ApprovalNodeOutputProjection.Instance : null);
+            type => type is ApprovalNodeType ? new ApprovalNodeOutputProjection() : null);
 }

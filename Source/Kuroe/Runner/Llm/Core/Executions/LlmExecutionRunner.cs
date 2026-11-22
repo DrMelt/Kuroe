@@ -13,6 +13,7 @@ internal sealed class LlmExecutionRunner(
     SessionFactory sessions,
     IExecutionRequestEntry requests,
     LlmExecutionParameters parameters,
+    TimeProvider time,
     LlmAgentSessionPayload? restored = null) : IExecutionRunner, IExecutionUsageSource, IExecutionRestoreDataSource
 {
     /// <summary>补发要求的上限，用尽仍未交回按收口失败处理。</summary>
@@ -20,7 +21,7 @@ internal sealed class LlmExecutionRunner(
 
     private readonly SessionFactory _sessions = sessions;
     private readonly ContractReminder _reminder = new(requests);
-    private readonly ProcessJournal _journal = new();
+    private readonly ProcessJournal _journal = new(time);
     private readonly IExecutionRequestEntry _requests = requests;
     private readonly LlmExecutionParameters _parameters = parameters;
     private readonly LlmAgentSessionPayload? _restored = restored;

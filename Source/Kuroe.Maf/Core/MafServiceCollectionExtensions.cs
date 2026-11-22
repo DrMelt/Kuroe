@@ -51,13 +51,16 @@ public static class MafServiceCollectionExtensions
     {
         MafFlowTemplates templates = new(flows);
         registrar.Register(templates);
+        services.AddSingleton<ICheckpointIdSource, GuidCheckpointIdSource>();
         services.AddSingleton(flows);
         services.AddSingleton<IFlowTemplateSource>(templates);
         services.AddSingleton(sp => new FlowProvider(
             new MafFlowIdentity(flows),
             new MafFlowSubmission(flows, sp.GetRequiredService<ITaskExecutionGateway>()),
             null,
-            new MafFlowControlFactory(sp.GetRequiredService<ITaskExecutionGateway>()),
+            new MafFlowControlFactory(
+                sp.GetRequiredService<ITaskExecutionGateway>(),
+                sp.GetRequiredService<ICheckpointIdSource>()),
             new MafFlowPresentation(),
             new MafFlowRecordSource()));
         services.AddSingleton<IFlowRecordCodec, MafFlowRecordCodec>();

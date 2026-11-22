@@ -7,17 +7,18 @@ namespace Kuroe.Files.Tests;
 /// <summary>系统文件访问的薄适配：编码与 BOM、目录枚举、文件事实与写入移动删除。</summary>
 public sealed class SystemWorkspaceFilesTests : IDisposable
 {
+    private readonly SystemWorkspaceFiles _files = new();
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
-    public SystemWorkspaceFilesTests() => SystemWorkspaceFiles.Instance.CreateDirectory(_root);
+    public SystemWorkspaceFilesTests() => _files.CreateDirectory(_root);
 
     [Fact(DisplayName = "写入文本使用编码前导")]
     public void Write_text_uses_the_encoding_preamble()
     {
         string path = Path.Combine(_root, "utf16.txt");
 
-        SystemWorkspaceFiles.Instance.WriteText(path, "内容", Encoding.Unicode);
-        byte[] bytes = SystemWorkspaceFiles.Instance.ReadBytes(path);
+        _files.WriteText(path, "内容", Encoding.Unicode);
+        byte[] bytes = _files.ReadBytes(path);
 
         Assert.Equal(new byte[] { 0xFF, 0xFE }, bytes[..2]);
         Assert.Equal("内容", Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2));
@@ -28,8 +29,8 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
     {
         string path = Path.Combine(_root, "bom.txt");
 
-        SystemWorkspaceFiles.Instance.WriteText(path, "内容", new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-        byte[] bytes = SystemWorkspaceFiles.Instance.ReadBytes(path);
+        _files.WriteText(path, "内容", new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        byte[] bytes = _files.ReadBytes(path);
 
         Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, bytes[..3]);
     }
@@ -39,14 +40,14 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
     {
         string file = Path.Combine(_root, "a.txt");
         string directory = Path.Combine(_root, "b");
-        SystemWorkspaceFiles.Instance.WriteText(file, "x", new UTF8Encoding(false));
-        SystemWorkspaceFiles.Instance.CreateDirectory(directory);
+        _files.WriteText(file, "x", new UTF8Encoding(false));
+        _files.CreateDirectory(directory);
 
-        Assert.Equal([file], SystemWorkspaceFiles.Instance.Files(_root));
-        Assert.Equal([directory], SystemWorkspaceFiles.Instance.Directories(_root));
-        Assert.Equal(2, SystemWorkspaceFiles.Instance.Entries(_root).Count);
-        Assert.True(SystemWorkspaceFiles.Instance.FileExists(file));
-        Assert.True(SystemWorkspaceFiles.Instance.DirectoryExists(directory));
+        Assert.Equal([file], _files.Files(_root));
+        Assert.Equal([directory], _files.Directories(_root));
+        Assert.Equal(2, _files.Entries(_root).Count);
+        Assert.True(_files.FileExists(file));
+        Assert.True(_files.DirectoryExists(directory));
     }
 
     [Fact(DisplayName = "检查报告大小与最后写入时间")]
@@ -54,10 +55,10 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
     {
         string path = Path.Combine(_root, "a.txt");
         DateTimeOffset lastWrite = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
-        SystemWorkspaceFiles.Instance.WriteText(path, "abc", new UTF8Encoding(false));
+        _files.WriteText(path, "abc", new UTF8Encoding(false));
         File.SetLastWriteTimeUtc(path, lastWrite.UtcDateTime);
 
-        FileFacts facts = SystemWorkspaceFiles.Instance.Inspect(path);
+        FileFacts facts = _files.Inspect(path);
 
         Assert.Equal(3, facts.Size);
         Assert.Equal(lastWrite, facts.LastWrite);
@@ -68,26 +69,26 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
     {
         string source = Path.Combine(_root, "a.txt");
         string target = Path.Combine(_root, "nested", "b.txt");
-        SystemWorkspaceFiles.Instance.WriteText(source, "x", new UTF8Encoding(false));
-        SystemWorkspaceFiles.Instance.CreateDirectory(Path.GetDirectoryName(target)
+        _files.WriteText(source, "x", new UTF8Encoding(false));
+        _files.CreateDirectory(Path.GetDirectoryName(target)
             ?? throw new InvalidOperationException($"目标 {target} 没有所在目录。"));
 
-        SystemWorkspaceFiles.Instance.MoveFile(source, target);
+        _files.MoveFile(source, target);
 
-        Assert.False(SystemWorkspaceFiles.Instance.FileExists(source));
-        Assert.True(SystemWorkspaceFiles.Instance.FileExists(target));
+        Assert.False(_files.FileExists(source));
+        Assert.True(_files.FileExists(target));
 
-        SystemWorkspaceFiles.Instance.DeleteDirectory(_root, recursive: true);
+        _files.DeleteDirectory(_root, recursive: true);
 
-        Assert.False(SystemWorkspaceFiles.Instance.DirectoryExists(_root));
+        Assert.False(_files.DirectoryExists(_root));
     }
 
     [Fact(DisplayName = "目录不是重解析点")]
     public void Directory_is_not_a_reparse_point()
     {
-        SystemWorkspaceFiles.Instance.CreateDirectory(_root);
+        _files.CreateDirectory(_root);
 
-        Assert.False(SystemWorkspaceFiles.Instance.IsReparsePoint(_root));
+        Assert.False(_files.IsReparsePoint(_root));
     }
 
     [Fact(DisplayName = "原子写入建立缺失的父目录且不带 BOM")]
@@ -95,9 +96,9 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
     {
         string path = Path.Combine(_root, "nested", "deep", "a.json");
 
-        SystemWorkspaceFiles.Instance.WriteTextAtomic(path, "内容");
+        _files.WriteTextAtomic(path, "内容");
 
-        byte[] bytes = SystemWorkspaceFiles.Instance.ReadBytes(path);
+        byte[] bytes = _files.ReadBytes(path);
         Assert.Equal("内容", Encoding.UTF8.GetString(bytes));
     }
 
@@ -105,12 +106,12 @@ public sealed class SystemWorkspaceFilesTests : IDisposable
     public void Atomic_write_replaces_an_existing_target_without_leftovers()
     {
         string path = Path.Combine(_root, "a.json");
-        SystemWorkspaceFiles.Instance.WriteTextAtomic(path, "旧");
+        _files.WriteTextAtomic(path, "旧");
 
-        SystemWorkspaceFiles.Instance.WriteTextAtomic(path, "新");
+        _files.WriteTextAtomic(path, "新");
 
-        Assert.Equal("新", Encoding.UTF8.GetString(SystemWorkspaceFiles.Instance.ReadBytes(path)));
-        Assert.Equal([path], SystemWorkspaceFiles.Instance.Files(_root));
+        Assert.Equal("新", Encoding.UTF8.GetString(_files.ReadBytes(path)));
+        Assert.Equal([path], _files.Files(_root));
     }
 
     public void Dispose()

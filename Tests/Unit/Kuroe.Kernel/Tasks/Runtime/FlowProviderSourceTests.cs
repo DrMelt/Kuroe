@@ -16,7 +16,7 @@ public sealed class FlowProviderSourceTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
     private static Execution.ExecutionRuntime Runtime() =>
-        new(new Execution.ExecutionDispatcher());
+        new(new Execution.ExecutionDispatcher(), TimeProvider.System);
     [Fact(DisplayName = "身份按实现查找提供方")]
     public void Identity_finds_provider_by_implementation()
     {
@@ -73,7 +73,8 @@ public sealed class FlowProviderSourceTests
             registry,
             Runtime(),
             new FlowProviderSource([first, second]),
-            new UnusedRuntime());
+            new UnusedRuntime(),
+            TimeProvider.System);
 
         TaskSnapshot snapshot = runtime.Restore(CodeTask("second")).ThrowIfError();
 

@@ -21,7 +21,8 @@ namespace Kuroe.Flow.Control.Runtime.Nodes;
 /// 节点状态只经推进方法改动，读写都要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
 internal sealed class RuntimeExecutable(
     ExecutableNode executable,
-    IGraphNodeCapabilities capabilities) : RuntimeNode(executable)
+    IGraphNodeCapabilities capabilities,
+    TimeProvider time) : RuntimeNode(executable, time)
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;

@@ -29,7 +29,7 @@ public sealed class ExecutionRunTests
 
             return Task.FromResult<ErrorOr<ExecutionOutput>>(ExecutionOutput.FromPorts([]));
         };
-        NeutralExecution execution = new(new ExecutionId(1), Request());
+        NeutralExecution execution = new(new ExecutionId(1), Request(), TimeProvider.System);
 
         ExecutionRun run = ExecutionRun.Create(execution, Invocation(runner));
         await run.ExecuteAsync();
@@ -49,7 +49,7 @@ public sealed class ExecutionRunTests
             OnExecute = _ => Task.FromResult<ErrorOr<ExecutionOutput>>(
                 Error.Failure("Test.Failure", "失败。")),
         };
-        NeutralExecution execution = new(new ExecutionId(1), Request());
+        NeutralExecution execution = new(new ExecutionId(1), Request(), TimeProvider.System);
 
         ExecutionRun run = ExecutionRun.Create(execution, Invocation(runner));
         await run.ExecuteAsync();
@@ -66,7 +66,7 @@ public sealed class ExecutionRunTests
         {
             OnExecute = _ => throw new InvalidOperationException("坏了"),
         };
-        NeutralExecution execution = new(new ExecutionId(1), Request());
+        NeutralExecution execution = new(new ExecutionId(1), Request(), TimeProvider.System);
 
         ExecutionRun run = ExecutionRun.Create(execution, Invocation(runner));
         await run.ExecuteAsync();
@@ -83,7 +83,7 @@ public sealed class ExecutionRunTests
         {
             OnExecute = token => throw new OperationCanceledException(token),
         };
-        NeutralExecution execution = new(new ExecutionId(1), Request());
+        NeutralExecution execution = new(new ExecutionId(1), Request(), TimeProvider.System);
         execution.Interrupt("测试中断。");
 
         ExecutionRun run = ExecutionRun.Create(execution, Invocation(runner));
@@ -119,7 +119,7 @@ public sealed class ExecutionRunTests
 
     private sealed class TestRunner : IExecutionRunner, IExecutionUsageSource, IExecutionRestoreDataSource
     {
-        private readonly ExecutionJournal _journal = new();
+        private readonly ExecutionJournal _journal = new(TimeProvider.System);
 
         /// <summary>本次执行的过程记录，测试写入条目后读取快照。</summary>
         public ExecutionJournal Log => _journal;

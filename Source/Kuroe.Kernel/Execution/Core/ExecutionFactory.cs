@@ -11,10 +11,11 @@ namespace Kuroe.Kernel.Execution;
 internal static class ExecutionFactory
 {
     /// <summary>建立一个排队中的执行。</summary>
-    public static IExecution Create(ExecutionId id, ExecutionRequest request) => new ExecutionInstance(id, request);
+    public static IExecution Create(ExecutionId id, ExecutionRequest request, TimeProvider time) =>
+        new ExecutionInstance(id, request, time);
 
     /// <summary>按存档数据重建一次执行。</summary>
-    public static IExecution Restore(ExecutionRestorePlan plan) =>
+    public static IExecution Restore(ExecutionRestorePlan plan, TimeProvider time) =>
         ExecutionInstance.Restore(
             plan.Id,
             plan.Request,
@@ -27,5 +28,6 @@ internal static class ExecutionFactory
             plan.Usage,
             plan.RestoreData,
             plan.Contract,
-            plan.ContinuedFrom);
+            plan.ContinuedFrom,
+            time);
 }

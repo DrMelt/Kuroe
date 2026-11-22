@@ -16,7 +16,7 @@ public sealed class TaskTreeViewTests
         using ConsoleSession cli = new();
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
 
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowItemState.Pending));
+        new TaskTreeView(terminal, cli.Environment.Pendings, TimeProvider.System).Print(Snapshot(FlowItemState.Pending));
 
         Assert.Contains("节点", output.Output);
         Assert.Contains("整体", output.Output);
@@ -31,7 +31,7 @@ public sealed class TaskTreeViewTests
         using ConsoleSession cli = new();
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
 
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowItemState.Blocked));
+        new TaskTreeView(terminal, cli.Environment.Pendings, TimeProvider.System).Print(Snapshot(FlowItemState.Blocked));
 
         Assert.Contains("阻塞原因 节点失败原因。", output.Output);
     }
@@ -42,7 +42,7 @@ public sealed class TaskTreeViewTests
         using ConsoleSession cli = new();
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
 
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowItemState.Done));
+        new TaskTreeView(terminal, cli.Environment.Pendings, TimeProvider.System).Print(Snapshot(FlowItemState.Done));
 
         Assert.Contains("已完成", output.Output);
     }

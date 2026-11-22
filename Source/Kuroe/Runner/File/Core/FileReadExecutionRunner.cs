@@ -9,8 +9,9 @@ namespace Kuroe.Runner.File;
 internal sealed class FileReadExecutionRunner(
     FileExecutionParameters parameters,
     IWorkspaceFiles files,
-    IExecutionRequestEntry requests)
-    : FileExecutionRunner(parameters, files, requests)
+    IExecutionRequestEntry requests,
+    TimeProvider time)
+    : FileExecutionRunner(parameters, files, requests, time)
 {
     /// <inheritdoc/>
     public override Task<ErrorOr<ExecutionOutput>> ExecuteAsync(

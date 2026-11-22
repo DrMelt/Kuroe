@@ -19,7 +19,7 @@ public sealed class ExecutionTests
     [Fact(DisplayName = "标记运行只通知一次并记录开始")]
     public void Mark_running_notifies_once_and_records_start()
     {
-        NeutralExecution unit = new(new ExecutionId(1), Request());
+        NeutralExecution unit = new(new ExecutionId(1), Request(), TimeProvider.System);
         int started = 0;
         unit.Started += () => started++;
 
@@ -37,7 +37,8 @@ public sealed class ExecutionTests
         ExecutionPortName port = new("结论");
         NeutralExecution unit = new(
             new ExecutionId(1),
-            Request(new ExecutionOutputPort(port, ExecutionPortKind.Text, true, false)));
+            Request(new ExecutionOutputPort(port, ExecutionPortKind.Text, true, false)),
+            TimeProvider.System);
         ErrorOr<ExecutionStatus> submitted = new ExecutionRequestEntry(unit)
             .SubmitOutputs([new ExecutionOutputValue(port, "结果")]);
         Assert.False(submitted.IsError, submitted.FirstError.Description);
@@ -53,7 +54,7 @@ public sealed class ExecutionTests
     [Fact(DisplayName = "中断后收口记录原因")]
     public void Interrupt_then_settle_records_reason()
     {
-        NeutralExecution unit = new(new ExecutionId(1), Request());
+        NeutralExecution unit = new(new ExecutionId(1), Request(), TimeProvider.System);
         unit.MarkRunning();
 
         unit.Interrupt("任务终止。");
@@ -79,7 +80,8 @@ public sealed class ExecutionTests
             ExecutionUsage.None,
             null,
             ExecutionContract.Empty,
-            null);
+            null,
+            TimeProvider.System);
 
         Assert.Equal(ExecutionState.Interrupted, unit.State);
         Assert.Contains("进程退出前未收口。", unit.Snapshot().Failures);
@@ -88,7 +90,7 @@ public sealed class ExecutionTests
     [Fact(DisplayName = "运行拒绝与请求不匹配的目标")]
     public async Task Run_rejects_a_target_that_does_not_match_the_request()
     {
-        ExecutionRuntime runtime = new(new ExecutionDispatcher());
+        ExecutionRuntime runtime = new(new ExecutionDispatcher(), TimeProvider.System);
         IExecution execution = runtime.Create(new ExecutionId(1), Request());
         ExecutionInvocation invocation = new(
             new ExecutionStepId("其他"),
@@ -115,7 +117,7 @@ public sealed class ExecutionTests
     [Fact(DisplayName = "过程记录条目内容与进度进入快照")]
     public void Journal_entries_content_and_progress_reach_the_snapshot()
     {
-        NeutralExecution unit = new(new ExecutionId(1), Request());
+        NeutralExecution unit = new(new ExecutionId(1), Request(), TimeProvider.System);
         TestJournal journal = new();
         List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
@@ -139,7 +141,7 @@ public sealed class ExecutionTests
     [Fact(DisplayName = "用量读取器跟随到收口")]
     public void Usage_reader_is_followed_until_settled()
     {
-        NeutralExecution unit = new(new ExecutionId(1), Request());
+        NeutralExecution unit = new(new ExecutionId(1), Request(), TimeProvider.System);
         TestUsageReader reader = new()
         {
             Usage = new ExecutionUsage(1, 0, new TokenUsage(10, 2, 12, null, null)),
@@ -159,7 +161,7 @@ public sealed class ExecutionTests
     [Fact(DisplayName = "成功之后保留恢复数据读取器")]
     public void Restore_data_reader_is_kept_after_success()
     {
-        NeutralExecution unit = new(new ExecutionId(1), Request());
+        NeutralExecution unit = new(new ExecutionId(1), Request(), TimeProvider.System);
         TestRestoreReader reader = new()
         {
             RestoreData = new ExecutionRestoreState("test", "data"),
@@ -176,7 +178,7 @@ public sealed class ExecutionTests
     [Fact(DisplayName = "开始事件只触发一次")]
     public void Started_event_fires_once()
     {
-        NeutralExecution unit = new(new ExecutionId(1), Request());
+        NeutralExecution unit = new(new ExecutionId(1), Request(), TimeProvider.System);
         int started = 0;
         unit.Started += () => started++;
 

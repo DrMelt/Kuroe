@@ -18,7 +18,8 @@ internal sealed class GraphFlowControl(
     ITaskFlowContext task,
     GraphFlowState state,
     IExecutionNodeDeclarationResolver declarationResolver,
-    ITaskExecutionGateway gateway) : IFlowControl, IFlowRerun
+    ITaskExecutionGateway gateway,
+    TimeProvider time) : IFlowControl, IFlowRerun
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
@@ -588,7 +589,7 @@ internal sealed class GraphFlowControl(
                 string reason = string.IsNullOrWhiteSpace(declaration.FirstError.Description)
                     ? "执行节点声明解析失败。"
                     : declaration.FirstError.Description;
-                node.EnterBlocked([node.Path], new NodeBlock(reason, null, DateTimeOffset.UtcNow));
+                node.EnterBlocked([node.Path], new NodeBlock(reason, null, time.GetUtcNow()));
                 task.AppendError(reason);
                 task.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
                 return;

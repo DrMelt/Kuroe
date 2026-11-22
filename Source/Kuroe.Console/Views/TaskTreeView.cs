@@ -8,21 +8,22 @@ using Spectre.Console.Rendering;
 namespace Kuroe.Console.Views;
 
 /// <summary>任务节点树：按流程视图列出分组、步骤与执行，执行作为步骤的子行。</summary>
-internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
+internal sealed class TaskTreeView(Terminal terminal, PendingService pendings, TimeProvider time)
 {
     private readonly Terminal _terminal = terminal;
     private readonly PendingService _pendings = pendings;
+    private readonly TimeProvider _time = time;
 
     public void Print(TaskSnapshot task)
     {
         Facts facts = new(task, _pendings);
         _terminal.Write(StartLine(task.View.StartPorts));
-        _terminal.Write(Build(task, facts));
+        _terminal.Write(Build(task, facts, _time.GetUtcNow()));
     }
 
     private static Paragraph Header() => new ViewLine().Add("节点", Styles.Hint).Build();
 
-    private static Tree Build(TaskSnapshot task, Facts facts)
+    private static Tree Build(TaskSnapshot task, Facts facts, DateTimeOffset now)
     {
         List<TreeNodeData> nodes =
         [
@@ -35,7 +36,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
                 step.Path,
                 step.GroupPath,
                 StepLine(facts, step),
-                [.. Details(step)])),
+                [.. Details(step, now)])),
         ];
 
         Dictionary<string, List<TreeNodeData>> byParent = nodes
@@ -166,7 +167,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         }
     }
 
-    private static IEnumerable<IRenderable> Details(FlowStepView step)
+    private static IEnumerable<IRenderable> Details(FlowStepView step, DateTimeOffset now)
     {
         foreach (FlowPortView port in step.Outputs.Where(port => port.Constant))
         {
@@ -178,14 +179,14 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         foreach (FlowExecutionView execution in step.Executions.OrderBy(execution => execution.Id))
         {
-            yield return ExecutionLine(execution);
+            yield return ExecutionLine(execution, now);
         }
     }
 
-    private static Paragraph ExecutionLine(FlowExecutionView execution)
+    private static Paragraph ExecutionLine(FlowExecutionView execution, DateTimeOffset now)
     {
         (string id, string round, string state, string elapsed, string? failures) =
-            ViewLabels.ExecutionParts(execution);
+            ViewLabels.ExecutionParts(execution, now);
         ViewLine line = new ViewLine()
             .Add(id, Styles.Key)
             .Add(round, Styles.Hint)

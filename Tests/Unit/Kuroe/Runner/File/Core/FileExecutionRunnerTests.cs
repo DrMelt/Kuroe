@@ -218,10 +218,10 @@ public sealed class FileExecutionRunnerTests
     }
 
     private FileReadExecutionRunner Reader(FileExecutionParameters parameters) =>
-        new(parameters, _files, _entry);
+        new(parameters, _files, _entry, TimeProvider.System);
 
     private FileWriteExecutionRunner Writer(FileExecutionParameters parameters) =>
-        new(parameters, _files, _entry);
+        new(parameters, _files, _entry, TimeProvider.System);
 
     private ExecutableNode ReadNode(
         string relative,

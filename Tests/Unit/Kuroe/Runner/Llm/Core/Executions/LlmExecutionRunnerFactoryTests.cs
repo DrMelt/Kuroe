@@ -19,7 +19,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact(DisplayName = "准备拒绝报告无法完成的执行")]
     public void Prepare_rejects_an_execution_that_reported_cannot_complete()
     {
-        LlmExecutionRunnerFactory factory = new(Factory());
+        LlmExecutionRunnerFactory factory = new(Factory(), TimeProvider.System);
         ExecutionRestoreContext context = Context(new ExecutionContract(CannotCompleteReason: "缺少资料"));
 
         Assert.True(factory.Prepare(context).IsError);
@@ -28,7 +28,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact(DisplayName = "准备接受可读取的会话负载")]
     public void Prepare_accepts_a_readable_session_payload()
     {
-        LlmExecutionRunnerFactory factory = new(Factory());
+        LlmExecutionRunnerFactory factory = new(Factory(), TimeProvider.System);
         ExecutionRestoreContext context = Context(ExecutionContract.Empty);
 
         Assert.False(factory.Prepare(context).IsError);
@@ -37,7 +37,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact(DisplayName = "准备拒绝来自其他模型的负载")]
     public void Prepare_rejects_a_payload_from_another_model()
     {
-        LlmExecutionRunnerFactory factory = new(Factory());
+        LlmExecutionRunnerFactory factory = new(Factory(), TimeProvider.System);
         ExecutionRestoreContext context = Context(ExecutionContract.Empty, model: "other");
 
         Assert.True(factory.Prepare(context).IsError);
@@ -46,7 +46,7 @@ public sealed class LlmExecutionRunnerFactoryTests
     [Fact(DisplayName = "准备拒绝未知负载格式")]
     public void Prepare_rejects_an_unknown_payload_format()
     {
-        LlmExecutionRunnerFactory factory = new(Factory());
+        LlmExecutionRunnerFactory factory = new(Factory(), TimeProvider.System);
         ExecutionRestoreContext context = Context(ExecutionContract.Empty, format: "llm.session.v2");
 
         Assert.True(factory.Prepare(context).IsError);
@@ -74,7 +74,7 @@ public sealed class LlmExecutionRunnerFactoryTests
             []);
         ExecutionInvocation target = new(
             new ExecutionStepId("实施"),
-            new LlmExecutionRunnerFactory(Factory()),
+            new LlmExecutionRunnerFactory(Factory(), TimeProvider.System),
             new LlmExecutionParameters(null, [], [], new Dictionary<string, IReadOnlyDictionary<string, string>>(), "fake"));
 
         return new ExecutionRestoreContext(

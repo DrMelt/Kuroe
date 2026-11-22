@@ -10,11 +10,13 @@ internal sealed class MafWorkflowCheckpointStore : ICheckpointStore<JsonElement>
     private readonly Dictionary<string, Entry> _values = [];
     private readonly Dictionary<string, List<CheckpointInfo>> _index = [];
     private readonly IMafWorkflowCheckpoints _checkpoints;
+    private readonly ICheckpointIdSource _ids;
     private readonly Lock _sync = new();
 
-    internal MafWorkflowCheckpointStore(IMafWorkflowCheckpoints checkpoints)
+    internal MafWorkflowCheckpointStore(IMafWorkflowCheckpoints checkpoints, ICheckpointIdSource ids)
     {
         _checkpoints = checkpoints;
+        _ids = ids;
         Manager = CheckpointManager.CreateJson(this, new JsonSerializerOptions(JsonSerializerDefaults.General));
 
         if (checkpoints.Load() is not { } checkpoint)
@@ -40,7 +42,7 @@ internal sealed class MafWorkflowCheckpointStore : ICheckpointStore<JsonElement>
         JsonElement value,
         CheckpointInfo? parent = null)
     {
-        CheckpointInfo info = new(sessionId, Guid.NewGuid().ToString("N"));
+        CheckpointInfo info = new(sessionId, _ids.Next());
         lock (_sync)
         {
             _values[info.CheckpointId] = new Entry(sessionId, value, parent);

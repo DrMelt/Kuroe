@@ -14,6 +14,7 @@ namespace Kuroe.Tool.Implementation.KuroeInfo;
 public sealed class TaskKuroeInfoTool : ITool
 {
     private readonly ITaskReader _registry;
+    private readonly TimeProvider _time;
 
     /// <summary>详情里最近呈现的记录数。</summary>
     private const int JournalLimit = 10;
@@ -43,9 +44,10 @@ public sealed class TaskKuroeInfoTool : ITool
         [new ToolParameter(new ToolName("executionId"), "要查看的执行号", Required: true)]);
 
     /// <summary>用任务与执行的索引建立载体。</summary>
-    public TaskKuroeInfoTool(ITaskReader registry)
+    public TaskKuroeInfoTool(ITaskReader registry, TimeProvider time)
     {
         _registry = registry;
+        _time = time;
         Functions =
         [
             ListTasks.Bind(_ => List()),
@@ -123,7 +125,7 @@ public sealed class TaskKuroeInfoTool : ITool
     }
 
     /// <summary>任务详情：目标、流程、步骤状态与执行列表。</summary>
-    private static string DescribeTask(TaskSnapshot task)
+    private string DescribeTask(TaskSnapshot task)
     {
         var text = new StringBuilder();
         text.AppendLine($"#{task.Id.Short} · {task.Title} · {StateLabel(task)}");
@@ -173,10 +175,10 @@ public sealed class TaskKuroeInfoTool : ITool
     }
 
     /// <summary>执行详情。</summary>
-    private static string DescribeExecution(TaskSnapshot task, ExecutionSnapshot execution)
+    private string DescribeExecution(TaskSnapshot task, ExecutionSnapshot execution)
     {
         var text = new StringBuilder();
-        TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
+        TimeSpan elapsed = (execution.FinishedAt ?? _time.GetUtcNow()) - (execution.StartedAt ?? execution.CreatedAt);
         text.AppendLine($"{execution.Id} · 第 {task.RoundOf(execution)} 轮");
         text.AppendLine($"{task.Id} {task.Title} · 步骤 {execution.Request.Step}");
         string stateLabel = execution.State.IsLive() && execution.Progress.Length > 0
@@ -249,9 +251,9 @@ public sealed class TaskKuroeInfoTool : ITool
     }
 
     /// <summary>列表里一行的执行概况。</summary>
-    private static string ExecutionLine(TaskSnapshot task, ExecutionSnapshot execution)
+    private string ExecutionLine(TaskSnapshot task, ExecutionSnapshot execution)
     {
-        TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
+        TimeSpan elapsed = (execution.FinishedAt ?? _time.GetUtcNow()) - (execution.StartedAt ?? execution.CreatedAt);
         List<string> parts =
         [
             execution.Id.ToString(),

@@ -8,14 +8,15 @@ namespace Kuroe.Runner.Llm.Executions;
 
 /// <summary>为 Llm 执行节点建立单次执行的运行器，并校验与建立恢复执行。</summary>
 public sealed class LlmExecutionRunnerFactory(
-    SessionFactory sessions) : IExecutionRunnerFactory, IExecutionRestorer
+    SessionFactory sessions,
+    TimeProvider time) : IExecutionRunnerFactory, IExecutionRestorer
 {
     /// <summary>为一次普通执行建立运行器。</summary>
     public IExecutionRunner Create(
         IExecutionParameters parameters,
         IExecutionRequestEntry requests) =>
         parameters is LlmExecutionParameters llm
-            ? new LlmExecutionRunner(sessions, requests, llm)
+            ? new LlmExecutionRunner(sessions, requests, llm, time)
             : throw new InvalidOperationException("Llm 执行节点的参数类型不匹配。");
 
     /// <summary>校验恢复负载的格式与模型并装配一次恢复。历史可继续性在建立恢复会话时校验。已上报无法完成的执行不允许恢复。</summary>
@@ -51,6 +52,6 @@ public sealed class LlmExecutionRunnerFactory(
         IExecutionRestoreData data,
         IExecutionRequestEntry requests) =>
         data is LlmAgentSessionPayload state && context.Invocation.Parameters is LlmExecutionParameters parameters
-            ? new LlmExecutionRunner(sessions, requests, parameters, state)
+            ? new LlmExecutionRunner(sessions, requests, parameters, time, state)
             : throw new InvalidOperationException("Llm 恢复数据类型不匹配。");
 }

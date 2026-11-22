@@ -37,7 +37,7 @@ public sealed class RuntimeContainerTests
             },
         };
         StubContext context = new(NodeInputPlan.Of(container), containerPath, member, gate);
-        RuntimeContainer runtime = new(container, context);
+        RuntimeContainer runtime = new(container, context, TimeProvider.System);
 
         Assert.True(runtime.ContentReady);
 
@@ -58,6 +58,8 @@ public sealed class RuntimeContainerTests
         NodePath gate) : INodeContext
     {
         public TaskId Id { get; } = new(1);
+
+        public TimeProvider Time => TimeProvider.System;
 
         public bool GateReleased { get; set; }
 

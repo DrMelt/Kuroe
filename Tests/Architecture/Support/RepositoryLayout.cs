@@ -34,6 +34,14 @@ internal static class RepositoryLayout
         Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
             .Where(path => !IsBuildOutput(path));
 
+    /// <summary>目录下的源码文件，排除构建产物与源生成目录。</summary>
+    internal static IEnumerable<string> SourceFiles(string root) =>
+        Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsBuildOutput(path) && !IsGenerated(path));
+
+    internal static bool IsGenerated(string path) =>
+        path.Contains($"{Path.DirectorySeparatorChar}generated{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
+
     internal static bool IsUnder(string path, string directory)
     {
         string relative = Path.GetRelativePath(directory, path);

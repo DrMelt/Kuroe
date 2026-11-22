@@ -19,7 +19,8 @@ internal sealed class TaskBrowser(
     TaskTreeView tree,
     ExecutionDetailView executionView,
     Terminal terminal,
-    ResultView results)
+    ResultView results,
+    TimeProvider time)
 {
     /// <summary>一个菜单项：进下一级、执行动作或返回。</summary>
     private sealed record Item(
@@ -503,8 +504,8 @@ internal sealed class TaskBrowser(
     private Item Choose(string title, IReadOnlyList<Item> items) =>
         terminal.Prompt(new MenuPrompt<Item>(title, items, item => item.Label, Back));
 
-    private static string ExecutionItemLabel(FlowExecutionView execution) =>
-        $"› {ViewLabels.ExecutionLabel(execution)}";
+    private string ExecutionItemLabel(FlowExecutionView execution) =>
+        $"› {ViewLabels.ExecutionLabel(execution, time.GetUtcNow())}";
 
     private static string TaskLabel(TaskSnapshot task) =>
         $"#{task.Id.Short} {task.Title} · {ViewLabels.Of(task.State)}";

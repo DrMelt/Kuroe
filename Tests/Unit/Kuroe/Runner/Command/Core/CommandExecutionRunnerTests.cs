@@ -269,7 +269,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionParameters parameters,
         FakeProcessRunner process,
         ExecutionRequest? request = null) =>
-        new(parameters, process, new Entry(request ?? Input()));
+        new(parameters, process, new Entry(request ?? Input()), TimeProvider.System);
 
     private static ExecutionRequest Input(
         params (string Port, string Text)[] texts)

@@ -21,8 +21,8 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
         AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(System.Console.Error) }));
 
     /// <summary>能否读键盘。浏览与下钻要求交互终端。</summary>
-    public static bool Interactive =>
-        !System.Console.IsInputRedirected && !System.Console.IsOutputRedirected && AnsiConsole.Console.Profile.Capabilities.Interactive;
+    public bool Interactive =>
+        !System.Console.IsInputRedirected && !System.Console.IsOutputRedirected && output.Profile.Capabilities.Interactive;
 
     /// <summary>写出参与排版的渲染元素。</summary>
     public void Write(IRenderable renderable)

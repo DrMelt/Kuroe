@@ -110,7 +110,7 @@ public sealed class ToolCollectionTests
     [Fact(DisplayName = "工具调用只在运行时报告进度")]
     public async Task Tool_invocation_reports_progress_only_while_running()
     {
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         List<string> progress = [];
         journal.ProgressReported += progress.Add;
         ToolCollection tools = new([new FakeTool("GetLocalTime")], new ToolJson());
@@ -124,7 +124,7 @@ public sealed class ToolCollectionTests
     [Fact(DisplayName = "失败工具调用在文本之后渲染状态并记录原始结果")]
     public async Task Failed_tool_call_renders_status_after_its_text_and_records_raw_outcome()
     {
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         ToolCollection tools = new([new FailingTool()], new ToolJson());
         AIFunction function = tools.Build(journal, [new ToolPath("cmd/Run")]).Single();
 
@@ -134,7 +134,7 @@ public sealed class ToolCollectionTests
         Assert.Equal("cmd/Run {}\n命令：cmd\n坏了", Assert.Single(journal.Entries).Text);
     }
 
-    private static ProcessJournal Journal() => new();
+    private static ProcessJournal Journal() => new(TimeProvider.System);
 
     private sealed class FailingTool : ITool
     {

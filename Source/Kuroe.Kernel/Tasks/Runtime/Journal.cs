@@ -1,20 +1,20 @@
 namespace Kuroe.Kernel.Tasks.Runtime;
 
 /// <summary>任务级诊断记录。追加与读取共用共享存储，交出的快照不受后续追加影响。</summary>
-internal sealed class Journal
+internal sealed class Journal(TimeProvider time)
 {
     private const string ErrorLabel = "错误";
     private const string InfoLabel = "信息";
 
-    private readonly ProcessJournalStore _store = new();
+    private readonly ProcessJournalStore _store = new(time);
 
     /// <summary>追加一条失败说明。</summary>
     public void AppendError(string text) =>
-        _store.Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Error, ErrorLabel, text));
+        _store.Append(new JournalEntry(time.GetUtcNow(), JournalLevel.Error, ErrorLabel, text));
 
     /// <summary>追加一条信息说明。</summary>
     public void AppendInfo(string text) =>
-        _store.Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, InfoLabel, text));
+        _store.Append(new JournalEntry(time.GetUtcNow(), JournalLevel.Information, InfoLabel, text));
 
     /// <summary>已记录的条目，按发生顺序。</summary>
     public IReadOnlyList<JournalEntry> Entries => _store.Entries;

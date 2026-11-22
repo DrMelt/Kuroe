@@ -19,8 +19,6 @@ using Kuroe.Platform;
 using Kuroe.Kernel.Tasks.Persistence.Files;
 using Kuroe.Kernel.Tasks.Persistence.Files.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Serialization.Json;
-using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
-using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Serialization.Shared;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Records.Shared;
@@ -56,7 +54,8 @@ public static class ServiceCollectionExtensions
         KuroeCompositionOptions? options = null)
     {
         KuroeCompositionOptions coreOptions = options ?? new KuroeCompositionOptions();
-        IWorkspaceFiles files = coreOptions.Files ?? SystemWorkspaceFiles.Instance;
+        TimeProvider time = coreOptions.Time ?? TimeProvider.System;
+        IWorkspaceFiles files = coreOptions.Files ?? new SystemWorkspaceFiles();
         Func<string, ITaskLeaseStore> leaseStores =
             coreOptions.LeaseStores ?? (directory => new FileTaskLeaseStore(directory));
         ErrorOr<SettingsProvider> settings = SettingsProvider.Create(paths, files);
@@ -91,7 +90,8 @@ public static class ServiceCollectionExtensions
             paths,
             coreOptions.PersistTasks,
             inputs,
-            flowTemplates);
+            flowTemplates,
+            time);
 
         List<IToolSource> definitionSources =
         [
@@ -99,7 +99,7 @@ public static class ServiceCollectionExtensions
             new GitToolSource(),
             new DotnetToolSource(),
             new ConfiguredToolSource(configuredTools.Value),
-            new TimeToolSource(TimeProvider.System),
+            new TimeToolSource(time),
         ];
         ErrorOr<Success> definitionTools = composition.AddToolSources(definitionSources);
         if (definitionTools.IsError)
@@ -109,6 +109,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(paths);
         services.AddSingleton(files);
+        services.AddSingleton(time);
         services.AddSingleton(leaseStores);
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
@@ -130,7 +131,8 @@ public static class ServiceCollectionExtensions
             catalog.Value,
             modelService,
             taskRegistry,
-            executions);
+            executions,
+            time);
         if (registered.IsError)
         {
             return registered.ErrorsOrEmptyList;
@@ -139,7 +141,7 @@ public static class ServiceCollectionExtensions
         ToolJson toolJson = new();
         KuroeToolFactory toolFactory = new(composition.ToolSources, paths.WorkingDirectory);
         SessionFactory sessions = new(catalog.Value, toolFactory, toolJson);
-        LlmExecutionRunnerFactory llmRunner = new(sessions);
+        LlmExecutionRunnerFactory llmRunner = new(sessions, time);
         composition.AttachLlmRunner(llmRunner);
 
         services.AddSingleton<IToolJson>(toolJson);
@@ -151,7 +153,8 @@ public static class ServiceCollectionExtensions
             toolJson));
         services.AddSingleton<ExecutionDispatcher>();
         services.AddSingleton(sp => new ExecutionRuntime(
-            sp.GetRequiredService<ExecutionDispatcher>()));
+            sp.GetRequiredService<ExecutionDispatcher>(),
+            sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
         services.AddSingleton<IExecutionOwnerIndex>(executions);
         services.AddSingleton<IExecutionIndex>(executions);
@@ -175,6 +178,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IFlowRuntime>(),
             sp.GetRequiredService<IFlowProviderSource>(),
             sp.GetRequiredService<ITaskIdSource>(),
+            sp.GetRequiredService<TimeProvider>(),
             coreOptions.PersistTasks,
             coreOptions.PersistTasks ? paths.RecordsDirectory : null,
             coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCodec>() : null,
@@ -207,14 +211,16 @@ public static class ServiceCollectionExtensions
         CatalogService catalog,
         ModelService models,
         TaskRegistry taskRegistry,
-        ExecutionIndex executions)
+        ExecutionIndex executions,
+        TimeProvider time)
     {
         TaskSnapshotReader taskReader = new(taskRegistry);
         KuroeInfoToolSource info = new(
             taskReader,
             new ToolCatalogView(catalog, models),
             flowTemplates,
-            settings);
+            settings,
+            time);
 
         ErrorOr<Success> added = composition.AddToolSources([info, new ContractToolSource()]);
         if (added.IsError)

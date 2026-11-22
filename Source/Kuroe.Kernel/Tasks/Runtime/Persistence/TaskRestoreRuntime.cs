@@ -14,7 +14,8 @@ public sealed class TaskRestoreRuntime(
     TaskRegistry registry,
     IExecutionRuntime executions,
     IFlowProviderSource providers,
-    IFlowRuntime runner) : ITaskRestoreRuntime
+    IFlowRuntime runner,
+    TimeProvider time) : ITaskRestoreRuntime
 {
     /// <inheritdoc/>
     public ErrorOr<TaskSnapshot> Restore(TaskRecord record)
@@ -39,7 +40,8 @@ public sealed class TaskRestoreRuntime(
             provider,
             restored.Value.State,
             restored.Value.StartTexts,
-            restored.Value.Executions);
+            restored.Value.Executions,
+            time);
         registry.Adopt(task);
         foreach (IExecution execution in task.Executions)
         {

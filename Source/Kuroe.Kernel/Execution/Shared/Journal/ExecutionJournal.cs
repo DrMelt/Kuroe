@@ -1,9 +1,9 @@
 namespace Kuroe.Kernel.Execution.Shared.Journal;
 
 /// <summary>一次执行的过程记录：内容写入共享存储，条目按时间保留，变更后向外播发。</summary>
-public sealed class ExecutionJournal : IProcessJournal
+public sealed class ExecutionJournal(TimeProvider time) : IProcessJournal
 {
-    private readonly ProcessJournalStore _store = new();
+    private readonly ProcessJournalStore _store = new(time);
     private readonly Lock _progressGate = new();
     private string _progress = string.Empty;
 
@@ -19,7 +19,7 @@ public sealed class ExecutionJournal : IProcessJournal
     /// <summary>追加一条记录并播发。</summary>
     public void Append(string label, string text, JournalLevel level = JournalLevel.Information)
     {
-        JournalEntry entry = new(DateTimeOffset.UtcNow, level, label, text);
+        JournalEntry entry = new(time.GetUtcNow(), level, label, text);
         _store.Append(entry);
         EntryAppended?.Invoke(entry);
     }

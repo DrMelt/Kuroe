@@ -14,7 +14,8 @@ namespace Kuroe.Flow.Control.Runtime.Nodes;
 /// 读写都要求持有 <see cref="ITaskFlowContext.Gate"/>。</summary>
 internal sealed class RuntimeContainer(
     ContainerNode container,
-    INodeContext context) : RuntimeNode(container)
+    INodeContext context,
+    TimeProvider time) : RuntimeNode(container, time)
 {
     /// <summary>提交时锁定的容器定义，不可变。</summary>
     public ContainerNode Container { get; } = container;

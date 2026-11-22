@@ -27,6 +27,7 @@ public sealed class GraphFlowSubmission(
     IExecutionNodeDeclarationResolver declarations,
     ITaskExecutionGateway executions,
     IGraphNodeCapabilities capabilities,
+    TimeProvider time,
     IFlowSnapshotSource? snapshots = null) : IFlowSubmission
 {
     /// <inheritdoc/>
@@ -109,7 +110,7 @@ public sealed class GraphFlowSubmission(
             }
         }
 
-        GraphFlowState state = new(flow, effectiveInputs, start.Value, startPorts, definition, executions, capabilities);
+        GraphFlowState state = new(flow, effectiveInputs, start.Value, startPorts, definition, executions, capabilities, time);
 
         return new FlowSubmission(
             state,
@@ -135,7 +136,7 @@ public sealed class GraphFlowSubmission(
         FlowGraph flow = compiled.Value;
         PortTexts startTexts = new(saved.Start.StartTexts);
         StartPortValues startPorts = new(flow.Graph.StartPorts, startTexts, saved.Start.Inputs);
-        GraphFlowState state = new(flow, saved.Start.Inputs, startTexts, startPorts, definition, executions, capabilities)
+        GraphFlowState state = new(flow, saved.Start.Inputs, startTexts, startPorts, definition, executions, capabilities, time)
         {
             RestoreNodes = saved.Nodes,
             RestorePorts = saved.Ports,

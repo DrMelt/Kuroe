@@ -32,9 +32,6 @@ public sealed record FlowExecutionView(
     /// <summary>继续自的执行号，不是恢复执行时为空。</summary>
     public int? ContinuedFrom { get; init; }
 
-    /// <summary>已耗时，未收口时按当前时刻算。</summary>
-    public TimeSpan Elapsed => ElapsedAt(DateTimeOffset.UtcNow);
-
     /// <summary>到给定时刻为止的已耗时，未收口时按该时刻算。</summary>
     public TimeSpan ElapsedAt(DateTimeOffset now) => (FinishedAt ?? now) - (StartedAt ?? CreatedAt);
 }

@@ -88,19 +88,19 @@ public sealed class RuntimeExecutableTests
             Type = executable.Type,
             OutputPorts = executable.Outputs,
         };
-        Kernel.Execution.ExecutionRuntime runtime = new(new Kernel.Execution.ExecutionDispatcher());
+        Kernel.Execution.ExecutionRuntime runtime = new(new Kernel.Execution.ExecutionDispatcher(), TimeProvider.System);
         Kernel.Execution.Shared.State.IExecution unit = runtime.Create(
             new Kernel.Execution.Shared.Identity.ExecutionId(1),
             RuntimeExecution.BuildRequest(input));
         RuntimeExecution execution = new(input, unit, 0, TestNodeCapabilities.Build());
 
-        return (new RuntimeExecutable(executable, TestNodeCapabilities.Build()), execution);
+        return (new RuntimeExecutable(executable, TestNodeCapabilities.Build(), TimeProvider.System), execution);
     }
 
     private static Task<ErrorOr<Success>> SubmitAsync(
         RuntimeExecution execution,
         Dictionary<PortName, PortValue> values) =>
-        new Kernel.Execution.ExecutionRuntime(new Kernel.Execution.ExecutionDispatcher())
+        new Kernel.Execution.ExecutionRuntime(new Kernel.Execution.ExecutionDispatcher(), TimeProvider.System)
             .RunAsync(
                 execution.Unit,
                 new ExecutionInvocation(
@@ -131,7 +131,7 @@ public sealed class RuntimeExecutableTests
             IExecutionRequestEntry requests,
             IReadOnlyList<ExecutionOutputValue> values) : IExecutionRunner
         {
-            public IProcessJournal Journal { get; } = new ExecutionJournal();
+            public IProcessJournal Journal { get; } = new ExecutionJournal(TimeProvider.System);
 
             public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(CancellationToken cancellationToken)
             {

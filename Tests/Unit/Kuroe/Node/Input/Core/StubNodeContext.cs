@@ -16,6 +16,8 @@ internal sealed class StubNodeContext : INodeContext
 
     public TaskId Id { get; } = new(1);
 
+    public TimeProvider Time => TimeProvider.System;
+
     public NodeInputPlan? Plan(NodePath node) => new()
     {
         Groups =

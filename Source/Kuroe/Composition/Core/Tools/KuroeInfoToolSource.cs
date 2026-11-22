@@ -12,12 +12,13 @@ internal sealed class KuroeInfoToolSource(
     ITaskReader tasks,
     ICatalogView catalog,
     IFlowTemplateCatalog flows,
-    ISettingsView settings) : IToolSource
+    ISettingsView settings,
+    TimeProvider time) : IToolSource
 {
     /// <inheritdoc/>
     public IReadOnlyList<ToolDefinition> Definitions { get; } =
     [
-        .. new TaskKuroeInfoTool(tasks).Functions.Select(function => function.Definition),
+        .. new TaskKuroeInfoTool(tasks, time).Functions.Select(function => function.Definition),
         .. new CatalogKuroeInfoTool(catalog).Functions.Select(function => function.Definition),
         .. new FlowKuroeInfoTool(flows).Functions.Select(function => function.Definition),
         .. new SettingsKuroeInfoTool(settings).Functions.Select(function => function.Definition),
@@ -27,7 +28,7 @@ internal sealed class KuroeInfoToolSource(
     public IReadOnlyList<ITool> Create(ToolContext context)
     {
         List<ITool> tools = [];
-        Add(new TaskKuroeInfoTool(tasks));
+        Add(new TaskKuroeInfoTool(tasks, time));
         Add(new CatalogKuroeInfoTool(catalog));
         Add(new FlowKuroeInfoTool(flows));
         Add(new SettingsKuroeInfoTool(settings));

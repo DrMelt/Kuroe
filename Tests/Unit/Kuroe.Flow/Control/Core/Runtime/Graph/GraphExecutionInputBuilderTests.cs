@@ -103,7 +103,7 @@ public sealed class GraphExecutionInputBuilderTests
 
     private static InputValue Build(ExecutableNode executable, NodeGraph graph, PortName port, string text)
     {
-        RuntimeExecutable node = new(executable, TestNodeCapabilities.Build());
+        RuntimeExecutable node = new(executable, TestNodeCapabilities.Build(), TimeProvider.System);
         NodeInputValues inputs = new(
             [],
             new HashSet<PortName>(),
@@ -138,5 +138,5 @@ public sealed class GraphExecutionInputBuilderTests
         ],
         Outputs = [],
         MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
-    }, TestNodeCapabilities.Build());
+    }, TestNodeCapabilities.Build(), TimeProvider.System);
 }

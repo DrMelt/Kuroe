@@ -49,7 +49,9 @@ internal static class DialogueHostFactory
             services.GetRequiredService<IExecutionRuntime>(),
             services.GetRequiredService<IFlowRuntime>(),
             providers,
+            // 对话域任务标识独立于用户域，不共用容器登记的标识源
             new GuidTaskIdSource(),
+            services.GetRequiredService<TimeProvider>(),
             persistTasks,
             persistTasks ? paths.AssistantRecordsDirectory : null,
             persistTasks ? services.GetRequiredService<ITaskRecordCodec>() : null,

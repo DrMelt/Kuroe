@@ -49,7 +49,7 @@ public sealed class AgentSessionTests
             CancellationToken.None);
 
         (ChatClientAgent agent, InMemoryChatHistoryProvider provider, ExecutionChatClient executionClient) =
-            CreateAgent(client, new ProcessJournal(), tools: null);
+            CreateAgent(client, new ProcessJournal(TimeProvider.System), tools: null);
         AgentSession restored = await AgentSessionCodec.RestoreAsync(
             agent,
             AgentSessionCodec.Decode(AgentSessionCodec.Encode(captured)),
@@ -74,7 +74,7 @@ public sealed class AgentSessionTests
             restored,
             provider,
             history,
-            new ProcessJournal(),
+            new ProcessJournal(TimeProvider.System),
             executionClient,
             restored: false);
 
@@ -86,7 +86,7 @@ public sealed class AgentSessionTests
     [Fact(DisplayName = "已消费请求记录用量与内容")]
     public async Task A_consumed_request_records_usage_and_content()
     {
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         FakeClient client = new(_ => UsageReply("先想", "再答"));
         TestSession created = await CreateSession(client, journal);
 
@@ -104,7 +104,7 @@ public sealed class AgentSessionTests
     [Fact(DisplayName = "空回复丢弃该轮")]
     public async Task An_empty_reply_discards_the_round()
     {
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         FakeClient client = new(_ => new ChatResponse());
         TestSession created = await CreateSession(client, journal);
 
@@ -136,7 +136,7 @@ public sealed class AgentSessionTests
     [Fact(DisplayName = "失败工具返回错误结果并继续")]
     public async Task A_failing_tool_returns_an_error_result_and_continues()
     {
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         ToolCollection collection = new([new FakeTool()], new ToolJson());
         IReadOnlyList<AIFunction> functions = collection.Build(journal, [new ToolPath("GetLocalTime")]);
         FakeClient client = new(
@@ -246,7 +246,7 @@ public sealed class AgentSessionTests
 
         LlmAgentSessionPayload payload = await created.Session.CreateRestoreDataAsync(CancellationToken.None)
             ?? throw new InvalidOperationException("没有恢复数据。");
-        ProcessJournal journal = new();
+        ProcessJournal journal = new(TimeProvider.System);
         (ChatClientAgent agent, InMemoryChatHistoryProvider provider, ExecutionChatClient executionClient) =
             CreateAgent(client, journal, tools: null);
         AgentSession restored = await AgentSessionCodec.RestoreAsync(agent, payload, CancellationToken.None);
@@ -271,7 +271,7 @@ public sealed class AgentSessionTests
             CancellationToken.None);
 
         (ChatClientAgent agent, InMemoryChatHistoryProvider provider, _) =
-            CreateAgent(client, new ProcessJournal(), tools: null);
+            CreateAgent(client, new ProcessJournal(TimeProvider.System), tools: null);
         AgentSession restored = await AgentSessionCodec.RestoreAsync(
             agent,
             AgentSessionCodec.Decode(AgentSessionCodec.Encode(captured)),
@@ -343,7 +343,7 @@ public sealed class AgentSessionTests
         ProcessJournal? journal = null,
         IReadOnlyList<AIFunction>? tools = null)
     {
-        ProcessJournal target = journal ?? new ProcessJournal();
+        ProcessJournal target = journal ?? new ProcessJournal(TimeProvider.System);
         (ChatClientAgent agent, InMemoryChatHistoryProvider provider, ExecutionChatClient executionClient) =
             CreateAgent(client, target, tools);
         AgentSession agentSession = await agent.CreateSessionAsync();

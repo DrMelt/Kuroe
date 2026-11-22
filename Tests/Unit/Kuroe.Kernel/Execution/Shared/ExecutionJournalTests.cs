@@ -9,7 +9,7 @@ public sealed class ExecutionJournalTests
     [Fact(DisplayName = "内容增量合并为一条条目并报告进度")]
     public void Content_deltas_merge_into_one_entry_and_report_progress()
     {
-        ExecutionJournal journal = new();
+        ExecutionJournal journal = new(TimeProvider.System);
         List<ProcessContent> contents = [];
         List<string> progress = [];
         journal.ContentAppended += contents.Add;
@@ -30,7 +30,7 @@ public sealed class ExecutionJournalTests
     [Fact(DisplayName = "执行记录条目无数量上限保留")]
     public void Entries_are_retained_without_a_count_limit()
     {
-        ExecutionJournal journal = new();
+        ExecutionJournal journal = new(TimeProvider.System);
 
         for (int index = 0; index <= 400; index++)
         {

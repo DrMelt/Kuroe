@@ -12,10 +12,11 @@ internal static class MafWorkflowRunner
         string session,
         Func<MafStep, MafStepHandler> handlers,
         IMafWorkflowCheckpoints checkpoints,
+        ICheckpointIdSource ids,
         CancellationToken cancellationToken)
     {
         MafWorkflowGraph graph = MafWorkflow.Build(definition, entry, handlers);
-        MafWorkflowCheckpointStore store = new(checkpoints);
+        MafWorkflowCheckpointStore store = new(checkpoints, ids);
 
         return store.Current is { } checkpoint
             ? ResumeAsync(graph, checkpoint, store.Manager, cancellationToken)

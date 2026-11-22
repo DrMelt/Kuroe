@@ -13,6 +13,9 @@ public interface INodeContext : IReadinessSources
     /// <summary>所属任务的标识，节点用它登记外部输入。</summary>
     TaskId Id { get; }
 
+    /// <summary>打时间戳用的时钟。</summary>
+    TimeProvider Time { get; }
+
     /// <summary>某节点的输入侧方案，开始端口没有方案。</summary>
     NodeInputPlan? Plan(NodePath node);
 

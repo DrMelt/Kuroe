@@ -11,9 +11,10 @@ namespace Kuroe.Runner.File;
 internal abstract class FileExecutionRunner(
     FileExecutionParameters parameters,
     IWorkspaceFiles files,
-    IExecutionRequestEntry requests) : IExecutionRunner
+    IExecutionRequestEntry requests,
+    TimeProvider time) : IExecutionRunner
 {
-    private readonly ExecutionJournal _journal = new();
+    private readonly ExecutionJournal _journal = new(time);
     private readonly IExecutionRequestEntry _requests = requests;
 
     /// <summary>本节点的类型专属声明。</summary>

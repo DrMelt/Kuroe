@@ -20,6 +20,7 @@
 | `HostAndToolBoundaryTests` | 除 Console 外宿主入口不引用图运行期与图共享层、Console 只引用图共享层与图契约层、文件访问共享项不依赖同模块核心 |
 | `AssistantBoundaryTests` | 助手宿主只依赖代码流程、对话宿主与代码流程分区 |
 | `MafBoundaryTests` | MAF 与 Kernel 契约的引用关系、MAF 运行期不引用流程区域、文档装配只引用流程描述 |
+| `GlobalStateTests` | 静态成员只允许不可变常量与纯函数、时钟随机源与环境只在系统适配器与组合根读取、按源码路径豁免 |
 
 ## 项目与目录约束
 

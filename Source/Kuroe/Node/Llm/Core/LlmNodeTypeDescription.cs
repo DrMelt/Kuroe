@@ -15,7 +15,7 @@ internal sealed class LlmNodeTypeDescription(IToolContractCatalog? contracts = n
     private const string SystemPromptName = "SystemPrompt";
     private const string ToolPortsName = "ToolPorts";
 
-    private readonly IToolContractCatalog _contracts = contracts ?? EmptyToolContractCatalog.Instance;
+    private readonly IToolContractCatalog _contracts = contracts ?? new EmptyToolContractCatalog();
 
     /// <summary>形状所属的节点类型名。</summary>
     public NodeKind Kind => LlmNodeTypes.Name;

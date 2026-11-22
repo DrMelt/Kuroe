@@ -16,6 +16,7 @@ public sealed class WorkTask : ITaskFlowHost
     private readonly List<IExecution> _executions = [];
     private IExecution[] _executionsSnapshot = [];
     private readonly DateTimeOffset _createdAt;
+    private readonly TimeProvider _time;
     private readonly ProcessObserver? _observer;
     private readonly FlowProvider _provider;
     private readonly IFlowState _state;
@@ -38,8 +39,11 @@ public sealed class WorkTask : ITaskFlowHost
         FlowProvider provider,
         IFlowState state,
         IFlowDefinitionRecord? definition,
-        ProcessObserver? observer)
+        ProcessObserver? observer,
+        TimeProvider time)
     {
+        _time = time;
+        Journal = new(time);
         Registry = registry;
         _executionRuntime = executions;
         Id = id;
@@ -48,7 +52,7 @@ public sealed class WorkTask : ITaskFlowHost
         _provider = provider;
         _state = state;
         _flowSnapshot = definition;
-        _createdAt = DateTimeOffset.UtcNow;
+        _createdAt = time.GetUtcNow();
         _lastActivityAt = _createdAt;
         _observer = observer;
         _title = title;
@@ -63,8 +67,11 @@ public sealed class WorkTask : ITaskFlowHost
         IFlowState state,
         FlowTexts startTexts,
         IReadOnlyList<IExecution> executionsFromRecord,
-        ProcessObserver? observer)
+        ProcessObserver? observer,
+        TimeProvider time)
     {
+        _time = time;
+        Journal = new(time);
         Registry = registry;
         _executionRuntime = executions;
         Id = record.Identity.Id;
@@ -99,8 +106,9 @@ public sealed class WorkTask : ITaskFlowHost
         IFlowState state,
         FlowTexts startTexts,
         IReadOnlyList<IExecution> executionsFromRecord,
+        TimeProvider time,
         ProcessObserver? observer = null) =>
-        new(registry, executions, record, provider, state, startTexts, executionsFromRecord, observer);
+        new(registry, executions, record, provider, state, startTexts, executionsFromRecord, observer, time);
 
     /// <summary>任务标识。</summary>
     public TaskId Id { get; }
@@ -172,7 +180,7 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>任务的过程记录。</summary>
-    internal Journal Journal { get; } = new();
+    internal Journal Journal { get; }
 
     /// <summary>任务内状态改动的串行点。</summary>
     internal Lock Gate { get; } = new();
@@ -335,7 +343,7 @@ public sealed class WorkTask : ITaskFlowHost
 
         _lifecycle = TaskLifecycle.Paused;
         _controlVersion++;
-        _lastActivityAt = DateTimeOffset.UtcNow;
+        _lastActivityAt = _time.GetUtcNow();
         Journal.AppendInfo("可恢复的中断已收口，任务暂停等待恢复。");
         NotifyChanged();
     }
@@ -360,7 +368,7 @@ public sealed class WorkTask : ITaskFlowHost
 
         _lifecycle = TaskLifecycle.Paused;
         _controlVersion++;
-        _lastActivityAt = DateTimeOffset.UtcNow;
+        _lastActivityAt = _time.GetUtcNow();
         Journal.AppendInfo("任务暂停。");
         NotifyChanged();
 
@@ -385,7 +393,7 @@ public sealed class WorkTask : ITaskFlowHost
 
         _lifecycle = TaskLifecycle.Active;
         _controlVersion++;
-        _lastActivityAt = DateTimeOffset.UtcNow;
+        _lastActivityAt = _time.GetUtcNow();
         Journal.AppendInfo("任务恢复推进。");
         NotifyChanged();
 
@@ -416,7 +424,7 @@ public sealed class WorkTask : ITaskFlowHost
             _executionRuntime.Interrupt(execution, "任务终止。");
         }
 
-        _lastActivityAt = DateTimeOffset.UtcNow;
+        _lastActivityAt = _time.GetUtcNow();
         NotifyChanged();
 
         return Result.Success;
@@ -430,7 +438,7 @@ public sealed class WorkTask : ITaskFlowHost
     {
         _executions.Add(execution);
         _executionsSnapshot = [.. _executions];
-        _lastActivityAt = DateTimeOffset.UtcNow;
+        _lastActivityAt = _time.GetUtcNow();
         execution.Started += () => OnExecutionStarted(execution);
         Journal.AppendInfo($"执行 {execution.Id.Value} 创建。");
         if (_observer?.Content is { } onContent)
@@ -455,7 +463,7 @@ public sealed class WorkTask : ITaskFlowHost
     {
         lock (Gate)
         {
-            _lastActivityAt = DateTimeOffset.UtcNow;
+            _lastActivityAt = _time.GetUtcNow();
             Journal.AppendInfo($"执行 {execution.Id.Value} 开始。");
             NotifyChanged();
         }
@@ -472,7 +480,7 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>记一次任务活动。</summary>
-    void ITaskFlowContext.Touch() => _lastActivityAt = DateTimeOffset.UtcNow;
+    void ITaskFlowContext.Touch() => _lastActivityAt = _time.GetUtcNow();
 
     /// <summary>当前状态的只读快照，含流程视图、过程记录与执行列表。</summary>
     public TaskSnapshot Snapshot()
@@ -493,7 +501,7 @@ public sealed class WorkTask : ITaskFlowHost
 
         return new TaskRecord(
             new TaskIdentity(Id, Title, _createdAt, _lastActivityAt),
-            DateTimeOffset.UtcNow,
+            _time.GetUtcNow(),
             _lifecycle,
             _completed,
             new TaskJournalRecord(Journal.Entries, Journal.DroppedEntries),

@@ -26,7 +26,7 @@ public sealed class InputExecutionRunnerTests
         InputExecutionRunner runner = new(
             channel,
             new InputExecutionParameters("要做什么", Step),
-            new Entry(Request()));
+            new Entry(Request()), TimeProvider.System);
 
         Task<ErrorOr<ExecutionOutput>> running = runner.ExecuteAsync(CancellationToken.None);
 
@@ -50,7 +50,7 @@ public sealed class InputExecutionRunnerTests
         InputExecutionRunner runner = new(
             channel,
             new InputExecutionParameters(null, Step),
-            new Entry(Request()));
+            new Entry(Request()), TimeProvider.System);
         using CancellationTokenSource cancellation = new();
 
         Task<ErrorOr<ExecutionOutput>> running = runner.ExecuteAsync(cancellation.Token);

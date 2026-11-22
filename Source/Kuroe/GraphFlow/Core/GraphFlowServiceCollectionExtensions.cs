@@ -67,6 +67,7 @@ public static class GraphFlowServiceCollectionExtensions
     {
         GraphFlowOptions graphOptions = options ?? new GraphFlowOptions();
         KuroePaths paths = composition.Paths;
+        TimeProvider time = composition.Time;
 
         ErrorOr<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> hostForms =
             new HostStartInputsStore(paths.HostStartInputsFile, composition.Files).Load();
@@ -92,11 +93,11 @@ public static class GraphFlowServiceCollectionExtensions
         IExecutionRunnerFactory llmRunner = graphOptions.LlmRunnerFactory ?? composition.LlmRunner;
         FlowNodeExecutionRunners runners = graphOptions.ExecutionRunners ?? new(
             llmRunner,
-            new CommandExecutionRunnerFactory(process),
-            new FileReadExecutionRunnerFactory(composition.Files),
-            new FileWriteExecutionRunnerFactory(composition.Files),
-            new InputExecutionRunnerFactory(composition.InputChannel),
-            new ApprovalExecutionRunnerFactory(composition.InputChannel));
+            new CommandExecutionRunnerFactory(process, time),
+            new FileReadExecutionRunnerFactory(composition.Files, time),
+            new FileWriteExecutionRunnerFactory(composition.Files, time),
+            new InputExecutionRunnerFactory(composition.InputChannel, time),
+            new ApprovalExecutionRunnerFactory(composition.InputChannel, time));
         NodeTypeDescriptionRegistry typeFiles = new();
         JsonNodeFormat nodeFormat = new();
         JsonFlowFormat flowFormat = new();
@@ -140,7 +141,6 @@ public static class GraphFlowServiceCollectionExtensions
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
-        services.AddSingleton(descriptionCompiler);
         services.AddSingleton<IFlowGraphCompiler>(new FlowGraphCompiler());
         services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
         services.AddSingleton<IExecutionNodeDeclarationResolver>(sp => new ExecutionNodeDeclarationResolver(
@@ -158,11 +158,13 @@ public static class GraphFlowServiceCollectionExtensions
                 sp.GetRequiredService<IExecutionNodeDeclarationResolver>(),
                 sp.GetRequiredService<ITaskExecutionGateway>(),
                 capabilities,
+                time,
                 composition.PersistTasks ? flows.Value : null),
             new GraphFlowStateBinder(),
             new GraphFlowControlFactory(
                 sp.GetRequiredService<IExecutionNodeDeclarationResolver>(),
-                sp.GetRequiredService<ITaskExecutionGateway>()),
+                sp.GetRequiredService<ITaskExecutionGateway>(),
+                time),
             new GraphFlowPresentation(),
             new GraphFlowRecordSource()));
 

@@ -13,6 +13,8 @@ internal sealed class StubNodeContext : INodeContext
 {
     public TaskId Id { get; } = new(1);
 
+    public TimeProvider Time => TimeProvider.System;
+
     public NodeInputPlan? Plan(NodePath node) => throw new NotSupportedException();
 
     public NodeRuntime Runtime(NodePath node) => throw new NotSupportedException();

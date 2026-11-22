@@ -11,7 +11,7 @@ public sealed class ProcessJournalStoreTests
     [Fact(DisplayName = "默认存储保留全部条目")]
     public void Default_store_keeps_all_entries()
     {
-        ProcessJournalStore store = new();
+        ProcessJournalStore store = new(TimeProvider.System);
 
         for (int index = 0; index <= 400; index++)
         {

@@ -17,6 +17,7 @@ public sealed class TaskActions(
     IFlowRuntime driver,
     IFlowProviderSource providers,
     ITaskIdSource ids,
+    TimeProvider time,
     ITaskRecordCoordinator? records = null,
     ITaskLeaseStore? leases = null)
 {
@@ -25,6 +26,7 @@ public sealed class TaskActions(
     private readonly IFlowRuntime _driver = driver;
     private readonly IFlowProviderSource _providers = providers;
     private readonly ITaskIdSource _ids = ids;
+    private readonly TimeProvider _time = time;
     private readonly ITaskRecordCoordinator? _records = records;
     private readonly ITaskLeaseStore? _leases = leases;
 
@@ -80,7 +82,8 @@ public sealed class TaskActions(
             provider,
             submission.State,
             submission.Definition,
-            observer);
+            observer,
+            _time);
         _registry.Adopt(task);
 
         lock (task.Gate)

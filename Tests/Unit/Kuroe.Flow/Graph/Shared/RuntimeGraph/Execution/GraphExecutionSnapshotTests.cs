@@ -19,7 +19,7 @@ public sealed class GraphExecutionSnapshotTests
         DateTimeOffset started = created.AddMinutes(1);
         DateTimeOffset finished = created.AddMinutes(3);
 
-        Assert.Equal(TimeSpan.FromMinutes(2), Execution(ExecutionState.Succeeded, created, started, finished).Elapsed);
+        Assert.Equal(TimeSpan.FromMinutes(2), Execution(ExecutionState.Succeeded, created, started, finished).ElapsedAt(finished));
     }
 
     [Fact(DisplayName = "运行中耗时回退到当前时间")]

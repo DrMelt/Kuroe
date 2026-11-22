@@ -16,7 +16,7 @@ public sealed class KuroeInfoToolTests
         using TestEnvironment environment = TestEnvironment.Create();
         TaskId id = environment.Submit("写一段百字以内的欢迎致辞");
 
-        TaskKuroeInfoTool tool = new(environment.TaskReader);
+        TaskKuroeInfoTool tool = new(environment.TaskReader, TimeProvider.System);
         string list = Call(tool, "ListTasks");
         string detail = Call(tool, "GetTask", ("taskId", id.Value.ToString()));
 
@@ -34,7 +34,7 @@ public sealed class KuroeInfoToolTests
         environment.Runner.Reply = _ => "回复你好";
         ErrorOr<Success> reply = await environment.SayAsync("你好", null);
 
-        TaskKuroeInfoTool tool = new(environment.TaskReader);
+        TaskKuroeInfoTool tool = new(environment.TaskReader, TimeProvider.System);
 
         Assert.False(reply.IsError, reply.ErrorsText());
         Assert.Contains("还没有任务", Call(tool, "ListTasks"));
@@ -58,7 +58,7 @@ public sealed class KuroeInfoToolTests
         await environment.SettleAsync(id);
 
         ExecutionId executionId = new(environment.Snapshot(id).Executions[0].Id.Value);
-        TaskKuroeInfoTool tool = new(environment.TaskReader);
+        TaskKuroeInfoTool tool = new(environment.TaskReader, TimeProvider.System);
         string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()))
             .Replace("\r", string.Empty);
 
@@ -93,7 +93,7 @@ public sealed class KuroeInfoToolTests
             .First(execution => execution.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Running)
             .Id.Value);
 
-        TaskKuroeInfoTool tool = new(environment.TaskReader);
+        TaskKuroeInfoTool tool = new(environment.TaskReader, TimeProvider.System);
 
         Assert.Contains("执行中（调用工具 file/ReadFile）",
             Call(tool, "GetExecution", ("executionId", executionId.Value.ToString())));
@@ -124,7 +124,7 @@ public sealed class KuroeInfoToolTests
             .First(execution => execution.State == Kuroe.Kernel.Execution.Shared.State.ExecutionState.Running)
             .Id.Value);
 
-        TaskKuroeInfoTool tool = new(environment.TaskReader);
+        TaskKuroeInfoTool tool = new(environment.TaskReader, TimeProvider.System);
         string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()));
 
         Assert.Contains("执行中（输出）", output);

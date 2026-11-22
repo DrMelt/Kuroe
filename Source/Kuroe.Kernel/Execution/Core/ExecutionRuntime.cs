@@ -9,13 +9,14 @@ namespace Kuroe.Kernel.Execution;
 
 /// <summary>执行核心的控制面：按装配结果派发执行、等待收口与退出收口。执行状态迁移不出执行核心。</summary>
 public sealed class ExecutionRuntime(
-    ExecutionDispatcher dispatcher) : IExecutionRuntime
+    ExecutionDispatcher dispatcher,
+    TimeProvider time) : IExecutionRuntime
 {
     /// <inheritdoc/>
-    public IExecution Create(ExecutionId id, ExecutionRequest request) => ExecutionFactory.Create(id, request);
+    public IExecution Create(ExecutionId id, ExecutionRequest request) => ExecutionFactory.Create(id, request, time);
 
     /// <inheritdoc/>
-    public IExecution Restore(ExecutionRestorePlan plan) => ExecutionFactory.Restore(plan);
+    public IExecution Restore(ExecutionRestorePlan plan) => ExecutionFactory.Restore(plan, time);
 
     /// <inheritdoc/>
     public Task<ErrorOr<Success>> RunAsync(

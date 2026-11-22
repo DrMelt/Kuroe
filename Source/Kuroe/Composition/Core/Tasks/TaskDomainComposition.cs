@@ -33,6 +33,7 @@ public static class TaskDomainComposition
         IFlowRuntime flow,
         IFlowProviderSource providers,
         ITaskIdSource ids,
+        TimeProvider time,
         bool persist,
         string? recordsDirectory,
         ITaskRecordCodec? codec,
@@ -45,7 +46,7 @@ public static class TaskDomainComposition
             return new TaskDomain(
                 registry,
                 pendings,
-                new TaskActions(registry, executions, flow, providers, ids),
+                new TaskActions(registry, executions, flow, providers, ids, time),
                 null,
                 null);
         }
@@ -58,12 +59,12 @@ public static class TaskDomainComposition
         ITaskRecordStore records = new FileTaskRecordStore(recordsDirectory, codec, files);
         ITaskLeaseStore leases = leaseStores(recordsDirectory);
         TaskRecordCoordinator coordinator = new(new TaskRecordSource(registry), records);
-        TaskRestoreRuntime restoreRuntime = new(registry, executions, providers, flow);
+        TaskRestoreRuntime restoreRuntime = new(registry, executions, providers, flow, time);
 
         return new TaskDomain(
             registry,
             pendings,
-            new TaskActions(registry, executions, flow, providers, ids, coordinator, leases),
+            new TaskActions(registry, executions, flow, providers, ids, time, coordinator, leases),
             coordinator,
             new TaskRestoreService(records, leases, restoreRuntime));
     }

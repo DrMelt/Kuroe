@@ -34,7 +34,7 @@ public sealed class InputProgressTests
             ],
         };
         Sources sources = new() { Revision = 3 };
-        InputProgress progress = new();
+        InputProgress progress = new(TimeProvider.System);
 
         Assert.Equal(0, progress.ConsumedRevision(key));
 
@@ -50,7 +50,7 @@ public sealed class InputProgressTests
     [Fact(DisplayName = "发布设置修订失效保留修订")]
     public void Publish_sets_the_revision_and_invalidate_keeps_it()
     {
-        InputProgress progress = new();
+        InputProgress progress = new(TimeProvider.System);
         Publication publication = new(
             2,
             new Dictionary<PortName, bool>(),
@@ -71,7 +71,8 @@ public sealed class InputProgressTests
     [Fact(DisplayName = "发布历史保留已失效的发布")]
     public void Publish_history_keeps_invalidated_publications()
     {
-        InputProgress progress = new();
+        StubTimeProvider time = new(TestTime.At);
+        InputProgress progress = new(time);
         Publication first = new(
             1,
             new Dictionary<PortName, bool>(),
@@ -83,16 +84,18 @@ public sealed class InputProgressTests
 
         progress.Publish(first);
         progress.Invalidate();
+        time.Set(TestTime.At.AddMinutes(1));
         progress.Publish(second);
 
         Assert.Equal([1L, 2L], progress.History.Select(entry => entry.Publication.Revision));
+        Assert.Equal([TestTime.At, TestTime.At.AddMinutes(1)], progress.History.Select(entry => entry.At));
         Assert.Same(second, progress.Publication);
     }
 
     [Fact(DisplayName = "已开始计数执行且重跑被消费")]
     public void Started_counts_executions_and_rerun_is_consumed()
     {
-        InputProgress progress = new();
+        InputProgress progress = new(TimeProvider.System);
 
         progress.Started();
         progress.Started();
