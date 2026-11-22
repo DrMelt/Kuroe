@@ -1,10 +1,10 @@
 # Kuroe.Flow.Graph.Shared
 
-图流程的静态图与运行期形状：静态执行视图、接线绑定、运行期节点与端口状态、就绪判定、图执行输入与执行契约、节点记录与执行步骤标识。描述模型与描述编译在 Kuroe.FlowDescription，流程控制与节点实现都按这层的形状协作。
+图流程的静态图与运行期形状：静态执行视图、接线绑定、运行期节点与端口状态、就绪判定、图执行输入与执行契约、节点记录与执行步骤标识。描述模型在 Kuroe.FlowDescription.Definition.Shared，描述编译在 Kuroe.FlowDescription.Compilation，流程控制与节点实现都按这层的形状协作。
 
 ## 职责
 
-- 静态图：`FlowGraph`、`NodeGraph`、`ExecutableNode`、`ContainerNode`、输入方案与接线绑定。
+- 静态图：流程图、节点图、可执行节点、容器节点、输入方案与接线绑定。
 - 图节点能力：执行器绑定、输出投影与运行期工厂的映射。
 
 - 运行期节点：输入取值、输出发布与多版本消费、上下文取值、节点状态与阻塞。
