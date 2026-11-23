@@ -4,7 +4,7 @@
 
 ## 总体设计
 
-[系统结构](architecture/design.md)给出运行时分层图。
+[系统结构](architecture/design/index.md)给出运行时分层图。
 
 ## 域索引
 
