@@ -21,14 +21,14 @@ public sealed record TaskStartSnapshot(
     StartInputs Inputs,
     IReadOnlyDictionary<PortName, string> StartTexts);
 
-/// <summary>按流程名捕获当前流程文档快照。由宿主实现。</summary>
+/// <summary>按流程名捕获当前流程文档快照。</summary>
 public interface IFlowSnapshotSource
 {
     /// <summary>捕获指定流程的快照。</summary>
     ErrorOr<GraphFlowDefinitionRecord> Capture(FlowName name);
 }
 
-/// <summary>把流程快照重新编译为可运行流程。由宿主实现。</summary>
+/// <summary>把流程快照重新编译为可运行流程。</summary>
 public interface IFlowSnapshotCompiler
 {
     /// <summary>编译快照，失败时返回流程错误。</summary>
