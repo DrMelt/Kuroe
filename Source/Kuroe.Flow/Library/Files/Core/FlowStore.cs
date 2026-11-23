@@ -58,7 +58,7 @@ public sealed class FlowStore(
                 return text.ErrorsOrEmptyList;
             }
 
-            ErrorOr<IReadOnlyList<NodeDefinitionDescription>> read = ReadNodesText(text.Value);
+            ErrorOr<IReadOnlyList<NodeDefinitionDescription>> read = nodeReader.Read(text.Value);
             if (read.IsError)
             {
                 return InFile(_nodesFile, read.ErrorsOrEmptyList);
@@ -76,7 +76,7 @@ public sealed class FlowStore(
                 return text.ErrorsOrEmptyList;
             }
 
-            ErrorOr<IReadOnlyList<FlowEntry>> read = ReadFlowsText(text.Value);
+            ErrorOr<IReadOnlyList<FlowEntry>> read = flowReader.Read(text.Value);
             if (read.IsError)
             {
                 return InFile(_flowsFile, read.ErrorsOrEmptyList);
@@ -96,20 +96,8 @@ public sealed class FlowStore(
     public ErrorOr<Success> SaveFlows(IReadOnlyList<FlowEntry> flows) =>
         Save(_flowsFile, flowWriter.Write(flows));
 
-    /// <summary>把节点库写成文本，不落盘。存档快照使用。</summary>
-    public ErrorOr<string> RenderNodes(IReadOnlyList<NodeDefinitionDescription> nodes) => nodeWriter.Write(nodes);
-
-    /// <summary>把流程写成文本，不落盘。存档快照使用。</summary>
-    public ErrorOr<string> RenderFlows(IReadOnlyList<FlowEntry> flows) => flowWriter.Write(flows);
-
-    /// <summary>从文本读出节点库，不落盘。存档编译使用。</summary>
-    public ErrorOr<IReadOnlyList<NodeDefinitionDescription>> ReadNodesText(string text) => nodeReader.Read(text);
-
-    /// <summary>从文本读出流程，不落盘。存档编译使用。</summary>
-    public ErrorOr<IReadOnlyList<FlowEntry>> ReadFlowsText(string text) => flowReader.Read(text);
-
-    /// <summary>读取导入文件，按顶层字段判定节点库文件或流程文件。</summary>
-    public ErrorOr<FlowImportFile> ReadFile(string path)
+    /// <summary>读取导入文件，按顶层字段判定节点库文件还是流程文件。</summary>
+    public ErrorOr<FlowImportContent> ReadFile(string path)
     {
         ErrorOr<string> text = ReadText(path);
         if (text.IsError)
@@ -118,14 +106,8 @@ public sealed class FlowStore(
         }
 
         ErrorOr<FlowImportContent> content = importReader.Read(text.Value);
-        if (content.IsError)
-        {
-            return InFile(path, content.ErrorsOrEmptyList);
-        }
 
-        return content.Value.Kind == FlowImportKind.Nodes
-            ? new NodeLibraryImportFile(path, content.Value.Nodes)
-            : new FlowDefinitionsImportFile(path, content.Value.Flows);
+        return content.IsError ? InFile(path, content.ErrorsOrEmptyList) : content;
     }
 
     private ErrorOr<Success> Save(string file, ErrorOr<string> rendered)

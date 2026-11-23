@@ -112,7 +112,10 @@ public sealed class TestEnvironment : IDisposable
 
     public SettingsProvider Settings => _provider.GetRequiredService<SettingsProvider>();
 
-    public FlowService Flows => _provider.GetRequiredService<FlowService>();
+    public FlowLibrary Flows => _provider.GetRequiredService<FlowLibrary>();
+
+    /// <summary>流程库只读查询。</summary>
+    public FlowCatalog FlowCatalog => _provider.GetRequiredService<FlowCatalog>();
 
     /// <summary>流程模板目录。</summary>
     public IFlowTemplateCatalog Templates => _provider.GetRequiredService<IFlowTemplateCatalog>();

@@ -14,21 +14,22 @@ using Kuroe.FlowDescription.Compilation.Library;
 
 namespace Kuroe.Composition.Tests.Workflows.Flows;
 
-/// <summary>流程服务按流程隔离编译：不支持的节点只让所在流程不可用。</summary>
-public sealed class FlowServiceTests
+/// <summary>流程库按流程隔离编译：不支持的节点只让所在流程不可用。</summary>
+public sealed class FlowLibraryTests
 {
     [Fact(DisplayName = "宽容加载保留可编译流程并报告不可用")]
     public void Tolerant_load_keeps_compilable_flows_and_reports_unavailable()
     {
         WithLibrary((store, compiler) =>
         {
-            FlowService service = FlowService.Create(store, compiler, tolerateFailures: true).ThrowIfError();
+            FlowLibrary library = FlowLibrary.Create(store, compiler, tolerateFailures: true).ThrowIfError();
+            FlowCatalog catalog = new(library);
 
-            Assert.Contains(service.All(), flow => flow.Name.Value == "可运行");
-            FlowFailure failure = Assert.Single(service.Failures);
+            Assert.Contains(catalog.All(), flow => flow.Name.Value == "可运行");
+            FlowFailure failure = Assert.Single(library.Failures);
             Assert.Equal("待输入", failure.Name.Value);
             Assert.Contains(failure.Errors, error => error.Description.Contains("未注册", StringComparison.Ordinal));
-            Assert.True(service.FindCompiled(new FlowName("待输入")).IsError);
+            Assert.True(catalog.FindCompiled(new FlowName("待输入")).IsError);
         });
     }
 
@@ -37,7 +38,7 @@ public sealed class FlowServiceTests
     {
         WithLibrary((store, compiler) =>
         {
-            var created = FlowService.Create(store, compiler, tolerateFailures: false);
+            var created = FlowLibrary.Create(store, compiler, tolerateFailures: false);
 
             Assert.True(created.IsError);
             Assert.Contains(created.ErrorsOrEmptyList, error => error.Description.Contains("Input", StringComparison.Ordinal));
@@ -97,6 +98,4 @@ public sealed class FlowServiceTests
           ]
         }
         """;
-
-
 }

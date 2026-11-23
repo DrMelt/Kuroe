@@ -17,7 +17,7 @@ public sealed class FlowImportTests
     public void Flow_loads_and_imports_a_custom_definition()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleFunnelFlow);
-        Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("默认"));
+        Assert.Contains(environment.FlowCatalog.All(), flow => flow.Name == new FlowName("默认"));
 
         string source = Path.Combine(Path.GetTempPath(), $"kuroe-flow-{Guid.NewGuid():N}.json");
         File.WriteAllText(source, TwoCustomFlows);
@@ -26,8 +26,8 @@ public sealed class FlowImportTests
             FlowImport imported = environment.Flows.Import(source).ThrowIfError();
 
             Assert.Single(imported.Flows);
-            Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("两级"));
-            IReadOnlyList<NodeSpec>? nodes = environment.Flows.Find(new FlowName("两级"))
+            Assert.Contains(environment.FlowCatalog.All(), flow => flow.Name == new FlowName("两级"));
+            IReadOnlyList<NodeSpec>? nodes = environment.FlowCatalog.Find(new FlowName("两级"))
                 .ThrowIfError().RootNode.Nodes;
             Assert.NotNull(nodes);
             Assert.Equal(2, nodes.Count);
@@ -46,7 +46,7 @@ public sealed class FlowImportTests
 
         environment.Flows.Import("loop.json").ThrowIfError();
 
-        IReadOnlyList<NodeSpec>? rootNodes = environment.Flows.Find(new FlowName("默认"))
+        IReadOnlyList<NodeSpec>? rootNodes = environment.FlowCatalog.Find(new FlowName("默认"))
             .ThrowIfError().RootNode.Nodes;
         Assert.NotNull(rootNodes);
 
@@ -62,9 +62,9 @@ public sealed class FlowImportTests
     {
         using TestEnvironment environment = TestEnvironment.Create(SurroundingSpacesFlowName);
 
-        FlowDefinition flow = Assert.Single(environment.Flows.All());
+        FlowDefinition flow = Assert.Single(environment.FlowCatalog.All());
         Assert.Equal(new FlowName("默认"), flow.Name);
-        Assert.True(environment.Flows.Find(new FlowName("默认")).IsSuccess);
+        Assert.True(environment.FlowCatalog.Find(new FlowName("默认")).IsSuccess);
     }
 
     [Fact(DisplayName = "导入按工作目录解析相对路径")]

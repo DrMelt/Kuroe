@@ -113,7 +113,7 @@ public static class GraphFlowServiceCollectionExtensions
         FlowNodeExecution.Register(capabilities, runners);
         graphOptions.RegisterNodeTypes?.Invoke(typeFiles, capabilities, runners);
 
-        ErrorOr<FlowService> flows = FlowService.Create(
+        ErrorOr<FlowLibrary> flows = FlowLibrary.Create(
             new FlowStore(
                 paths.NodesFile,
                 paths.FlowsFile,
@@ -130,12 +130,16 @@ public static class GraphFlowServiceCollectionExtensions
         {
             return flows.ErrorsOrEmptyList;
         }
+        FlowCatalog catalog = new(flows.Value);
+        FlowSnapshotSource snapshots = new(flows.Value, nodeFormat, flowFormat);
+        FlowSnapshotCompiler snapshotCompiler = new(nodeFormat, flowFormat, flowCompiler);
         services.AddSingleton(flows.Value);
-        services.AddSingleton<IFlowCatalog>(flows.Value);
+        services.AddSingleton(catalog);
+        services.AddSingleton<IFlowCatalog>(catalog);
         services.AddSingleton<IFlowLibrary>(flows.Value);
-        services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
-        services.AddSingleton<IFlowSnapshotSource>(flows.Value);
-        services.AddSingleton<IFlowSnapshotCompiler>(flows.Value);
+        services.AddSingleton<IFlowRuntimeCatalog>(catalog);
+        services.AddSingleton<IFlowSnapshotSource>(snapshots);
+        services.AddSingleton<IFlowSnapshotCompiler>(snapshotCompiler);
         services.AddSingleton(hostStartInputs.Value);
         services.AddSingleton<IHostStartInputs>(hostStartInputs.Value);
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
@@ -145,21 +149,21 @@ public static class GraphFlowServiceCollectionExtensions
         services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
         services.AddSingleton<IExecutionNodeDeclarationResolver>(sp => new ExecutionNodeDeclarationResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
-        GraphFlowTemplateSource templates = new(flows.Value, hostStartInputs.Value);
+        GraphFlowTemplateSource templates = new(catalog, hostStartInputs.Value);
         composition.FlowTemplates.Register(templates);
         services.AddSingleton<IFlowTemplateSource>(templates);
         services.AddSingleton(sp => new FlowProvider(
-            new GraphFlowIdentity(flows.Value),
+            new GraphFlowIdentity(catalog),
             new GraphFlowSubmission(
-                flows.Value,
-                flows.Value,
+                catalog,
+                snapshotCompiler,
                 hostStartInputs.Value,
                 sp.GetRequiredService<IHostTaskStart>(),
                 sp.GetRequiredService<IExecutionNodeDeclarationResolver>(),
                 sp.GetRequiredService<ITaskExecutionGateway>(),
                 capabilities,
                 time,
-                composition.PersistTasks ? flows.Value : null),
+                composition.PersistTasks ? snapshots : null),
             new GraphFlowStateBinder(),
             new GraphFlowControlFactory(
                 sp.GetRequiredService<IExecutionNodeDeclarationResolver>(),

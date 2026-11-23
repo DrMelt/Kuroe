@@ -67,7 +67,7 @@ public sealed class ExecutionLimitTests
         TaskId id = environment.Submit("补齐 README");
         environment.Settle(id);
 
-        NodeGraph graph = environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
+        NodeGraph graph = environment.FlowCatalog.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
         Assert.Equal(5, graph.Containers
             .Single(node => node.Path.Value == "整体/较重").MaxExecutions);
         Assert.Equal(3, graph.Containers
@@ -83,7 +83,7 @@ public sealed class ExecutionLimitTests
         TaskId id = environment.Submit("补齐 README");
         environment.Settle(id);
 
-        NodeGraph graph = environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
+        NodeGraph graph = environment.FlowCatalog.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
         Assert.Equal(5, graph.ExecutableNodes
             .Single(node => node.Label.Value == "覆盖干活").MaxExecutions);
         Assert.Equal(3, graph.ExecutableNodes

@@ -30,6 +30,7 @@
     <Project Path="Source/Kuroe/GraphFlow/Core/Kuroe.GraphFlow.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Core/Kuroe.Flow.Compilation.csproj" />
     <Project Path="Source/Kuroe.Flow/Library/Core/Kuroe.Flow.Library.csproj" />
+    <Project Path="Source/Kuroe.Flow/Library/Files/Core/Kuroe.Flow.Library.Files.csproj" />
     <Project Path="Source/Kuroe.FlowDescription/Description/Shared/Kuroe.FlowDescription.Description.Shared.csproj" />
     <Project Path="Source/Kuroe.FlowDescription/Definition/Shared/Kuroe.FlowDescription.Definition.Shared.csproj" />
     <Project Path="Source/Kuroe.FlowDescription/Compilation/Shared/Kuroe.FlowDescription.Compilation.Shared.csproj" />

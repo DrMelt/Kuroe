@@ -152,7 +152,7 @@ public sealed class InputNodeTests
 
         TaskId id = environment.Submit("补齐 README");
         WaitForInputs(environment, id, 1);
-        NodeGraph graph = environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
+        NodeGraph graph = environment.FlowCatalog.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
 
         ExecutableNode input = graph.ExecutableNodes.Single(node => node.Label.Value == "用户输入");
         ExecutableNode implement = graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
