@@ -4,24 +4,21 @@
 
 ## 总体设计
 
-[系统结构](architecture/design/index.md)给出运行时分层图。
+[项目结构](architecture/functional_boundary/index.md)给出分层结构图与项目索引。
 
-## 域索引
+## 层索引
 
-模块与边界文档的完整索引见 [architecture](architecture/architecture.md#项目文档索引)。
+模块与边界文档的完整索引见[项目结构](architecture/functional_boundary/index.md)。
 
-| 域 | 内容 |
+| 层 | 内容 |
 | --- | --- |
-| kernel | 执行单元、任务域、流程控制、输入通道、表现与任务持久化 |
-| flow | 图流程运行期与宿主流程库 |
-| flow-description | 流程描述、端口词汇与共享描述编译 |
-| codeflow | 代码定义流程的记录与编解码 |
-| maf | MAF 流程定义、控制、记录与装配 |
-| runner | Llm、命令、文件、输入与审批执行运行器 |
-| node | 图流程的节点类型 |
-| tool | 工具载体、工具组与工具文件 |
-| assistant | 内置助手会话域 |
-| host | 核心装配、终端入口与命令行入口 |
+| entry | 交互终端与命令行入口 |
+| assembly | 核心装配、图流程装配、MAF 装配与内置助手 |
+| flow | 图流程与 MAF 流程运行期 |
+| description | 流程描述、描述编译、流程库与 MAF 文档装配 |
+| ability | 节点类型、运行器与工具 |
+| persistence | 任务存档、写盘协调、启动恢复与流程编解码 |
+| kernel | 任务域、执行、流程控制、输入通道与表现契约 |
 | platform | 路径与配置视图、工作区文件、进程执行 |
 
 ## 跨模块机制

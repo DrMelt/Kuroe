@@ -1,4 +1,4 @@
-# 系统结构
+# 项目结构
 
 ```mermaid
 flowchart TD
@@ -40,13 +40,13 @@ flowchart TD
     LKernel --> LPersistence
 ```
 
-| 子结构 | 文件 |
+| 层 | 文件 |
 | --- | --- |
-| 入口 | [entry](entry.md) |
-| 装配 | [assembly](assembly.md) |
-| 流程实现 | [flow](flow.md) |
-| 描述编译 | [description](description.md) |
-| 执行能力 | [ability](ability.md) |
-| 存档恢复 | [persistence](persistence.md) |
-| 内核 | [kernel](kernel.md) |
-| 平台 | [platform](platform.md) |
+| 入口 | [entry](entry/index.md) |
+| 装配 | [assembly](assembly/index.md) |
+| 流程实现 | [flow](flow/index.md) |
+| 描述编译 | [description](description/index.md) |
+| 执行能力 | [ability](ability/index.md) |
+| 存档恢复 | [persistence](persistence/index.md) |
+| 内核 | [kernel](kernel/index.md) |
+| 平台 | [platform](platform/index.md) |
