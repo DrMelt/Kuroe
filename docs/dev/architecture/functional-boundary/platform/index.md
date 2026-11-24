@@ -9,9 +9,9 @@ flowchart TD
     Process["进程执行<br>Kuroe.Process"]
 ```
 
-| 项目 | 节点 | 边界文档 |
+| 子域 | 项目 | 文件 |
 | --- | --- | --- |
-| `Kuroe.Platform` | 路径规则与配置视图 | [kuroe-platform](platform/kuroe-platform.md) |
-| `Kuroe.Files.Shared` | 工作区文件 | [kuroe-files-shared](files/kuroe-files-shared.md) |
-| `Kuroe.Files` | 工作区文件 | [kuroe-files](files/kuroe-files.md) |
-| `Kuroe.Process` | 进程执行 | [kuroe-process](process/kuroe-process.md) |
+| 路径规则与配置视图 | `Kuroe.Platform` | [kuroe-platform](platform/kuroe-platform.md) |
+| 工作区文件 | `Kuroe.Files.Shared` | [kuroe-files-shared](files/kuroe-files-shared.md) |
+| 工作区文件 | `Kuroe.Files` | [kuroe-files](files/kuroe-files.md) |
+| 进程执行 | `Kuroe.Process` | [kuroe-process](process/kuroe-process.md) |

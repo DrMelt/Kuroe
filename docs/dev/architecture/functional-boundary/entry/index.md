@@ -8,7 +8,7 @@ flowchart TD
     Cli["命令行<br>Kuroe.Cli"]
 ```
 
-| 项目 | 节点 | 边界文档 |
+| 子域 | 项目 | 文件 |
 | --- | --- | --- |
-| `Kuroe.Console` | 交互终端 | [kuroe-console](console/kuroe-console.md) |
-| `Kuroe.Cli` | 命令行 | [kuroe-cli](cli/kuroe-cli.md) |
+| 交互终端 | `Kuroe.Console` | [kuroe-console](console/kuroe-console.md) |
+| 命令行 | `Kuroe.Cli` | [kuroe-cli](cli/kuroe-cli.md) |

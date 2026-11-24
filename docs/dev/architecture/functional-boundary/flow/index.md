@@ -4,25 +4,14 @@
 
 ```mermaid
 flowchart TD
-    Graph["图流程<br>Kuroe.Flow/{Compilation,Control,Graph,Library,Persistence,Records}"]
-    Maf["MAF 流程<br>Kuroe.Maf/{Compilation,Control,Definition,Persistence,Records}"]
-    Code["代码流程<br>Kuroe.CodeFlow"]
+    GraphFlow["图流程<br>Kuroe.Flow/{Compilation,Control,Graph,Library,Persistence,Records}"]
+    MafFlow["MAF 流程<br>Kuroe.Maf/{Compilation,Control,Definition,Persistence,Records}"]
+    CodeFlow["代码流程<br>Kuroe.CodeFlow"]
 ```
 
-| 项目 | 节点 | 边界文档 |
+| 子域 | 项目 | 文件 |
 | --- | --- | --- |
-| `Kuroe.Flow.Compilation` | 图流程 | [kuroe-flow-compilation](graph/kuroe-flow-compilation.md) |
-| `Kuroe.Flow.Control` | 图流程 | [kuroe-flow-control](graph/kuroe-flow-control.md) |
-| `Kuroe.Flow.Graph.Shared` | 图流程 | [kuroe-flow-graph-shared](graph/kuroe-flow-graph-shared.md) |
-| `Kuroe.Flow.Library` | 图流程 | [kuroe-flow-library](graph/kuroe-flow-library.md) |
-| `Kuroe.Flow.Library.Files` | 图流程 | [kuroe-flow-library-files](graph/kuroe-flow-library-files.md) |
-| `Kuroe.Flow.Records.Shared` | 图流程 | [kuroe-flow-records-shared](graph/kuroe-flow-records-shared.md) |
-| `Kuroe.Flow.Persistence.Serialization.Graph` | 图流程 | [kuroe-flow-persistence-serialization-graph](graph/kuroe-flow-persistence-serialization-graph.md) |
-| `Kuroe.Maf.Compilation.Shared` | MAF 流程 | [kuroe-maf-compilation-shared](maf/kuroe-maf-compilation-shared.md) |
-| `Kuroe.Maf.Compilation` | MAF 流程 | [kuroe-maf-compilation](maf/kuroe-maf-compilation.md) |
-| `Kuroe.Maf.Control` | MAF 流程 | [kuroe-maf-control](maf/kuroe-maf-control.md) |
-| `Kuroe.Maf.Definition` | MAF 流程 | [kuroe-maf-definition](maf/kuroe-maf-definition.md) |
-| `Kuroe.Maf.Records.Shared` | MAF 流程 | [kuroe-maf-records-shared](maf/kuroe-maf-records-shared.md) |
-| `Kuroe.Maf.Persistence` | MAF 流程 | [kuroe-maf-persistence](maf/kuroe-maf-persistence.md) |
-| `Kuroe.CodeFlow.Records.Shared` | 代码流程 | [kuroe-code-flow-records-shared](code/kuroe-code-flow-records-shared.md) |
-| `Kuroe.CodeFlow.Persistence` | 代码流程 | [kuroe-code-flow-persistence](code/kuroe-code-flow-persistence.md) |
+| 图流程 |  | [graph](graph/index.md) |
+| MAF 流程 |  | [maf](maf/index.md) |
+| 代码流程 | `Kuroe.CodeFlow.Records.Shared` | [kuroe-code-flow-records-shared](code/kuroe-code-flow-records-shared.md) |
+| 代码流程 | `Kuroe.CodeFlow.Persistence` | [kuroe-code-flow-persistence](code/kuroe-code-flow-persistence.md) |

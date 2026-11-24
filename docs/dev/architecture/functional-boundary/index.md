@@ -32,7 +32,7 @@ flowchart TD
     LKernel --> LPlatform
 ```
 
-| 层 | 文件 |
+| 域 | 文件 |
 | --- | --- |
 | 宿主入口 | [entry](entry/index.md) |
 | 宿主装配 | [assembly](assembly/index.md) |
