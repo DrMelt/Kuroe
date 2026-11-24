@@ -4,7 +4,7 @@ using Kuroe.FlowDescription.Definition.Shared.Ports;
 
 namespace Kuroe.Flow.NodeType.Container;
 
-/// <summary>引擎内置的容器类型：类型名、静态形状与描述实例。容器组织成员并限定作用域，自身不执行，运行期对象由引擎建立。</summary>
+/// <summary>图流程内置的容器类型：类型名、静态形状与描述实例。容器组织成员并限定作用域，自身不执行，运行期对象由图流程控制建立。</summary>
 public static class ContainerNodeTypes
 {
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
@@ -18,6 +18,6 @@ public static class ContainerNodeTypes
         OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };
 
-    /// <summary>容器描述实例，全引擎共用一份。</summary>
+    /// <summary>容器描述实例，图流程共用一份。</summary>
     public static INodeType Type { get; } = new ContainerNodeType();
 }

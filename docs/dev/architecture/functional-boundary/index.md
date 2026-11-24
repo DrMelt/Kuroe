@@ -25,7 +25,6 @@ flowchart TD
     LFlow --> LKernel
     LFlow --> LPlatform
     LDescription --> LKernel
-    LAbility --> LFlow
     LAbility --> LDescription
     LAbility --> LKernel
     LAbility --> LPlatform
