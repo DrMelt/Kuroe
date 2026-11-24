@@ -7,7 +7,7 @@ flowchart TD
     LFlow["流程实现<br>Kuroe.Flow/{Compilation,Control,Graph,Library,Persistence,Records}<br>Kuroe.Maf/{Compilation,Control,Definition,Persistence,Records}<br>Kuroe.CodeFlow"]
     LDescription["流程描述<br>Kuroe.FlowDescription"]
     LAbility["执行能力<br>Kuroe/{Node,Runner,Tool}<br>Kuroe.Flow/NodeType"]
-    LKernel["内核<br>Kuroe.Kernel/{Control,Input}/{Runtime,Shared}<br>Kuroe.Kernel/Execution/{Core,Shared,Records}<br>Kuroe.Kernel/Tasks/{Persistence,Runtime,Shared,Records,Presentation}<br>Kuroe.Kernel/Presentation"]
+    LKernel["内核<br>Kuroe.Kernel"]
     LPlatform["平台<br>Kuroe/Platform<br>Kuroe.Files<br>Kuroe.Process"]
 
     LEntry --> LAssembly
