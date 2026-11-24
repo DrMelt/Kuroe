@@ -113,6 +113,22 @@ public sealed class FlowAreaTests
         Assert.DoesNotContain(references, reference => IsUnder(reference, tools));
     }
 
+    [Fact(DisplayName = "流程库不引用控制实现")]
+    public void Flow_library_does_not_reference_control_implementation()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Library",
+            "Core",
+            "Kuroe.Flow.Library.csproj");
+        string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core");
+
+        Assert.DoesNotContain(
+            ProjectReferences(project),
+            reference => IsUnder(reference, control));
+    }
+
     [Fact(DisplayName = "流程区域不含任务与表现项目")]
     public void Flow_area_stays_free_of_task_and_presentation_projects()
     {
@@ -216,6 +232,7 @@ public sealed class FlowAreaTests
         string control = Path.Combine(KernelRoot, "Control", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
+        string catalog = Path.Combine(SourceRoot, "Kuroe.Flow", "Catalog", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
         string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
@@ -230,6 +247,7 @@ public sealed class FlowAreaTests
             control,
             execution,
             executionRecords,
+            catalog,
             graphRecords,
             nodes,
             presentation,

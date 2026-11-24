@@ -10,8 +10,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Files\Core\Kuroe.Flow.Library.Files.csproj" />
+        <ProjectReference Include="..\..\Catalog\Shared\Kuroe.Flow.Catalog.Shared.csproj" />
         <ProjectReference Include="..\..\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
-        <ProjectReference Include="..\..\Control\Core\Kuroe.Flow.Control.csproj" />
         <ProjectReference Include="..\..\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
         <ProjectReference Include="..\..\Records\Shared\Kuroe.Flow.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.FlowDescription\Description\Shared\Kuroe.FlowDescription.Description.Shared.csproj" />

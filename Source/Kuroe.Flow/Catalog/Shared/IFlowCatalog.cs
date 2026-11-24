@@ -2,9 +2,9 @@ using ErrorOr;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Runtime.Catalog;
+namespace Kuroe.Flow.Catalog.Shared;
 
-/// <summary>运行期的流程模板查询。实现由宿主提供。</summary>
+/// <summary>运行期的流程模板查询。实现由流程库提供。</summary>
 public interface IFlowCatalog
 {
     /// <summary>全部流程，按文件顺序。</summary>

@@ -6,16 +6,19 @@
 flowchart TD
     Records["记录<br>Kuroe.Flow/Records"]
     GraphModel["模型<br>Kuroe.Flow/Graph"]
+    Catalog["目录契约<br>Kuroe.Flow/Catalog/Shared"]
     Compilation["编译<br>Kuroe.Flow/Compilation"]
     Control["控制<br>Kuroe.Flow/Control"]
     Library["流程库<br>Kuroe.Flow/Library"]
     Persistence["持久化<br>Kuroe.Flow/Persistence"]
     Records --> GraphModel
+    Catalog --> GraphModel
     Compilation --> GraphModel
+    Control --> Catalog
     Control --> Records
     Control --> GraphModel
+    Library --> Catalog
     Library --> Compilation
-    Library --> Control
     Library --> GraphModel
     Library --> Records
     Persistence --> Records
@@ -26,6 +29,7 @@ flowchart TD
 | --- | --- | --- |
 | 记录 | `Kuroe.Flow.Records.Shared` | [kuroe-flow-records-shared](kuroe-flow-records-shared.md) |
 | 模型 | `Kuroe.Flow.Graph.Shared` | [kuroe-flow-graph-shared](kuroe-flow-graph-shared.md) |
+| 目录契约 | `Kuroe.Flow.Catalog.Shared` | [kuroe-flow-catalog-shared](kuroe-flow-catalog-shared.md) |
 | 编译 | `Kuroe.Flow.Compilation` | [kuroe-flow-compilation](kuroe-flow-compilation.md) |
 | 控制 | `Kuroe.Flow.Control` | [kuroe-flow-control](kuroe-flow-control.md) |
 | 流程库 | `Kuroe.Flow.Library` | [kuroe-flow-library](kuroe-flow-library.md) |

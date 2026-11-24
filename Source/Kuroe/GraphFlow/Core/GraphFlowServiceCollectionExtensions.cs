@@ -9,7 +9,7 @@ using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Compilation.Shared.Flow;
 using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation;
-using Kuroe.Flow.Control.Runtime.Catalog;
+using Kuroe.Flow.Catalog.Shared;
 using Kuroe.Flow.Control.Runtime.Engine;
 using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Library;

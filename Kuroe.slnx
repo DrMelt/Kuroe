@@ -28,6 +28,7 @@
     <Project Path="Source/Kuroe/Node/Command/Core/Kuroe.Node.Command.csproj" />
     <Project Path="Source/Kuroe/Node/Input/Core/Kuroe.Node.Input.csproj" />
     <Project Path="Source/Kuroe/GraphFlow/Core/Kuroe.GraphFlow.csproj" />
+    <Project Path="Source/Kuroe.Flow/Catalog/Shared/Kuroe.Flow.Catalog.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Core/Kuroe.Flow.Compilation.csproj" />
     <Project Path="Source/Kuroe.Flow/Library/Core/Kuroe.Flow.Library.csproj" />
     <Project Path="Source/Kuroe.Flow/Library/Files/Core/Kuroe.Flow.Library.Files.csproj" />

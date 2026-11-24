@@ -6,7 +6,7 @@ using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Runtime.Catalog;
+namespace Kuroe.Flow.Control.Runtime.Templates;
 
 /// <summary>把流程定义投影为宿主可读的中性模板视图。</summary>
 public static class FlowTemplateProjection

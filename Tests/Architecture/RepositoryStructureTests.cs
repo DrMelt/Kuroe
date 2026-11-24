@@ -113,6 +113,7 @@ public sealed class RepositoryStructureTests
 
         foreach (string relative in new[]
         {
+            Path.Combine("Catalog", "Shared"),
             Path.Combine("Graph", "Shared"),
             Path.Combine("Records", "Shared"),
         })
