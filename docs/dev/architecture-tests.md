@@ -32,4 +32,4 @@
 - 测试支持项目位于 `Tests/Support`，项目名以 `.TestSupport` 结尾，目录名为项目名。
 - `Kuroe.Architecture.Tests`、`Kuroe.Integration.Tests` 与 `Kuroe.FlowDescription.Compilation.Integration.Tests` 按测试类型放置，不镜像源项目。
 - `Kuroe.slnx` 包含全部源项目与测试项目且不重复。
-- 命名空间根约束见[总体架构](architecture/architecture.md#命名空间与路径)，由 `ProjectLayoutTests` 校验。
+- 命名空间根取项目名，类型由项目名定位；`Kuroe.Runner.Shared` 取使用方命名空间 `Kuroe.Runner`，由 `ProjectLayoutTests` 校验。

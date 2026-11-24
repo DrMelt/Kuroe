@@ -65,9 +65,3 @@ token 用量取自 provider 返回的 usage，分输入、输出与合计，另�
 上下文取最近一次返回用量的请求的输入 token 数，不随请求累计；该请求没有给出输入 token 数，或其后有请求未返回用量时显示未提供。provider 不返回 usage 时该请求记为未返回用量，不按 0 计，并清除上下文。
 
 请求次数与用量在执行运行中为当前累计，收口后为最终值。执行详情里的请求次数只统计本次执行。
-
-## 相关页面
-
-- 节点类型的中断行为见[Llm](../reference/nodes/llm.md)
-- 查看入口见[操作指南](../console/operation-guide.md#任务)与[命令行接口](../cli/command-line-interface.md#run)
-- 敏感数据保护见[安全与权限](security-and-permissions.md#凭据与数据)

@@ -28,8 +28,8 @@ flowchart TD
 | `Kuroe.Runner.Approval` | 运行器 | [kuroe-runner-approval](runner/kuroe-runner-approval.md) |
 | `Kuroe.Tool` | 工具 | [kuroe-tool](tool/kuroe-tool.md) |
 | `Kuroe.Tool.Json` | 工具 | [kuroe-tool-json](tool/kuroe-tool-json.md) |
-| `Kuroe.Tool.FileAccess.Shared` | 工具 | [kuroe-tool-fileaccess-shared](tool/kuroe-tool-fileaccess-shared.md) |
-| `Kuroe.Tool.FileAccess` | 工具 | [kuroe-tool-fileaccess](tool/kuroe-tool-fileaccess.md) |
+| `Kuroe.Tool.FileAccess.Shared` | 工具 | [kuroe-tool-file-access-shared](tool/kuroe-tool-file-access-shared.md) |
+| `Kuroe.Tool.FileAccess` | 工具 | [kuroe-tool-file-access](tool/kuroe-tool-file-access.md) |
 | `Kuroe.Tool.Implementation.Command.Shared` | 工具 | [kuroe-tool-implementation-command-shared](tool/kuroe-tool-implementation-command-shared.md) |
 | `Kuroe.Tool.Implementation.Command` | 工具 | [kuroe-tool-implementation-command](tool/kuroe-tool-implementation-command.md) |
 | `Kuroe.Tool.Implementation.Command.Json` | 工具 | [kuroe-tool-implementation-command-json](tool/kuroe-tool-implementation-command-json.md) |
@@ -37,7 +37,7 @@ flowchart TD
 | `Kuroe.Tool.Implementation.Dotnet` | 工具 | [kuroe-tool-implementation-dotnet](tool/kuroe-tool-implementation-dotnet.md) |
 | `Kuroe.Tool.Implementation.File` | 工具 | [kuroe-tool-implementation-file](tool/kuroe-tool-implementation-file.md) |
 | `Kuroe.Tool.Implementation.Git` | 工具 | [kuroe-tool-implementation-git](tool/kuroe-tool-implementation-git.md) |
-| `Kuroe.Tool.Implementation.KuroeInfo` | 工具 | [kuroe-tool-implementation-kuroeinfo](tool/kuroe-tool-implementation-kuroeinfo.md) |
+| `Kuroe.Tool.Implementation.KuroeInfo` | 工具 | [kuroe-tool-implementation-kuroe-info](tool/kuroe-tool-implementation-kuroe-info.md) |
 | `Kuroe.Tool.Implementation.Source` | 工具 | [kuroe-tool-implementation-source](tool/kuroe-tool-implementation-source.md) |
 | `Kuroe.Tool.Implementation.Time` | 工具 | [kuroe-tool-implementation-time](tool/kuroe-tool-implementation-time.md) |
-| `Kuroe.Flow.NodeType.Container` | 容器节点类型 | [kuroe-flow-nodetype-container](container/kuroe-flow-nodetype-container.md) |
+| `Kuroe.Flow.NodeType.Container` | 容器节点类型 | [kuroe-flow-node-type-container](container/kuroe-flow-node-type-container.md) |

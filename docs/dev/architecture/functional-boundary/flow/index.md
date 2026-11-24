@@ -24,5 +24,5 @@ flowchart TD
 | `Kuroe.Maf.Definition` | MAF 流程 | [kuroe-maf-definition](maf/kuroe-maf-definition.md) |
 | `Kuroe.Maf.Records.Shared` | MAF 流程 | [kuroe-maf-records-shared](maf/kuroe-maf-records-shared.md) |
 | `Kuroe.Maf.Persistence` | MAF 流程 | [kuroe-maf-persistence](maf/kuroe-maf-persistence.md) |
-| `Kuroe.CodeFlow.Records.Shared` | 代码流程 | [kuroe-codeflow-records-shared](code/kuroe-codeflow-records-shared.md) |
-| `Kuroe.CodeFlow.Persistence` | 代码流程 | [kuroe-codeflow-persistence](code/kuroe-codeflow-persistence.md) |
+| `Kuroe.CodeFlow.Records.Shared` | 代码流程 | [kuroe-code-flow-records-shared](code/kuroe-code-flow-records-shared.md) |
+| `Kuroe.CodeFlow.Persistence` | 代码流程 | [kuroe-code-flow-persistence](code/kuroe-code-flow-persistence.md) |
