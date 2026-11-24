@@ -10,6 +10,7 @@
 
 ## 分层
 
+- 层按功能域划分，跨域技术关注点写入 `dev/architecture/mechanism/`，不单独成层。
 - `dev/architecture/architecture.md` 只写项目定位与命名空间规则，结构索引在边界文档树的根。
 - `dev/architecture/functional_boundary/` 按层分组，每层一篇 index.md 写层结构图与项目索引表；层下按结构图节点建组目录，项目文档放在所属节点的组目录下，一项目一篇，文件名 slug 由项目名点号改连字符、全小写得到，组目录名由节点标识改连字符、全小写得到。结构见[结构文档结构](#结构文档结构)与[边界文档结构](#边界文档结构)。
 - `dev/architecture/mechanism/` 一主题一篇，写跨模块时序、类型名、方法名与扩展点，不写模块内部实现，不重复边界文档的职责。

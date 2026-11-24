@@ -4,8 +4,9 @@
 
 ```mermaid
 flowchart TD
-    Graph["图流程<br>Kuroe.Flow/{Compilation,Control,Graph,Library,Records}"]
-    Maf["MAF 流程<br>Kuroe.Maf/{Compilation,Control,Definition,Records}"]
+    Graph["图流程<br>Kuroe.Flow/{Compilation,Control,Graph,Library,Persistence,Records}"]
+    Maf["MAF 流程<br>Kuroe.Maf/{Compilation,Control,Definition,Persistence,Records}"]
+    Code["代码流程<br>Kuroe.CodeFlow"]
 ```
 
 | 项目 | 节点 | 边界文档 |
@@ -16,8 +17,12 @@ flowchart TD
 | `Kuroe.Flow.Library` | 图流程 | [kuroe-flow-library](graph/kuroe-flow-library.md) |
 | `Kuroe.Flow.Library.Files` | 图流程 | [kuroe-flow-library-files](graph/kuroe-flow-library-files.md) |
 | `Kuroe.Flow.Records.Shared` | 图流程 | [kuroe-flow-records-shared](graph/kuroe-flow-records-shared.md) |
+| `Kuroe.Flow.Persistence.Serialization.Graph` | 图流程 | [kuroe-flow-persistence-serialization-graph](graph/kuroe-flow-persistence-serialization-graph.md) |
 | `Kuroe.Maf.Compilation.Shared` | MAF 流程 | [kuroe-maf-compilation-shared](maf/kuroe-maf-compilation-shared.md) |
 | `Kuroe.Maf.Compilation` | MAF 流程 | [kuroe-maf-compilation](maf/kuroe-maf-compilation.md) |
 | `Kuroe.Maf.Control` | MAF 流程 | [kuroe-maf-control](maf/kuroe-maf-control.md) |
 | `Kuroe.Maf.Definition` | MAF 流程 | [kuroe-maf-definition](maf/kuroe-maf-definition.md) |
 | `Kuroe.Maf.Records.Shared` | MAF 流程 | [kuroe-maf-records-shared](maf/kuroe-maf-records-shared.md) |
+| `Kuroe.Maf.Persistence` | MAF 流程 | [kuroe-maf-persistence](maf/kuroe-maf-persistence.md) |
+| `Kuroe.CodeFlow.Records.Shared` | 代码流程 | [kuroe-codeflow-records-shared](code/kuroe-codeflow-records-shared.md) |
+| `Kuroe.CodeFlow.Persistence` | 代码流程 | [kuroe-codeflow-persistence](code/kuroe-codeflow-persistence.md) |
