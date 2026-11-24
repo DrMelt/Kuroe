@@ -14,8 +14,8 @@
 | --- | --- |
 | entry | 交互终端与命令行入口 |
 | assembly | 核心装配、图流程装配、MAF 装配与内置助手 |
-| flow | 图流程与 MAF 流程运行期 |
-| description | 流程描述、描述编译、流程库与 MAF 文档装配 |
+| flow | 图流程与 MAF 流程运行期、流程编译与流程库 |
+| description | 流程描述 |
 | ability | 节点类型、运行器与工具 |
 | persistence | 任务存档、写盘协调、启动恢复与流程编解码 |
 | kernel | 任务域、执行、流程控制、输入通道与表现契约 |

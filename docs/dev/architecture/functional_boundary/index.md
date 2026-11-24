@@ -2,10 +2,10 @@
 
 ```mermaid
 flowchart TD
-    LEntry["入口<br>Kuroe.Console<br>Kuroe.Cli"]
-    LAssembly["装配<br>Kuroe/{Composition,GraphFlow,Assistant}<br>Kuroe.Maf/{Core,NodeExecution}"]
-    LFlow["流程实现<br>Kuroe.Flow/{Control,Graph,Records}<br>Kuroe.Maf/{Control,Definition,Records}"]
-    LDescription["描述编译<br>Kuroe.FlowDescription<br>Kuroe.Flow/{Compilation,Library}<br>Kuroe.Maf/Compilation"]
+    LEntry["宿主入口<br>Kuroe.Console<br>Kuroe.Cli"]
+    LAssembly["宿主装配<br>Kuroe/{Composition,GraphFlow,Assistant}<br>Kuroe.Maf/{Core,NodeExecution}"]
+    LFlow["流程实现<br>Kuroe.Flow/{Compilation,Control,Graph,Library,Records}<br>Kuroe.Maf/{Compilation,Control,Definition,Records}"]
+    LDescription["流程描述<br>Kuroe.FlowDescription"]
     LAbility["执行能力<br>Kuroe/{Node,Runner,Tool}<br>Kuroe.Flow/NodeType"]
     LPersistence["存档恢复<br>Kuroe.Kernel/Tasks/Persistence<br>Kuroe.Flow/Persistence<br>Kuroe.CodeFlow<br>Kuroe.Maf/Persistence"]
     LKernel["内核<br>Kuroe.Kernel/{Control,Input}/{Runtime,Shared}<br>Kuroe.Kernel/Execution/{Core,Shared,Records}<br>Kuroe.Kernel/Tasks/{Runtime,Shared,Records,Presentation}<br>Kuroe.Kernel/Presentation"]
@@ -26,9 +26,8 @@ flowchart TD
     LAssembly --> LPlatform
     LFlow --> LDescription
     LFlow --> LKernel
-    LDescription --> LFlow
+    LFlow --> LPlatform
     LDescription --> LKernel
-    LDescription --> LPlatform
     LAbility --> LFlow
     LAbility --> LDescription
     LAbility --> LKernel
@@ -42,10 +41,10 @@ flowchart TD
 
 | 层 | 文件 |
 | --- | --- |
-| 入口 | [entry](entry/index.md) |
-| 装配 | [assembly](assembly/index.md) |
+| 宿主入口 | [entry](entry/index.md) |
+| 宿主装配 | [assembly](assembly/index.md) |
 | 流程实现 | [flow](flow/index.md) |
-| 描述编译 | [description](description/index.md) |
+| 流程描述 | [description](description/index.md) |
 | 执行能力 | [ability](ability/index.md) |
 | 存档恢复 | [persistence](persistence/index.md) |
 | 内核 | [kernel](kernel/index.md) |
