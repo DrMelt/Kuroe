@@ -2,9 +2,9 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using ExecutableNode = Kuroe.Flow.Graph.Shared.StaticGraph.ExecutableNode;
-using Kuroe.Node.Llm;
-using Kuroe.Runner;
-using ModelErrors = Kuroe.Node.Llm.ModelErrors;
+using Kuroe.Ability.Node.Llm;
+using Kuroe.Ability.Runner.Shared;
+using ModelErrors = Kuroe.Ability.Node.Llm.ModelErrors;
 using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.FlowIntegration.GraphFlow.NodeExecution;

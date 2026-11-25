@@ -2,8 +2,8 @@ using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Platform.Catalogs;
 using Kuroe.Platform.Configuration;
-using Kuroe.Tool;
-using Kuroe.Tool.Implementation.KuroeInfo;
+using Kuroe.Ability.Tool;
+using Kuroe.Ability.Tool.Implementation.KuroeInfo;
 
 namespace Kuroe.Composition.Tools;
 

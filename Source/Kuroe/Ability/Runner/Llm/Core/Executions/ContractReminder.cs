@@ -1,0 +1,25 @@
+using Kuroe.Ability.Tool;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+
+namespace Kuroe.Ability.Runner.Llm.Executions;
+
+/// <summary>本轮产出契约的补交要求：声明了输出端口却未交回时，给出写给模型的补交要求。</summary>
+internal sealed class ContractReminder(IExecutionRequestEntry requests)
+{
+    /// <summary>还缺交回内容时给出补交要求，齐备时为空。</summary>
+    public string? Text()
+    {
+        ExecutionStatus round = requests.ReadStatus();
+
+        // 已上报无法完成的执行，缺项是它主动留下的，不再追问
+        if (round.CannotCompleteReason is not null || round.OutstandingOutputs.Count == 0)
+        {
+            return null;
+        }
+
+        string ports = string.Join('、', round.OutstandingOutputs.Select(name => $"「{name}」"));
+
+        return $"本轮还缺交回：输出端口{ports}，请调用 {ContractTools.Port} 提交。";
+    }
+}

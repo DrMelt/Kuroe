@@ -1,5 +1,5 @@
-using Kuroe.Runner.Llm;
-using Kuroe.Tool;
+using Kuroe.Ability.Runner.Llm;
+using Kuroe.Ability.Tool;
 using Kuroe.Kernel.Execution.Shared.Ports;
 using Kuroe.Kernel.Execution.Shared.Runtime;
 

@@ -2,8 +2,8 @@ using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
-using Kuroe.Node.Approval;
-using Kuroe.Runner.Approval;
+using Kuroe.Ability.Node.Approval;
+using Kuroe.Ability.Runner.Approval;
 
 namespace Kuroe.FlowIntegration.GraphFlow.NodeExecution;
 

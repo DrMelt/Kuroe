@@ -1,11 +1,11 @@
-using Kuroe.Runner.Llm;
+using Kuroe.Ability.Runner.Llm;
 using ApiHub.Shared.Models;
 using Kuroe.Console.Views;
 
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Runner.Llm.Tools;
-using Kuroe.Tool.Implementation.Command.Json;
-using Kuroe.Tool.Json;
+using Kuroe.Ability.Runner.Llm.Tools;
+using Kuroe.Ability.Tool.Implementation.Command.Json;
+using Kuroe.Ability.Tool.Json;
 using Xunit;
 
 namespace Kuroe.Console.Tests;

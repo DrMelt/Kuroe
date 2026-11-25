@@ -1,8 +1,8 @@
 using Kuroe.Composition.Catalogs;
 using Kuroe.Platform.Catalogs;
 using Kuroe.Composition.Tests.Support;
-using Kuroe.Tool;
-using Kuroe.Tool.Implementation.KuroeInfo;
+using Kuroe.Ability.Tool;
+using Kuroe.Ability.Tool.Implementation.KuroeInfo;
 using Xunit;
 
 namespace Kuroe.Composition.Tests.Catalogs;

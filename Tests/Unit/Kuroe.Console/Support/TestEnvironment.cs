@@ -16,7 +16,7 @@ using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
-using Kuroe.Runner.Llm.Tools;
+using Kuroe.Ability.Runner.Llm.Tools;
 using Kuroe.Assistant;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant.Dialogue;
@@ -123,8 +123,8 @@ public sealed class TestEnvironment : IDisposable
 
     public ToolCollection Tools => _provider.GetRequiredService<ToolCollection>();
 
-    public IReadOnlyList<Tool.Json.ConfiguredTool> ConfiguredTools =>
-        _provider.GetRequiredService<IReadOnlyList<Tool.Json.ConfiguredTool>>();
+    public IReadOnlyList<Ability.Tool.Json.ConfiguredTool> ConfiguredTools =>
+        _provider.GetRequiredService<IReadOnlyList<Ability.Tool.Json.ConfiguredTool>>();
 
     /// <summary>测试默认写入的流程文件与宿主开始输入表，模型经宿主输入 MODEL 取当前选择，供按名提交的执行测试使用。</summary>
     private const string TestFlowFile = """

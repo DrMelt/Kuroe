@@ -1,4 +1,4 @@
-using Kuroe.Runner;
+using Kuroe.Ability.Runner.Shared;
 using ApiHub.Catalogs;
 using ApiHub.Shared.Catalogs;
 using ApiHub.Shared.Models;

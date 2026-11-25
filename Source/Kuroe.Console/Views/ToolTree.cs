@@ -1,5 +1,5 @@
-using Kuroe.Tool;
-using Kuroe.Tool.Json;
+using Kuroe.Ability.Tool;
+using Kuroe.Ability.Tool.Json;
 using Spectre.Console;
 
 namespace Kuroe.Console.Views;

@@ -17,22 +17,22 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Tool\Core\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\Ability\Tool\Core\Kuroe.Ability.Tool.csproj" />
         <ProjectReference
-            Include="..\..\Tool\Implementation\Time\Core\Kuroe.Tool.Implementation.Time.csproj" />
+            Include="..\..\Ability\Tool\Implementation\Time\Core\Kuroe.Ability.Tool.Implementation.Time.csproj" />
         <ProjectReference
-            Include="..\..\Tool\Implementation\File\Core\Kuroe.Tool.Implementation.File.csproj" />
+            Include="..\..\Ability\Tool\Implementation\File\Core\Kuroe.Ability.Tool.Implementation.File.csproj" />
         <ProjectReference
-            Include="..\..\Tool\Implementation\Git\Core\Kuroe.Tool.Implementation.Git.csproj" />
+            Include="..\..\Ability\Tool\Implementation\Git\Core\Kuroe.Ability.Tool.Implementation.Git.csproj" />
         <ProjectReference
-            Include="..\..\Tool\Implementation\Dotnet\Core\Kuroe.Tool.Implementation.Dotnet.csproj" />
-        <ProjectReference Include="..\..\Tool\Json\Kuroe.Tool.Json.csproj" />
+            Include="..\..\Ability\Tool\Implementation\Dotnet\Core\Kuroe.Ability.Tool.Implementation.Dotnet.csproj" />
+        <ProjectReference Include="..\..\Ability\Tool\Json\Kuroe.Ability.Tool.Json.csproj" />
         <ProjectReference
-            Include="..\..\Tool\Implementation\Command\Json\Kuroe.Tool.Implementation.Command.Json.csproj" />
+            Include="..\..\Ability\Tool\Implementation\Command\Json\Kuroe.Ability.Tool.Implementation.Command.Json.csproj" />
         <ProjectReference
-            Include="..\..\Tool\Implementation\Contract\Core\Kuroe.Tool.Implementation.Contract.csproj" />
+            Include="..\..\Ability\Tool\Implementation\Contract\Core\Kuroe.Ability.Tool.Implementation.Contract.csproj" />
         <ProjectReference
-            Include="..\..\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.Implementation.KuroeInfo.csproj" />
+            Include="..\..\Ability\Tool\Implementation\KuroeInfo\Core\Kuroe.Ability.Tool.Implementation.KuroeInfo.csproj" />
         <ProjectReference Include="..\..\Platform\Kuroe.Platform.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Files\Core\Kuroe.Files.csproj" />
@@ -66,9 +66,9 @@
             Include="..\..\..\Kuroe.Kernel\Input\Runtime\Kuroe.Kernel.Input.Runtime.csproj" />
         <ProjectReference
             Include="..\..\..\Kuroe.Kernel\Execution\Core\Kuroe.Kernel.Execution.csproj" />
-        <ProjectReference Include="..\..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\Runner\Shared\Kuroe.Runner.Shared.csproj" />
-        <ProjectReference Include="..\..\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
+        <ProjectReference Include="..\..\Ability\Node\Llm\Core\Kuroe.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\Ability\Runner\Shared\Kuroe.Ability.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\Ability\Runner\Llm\Core\Kuroe.Ability.Runner.Llm.csproj" />
     </ItemGroup>
 
     <ItemGroup>

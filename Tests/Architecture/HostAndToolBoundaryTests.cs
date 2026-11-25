@@ -10,9 +10,9 @@ public sealed class HostAndToolBoundaryTests
     [Fact(DisplayName = "文件访问共享层不含核心实现与文件 IO")]
     public void FileAccess_shared_project_stays_free_of_core_and_file_io()
     {
-        string fileAccess = Path.Combine(SourceRoot, "Kuroe", "Tool", "FileAccess");
-        string shared = Path.Combine(fileAccess, "Shared", "Kuroe.Tool.FileAccess.Shared.csproj");
-        string core = Path.Combine(fileAccess, "Core", "Kuroe.Tool.FileAccess.csproj");
+        string fileAccess = Path.Combine(AbilityRoot, "Tool", "FileAccess");
+        string shared = Path.Combine(fileAccess, "Shared", "Kuroe.Ability.Tool.FileAccess.Shared.csproj");
+        string core = Path.Combine(fileAccess, "Core", "Kuroe.Ability.Tool.FileAccess.csproj");
         IReadOnlyList<string> sharedReferences = ProjectReferences(shared);
 
         Assert.DoesNotContain(sharedReferences, reference => IsUnder(reference, Path.Combine(fileAccess, "Core")));
@@ -29,13 +29,12 @@ public sealed class HostAndToolBoundaryTests
             Path.Combine(SourceRoot, "Kuroe.Cli", "Kuroe.Cli.csproj"),
             Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Kuroe.Assistant.csproj"),
             Path.Combine(
-                SourceRoot,
-                "Kuroe",
+                AbilityRoot,
                 "Tool",
                 "Implementation",
                 "KuroeInfo",
                 "Core",
-                "Kuroe.Tool.Implementation.KuroeInfo.csproj"),
+                "Kuroe.Ability.Tool.Implementation.KuroeInfo.csproj"),
         ];
 
         foreach (string project in projects)

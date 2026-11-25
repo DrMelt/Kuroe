@@ -1,4 +1,4 @@
-using Kuroe.Tool;
+using Kuroe.Ability.Tool;
 
 namespace Kuroe.Assistant.Dialogue;
 

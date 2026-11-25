@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Command\Core\Kuroe.Ability.Tool.Implementation.Command.csproj" />
+        <ProjectReference Include="..\..\Command\Shared\Kuroe.Ability.Tool.Implementation.Command.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Core\Kuroe.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Platform\Kuroe.Platform.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Node.Llm;
+using Kuroe.Ability.Node.Llm;
 using Kuroe.Kernel.Execution.Shared.Identity;
 using Kuroe.Kernel.Execution.Shared.Ports;
 using Kuroe.Kernel.Execution.Shared.Request;

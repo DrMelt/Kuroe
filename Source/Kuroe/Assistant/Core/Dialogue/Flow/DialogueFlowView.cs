@@ -1,6 +1,6 @@
 using Kuroe.CodeFlow.Records.Shared;
 using Kuroe.Kernel.Control.Shared;
-using Kuroe.Node.Llm;
+using Kuroe.Ability.Node.Llm;
 using Kuroe.Kernel.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
 

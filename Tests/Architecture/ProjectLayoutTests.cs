@@ -91,7 +91,6 @@ public sealed partial class ProjectLayoutTests
         foreach (string project in ProjectFiles(SourceRoot).Concat(ProjectFiles(TestsRoot)))
         {
             string name = Path.GetFileNameWithoutExtension(project);
-            string expected = name == "Kuroe.Runner.Shared" ? "Kuroe.Runner" : name;
 
             foreach (string file in Directory
                 .EnumerateFiles(DirectoryOf(project), "*.cs", SearchOption.AllDirectories)
@@ -103,8 +102,8 @@ public sealed partial class ProjectLayoutTests
                     string value = match.Groups[1].Value;
 
                     Assert.True(
-                        value == expected || value.StartsWith($"{expected}.", StringComparison.Ordinal),
-                        $"{file} 的命名空间 {value} 不以 {expected} 为根。");
+                        value == name || value.StartsWith($"{name}.", StringComparison.Ordinal),
+                        $"{file} 的命名空间 {value} 不以 {name} 为根。");
                 }
             }
         }

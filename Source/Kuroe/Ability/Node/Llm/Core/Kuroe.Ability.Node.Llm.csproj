@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ApiHub.Shared" />
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Tool\Core\Kuroe.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\Runner\Shared\Kuroe.Ability.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Runner\Llm\Core\Kuroe.Ability.Runner.Llm.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.FlowDescription\Description\Shared\Kuroe.FlowDescription.Description.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Platform\Kuroe.Platform.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Ability.Node.Llm.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+    </ItemGroup>
+</Project>

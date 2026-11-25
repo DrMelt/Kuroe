@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Runner.Llm;
+using Kuroe.Ability.Runner.Llm;
 using Kuroe.Platform;
-using Kuroe.Tool;
+using Kuroe.Ability.Tool;
 using Kuroe.Composition.Tools;
 using Xunit;
 using Kuroe.Kernel.Execution.Shared.Contract;

@@ -1,8 +1,8 @@
 using ErrorOr;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Tool;
-using Kuroe.Tool.Implementation.KuroeInfo;
+using Kuroe.Ability.Tool;
+using Kuroe.Ability.Tool.Implementation.KuroeInfo;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Hosting;

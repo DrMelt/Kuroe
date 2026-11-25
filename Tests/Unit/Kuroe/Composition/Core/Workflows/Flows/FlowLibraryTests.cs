@@ -5,7 +5,7 @@ using Kuroe.FlowDescription.Json;
 using Kuroe.Flow.NodeType.Container;
 
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Node.Llm;
+using Kuroe.Ability.Node.Llm;
 using Kuroe.Composition.Tests.Support;
 using Kuroe.Flow.Library;
 using Kuroe.Flow.Library.Files;

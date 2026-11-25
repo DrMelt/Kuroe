@@ -1,5 +1,5 @@
-using Kuroe.Tool;
-using Kuroe.Tool.Json;
+using Kuroe.Ability.Tool;
+using Kuroe.Ability.Tool.Json;
 
 namespace Kuroe.Composition.Tools;
 

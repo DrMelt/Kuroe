@@ -131,9 +131,9 @@ public sealed class RepositoryStructureTests
             directories.Add(sourceDirectory);
         }
 
-        if (segments.Length >= 2 && segments[0] == "Kuroe" && segments[1] == "Tool")
+        if (IsUnder(sourceDirectory, Path.Combine(AbilityRoot, "Tool")))
         {
-            directories.Add(Path.Combine(SourceRoot, "Kuroe", "Tool", "Core"));
+            directories.Add(Path.Combine(AbilityRoot, "Tool", "Core"));
         }
 
         return directories;

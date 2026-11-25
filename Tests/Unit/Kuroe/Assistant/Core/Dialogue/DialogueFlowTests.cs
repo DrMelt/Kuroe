@@ -1,8 +1,8 @@
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Assistant.Dialogue.Flow;
-using Kuroe.Node.Llm;
+using Kuroe.Ability.Node.Llm;
 using Kuroe.Platform;
-using Kuroe.Tool;
+using Kuroe.Ability.Tool;
 using Xunit;
 
 namespace Kuroe.Assistant.Tests.Dialogue;

@@ -8,7 +8,7 @@ using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Node.Llm;
+using Kuroe.Ability.Node.Llm;
 using Kuroe.TestSupport;
 using Xunit;
 using Kuroe.FlowDescription.Compilation.Library;

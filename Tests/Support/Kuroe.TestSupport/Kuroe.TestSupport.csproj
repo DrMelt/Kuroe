@@ -18,14 +18,14 @@
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Input\Shared\Kuroe.Kernel.Input.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\FlowIntegration\GraphFlow\Core\Kuroe.FlowIntegration.GraphFlow.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Input\Core\Kuroe.Node.Input.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Dotnet\Core\Kuroe.Tool.Implementation.Dotnet.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\File\Core\Kuroe.Tool.Implementation.File.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Git\Core\Kuroe.Tool.Implementation.Git.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Time\Core\Kuroe.Tool.Implementation.Time.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Node\Approval\Core\Kuroe.Ability.Node.Approval.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Node\Input\Core\Kuroe.Ability.Node.Input.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Node\Llm\Core\Kuroe.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Core\Kuroe.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\Dotnet\Core\Kuroe.Ability.Tool.Implementation.Dotnet.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\File\Core\Kuroe.Ability.Tool.Implementation.File.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\Git\Core\Kuroe.Ability.Tool.Implementation.Git.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\Time\Core\Kuroe.Ability.Tool.Implementation.Time.csproj" />
     </ItemGroup>
 
 <ItemGroup>

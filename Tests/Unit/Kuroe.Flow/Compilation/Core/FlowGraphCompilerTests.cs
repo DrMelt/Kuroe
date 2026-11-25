@@ -6,7 +6,7 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
-using Kuroe.Node.Llm;
+using Kuroe.Ability.Node.Llm;
 using Kuroe.Kernel.Tasks.Shared;
 using Xunit;
 

@@ -46,7 +46,7 @@ public sealed class KernelAreaTests
         string[] forbidden =
         [
             Path.Combine(SourceRoot, "Kuroe.Flow"),
-            Path.Combine(SourceRoot, "Kuroe", "Node"),
+            Path.Combine(AbilityRoot, "Node"),
             Path.Combine(KernelRoot, "Execution"),
             Path.Combine(KernelRoot, "Control"),
             Path.Combine(KernelRoot, "Tasks", "Runtime"),

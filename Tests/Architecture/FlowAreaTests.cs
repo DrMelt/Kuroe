@@ -27,7 +27,7 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "节点项目不引用流程实现")]
     public void Node_projects_do_not_reference_flow_implementation()
     {
-        string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
+        string nodes = Path.Combine(AbilityRoot, "Node");
         string execution = Path.Combine(KernelRoot, "Execution", "Core");
         string flow = Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Runtime");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records");
@@ -111,9 +111,9 @@ public sealed class FlowAreaTests
             "Core",
             "Kuroe.Flow.Library.csproj");
         string host = Path.Combine(SourceRoot, "Kuroe");
-        string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
-        string runners = Path.Combine(SourceRoot, "Kuroe", "Runner");
-        string tools = Path.Combine(SourceRoot, "Kuroe", "Tool");
+        string nodes = Path.Combine(AbilityRoot, "Node");
+        string runners = Path.Combine(AbilityRoot, "Runner");
+        string tools = Path.Combine(AbilityRoot, "Tool");
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.DoesNotContain(references, reference => IsUnder(reference, host));

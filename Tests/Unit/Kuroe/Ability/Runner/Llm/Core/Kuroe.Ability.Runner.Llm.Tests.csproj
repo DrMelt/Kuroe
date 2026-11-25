@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+        <PackageReference Include="ApiHub.ChatClient" />
+        <PackageReference Include="ApiHub.Shared" />
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Agents.AI" />
+        <PackageReference Include="Microsoft.Extensions.AI" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\..\Source\Kuroe\Ability\Runner\Shared\Kuroe.Ability.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\Source\Kuroe\Ability\Runner\Llm\Core\Kuroe.Ability.Runner.Llm.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\Source\Kuroe\Ability\Tool\Core\Kuroe.Ability.Tool.csproj" />
+    </ItemGroup>
+</Project>

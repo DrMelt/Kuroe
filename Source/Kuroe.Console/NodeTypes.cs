@@ -1,8 +1,8 @@
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.FlowIntegration.GraphFlow.NodeExecution;
 using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
-using Kuroe.Node.Approval;
-using Kuroe.Node.Input;
+using Kuroe.Ability.Node.Approval;
+using Kuroe.Ability.Node.Input;
 
 namespace Kuroe.Console;
 

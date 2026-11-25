@@ -23,15 +23,15 @@
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Library\Files\Core\Kuroe.Flow.Library.Files.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Platform\Kuroe.Platform.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Runner\Llm\Core\Kuroe.Runner.Llm.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Ability\Node\Llm\Core\Kuroe.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Ability\Runner\Llm\Core\Kuroe.Ability.Runner.Llm.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Compilation\Core\Kuroe.FlowDescription.Compilation.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Json\Core\Kuroe.FlowDescription.Json.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.FlowDescription\Json\Shared\Kuroe.FlowDescription.Json.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.Implementation.KuroeInfo.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Ability\Tool\Core\Kuroe.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Ability\Tool\Implementation\KuroeInfo\Core\Kuroe.Ability.Tool.Implementation.KuroeInfo.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
     </ItemGroup>
 

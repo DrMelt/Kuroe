@@ -1,0 +1,104 @@
+using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
+using Xunit;
+
+namespace Kuroe.Ability.Node.Llm.Tests;
+
+/// <summary>Llm 节点的描述契约：字段表、能力路径与系统指令块的规则、类型实例的读取。</summary>
+public sealed class LlmNodeTypeDescriptionTests
+{
+    private const string PromptName = "Prompt";
+    private const string ToolsName = "Tools";
+    private const string SystemPromptName = "SystemPrompt";
+
+    private static readonly LlmNodeTypeDescription File = new();
+
+    [Fact(DisplayName = "种类是 LLM 节点类型")]
+    public void Kind_is_the_llm_node_type() =>
+        Assert.Equal(LlmNodeTypes.Name, File.Kind);
+
+    [Fact(DisplayName = "形状是 LLM 类型形状")]
+    public void Shape_is_the_llm_type_shape() =>
+        Assert.Equal(LlmNodeTypes.Shape, File.Shape);
+
+    [Fact(DisplayName = "字段声明参数段")]
+    public void Fields_declare_the_parameter_segment() =>
+        Assert.Equal(
+            [
+                new ParameterField(PromptName, ParameterValueKind.Text),
+                new ParameterField(ToolsName, ParameterValueKind.Texts),
+                new ParameterField(SystemPromptName, ParameterValueKind.Texts),
+                new ParameterField("ToolPorts", ParameterValueKind.MapMap),
+            ],
+            File.Fields);
+
+    [Fact(DisplayName = "LLM 类型读取从值构建")]
+    public void Read_builds_the_type_from_the_values()
+    {
+        LlmParameters parameters = Declared(File.Read(
+            new Reader("围绕目标展开", ["ReadFile", "file/WriteFile"], ["恒定块"]),
+            _ => { }));
+
+        Assert.Equal("围绕目标展开", parameters.Prompt);
+        Assert.Equal(["ReadFile", "file/WriteFile"], parameters.Tools.Select(tool => tool.Value));
+        Assert.Equal(["恒定块"], parameters.SystemPrompt);
+    }
+
+    [Fact(DisplayName = "LLM 类型没有值时读取采用安全默认值")]
+    public void Read_without_values_takes_the_safe_defaults()
+    {
+        LlmParameters parameters = Declared(File.Read(new Reader(), _ => { }));
+
+        Assert.Null(parameters.Prompt);
+        Assert.Empty(parameters.Tools);
+        Assert.Empty(parameters.SystemPrompt);
+    }
+
+    [Fact(DisplayName = "读取报告非法的能力路径")]
+    public void Read_reports_an_illegal_capability_path()
+    {
+        List<string> errors = [];
+        File.Read(new Reader(tools: ["file/写入 文件"]), errors.Add);
+
+        Assert.Equal(["路径 file/写入 文件 的段 写入 文件 只能写字母、数字、下划线与连字符。"], errors);
+    }
+
+    [Fact(DisplayName = "读取报告空白的系统块")]
+    public void Read_reports_a_blank_system_block()
+    {
+        List<string> errors = [];
+        File.Read(new Reader(blocks: ["恒定块", " "]), errors.Add);
+
+        Assert.Equal(["系统指令块不能为空。"], errors);
+    }
+
+    private static LlmParameters Declared(INodeType type) =>
+        Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(type).Parameters);
+
+    /// <summary>测试用的参数段取值：按字段名给出本轮内容，未给的字段取安全默认。</summary>
+    private sealed class Reader(
+        string? prompt = null,
+        IReadOnlyList<string>? tools = null,
+        IReadOnlyList<string>? blocks = null) : IParameterReader
+    {
+        public string? Text(string name) => name == PromptName ? prompt : null;
+
+        public IReadOnlyList<string> Texts(string name) => name switch
+        {
+            ToolsName => tools ?? [],
+            SystemPromptName => blocks ?? [],
+            _ => [],
+        };
+
+        public int? Integer(string name) => null;
+
+        public bool? Boolean(string name) => null;
+
+        public IReadOnlyDictionary<string, string> Mappings(string name) => new Dictionary<string, string>();
+
+        public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name) =>
+            new Dictionary<string, IReadOnlyDictionary<string, string>>();
+    }
+
+
+}

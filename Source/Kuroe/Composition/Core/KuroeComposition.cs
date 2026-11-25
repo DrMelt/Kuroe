@@ -5,8 +5,8 @@ using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.Kernel.Input.Shared;
 using Kuroe.Platform;
 using Kuroe.Files.Shared;
-using Kuroe.Tool;
-using Kuroe.Tool.Json;
+using Kuroe.Ability.Tool;
+using Kuroe.Ability.Tool.Json;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Composition;

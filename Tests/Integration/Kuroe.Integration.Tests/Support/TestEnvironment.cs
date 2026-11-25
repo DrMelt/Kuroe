@@ -14,8 +14,8 @@ using Kuroe.Composition.Configuration.Files;
 using Kuroe.FlowIntegration.GraphFlow;
 using Kuroe.FlowIntegration.GraphFlow.NodeExecution;
 using Kuroe.Flow.Library;
-using Kuroe.Node.Approval;
-using Kuroe.Node.Input;
+using Kuroe.Ability.Node.Approval;
+using Kuroe.Ability.Node.Input;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Model;
@@ -27,8 +27,8 @@ using Kuroe.Kernel.Control.Runtime;
 using Kuroe.Kernel.Tasks.Runtime;
 using Kuroe.Composition.Pending;
 using Kuroe.Process;
-using Kuroe.Tool;
-using Kuroe.Tool.Implementation.Contract;
+using Kuroe.Ability.Tool;
+using Kuroe.Ability.Tool.Implementation.Contract;
 using Kuroe.Flow.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using Kuroe.Kernel.Execution.Shared.Ports;
@@ -182,8 +182,8 @@ public sealed class TestEnvironment : IDisposable
 
     public ModelService Models => _provider.GetRequiredService<ModelService>();
 
-    public IReadOnlyList<Tool.Json.ConfiguredTool> ConfiguredTools =>
-        _provider.GetRequiredService<IReadOnlyList<Tool.Json.ConfiguredTool>>();
+    public IReadOnlyList<Ability.Tool.Json.ConfiguredTool> ConfiguredTools =>
+        _provider.GetRequiredService<IReadOnlyList<Ability.Tool.Json.ConfiguredTool>>();
 
     /// <summary>测试默认写入的流程文件与宿主开始输入表，模型经宿主输入 MODEL 取当前选择，供按名提交的执行测试使用。</summary>
     private const string TestFlowFile = """
