@@ -1,0 +1,36 @@
+using Kuroe.FlowDescription.Definition.Shared.Model;
+using Kuroe.FlowDescription.Definition.Shared.Nodes;
+using Kuroe.FlowDescription.Definition.Shared.Ports;
+using Kuroe.Kernel.Tasks.Shared;
+using Kuroe.Host.Ability.Runner.Command;
+
+namespace Kuroe.Host.Ability.Node.Command;
+
+/// <summary>命令节点类型的对外入口：类型名、静态形状与实例建立。</summary>
+public static class CommandNodeTypes
+{
+    /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
+    public static NodeKind Name { get; } = new("Command");
+
+    /// <summary>未声明 TimeoutSeconds 时的等待上限秒数。</summary>
+    public const int DefaultTimeoutSeconds = 120;
+
+    /// <summary>未声明 MaxChars 时的输出上限。</summary>
+    public const int DefaultMaxChars = 8000;
+
+    /// <summary>命令节点的静态形状：路径变量给出执行目录，<see cref="PortTypes.Signal"/> 输入触发，输出端口由类型给出为命令输出与完成信号。</summary>
+    public static NodeTypeShape Shape { get; } = new()
+    {
+        DispatchesExecutions = true,
+        InputTypes = [PortTypes.Text, PortTypes.Signal],
+        Outputs = new OutputDeclaration.Given(
+        [
+            new Port(new PortName("Output"), PortTypes.Text, "命令的合并输出。"),
+            new Port(new PortName("Completed"), PortTypes.Signal, "本次命令执行完成。"),
+        ]),
+    };
+
+    /// <summary>按类型专属声明建出类型实例。</summary>
+    public static INodeType Create(CommandExecutionParameters parameters) =>
+        new CommandNodeType(parameters);
+}

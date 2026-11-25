@@ -1,5 +1,5 @@
 using Kuroe.Kernel.Tasks.Presentation.Shared;
-using Kuroe.Composition.Pending;
+using Kuroe.Host.Composition.Pending;
 using Spectre.Console;
 
 namespace Kuroe.Console.Views;

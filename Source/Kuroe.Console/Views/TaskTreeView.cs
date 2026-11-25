@@ -1,7 +1,7 @@
 using Kuroe.Kernel.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
-using Kuroe.Ability.Node.Llm;
-using Kuroe.Composition.Pending;
+using Kuroe.Host.Ability.Node.Llm;
+using Kuroe.Host.Composition.Pending;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 

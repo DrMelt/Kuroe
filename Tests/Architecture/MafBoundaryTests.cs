@@ -59,7 +59,7 @@ public sealed class MafBoundaryTests
     {
         string[] runtime =
         [
-            Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "Maf", "Core"),
+            Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "Maf", "Core"),
             Path.Combine(SourceRoot, "Kuroe.Maf", "Control", "Core"),
             Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core"),
             Path.Combine(SourceRoot, "Kuroe.Maf", "Persistence", "Core"),
@@ -164,13 +164,13 @@ public sealed class MafBoundaryTests
     {
         string[] assembly =
         [
-            Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "Maf", "Core"),
+            Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "Maf", "Core"),
         ];
         string[] host =
         [
-            Path.Combine(SourceRoot, "Kuroe", "Composition"),
-            Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "GraphFlow"),
-            Path.Combine(SourceRoot, "Kuroe", "Assistant"),
+            Path.Combine(SourceRoot, "Kuroe.Host", "Composition"),
+            Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "GraphFlow"),
+            Path.Combine(SourceRoot, "Kuroe.Host", "Assistant"),
         ];
 
         foreach (string directory in assembly)

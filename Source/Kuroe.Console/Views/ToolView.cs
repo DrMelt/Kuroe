@@ -1,5 +1,5 @@
-using Kuroe.Ability.Runner.Llm.Tools;
-using Kuroe.Ability.Tool.Json;
+using Kuroe.Host.Ability.Runner.Llm.Tools;
+using Kuroe.Host.Ability.Tool.Json;
 
 namespace Kuroe.Console.Views;
 

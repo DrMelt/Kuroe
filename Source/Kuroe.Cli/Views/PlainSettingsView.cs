@@ -1,5 +1,5 @@
-using Kuroe.Composition.Configuration;
-using Kuroe.Platform.Configuration;
+using Kuroe.Host.Composition.Configuration;
+using Kuroe.Host.Platform.Configuration;
 
 namespace Kuroe.Cli.Views;
 

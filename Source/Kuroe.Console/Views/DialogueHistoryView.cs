@@ -1,4 +1,4 @@
-using Kuroe.Assistant.Dialogue;
+using Kuroe.Host.Assistant.Dialogue;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using Kuroe.Kernel.Execution.Shared.Conversation;

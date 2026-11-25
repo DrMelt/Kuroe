@@ -1,12 +1,12 @@
 using System.CommandLine;
 using ErrorOr;
-using Kuroe.Composition;
-using Kuroe.Assistant;
-using Kuroe.Assistant.Dialogue;
+using Kuroe.Host.Composition;
+using Kuroe.Host.Assistant;
+using Kuroe.Host.Assistant.Dialogue;
 using Kuroe.Console;
 using Kuroe.Console.Views;
-using Kuroe.Composition.Configuration.Files;
-using Kuroe.FlowIntegration.GraphFlow;
+using Kuroe.Host.Composition.Configuration.Files;
+using Kuroe.Host.FlowIntegration.GraphFlow;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

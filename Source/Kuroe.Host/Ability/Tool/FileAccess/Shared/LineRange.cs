@@ -1,0 +1,59 @@
+using System.Globalization;
+using ErrorOr;
+
+namespace Kuroe.Host.Ability.Tool.FileAccess.Shared;
+
+/// <summary>工具实参里的行号范围，行号从 1 起。缺省值由调用方给定，取 0 表示该行号必填，To 为空表示没有结束行。</summary>
+public readonly record struct LineRange(int From, int? To)
+{
+    /// <summary>从工具实参解析起始行号与结束行号，缺省或空白取给定量；非数字、小于 1 或结束行号小于起始行号时给出拒绝错误。</summary>
+    public static ErrorOr<LineRange> Parse(ToolArguments arguments, int defaultFrom, int? defaultTo)
+    {
+        ErrorOr<int?> from = ParseNumber("from", arguments.Text(new ToolName("from")), defaultFrom);
+        if (from.IsError)
+        {
+            return from.ErrorsOrEmptyList;
+        }
+
+        int start = from.Value ?? 0;
+
+        if (start < 1)
+        {
+            return ToolErrors.Argument("起始行号 from 从 1 起。");
+        }
+
+        ErrorOr<int?> to = ParseNumber("to", arguments.Text(new ToolName("to")), defaultTo);
+        if (to.IsError)
+        {
+            return to.ErrorsOrEmptyList;
+        }
+
+        if (to.Value is { } end)
+        {
+            if (end < 1)
+            {
+                return ToolErrors.Argument("结束行号 to 从 1 起。");
+            }
+
+            if (end < start)
+            {
+                return ToolErrors.Argument("结束行号 to 不能小于起始行号 from。");
+            }
+        }
+
+        return new LineRange(start, to.Value);
+    }
+
+    /// <summary>行号从文本取数。缺省或空白用默认值，其余按整数解析；解析失败给出带参数名与实参的详细错误。</summary>
+    private static ErrorOr<int?> ParseNumber(string parameter, string? text, int? @default)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return @default;
+        }
+
+        return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int number)
+            ? number
+            : ToolErrors.Argument($"参数 {parameter} 要写成数字，收到 {text}。");
+    }
+}

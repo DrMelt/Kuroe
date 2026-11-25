@@ -1,0 +1,222 @@
+using ErrorOr;
+using Xunit;
+
+namespace Kuroe.Host.Ability.Tool.Tests;
+
+/// <summary>工具函数的路径参数校验：调用体执行前完成解析、边界与准入判断。</summary>
+public sealed class ToolFunctionTests
+{
+    [Fact(DisplayName = "范围之外的路径在调用前被拒绝")]
+    public void Path_outside_scope_is_rejected_before_invoking()
+    {
+        string root = Root();
+        bool called = false;
+        ToolFunction function = Definition(RequiredPath())
+            .Bind(_ =>
+            {
+                called = true;
+
+                return "已写入";
+            }, new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> result = function.Invoke(Given(("path", Path.Combine("..", "escape.txt"))));
+
+        Assert.True(result.IsError);
+        Assert.Contains("不在工作目录内", result.FirstError.Description, StringComparison.Ordinal);
+        Assert.False(called);
+    }
+
+    [Fact(DisplayName = "缺少必填路径被拒绝")]
+    public void Missing_required_path_is_rejected()
+    {
+        string root = Root();
+        ToolFunction function = Definition(RequiredPath())
+            .Bind(_ => "已写入", new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> result = function.Invoke(Given());
+
+        Assert.True(result.IsError);
+        Assert.Equal("缺少参数 path。", result.FirstError.Description);
+    }
+
+    [Fact(DisplayName = "空路径被拒绝")]
+    public void Empty_path_is_rejected()
+    {
+        string root = Root();
+        ToolFunction function = Definition(RequiredPath())
+            .Bind(_ => "已写入", new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> result = function.Invoke(Given(("path", "  ")));
+
+        Assert.True(result.IsError);
+        Assert.Equal("路径参数 path 不能为空。", result.FirstError.Description);
+    }
+
+    [Fact(DisplayName = "路径魔法在调用前被拒绝")]
+    public void Pathspec_magic_is_rejected_before_invoking()
+    {
+        string root = Root();
+        bool called = false;
+        ToolFunction function = Definition(RequiredPath())
+            .Bind(_ =>
+            {
+                called = true;
+
+                return "已写入";
+            }, new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> result = function.Invoke(Given(("path", ":(top)Source")));
+
+        Assert.True(result.IsError);
+        Assert.Equal("路径参数 path 不能以 : 开头。", result.FirstError.Description);
+        Assert.False(called);
+    }
+
+    [Fact(DisplayName = "可选路径缺失仍调用主体")]
+    public void Optional_path_absent_invokes_body()
+    {
+        string root = Root();
+        bool called = false;
+        ToolFunction function = new ToolDefinition(
+                new ToolPath("List"),
+                "列出",
+                [new ToolParameter(new ToolName("path"), "路径", Path: true)])
+            .Bind(_ =>
+            {
+                called = true;
+
+                return "已列出";
+            }, new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> result = function.Invoke(Given());
+
+        Assert.False(result.IsError);
+        Assert.Equal("已列出", result.Value);
+        Assert.True(called);
+    }
+
+    private static readonly string[] stringArray = ["src/a", ".."];
+
+    [Fact(DisplayName = "路径列表项超出范围拒绝整个调用")]
+    public void Path_list_item_outside_scope_rejects_whole_call()
+    {
+        string root = Root();
+        bool called = false;
+        ToolFunction function = new ToolDefinition(
+                new ToolPath("Read"),
+                "读取",
+                [new ToolParameter(new ToolName("paths"), "路径列表", Required: true, List: true, Path: true)])
+            .Bind(_ =>
+            {
+                called = true;
+
+                return "已读取";
+            }, new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> result = function.Invoke(Given(("paths", stringArray)));
+
+        Assert.True(result.IsError);
+        Assert.Contains("不在工作目录内", result.FirstError.Description, StringComparison.Ordinal);
+        Assert.False(called);
+    }
+
+    [Fact(DisplayName = "互斥组多于一个参数在调用前被拒绝")]
+    public void Exclusive_group_rejects_more_than_one_parameter_before_invoking()
+    {
+        string root = Root();
+        bool called = false;
+        ToolFunction function = Grouped()
+            .Bind(_ =>
+            {
+                called = true;
+
+                return "已运行";
+            }, new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> both = function.Invoke(Given(("project", "a.csproj"), ("solution", "a.slnx")));
+
+        Assert.True(both.IsError);
+        Assert.Equal("参数 project、solution 只能给出一个。", both.FirstError.Description);
+        Assert.False(called);
+
+        ErrorOr<string> solution = function.Invoke(Given(("solution", "a.slnx")));
+
+        Assert.False(solution.IsError);
+        Assert.True(called);
+    }
+
+    /// <summary>项目与解决方案二选一的定义。</summary>
+    private static ToolDefinition Grouped()
+    {
+        ToolParameter project = new(new ToolName("project"), "项目", Path: true);
+        ToolParameter solution = new(new ToolName("solution"), "解决方案", Path: true);
+
+        return new ToolDefinition(
+            new ToolPath("Test"),
+            "测试",
+            [project, solution],
+            Groups: [new ToolParameterGroup([project.Name, solution.Name])]);
+    }
+
+    [Fact(DisplayName = "绑定拒绝没有范围的路径参数")]
+    public void Bind_rejects_path_parameter_without_scope()
+    {
+        ToolDefinition definition = Definition(RequiredPath());
+
+        Assert.Throws<InvalidOperationException>(() => definition.Bind(_ => "已写入"));
+    }
+
+    [Fact(DisplayName = "绑定拒绝同一参数同时是布尔与路径")]
+    public void Bind_rejects_flag_and_path_on_same_parameter()
+    {
+        string root = Root();
+        ToolDefinition definition = new(
+            new ToolPath("Invalid"),
+            "非法",
+            [new ToolParameter(new ToolName("path"), "路径", Flag: true, Path: true)]);
+
+        Assert.Throws<InvalidOperationException>(
+            () => definition.Bind(_ => "结果", new ToolPathScope(root, root, "工作目录")));
+    }
+
+    [Fact(DisplayName = "绑定拒绝非路径参数上的路径访问")]
+    public void Bind_rejects_path_access_on_non_path_parameter()
+    {
+        string root = Root();
+        ToolDefinition definition = new(
+            new ToolPath("Invalid"),
+            "非法",
+            [new ToolParameter(new ToolName("text"), "文本", PathAccess: new ToolPathAccess([], []))]);
+
+        Assert.Throws<InvalidOperationException>(
+            () => definition.Bind(_ => "结果", new ToolPathScope(root, root, "工作目录")));
+    }
+
+    [Fact(DisplayName = "绑定拒绝路径参数的前导短横线")]
+    public void Bind_rejects_leading_dash_on_path_parameter()
+    {
+        string root = Root();
+        ToolDefinition definition = new(
+            new ToolPath("Invalid"),
+            "非法",
+            [new ToolParameter(new ToolName("path"), "路径", Path: true, AllowLeadingDash: true)]);
+
+        Assert.Throws<InvalidOperationException>(
+            () => definition.Bind(_ => "结果", new ToolPathScope(root, root, "工作目录")));
+    }
+
+    /// <summary>声明一个必填路径参数的定义。</summary>
+    private static ToolDefinition Definition(ToolParameter parameter) =>
+        new(new ToolPath("Write"), "写入", [parameter]);
+
+    /// <summary>必填路径参数。</summary>
+    private static ToolParameter RequiredPath() =>
+        new(new ToolName("path"), "路径", Required: true, Path: true);
+
+    /// <summary>一次调用的实参。</summary>
+    private static ToolArguments Given(params (string Name, object? Value)[] values) =>
+        new(values.ToDictionary(value => value.Name, value => value.Value));
+
+    /// <summary>临时测试根目录，路径不需要实际存在。</summary>
+    private static string Root() => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+}

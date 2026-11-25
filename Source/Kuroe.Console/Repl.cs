@@ -1,4 +1,4 @@
-using Kuroe.Assistant.Dialogue;
+using Kuroe.Host.Assistant.Dialogue;
 using Kuroe.Console.Views;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;

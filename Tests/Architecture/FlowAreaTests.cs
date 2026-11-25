@@ -12,11 +12,11 @@ public sealed class FlowAreaTests
     {
         string project = Path.Combine(
             SourceRoot,
-            "Kuroe",
+            "Kuroe.Host",
             "FlowIntegration",
             "GraphFlow",
             "Core",
-            "Kuroe.FlowIntegration.GraphFlow.csproj");
+            "Kuroe.Host.FlowIntegration.GraphFlow.csproj");
         string execution = Path.Combine(KernelRoot, "Execution", "Core");
 
         Assert.DoesNotContain(
@@ -48,11 +48,11 @@ public sealed class FlowAreaTests
     {
         string project = Path.Combine(
             SourceRoot,
-            "Kuroe",
+            "Kuroe.Host",
             "FlowIntegration",
             "GraphFlow",
             "Core",
-            "Kuroe.FlowIntegration.GraphFlow.csproj");
+            "Kuroe.Host.FlowIntegration.GraphFlow.csproj");
         string graphShared = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
@@ -87,7 +87,7 @@ public sealed class FlowAreaTests
             Path.Combine(SourceRoot, "Kuroe.Flow"),
             Path.Combine(SourceRoot, "Kuroe.Maf"),
         ];
-        string host = Path.Combine(SourceRoot, "Kuroe");
+        string host = Path.Combine(SourceRoot, "Kuroe.Host");
 
         foreach (string area in areas)
         {
@@ -110,7 +110,7 @@ public sealed class FlowAreaTests
             "Library",
             "Core",
             "Kuroe.Flow.Library.csproj");
-        string host = Path.Combine(SourceRoot, "Kuroe");
+        string host = Path.Combine(SourceRoot, "Kuroe.Host");
         string nodes = Path.Combine(AbilityRoot, "Node");
         string runners = Path.Combine(AbilityRoot, "Runner");
         string tools = Path.Combine(AbilityRoot, "Tool");
@@ -165,7 +165,7 @@ public sealed class FlowAreaTests
     public void Flow_implementations_split_ports_by_class()
     {
         string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core", "Runtime", "Engine");
-        string dialogue = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Dialogue", "Flow");
+        string dialogue = Path.Combine(SourceRoot, "Kuroe.Host", "Assistant", "Core", "Dialogue", "Flow");
 
         Assert.False(File.Exists(Path.Combine(graph, "GraphFlowFramework.cs")), $"{Path.Combine(graph, "GraphFlowFramework.cs")} 不应存在。");
         Assert.False(File.Exists(Path.Combine(dialogue, "DialogueFlowFramework.cs")), $"{Path.Combine(dialogue, "DialogueFlowFramework.cs")} 不应存在。");

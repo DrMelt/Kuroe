@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Assistant;
-using Kuroe.Composition;
-using Kuroe.Composition.Configuration.Files;
-using Kuroe.Ability.Runner.Llm.Tools;
-using Kuroe.Ability.Tool;
+using Kuroe.Host.Assistant;
+using Kuroe.Host.Composition;
+using Kuroe.Host.Composition.Configuration.Files;
+using Kuroe.Host.Ability.Runner.Llm.Tools;
+using Kuroe.Host.Ability.Tool;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 

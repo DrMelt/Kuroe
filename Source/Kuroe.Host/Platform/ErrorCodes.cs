@@ -1,0 +1,41 @@
+namespace Kuroe.Host.Platform;
+
+/// <summary>任务目录、宿主开始输入表与设置改动的错误码。</summary>
+public static class ErrorCodes
+{
+    /// <summary>模型选择不按设置路径写入，只经模型选择维护。</summary>
+    public const string SettingsModelPath = "Settings.ModelPath";
+
+    /// <summary>写入的值是 JSON null。</summary>
+    public const string SettingsNullValue = "Settings.NullValue";
+
+    /// <summary>工具文件无法读取。</summary>
+    public const string ToolRead = "Tool.Read";
+
+    /// <summary>工具文件不是合法 JSON 或结构不符。</summary>
+    public const string ToolFormat = "Tool.Format";
+
+    /// <summary>命令工具定义本身不合规，如占位符与参数声明不匹配。</summary>
+    public const string ToolInvalid = "Tool.Invalid";
+
+    /// <summary>配置的工具与其他已注册工具重名。</summary>
+    public const string ToolDuplicate = "Tool.Duplicate";
+
+    /// <summary>启动参数给出的工作目录不是合法路径。</summary>
+    public const string WorkDirectoryInvalid = "WorkDirectory.Invalid";
+
+    /// <summary>命令行执行中出现未预期异常。</summary>
+    public const string CliInternal = "Cli.Internal";
+
+    /// <summary>命令行操作缺少提供商凭据。</summary>
+    public const string CliCredentialMissing = "Cli.CredentialMissing";
+
+    /// <summary>任务工作目录已被同名目录或文件占用。</summary>
+    public const string TaskWorkspaceConflict = "TaskWorkspace.Conflict";
+
+    /// <summary>任务工作目录无法建立。</summary>
+    public const string TaskWorkspaceCreate = "TaskWorkspace.Create";
+
+    /// <summary>宿主开始输入表的读取、名字校验与流程开始入口不一致，或宿主输入无法解析。</summary>
+    public const string TaskStartInput = "Task.StartInput";
+}

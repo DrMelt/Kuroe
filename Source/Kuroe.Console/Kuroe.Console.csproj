@@ -14,23 +14,23 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Kuroe\Composition\Core\Kuroe.Composition.csproj" />
-        <ProjectReference Include="..\Kuroe\Assistant\Core\Kuroe.Assistant.csproj" />
-        <ProjectReference Include="..\Kuroe\Ability\Node\Llm\Core\Kuroe.Ability.Node.Llm.csproj" />
-        <ProjectReference Include="..\Kuroe\Ability\Runner\Llm\Core\Kuroe.Ability.Runner.Llm.csproj" />
-        <ProjectReference Include="..\Kuroe\Ability\Node\Input\Core\Kuroe.Ability.Node.Input.csproj" />
-        <ProjectReference Include="..\Kuroe\Ability\Node\Approval\Core\Kuroe.Ability.Node.Approval.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Composition\Core\Kuroe.Host.Composition.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Assistant\Core\Kuroe.Host.Assistant.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Ability\Node\Llm\Core\Kuroe.Host.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Ability\Runner\Llm\Core\Kuroe.Host.Ability.Runner.Llm.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Ability\Node\Input\Core\Kuroe.Host.Ability.Node.Input.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Ability\Node\Approval\Core\Kuroe.Host.Ability.Node.Approval.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Input\Shared\Kuroe.Kernel.Input.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe\Ability\Tool\Core\Kuroe.Ability.Tool.csproj" />
-        <ProjectReference Include="..\Kuroe\Ability\Tool\Json\Kuroe.Ability.Tool.Json.csproj" />
-        <ProjectReference Include="..\Kuroe\FlowIntegration\GraphFlow\Core\Kuroe.FlowIntegration.GraphFlow.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Ability\Tool\Core\Kuroe.Host.Ability.Tool.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Ability\Tool\Json\Kuroe.Host.Ability.Tool.Json.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\FlowIntegration\GraphFlow\Core\Kuroe.Host.FlowIntegration.GraphFlow.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Persistence\Restoring\Shared\Kuroe.Kernel.Tasks.Persistence.Restoring.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe\Platform\Kuroe.Platform.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Platform\Kuroe.Host.Platform.csproj" />
     </ItemGroup>
 
     <ItemGroup>

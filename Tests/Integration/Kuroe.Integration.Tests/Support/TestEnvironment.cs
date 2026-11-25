@@ -1,4 +1,4 @@
-using Kuroe.Composition;
+using Kuroe.Host.Composition;
 using Kuroe.Flow.Control.Runtime.Graph;
 using Kuroe.Flow.Control.Runtime;
 using Kuroe.Kernel.Control.Shared;
@@ -8,27 +8,27 @@ using Kuroe.Kernel.Tasks.Shared;
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Composition.Catalogs;
-using Kuroe.Composition.Configuration;
-using Kuroe.Composition.Configuration.Files;
-using Kuroe.FlowIntegration.GraphFlow;
-using Kuroe.FlowIntegration.GraphFlow.NodeExecution;
+using Kuroe.Host.Composition.Catalogs;
+using Kuroe.Host.Composition.Configuration;
+using Kuroe.Host.Composition.Configuration.Files;
+using Kuroe.Host.FlowIntegration.GraphFlow;
+using Kuroe.Host.FlowIntegration.GraphFlow.NodeExecution;
 using Kuroe.Flow.Library;
-using Kuroe.Ability.Node.Approval;
-using Kuroe.Ability.Node.Input;
+using Kuroe.Host.Ability.Node.Approval;
+using Kuroe.Host.Ability.Node.Input;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Kuroe.Kernel.Tasks.Persistence.Saving.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
-using Kuroe.Assistant;
-using Kuroe.Assistant.Dialogue;
+using Kuroe.Host.Assistant;
+using Kuroe.Host.Assistant.Dialogue;
 using Kuroe.Kernel.Control.Runtime;
 using Kuroe.Kernel.Tasks.Runtime;
-using Kuroe.Composition.Pending;
+using Kuroe.Host.Composition.Pending;
 using Kuroe.Process;
-using Kuroe.Ability.Tool;
-using Kuroe.Ability.Tool.Implementation.Contract;
+using Kuroe.Host.Ability.Tool;
+using Kuroe.Host.Ability.Tool.Implementation.Contract;
 using Kuroe.Flow.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using Kuroe.Kernel.Execution.Shared.Ports;
@@ -182,8 +182,8 @@ public sealed class TestEnvironment : IDisposable
 
     public ModelService Models => _provider.GetRequiredService<ModelService>();
 
-    public IReadOnlyList<Ability.Tool.Json.ConfiguredTool> ConfiguredTools =>
-        _provider.GetRequiredService<IReadOnlyList<Ability.Tool.Json.ConfiguredTool>>();
+    public IReadOnlyList<Host.Ability.Tool.Json.ConfiguredTool> ConfiguredTools =>
+        _provider.GetRequiredService<IReadOnlyList<Host.Ability.Tool.Json.ConfiguredTool>>();
 
     /// <summary>测试默认写入的流程文件与宿主开始输入表，模型经宿主输入 MODEL 取当前选择，供按名提交的执行测试使用。</summary>
     private const string TestFlowFile = """

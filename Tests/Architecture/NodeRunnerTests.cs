@@ -10,21 +10,21 @@ public sealed class NodeRunnerTests
     public void Node_projects_reference_their_runner_implementation()
     {
         string runnerShared = Path.Combine(
-            AbilityRoot, "Runner", "Shared", "Kuroe.Ability.Runner.Shared.csproj");
+            AbilityRoot, "Runner", "Shared", "Kuroe.Host.Ability.Runner.Shared.csproj");
         string runnerRoot = Path.Combine(AbilityRoot, "Runner");
         (string Project, string Runner, bool AllowsRunnerShared)[] projects =
         [
             (
-                Path.Combine(AbilityRoot, "Node", "Command", "Core", "Kuroe.Ability.Node.Command.csproj"),
-                Path.Combine(runnerRoot, "Command", "Core", "Kuroe.Ability.Runner.Command.csproj"),
+                Path.Combine(AbilityRoot, "Node", "Command", "Core", "Kuroe.Host.Ability.Node.Command.csproj"),
+                Path.Combine(runnerRoot, "Command", "Core", "Kuroe.Host.Ability.Runner.Command.csproj"),
                 false),
             (
-                Path.Combine(AbilityRoot, "Node", "File", "Core", "Kuroe.Ability.Node.File.csproj"),
-                Path.Combine(runnerRoot, "File", "Core", "Kuroe.Ability.Runner.File.csproj"),
+                Path.Combine(AbilityRoot, "Node", "File", "Core", "Kuroe.Host.Ability.Node.File.csproj"),
+                Path.Combine(runnerRoot, "File", "Core", "Kuroe.Host.Ability.Runner.File.csproj"),
                 false),
             (
-                Path.Combine(AbilityRoot, "Node", "Llm", "Core", "Kuroe.Ability.Node.Llm.csproj"),
-                Path.Combine(runnerRoot, "Llm", "Core", "Kuroe.Ability.Runner.Llm.csproj"),
+                Path.Combine(AbilityRoot, "Node", "Llm", "Core", "Kuroe.Host.Ability.Node.Llm.csproj"),
+                Path.Combine(runnerRoot, "Llm", "Core", "Kuroe.Host.Ability.Runner.Llm.csproj"),
                 true),
         ];
 
@@ -44,12 +44,12 @@ public sealed class NodeRunnerTests
     public void Graph_flow_execution_assembly_references_input_and_approval_runners()
     {
         string runnerRoot = Path.Combine(AbilityRoot, "Runner");
-        string graphFlow = Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "GraphFlow", "Core", "Kuroe.FlowIntegration.GraphFlow.csproj");
+        string graphFlow = Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "GraphFlow", "Core", "Kuroe.Host.FlowIntegration.GraphFlow.csproj");
 
         IReadOnlyList<string> flowReferences = ProjectReferences(graphFlow);
         foreach (string runner in new[] { "Input", "Approval" })
         {
-            Assert.Contains(Path.Combine(runnerRoot, runner, "Core", $"Kuroe.Ability.Runner.{runner}.csproj"), flowReferences);
+            Assert.Contains(Path.Combine(runnerRoot, runner, "Core", $"Kuroe.Host.Ability.Runner.{runner}.csproj"), flowReferences);
         }
     }
 
@@ -94,7 +94,7 @@ public sealed class NodeRunnerTests
     [Fact(DisplayName = "进程项目是中性能力")]
     public void Process_project_is_a_neutral_capability()
     {
-        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe", "Process")), $"{Path.Combine(SourceRoot, "Kuroe", "Process")} 不应存在。");
+        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Host", "Process")), $"{Path.Combine(SourceRoot, "Kuroe.Host", "Process")} 不应存在。");
 
         string project = Path.Combine(SourceRoot, "Kuroe.Process", "Core", "Kuroe.Process.csproj");
         Assert.True(File.Exists(project), $"{project} 不存在。");
@@ -104,7 +104,7 @@ public sealed class NodeRunnerTests
     [Fact(DisplayName = "运行器共享层只引用中性契约")]
     public void Runner_shared_references_only_neutral_contracts()
     {
-        string project = Path.Combine(AbilityRoot, "Runner", "Shared", "Kuroe.Ability.Runner.Shared.csproj");
+        string project = Path.Combine(AbilityRoot, "Runner", "Shared", "Kuroe.Host.Ability.Runner.Shared.csproj");
 
         Assert.Empty(ProjectReferences(project));
     }

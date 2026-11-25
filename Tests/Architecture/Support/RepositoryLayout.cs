@@ -11,7 +11,7 @@ internal static class RepositoryLayout
     internal static readonly string KernelRoot = Path.Combine(SourceRoot, "Kuroe.Kernel");
 
     /// <summary>执行能力目录，包含节点、运行器与工具。</summary>
-    internal static readonly string AbilityRoot = Path.Combine(SourceRoot, "Kuroe", "Ability");
+    internal static readonly string AbilityRoot = Path.Combine(SourceRoot, "Kuroe.Host", "Ability");
 
     internal static IReadOnlyList<string> InternalsVisibleTo(string project) =>
         [.. XDocument.Load(project)

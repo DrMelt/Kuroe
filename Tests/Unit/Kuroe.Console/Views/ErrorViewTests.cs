@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Console.Views;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Platform;
+using Kuroe.Host.Platform;
 using Spectre.Console.Testing;
 using Xunit;
 

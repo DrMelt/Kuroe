@@ -22,9 +22,9 @@ public sealed partial class GlobalStateTests
     /// <summary>系统适配器与组合根，允许读取时钟、随机源与环境。</summary>
     private static readonly string[] AmbientAllowlist =
     [
-        "Kuroe/Composition/Core/ServiceCollectionExtensions.cs",
-        "Kuroe/FlowIntegration/GraphFlow/Core/GraphFlowServiceCollectionExtensions.cs",
-        "Kuroe/Composition/Core/Configuration/Files/KuroePaths.cs",
+        "Kuroe.Host/Composition/Core/ServiceCollectionExtensions.cs",
+        "Kuroe.Host/FlowIntegration/GraphFlow/Core/GraphFlowServiceCollectionExtensions.cs",
+        "Kuroe.Host/Composition/Core/Configuration/Files/KuroePaths.cs",
         "Kuroe.Cli/CliCommandLine.cs",
         "Kuroe.Files/Core/SystemWorkspaceFiles.cs",
         "Kuroe.Kernel/Tasks/Shared/TaskId.cs",

@@ -1,4 +1,4 @@
-using Kuroe.Assistant.Dialogue;
+using Kuroe.Host.Assistant.Dialogue;
 using Kuroe.Console.Views;
 using Xunit;
 using Kuroe.Kernel.Execution.Shared.Contract;

@@ -13,13 +13,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Kuroe\Composition\Core\Kuroe.Composition.csproj" />
-        <ProjectReference Include="..\Kuroe\Platform\Kuroe.Platform.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Composition\Core\Kuroe.Host.Composition.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Platform\Kuroe.Host.Platform.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe\FlowIntegration\GraphFlow\Core\Kuroe.FlowIntegration.GraphFlow.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\FlowIntegration\GraphFlow\Core\Kuroe.Host.FlowIntegration.GraphFlow.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
-        <ProjectReference Include="..\Kuroe\Ability\Node\Llm\Core\Kuroe.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\Kuroe.Host\Ability\Node\Llm\Core\Kuroe.Host.Ability.Node.Llm.csproj" />
     </ItemGroup>
 
     <ItemGroup>

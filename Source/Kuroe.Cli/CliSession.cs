@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Composition;
-using Kuroe.Composition.Catalogs;
-using Kuroe.Composition.Configuration;
-using Kuroe.Composition.Configuration.Files;
+using Kuroe.Host.Composition;
+using Kuroe.Host.Composition.Catalogs;
+using Kuroe.Host.Composition.Configuration;
+using Kuroe.Host.Composition.Configuration.Files;
 using Kuroe.Kernel.Control.Shared;
-using Kuroe.FlowIntegration.GraphFlow;
+using Kuroe.Host.FlowIntegration.GraphFlow;
 using Kuroe.Flow.Library;
 using Kuroe.Kernel.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;

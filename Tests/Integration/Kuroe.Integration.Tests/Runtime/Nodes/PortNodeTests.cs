@@ -1,10 +1,10 @@
 using System.Text.Json;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Ability.Node.Llm;
+using Kuroe.Host.Ability.Node.Llm;
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
-using Kuroe.Ability.Tool;
+using Kuroe.Host.Ability.Tool;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Nodes;

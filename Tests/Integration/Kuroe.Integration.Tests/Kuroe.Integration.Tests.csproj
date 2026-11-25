@@ -17,28 +17,28 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Source\Kuroe\Composition\Core\Kuroe.Composition.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Composition\Core\Kuroe.Host.Composition.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Files\Core\Kuroe.Files.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Assistant\Core\Kuroe.Assistant.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Node\Llm\Core\Kuroe.Ability.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Node\Command\Core\Kuroe.Ability.Node.Command.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Runner\Shared\Kuroe.Ability.Runner.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Runner\Llm\Core\Kuroe.Ability.Runner.Llm.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Node\File\Core\Kuroe.Ability.Node.File.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Assistant\Core\Kuroe.Host.Assistant.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Node\Llm\Core\Kuroe.Host.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Node\Command\Core\Kuroe.Host.Ability.Node.Command.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Runner\Shared\Kuroe.Host.Ability.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Runner\Llm\Core\Kuroe.Host.Ability.Runner.Llm.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Node\File\Core\Kuroe.Host.Ability.Node.File.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Process\Core\Kuroe.Process.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Node\Input\Core\Kuroe.Ability.Node.Input.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Node\Approval\Core\Kuroe.Ability.Node.Approval.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Core\Kuroe.Ability.Tool.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\Time\Core\Kuroe.Ability.Tool.Implementation.Time.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\Dotnet\Core\Kuroe.Ability.Tool.Implementation.Dotnet.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\File\Core\Kuroe.Ability.Tool.Implementation.File.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\Git\Core\Kuroe.Ability.Tool.Implementation.Git.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Json\Kuroe.Ability.Tool.Json.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\Command\Json\Kuroe.Ability.Tool.Implementation.Command.Json.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\Contract\Core\Kuroe.Ability.Tool.Implementation.Contract.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Ability\Tool\Implementation\KuroeInfo\Core\Kuroe.Ability.Tool.Implementation.KuroeInfo.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Platform\Kuroe.Platform.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Node\Input\Core\Kuroe.Host.Ability.Node.Input.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Node\Approval\Core\Kuroe.Host.Ability.Node.Approval.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Core\Kuroe.Host.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\Time\Core\Kuroe.Host.Ability.Tool.Implementation.Time.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\Dotnet\Core\Kuroe.Host.Ability.Tool.Implementation.Dotnet.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\File\Core\Kuroe.Host.Ability.Tool.Implementation.File.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\Git\Core\Kuroe.Host.Ability.Tool.Implementation.Git.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Json\Kuroe.Host.Ability.Tool.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\Command\Json\Kuroe.Host.Ability.Tool.Implementation.Command.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\Contract\Core\Kuroe.Host.Ability.Tool.Implementation.Contract.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\KuroeInfo\Core\Kuroe.Host.Ability.Tool.Implementation.KuroeInfo.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\Platform\Kuroe.Host.Platform.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Input\Shared\Kuroe.Kernel.Input.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Input\Runtime\Kuroe.Kernel.Input.Runtime.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.FlowDescription\Json\Shared\Kuroe.FlowDescription.Json.Shared.csproj" />
@@ -61,7 +61,7 @@
         <ProjectReference Include="..\..\..\Source\Kuroe.FlowDescription\Compilation\Core\Kuroe.FlowDescription.Compilation.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Control\Core\Kuroe.Flow.Control.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\FlowIntegration\GraphFlow\Core\Kuroe.FlowIntegration.GraphFlow.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Host\FlowIntegration\GraphFlow\Core\Kuroe.Host.FlowIntegration.GraphFlow.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
         <ProjectReference Include="..\..\Support\Kuroe.TestSupport\Kuroe.TestSupport.csproj" />

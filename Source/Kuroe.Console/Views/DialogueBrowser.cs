@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Assistant.Dialogue;
-using Kuroe.Composition.Catalogs;
-using Kuroe.Composition.Configuration;
+using Kuroe.Host.Assistant.Dialogue;
+using Kuroe.Host.Composition.Catalogs;
+using Kuroe.Host.Composition.Configuration;
 using Kuroe.Kernel.Tasks.Shared;
 using Spectre.Console;
 

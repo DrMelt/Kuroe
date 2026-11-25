@@ -1,10 +1,10 @@
 using ApiHub.Shared.Models;
-using Kuroe.Assistant.Dialogue;
+using Kuroe.Host.Assistant.Dialogue;
 using Kuroe.Console.Views;
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Composition.Pending;
+using Kuroe.Host.Composition.Pending;
 using Spectre.Console.Testing;
 using Xunit;
 

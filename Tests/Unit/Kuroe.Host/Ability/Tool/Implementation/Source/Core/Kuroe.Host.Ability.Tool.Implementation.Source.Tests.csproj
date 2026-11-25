@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\Source\Core\Kuroe.Host.Ability.Tool.Implementation.Source.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Host\Ability\Tool\Core\Kuroe.Host.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\Support\Kuroe.TestSupport\Kuroe.TestSupport.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
+    </ItemGroup>
+
+</Project>

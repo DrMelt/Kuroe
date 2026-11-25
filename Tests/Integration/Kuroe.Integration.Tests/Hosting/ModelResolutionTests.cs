@@ -1,4 +1,4 @@
-using Kuroe.FlowIntegration.GraphFlow.NodeExecution;
+using Kuroe.Host.FlowIntegration.GraphFlow.NodeExecution;
 using Kuroe.Flow.Graph.Shared.StaticGraph;
 using ErrorOr;
 using Kuroe.FlowDescription.Definition.Shared.Model;
@@ -8,7 +8,7 @@ using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Ability.Node.Llm;
+using Kuroe.Host.Ability.Node.Llm;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Hosting;

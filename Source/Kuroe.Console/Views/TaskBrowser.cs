@@ -4,7 +4,7 @@ using Kuroe.Kernel.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Runtime;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Composition.Pending;
+using Kuroe.Host.Composition.Pending;
 
 namespace Kuroe.Console.Views;
 

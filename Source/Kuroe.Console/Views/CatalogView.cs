@@ -1,5 +1,5 @@
 using ApiHub.Shared.Models;
-using Kuroe.Composition.Catalogs;
+using Kuroe.Host.Composition.Catalogs;
 using Spectre.Console;
 
 namespace Kuroe.Console.Views;

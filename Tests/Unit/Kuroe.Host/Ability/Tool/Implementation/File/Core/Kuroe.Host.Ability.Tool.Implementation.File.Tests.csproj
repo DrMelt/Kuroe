@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Host\Ability\Tool\Implementation\File\Core\Kuroe.Host.Ability.Tool.Implementation.File.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Host\Ability\Tool\Core\Kuroe.Host.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Host\Ability\Tool\FileAccess\Shared\Kuroe.Host.Ability.Tool.FileAccess.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Host\Ability\Tool\FileAccess\Core\Kuroe.Host.Ability.Tool.FileAccess.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Host\Platform\Kuroe.Host.Platform.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\Support\Kuroe.TestSupport\Kuroe.TestSupport.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe.Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+    </ItemGroup>
+</Project>

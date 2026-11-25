@@ -2,7 +2,7 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Composition.Pending;
+using Kuroe.Host.Composition.Pending;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Nodes;

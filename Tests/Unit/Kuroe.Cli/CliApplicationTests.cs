@@ -56,7 +56,7 @@ public sealed class CliApplicationTests
             error,
             directory => CliSession.Create(
                 directory,
-                compositionOptions: new Composition.KuroeCompositionOptions
+                compositionOptions: new Host.Composition.KuroeCompositionOptions
                 {
                     Files = files,
                     LeaseStores = new TestSupport.InMemoryTaskLeaseStores().Create,

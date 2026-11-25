@@ -9,7 +9,7 @@ public sealed class AssistantBoundaryTests
     [Fact(DisplayName = "对话宿主只依赖代码流程不依赖图控制")]
     public void Dialogue_host_depends_on_code_flow_not_graph_control()
     {
-        string project = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core", "Kuroe.Assistant.csproj");
+        string project = Path.Combine(SourceRoot, "Kuroe.Host", "Assistant", "Core", "Kuroe.Host.Assistant.csproj");
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.DoesNotContain(references, reference =>
@@ -23,7 +23,7 @@ public sealed class AssistantBoundaryTests
     [Fact(DisplayName = "助手把对话宿主与其代码流程分开")]
     public void Assistant_separates_dialogue_hosting_from_its_code_flow()
     {
-        string core = Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core");
+        string core = Path.Combine(SourceRoot, "Kuroe.Host", "Assistant", "Core");
         string dialogue = Path.Combine(core, "Dialogue");
         string flow = Path.Combine(dialogue, "Flow");
 

@@ -1,5 +1,5 @@
 using ApiHub.Shared.Models;
-using Kuroe.Composition.Catalogs;
+using Kuroe.Host.Composition.Catalogs;
 
 namespace Kuroe.Cli.Views;
 
