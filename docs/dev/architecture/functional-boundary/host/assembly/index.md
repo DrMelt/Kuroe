@@ -1,6 +1,6 @@
 # 宿主装配
 
-上层结构见[项目结构](../index.md)。
+上层结构见[宿主](../index.md)。
 
 ```mermaid
 flowchart TD

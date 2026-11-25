@@ -96,7 +96,7 @@ public sealed class RepositoryStructureTests
             }
         }
 
-        // 平台共享层提供路径规则与宿主视图，任何共享层都可引用
+        // 宿主共享契约提供路径规则与宿主视图，任何共享层都可引用
         string platform = Path.Combine(KuroeRoot, "Host", "Platform");
         if (Directory.Exists(platform))
         {
