@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart TD
-    Ability["执行能力<br>Kuroe/Host/Ability<br>Kuroe/Flow/NodeType"]
+    Ability["执行能力<br>Kuroe/Host/Ability"]
     Assembly["宿主装配<br>Kuroe/Host/{Composition,Assistant,FlowIntegration}"]
     Platform["宿主平台契约<br>Kuroe/Host/Platform"]
     Assembly --> Ability

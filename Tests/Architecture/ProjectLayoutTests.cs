@@ -126,6 +126,14 @@ public sealed partial class ProjectLayoutTests
         }
     }
 
+    [Fact(DisplayName = "域目录与结构文档一致")]
+    public void Domain_subdirectories_match_the_structural_map()
+    {
+        AssertDomain("Kuroe/Flow", "Catalog", "Compilation", "Control", "Graph", "Library", "Persistence", "Records");
+        AssertDomain("Kuroe/Host", "Ability", "Assistant", "Composition", "FlowIntegration", "Platform");
+        AssertDomain("Kuroe/Host/Ability", "Node", "Runner", "Tool");
+    }
+
     [Fact(DisplayName = "通用项目不引用产品项目")]
     public void Generic_projects_do_not_reference_product_projects()
     {
@@ -137,6 +145,20 @@ public sealed partial class ProjectLayoutTests
                     IsUnder(reference, KuroeRoot),
                     $"{project} 引用了产品项目 {reference}。"));
         }
+    }
+
+    private static void AssertDomain(string relative, params string[] expected)
+    {
+        string directory = Path.Combine(SourceRoot, relative.Replace('/', Path.DirectorySeparatorChar));
+        string[] actual = [.. Directory.EnumerateDirectories(directory)
+            .Where(path => !IsBuildOutput(path))
+            .Select(path => new DirectoryInfo(path).Name)
+            .Order(StringComparer.Ordinal)];
+        string[] want = [.. expected.Order(StringComparer.Ordinal)];
+
+        Assert.True(
+            want.SequenceEqual(actual, StringComparer.Ordinal),
+            $"{directory} 的子目录与结构文档不一致，见 docs/dev/architecture/functional-boundary/index.md。实际：{string.Join('、', actual)}");
     }
 
     private static string[] Segments(string project) =>

@@ -2,7 +2,7 @@ using Kuroe.Flow.Compilation;
 using Kuroe.FlowDescription.Compilation;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Json;
-using Kuroe.Flow.NodeType.Container;
+using Kuroe.Host.Ability.Node.Container;
 
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Host.Ability.Node.Llm;

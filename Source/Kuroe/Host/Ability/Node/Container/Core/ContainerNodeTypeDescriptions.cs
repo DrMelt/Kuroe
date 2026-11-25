@@ -1,6 +1,6 @@
 using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
 
-namespace Kuroe.Flow.NodeType.Container;
+namespace Kuroe.Host.Ability.Node.Container;
 
 /// <summary>图流程内置容器描述的注册入口。</summary>
 public static class ContainerNodeTypeDescriptions

@@ -7,7 +7,7 @@
 | 文件 | 覆盖 |
 | --- | --- |
 | `RepositoryStructureTests` | 仓库结构、`InternalsVisibleTo` 目标、共享测试工程引用、编译集成测试与宿主分离 |
-| `ProjectLayoutTests` | 源项目名与目录、产品与通用分组、通用项目引用边界、测试类型目录、单元测试镜像、解决方案项目清单、命名空间根 |
+| `ProjectLayoutTests` | 源项目名与目录、产品与通用分组、域目录与结构文档一致、通用项目引用边界、测试类型目录、单元测试镜像、解决方案项目清单、命名空间根 |
 | `KernelAreaTests` | Kernel 只引用 Kernel、输入项目边界 |
 | `KernelControlTests` | 控制共享契约、流程运行期、流程模板目录、恢复按身份解析 |
 | `KernelExecutionTests` | 执行契约与共享项目、执行状态机归属、执行记录来源 |

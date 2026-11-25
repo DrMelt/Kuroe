@@ -2,7 +2,7 @@ using Kuroe.Host.FlowIntegration.GraphFlow.NodeExecution;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.NodeType.Container;
+using Kuroe.Host.Ability.Node.Container;
 using Kuroe.Host.Ability.Node.Approval;
 using Kuroe.Host.Ability.Node.Input;
 using Kuroe.Host.Ability.Node.Llm;

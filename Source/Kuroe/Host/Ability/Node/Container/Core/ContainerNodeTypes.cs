@@ -2,7 +2,7 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 
-namespace Kuroe.Flow.NodeType.Container;
+namespace Kuroe.Host.Ability.Node.Container;
 
 /// <summary>图流程内置的容器类型：类型名、静态形状与描述实例。容器组织成员并限定作用域，自身不执行，运行期对象由图流程控制建立。</summary>
 public static class ContainerNodeTypes

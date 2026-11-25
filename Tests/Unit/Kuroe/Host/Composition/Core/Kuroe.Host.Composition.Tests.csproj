@@ -32,7 +32,7 @@
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\FlowDescription\Json\Shared\Kuroe.FlowDescription.Json.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Host\Ability\Tool\Core\Kuroe.Host.Ability.Tool.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Host\Ability\Tool\Implementation\KuroeInfo\Core\Kuroe.Host.Ability.Tool.Implementation.KuroeInfo.csproj" />
-        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Host\Ability\Node\Container\Core\Kuroe.Host.Ability.Node.Container.csproj" />
     </ItemGroup>
 
 <ItemGroup>

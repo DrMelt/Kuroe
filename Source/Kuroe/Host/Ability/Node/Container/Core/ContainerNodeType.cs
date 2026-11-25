@@ -4,7 +4,7 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 
-namespace Kuroe.Flow.NodeType.Container;
+namespace Kuroe.Host.Ability.Node.Container;
 
 /// <summary>容器类型：组织成员并限定作用域，自身不执行，成员齐备且启动组未抑制时发布。图流程内置，运行期对象由图流程控制建立。</summary>
 internal sealed class ContainerNodeType : INodeType, INodeTypeValidation

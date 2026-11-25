@@ -13,7 +13,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Flow\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Host\Ability\Node\Container\Core\Kuroe.Host.Ability.Node.Container.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\FlowDescription\Compilation\Core\Kuroe.FlowDescription.Compilation.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Host\Ability\Node\Llm\Core\Kuroe.Host.Ability.Node.Llm.csproj" />

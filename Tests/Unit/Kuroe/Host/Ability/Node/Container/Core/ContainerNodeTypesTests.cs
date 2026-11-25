@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace Kuroe.Flow.NodeType.Container.Tests;
+namespace Kuroe.Host.Ability.Node.Container.Tests;
 
 /// <summary>引擎内置的容器类型：类型名即流程文件里写的 Kind 取值。</summary>
 public sealed class ContainerNodeTypesTests

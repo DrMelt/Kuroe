@@ -63,7 +63,7 @@
     <ProjectReference Include="..\..\..\Source\Kuroe\Flow\Control\Core\Kuroe.Flow.Control.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Host\FlowIntegration\GraphFlow\Core\Kuroe.Host.FlowIntegration.GraphFlow.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Flow\Library\Core\Kuroe.Flow.Library.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe\Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Host\Ability\Node\Container\Core\Kuroe.Host.Ability.Node.Container.csproj" />
         <ProjectReference Include="..\..\Support\Kuroe.TestSupport\Kuroe.TestSupport.csproj" />
         <ProjectReference Include="..\..\Support\Kuroe.Flow.TestSupport\Kuroe.Flow.TestSupport.csproj" />
     </ItemGroup>

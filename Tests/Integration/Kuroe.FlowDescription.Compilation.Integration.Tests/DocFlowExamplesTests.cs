@@ -4,7 +4,7 @@ using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
-using Kuroe.Flow.NodeType.Container;
+using Kuroe.Host.Ability.Node.Container;
 using Kuroe.Host.Ability.Node.Approval;
 using Kuroe.Host.Ability.Node.File;
 using Kuroe.Host.Ability.Node.Input;

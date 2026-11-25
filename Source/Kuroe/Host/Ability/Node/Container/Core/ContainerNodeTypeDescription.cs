@@ -3,7 +3,7 @@ using Kuroe.FlowDescription.Definition.Shared.Validation;
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 
-namespace Kuroe.Flow.NodeType.Container;
+namespace Kuroe.Host.Ability.Node.Container;
 
 /// <summary>容器的描述契约：类型实例由容器类型提供，不接受任何类型参数。</summary>
 internal sealed class ContainerNodeTypeDescription : INodeTypeDescription
