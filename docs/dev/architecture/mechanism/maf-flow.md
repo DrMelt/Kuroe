@@ -1,6 +1,6 @@
 # MAF 流程
 
-MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，步骤的每次运行仍是一次 Kuroe 执行。流程定义由宿主以代码给出，或由流程描述装配，不写入 `.kuroe` 目录。流程定义类型位于 `Kuroe.Maf.Definition`，运行实例创建与任务控制位于 `Kuroe.Maf.Control`，文档装配位于 `Kuroe.Maf.Compilation`，装配入口 `AddKuroeMafFlows` 位于 `Kuroe.Maf`。
+MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，步骤的每次运行仍是一次 Kuroe 执行。流程定义由宿主以代码给出，或由流程描述装配，不写入 `.kuroe` 目录。流程定义类型位于 `Kuroe.Maf.Definition`，运行实例创建与任务控制位于 `Kuroe.Maf.Control`，文档装配位于 `Kuroe.Maf.Compilation`，装配入口 `AddKuroeMafFlows` 位于 `Kuroe.FlowIntegration.Maf`。
 
 ## 宿主装配
 
@@ -65,4 +65,4 @@ MAF 流程不提供停驻面，不能等待外部输入或批准，其任务没�
 
 ## 区域约束
 
-MAF 运行期项目位于 `Source/Kuroe.Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，只引用 `Kuroe.FlowDescription.Description.Shared`、`Kuroe.FlowDescription.Definition.Shared` 与 MAF 定义，不引用图流程实现。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Composition` 不引用 MAF 运行期。
+MAF 流程实现位于 `Source/Kuroe.Maf`，装配入口位于 `Source/Kuroe/FlowIntegration/Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，只引用 `Kuroe.FlowDescription.Description.Shared`、`Kuroe.FlowDescription.Definition.Shared` 与 MAF 定义，不引用图流程实现。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Composition` 不引用 MAF 运行期。

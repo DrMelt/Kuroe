@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Composition.Tests.Support;
-using Kuroe.GraphFlow.HostInputs;
+using Kuroe.FlowIntegration.GraphFlow.HostInputs;
 using Xunit;
 
 namespace Kuroe.Composition.Tests.Workflows.Tasks;

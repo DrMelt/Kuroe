@@ -13,9 +13,10 @@ public sealed class FlowAreaTests
         string project = Path.Combine(
             SourceRoot,
             "Kuroe",
+            "FlowIntegration",
             "GraphFlow",
             "Core",
-            "Kuroe.GraphFlow.csproj");
+            "Kuroe.FlowIntegration.GraphFlow.csproj");
         string execution = Path.Combine(KernelRoot, "Execution", "Core");
 
         Assert.DoesNotContain(
@@ -48,9 +49,10 @@ public sealed class FlowAreaTests
         string project = Path.Combine(
             SourceRoot,
             "Kuroe",
+            "FlowIntegration",
             "GraphFlow",
             "Core",
-            "Kuroe.GraphFlow.csproj");
+            "Kuroe.FlowIntegration.GraphFlow.csproj");
         string graphShared = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
@@ -80,15 +82,22 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "流程项目不引用宿主目录")]
     public void Flow_projects_do_not_reference_host_root()
     {
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string[] areas =
+        [
+            Path.Combine(SourceRoot, "Kuroe.Flow"),
+            Path.Combine(SourceRoot, "Kuroe.Maf"),
+        ];
         string host = Path.Combine(SourceRoot, "Kuroe");
 
-        Assert.NotEmpty(ProjectFiles(flow));
-        foreach (string project in ProjectFiles(flow))
+        foreach (string area in areas)
         {
-            Assert.DoesNotContain(
-                ProjectReferences(project),
-                reference => IsUnder(reference, host));
+            Assert.NotEmpty(ProjectFiles(area));
+            foreach (string project in ProjectFiles(area))
+            {
+                Assert.DoesNotContain(
+                    ProjectReferences(project),
+                    reference => IsUnder(reference, host));
+            }
         }
     }
 

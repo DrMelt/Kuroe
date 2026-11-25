@@ -14,10 +14,10 @@ using Kuroe.Flow.Control.Runtime.Engine;
 using Kuroe.Flow.Records.Shared;
 using Kuroe.Flow.Library;
 using Kuroe.Flow.Library.Files;
-using Kuroe.GraphFlow.HostInputs;
+using Kuroe.FlowIntegration.GraphFlow.HostInputs;
 using Kuroe.FlowDescription.Json;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
-using Kuroe.GraphFlow.NodeExecution;
+using Kuroe.FlowIntegration.GraphFlow.NodeExecution;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Persistence.Serialization.Graph;
 using Kuroe.Node.Command;
@@ -35,7 +35,7 @@ using Kuroe.Kernel.Execution.Shared.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Kuroe.FlowDescription.Compilation.Library;
 
-namespace Kuroe.GraphFlow;
+namespace Kuroe.FlowIntegration.GraphFlow;
 
 /// <summary>图流程装配选项：节点类型、流程库失败策略与命令节点的进程边界。</summary>
 public sealed record GraphFlowOptions

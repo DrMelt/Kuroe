@@ -1,4 +1,4 @@
-namespace Kuroe.GraphFlow.HostInputs;
+namespace Kuroe.FlowIntegration.GraphFlow.HostInputs;
 
 /// <summary>Kuroe 提供的宿主开始输入名。宿主开始输入表的值引用这些名字。</summary>
 public static class StartSources

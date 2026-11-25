@@ -1,4 +1,4 @@
-# Kuroe.GraphFlow
+# Kuroe.FlowIntegration.GraphFlow
 
 图流程的宿主侧装配：在核心装配之后把图流程实现、节点类型、执行器、宿主开始输入与任务工作目录注册进容器，使核心任务运行时能提交并推进图流程任务。
 

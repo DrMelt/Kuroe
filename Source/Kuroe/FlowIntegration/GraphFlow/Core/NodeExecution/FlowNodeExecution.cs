@@ -4,7 +4,7 @@ using Kuroe.Node.Command;
 using Kuroe.Node.File;
 using Kuroe.Node.Llm;
 
-namespace Kuroe.GraphFlow.NodeExecution;
+namespace Kuroe.FlowIntegration.GraphFlow.NodeExecution;
 
 /// <summary>图流程内置节点的执行器装配：把节点类型的中立执行器绑定与图能力注册集中到一处。</summary>
 public static class FlowNodeExecution

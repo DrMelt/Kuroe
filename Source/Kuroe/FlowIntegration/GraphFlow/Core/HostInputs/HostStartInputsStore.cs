@@ -3,7 +3,7 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Files.Shared;
 
-namespace Kuroe.GraphFlow.HostInputs;
+namespace Kuroe.FlowIntegration.GraphFlow.HostInputs;
 
 /// <summary>hostStartInputs.json 的读取：文本形状是流程名到开始端口到宿主输入名的两层表。
 /// 文件不存在时没有表项，结构不符、名字为空与重复一次给全。</summary>

@@ -1,4 +1,4 @@
-# Kuroe.Maf
+# Kuroe.FlowIntegration.Maf
 
 MAF 流程装配入口：由宿主在核心装配完成后调用，注册 MAF 流程实现、存档编解码与流程模板。
 

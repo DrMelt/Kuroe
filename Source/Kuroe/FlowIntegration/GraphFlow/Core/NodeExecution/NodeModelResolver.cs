@@ -7,7 +7,7 @@ using Kuroe.Runner;
 using ModelErrors = Kuroe.Node.Llm.ModelErrors;
 using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.GraphFlow.NodeExecution;
+namespace Kuroe.FlowIntegration.GraphFlow.NodeExecution;
 
 /// <summary>执行节点到可用模型的解析：取静态端口 MODEL_NAME 的值，没有声明或目录里没有时报错。</summary>
 public sealed class NodeModelResolver(IModelAccess access) : IExecutionNodeDeclarationResolver

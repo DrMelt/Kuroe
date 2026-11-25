@@ -59,7 +59,7 @@ public sealed class MafBoundaryTests
     {
         string[] runtime =
         [
-            Path.Combine(SourceRoot, "Kuroe.Maf", "Core"),
+            Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "Maf", "Core"),
             Path.Combine(SourceRoot, "Kuroe.Maf", "Control", "Core"),
             Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core"),
             Path.Combine(SourceRoot, "Kuroe.Maf", "Persistence", "Core"),
@@ -141,6 +141,49 @@ public sealed class MafBoundaryTests
             Assert.DoesNotContain(
                 ProjectReferences(project),
                 reference => IsUnder(reference, maf));
+        }
+    }
+
+    [Fact(DisplayName = "Maf 流程实现不引用图流程区域")]
+    public void Maf_flow_area_stays_free_of_graph_flow_area()
+    {
+        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+
+        Assert.NotEmpty(ProjectFiles(maf));
+        foreach (string project in ProjectFiles(maf))
+        {
+            Assert.DoesNotContain(
+                ProjectReferences(project),
+                reference => IsUnder(reference, flow));
+        }
+    }
+
+    [Fact(DisplayName = "Maf 装配不引用宿主装配")]
+    public void Maf_assembly_stays_free_of_host_assemblies()
+    {
+        string[] assembly =
+        [
+            Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "Maf", "Core"),
+        ];
+        string[] host =
+        [
+            Path.Combine(SourceRoot, "Kuroe", "Composition"),
+            Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "GraphFlow"),
+            Path.Combine(SourceRoot, "Kuroe", "Assistant"),
+        ];
+
+        foreach (string directory in assembly)
+        {
+            IReadOnlyList<string> projects = [.. ProjectFiles(directory)];
+
+            Assert.NotEmpty(projects);
+            foreach (string project in projects)
+            {
+                Assert.DoesNotContain(
+                    ProjectReferences(project),
+                    reference => host.Any(target => IsUnder(reference, target)));
+            }
         }
     }
 }

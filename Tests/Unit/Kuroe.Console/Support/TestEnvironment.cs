@@ -9,7 +9,7 @@ using ErrorOr;
 using Kuroe.Composition.Catalogs;
 using Kuroe.Composition.Configuration;
 using Kuroe.Composition.Configuration.Files;
-using Kuroe.GraphFlow;
+using Kuroe.FlowIntegration.GraphFlow;
 using Kuroe.Flow.Library;
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;

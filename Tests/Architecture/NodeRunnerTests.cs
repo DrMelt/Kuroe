@@ -40,21 +40,17 @@ public sealed class NodeRunnerTests
         }
     }
 
-    [Fact(DisplayName = "流程节点执行装配引用对应运行器")]
-    public void Node_execution_projects_reference_their_runner_implementations()
+    [Fact(DisplayName = "图流程节点执行装配引用输入与审批运行器")]
+    public void Graph_flow_execution_assembly_references_input_and_approval_runners()
     {
         string runnerRoot = Path.Combine(SourceRoot, "Kuroe", "Runner");
-        string graphFlow = Path.Combine(SourceRoot, "Kuroe", "GraphFlow", "Core", "Kuroe.GraphFlow.csproj");
-        string maf = Path.Combine(SourceRoot, "Kuroe.Maf", "NodeExecution", "Core", "Kuroe.Maf.NodeExecution.csproj");
+        string graphFlow = Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "GraphFlow", "Core", "Kuroe.FlowIntegration.GraphFlow.csproj");
 
         IReadOnlyList<string> flowReferences = ProjectReferences(graphFlow);
         foreach (string runner in new[] { "Input", "Approval" })
         {
             Assert.Contains(Path.Combine(runnerRoot, runner, "Core", $"Kuroe.Runner.{runner}.csproj"), flowReferences);
         }
-
-        IReadOnlyList<string> mafReferences = ProjectReferences(maf);
-        Assert.DoesNotContain(mafReferences, reference => IsUnder(reference, runnerRoot));
     }
 
     [Fact(DisplayName = "共享节点项目不引用流程实现")]

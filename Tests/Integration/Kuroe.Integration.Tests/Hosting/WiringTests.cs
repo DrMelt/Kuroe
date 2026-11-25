@@ -10,7 +10,7 @@ using Kuroe.Composition.Configuration;
 using Kuroe.Composition.Configuration.Files;
 using Kuroe.Tool;
 using Kuroe.Kernel.Tasks.Runtime;
-using Kuroe.GraphFlow;
+using Kuroe.FlowIntegration.GraphFlow;
 using Kuroe.Flow.Library;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

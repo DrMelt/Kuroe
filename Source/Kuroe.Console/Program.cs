@@ -6,7 +6,7 @@ using Kuroe.Assistant.Dialogue;
 using Kuroe.Console;
 using Kuroe.Console.Views;
 using Kuroe.Composition.Configuration.Files;
-using Kuroe.GraphFlow;
+using Kuroe.FlowIntegration.GraphFlow;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

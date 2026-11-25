@@ -3,7 +3,7 @@ using Kuroe.Platform;
 
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 
-namespace Kuroe.GraphFlow.HostInputs;
+namespace Kuroe.FlowIntegration.GraphFlow.HostInputs;
 
 /// <summary>宿主开始输入表的错误构造。表与流程的开始入口不一致时在任务提交阶段报出。</summary>
 static class HostStartInputsErrors

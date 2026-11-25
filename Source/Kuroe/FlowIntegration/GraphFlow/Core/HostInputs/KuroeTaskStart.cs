@@ -7,7 +7,7 @@ using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Runner;
 using Kuroe.Platform;
 
-namespace Kuroe.GraphFlow.HostInputs;
+namespace Kuroe.FlowIntegration.GraphFlow.HostInputs;
 
 /// <summary>Kuroe 的宿主开始输入：把表项里的宿主输入名解析为工作区、任务目录与当前模型，
 /// 并为用户任务准备任务目录。表项的键是开始端口名，由宿主的开始输入表给出。</summary>

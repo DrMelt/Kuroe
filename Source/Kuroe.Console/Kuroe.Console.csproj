@@ -23,7 +23,7 @@
         <ProjectReference Include="..\Kuroe.Kernel\Input\Shared\Kuroe.Kernel.Input.Shared.csproj" />
         <ProjectReference Include="..\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
-        <ProjectReference Include="..\Kuroe\GraphFlow\Core\Kuroe.GraphFlow.csproj" />
+        <ProjectReference Include="..\Kuroe\FlowIntegration\GraphFlow\Core\Kuroe.FlowIntegration.GraphFlow.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Library\Core\Kuroe.Flow.Library.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\Kuroe.Kernel\Tasks\Persistence\Restoring\Shared\Kuroe.Kernel.Tasks.Persistence.Restoring.Shared.csproj" />

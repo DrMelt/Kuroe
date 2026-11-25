@@ -5,7 +5,7 @@ using Kuroe.Flow.Graph.Shared.RuntimeGraph.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
 
-namespace Kuroe.GraphFlow.NodeExecution;
+namespace Kuroe.FlowIntegration.GraphFlow.NodeExecution;
 
 /// <summary>输入节点的输出投影：把用户回答投影为承载文本的输出端口，出处指向本节点的输入。</summary>
 public sealed class InputNodeOutputProjection : INodeOutputProjection

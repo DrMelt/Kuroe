@@ -5,8 +5,8 @@
 ```mermaid
 flowchart TD
     Composition["核心服务与装配<br>Kuroe/Composition"]
-    GraphFlow["图流程装配<br>Kuroe/GraphFlow"]
-    Maf["MAF 装配<br>Kuroe.Maf/{Core,NodeExecution}"]
+    GraphFlow["图流程装配<br>Kuroe/FlowIntegration/GraphFlow"]
+    Maf["MAF 装配<br>Kuroe/FlowIntegration/Maf"]
     Assistant["内置助手<br>Kuroe/Assistant"]
     GraphFlow --> Composition
     Assistant --> Composition
@@ -15,7 +15,6 @@ flowchart TD
 | 子域 | 项目 | 文件 |
 | --- | --- | --- |
 | 核心服务与装配 | `Kuroe.Composition` | [kuroe-composition](composition/kuroe-composition.md) |
-| 图流程装配 | `Kuroe.GraphFlow` | [kuroe-graph-flow](graph-flow/kuroe-graph-flow.md) |
-| MAF 装配 | `Kuroe.Maf` | [kuroe-maf](maf/kuroe-maf.md) |
-| MAF 装配 | `Kuroe.Maf.NodeExecution` | [kuroe-maf-node-execution](maf/kuroe-maf-node-execution.md) |
+| 图流程装配 | `Kuroe.FlowIntegration.GraphFlow` | [kuroe-flow-integration-graph-flow](graph-flow/kuroe-flow-integration-graph-flow.md) |
+| MAF 装配 | `Kuroe.FlowIntegration.Maf` | [kuroe-flow-integration-maf](maf/kuroe-flow-integration-maf.md) |
 | 内置助手 | `Kuroe.Assistant` | [kuroe-assistant](assistant/kuroe-assistant.md) |

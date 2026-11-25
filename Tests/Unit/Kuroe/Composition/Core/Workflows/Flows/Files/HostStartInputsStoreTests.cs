@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Composition.Tests.Support;
-using Kuroe.GraphFlow.HostInputs;
+using Kuroe.FlowIntegration.GraphFlow.HostInputs;
 using Kuroe.TestSupport;
 using Xunit;
 

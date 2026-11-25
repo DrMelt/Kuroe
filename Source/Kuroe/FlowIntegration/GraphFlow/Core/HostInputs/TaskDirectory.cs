@@ -3,7 +3,7 @@ using Kuroe.Files.Shared;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Platform;
 
-namespace Kuroe.GraphFlow.HostInputs;
+namespace Kuroe.FlowIntegration.GraphFlow.HostInputs;
 
 /// <summary>任务工作目录：以任务键给目录命名，在启动目录下建立。</summary>
 public sealed class TaskDirectory

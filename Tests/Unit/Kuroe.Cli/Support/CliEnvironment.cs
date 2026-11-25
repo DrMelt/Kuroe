@@ -3,7 +3,7 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Composition;
 using Kuroe.Kernel.Execution.Shared.Runtime;
-using Kuroe.GraphFlow;
+using Kuroe.FlowIntegration.GraphFlow;
 using Kuroe.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using NeutralExecutionOutput = Kuroe.Kernel.Execution.Shared.Ports.ExecutionOutput;

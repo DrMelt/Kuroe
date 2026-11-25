@@ -23,7 +23,7 @@ public sealed partial class GlobalStateTests
     private static readonly string[] AmbientAllowlist =
     [
         "Kuroe/Composition/Core/ServiceCollectionExtensions.cs",
-        "Kuroe/GraphFlow/Core/GraphFlowServiceCollectionExtensions.cs",
+        "Kuroe/FlowIntegration/GraphFlow/Core/GraphFlowServiceCollectionExtensions.cs",
         "Kuroe/Composition/Core/Configuration/Files/KuroePaths.cs",
         "Kuroe.Cli/CliCommandLine.cs",
         "Kuroe.Files/Core/SystemWorkspaceFiles.cs",

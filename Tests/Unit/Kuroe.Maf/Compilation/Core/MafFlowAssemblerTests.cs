@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Maf.NodeExecution;
+using Kuroe.Node.Llm;
 using Kuroe.Kernel.Execution.Shared.Identity;
 using Kuroe.Kernel.Execution.Shared.Ports;
 using Kuroe.Kernel.Execution.Shared.Request;
@@ -129,13 +129,7 @@ public sealed class MafFlowAssemblerTests
     private static MafNodeExecutions Executions()
     {
         MafNodeExecutions executions = new();
-        MafNodeExecution.Register(
-            executions,
-            new MafNodeExecutionRunners(
-                TestTypeFiles.Runners,
-                TestTypeFiles.Runners,
-                TestTypeFiles.Runners,
-                TestTypeFiles.Runners));
+        executions.Register(LlmNodeTypes.Name, type => LlmNodeExecution.Bind(type, TestTypeFiles.Runners));
 
         return executions;
     }

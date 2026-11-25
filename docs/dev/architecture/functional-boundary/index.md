@@ -3,7 +3,7 @@
 ```mermaid
 flowchart TD
     LEntry["宿主入口<br>Kuroe.Console<br>Kuroe.Cli"]
-    LAssembly["宿主装配<br>Kuroe/{Composition,GraphFlow,Assistant}<br>Kuroe.Maf/{Core,NodeExecution}"]
+    LAssembly["宿主装配<br>Kuroe/{Composition,Assistant,FlowIntegration}"]
     LFlow["流程实现<br>Kuroe.Flow/{Catalog,Compilation,Control,Graph,Library,Persistence,Records}<br>Kuroe.Maf/{Compilation,Control,Definition,Persistence,Records}<br>Kuroe.CodeFlow"]
     LDescription["流程描述<br>Kuroe.FlowDescription"]
     LAbility["执行能力<br>Kuroe/{Node,Runner,Tool}<br>Kuroe.Flow/NodeType"]

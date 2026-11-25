@@ -4,7 +4,7 @@ using Kuroe.Composition.Catalogs;
 using Kuroe.Composition.Configuration;
 using Kuroe.Composition.Configuration.Files;
 using Kuroe.Kernel.Control.Shared;
-using Kuroe.GraphFlow;
+using Kuroe.FlowIntegration.GraphFlow;
 using Kuroe.Flow.Library;
 using Kuroe.Kernel.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;

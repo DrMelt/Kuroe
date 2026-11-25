@@ -14,7 +14,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Maf\Definition\Core\Kuroe.Maf.Definition.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Maf\Control\Core\Kuroe.Maf.Control.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Maf\Core\Kuroe.Maf.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\FlowIntegration\Maf\Core\Kuroe.FlowIntegration.Maf.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Maf\Records\Shared\Kuroe.Maf.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Kernel\Input\Shared\Kuroe.Kernel.Input.Shared.csproj" />

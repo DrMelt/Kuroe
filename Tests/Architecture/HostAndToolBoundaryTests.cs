@@ -58,7 +58,7 @@ public sealed class HostAndToolBoundaryTests
         string control = Path.Combine(flow, "Control", "Core", "Kuroe.Flow.Control.csproj");
         string records = Path.Combine(flow, "Records", "Shared", "Kuroe.Flow.Records.Shared.csproj");
         string library = Path.Combine(flow, "Library", "Core", "Kuroe.Flow.Library.csproj");
-        string graphFlow = Path.Combine(SourceRoot, "Kuroe", "GraphFlow", "Core", "Kuroe.GraphFlow.csproj");
+        string graphFlow = Path.Combine(SourceRoot, "Kuroe", "FlowIntegration", "GraphFlow", "Core", "Kuroe.FlowIntegration.GraphFlow.csproj");
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.Contains(graphShared, references);

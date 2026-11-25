@@ -10,7 +10,7 @@ using Kuroe.Maf.Persistence;
 using Kuroe.Kernel.Tasks.Records.Shared;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Kuroe.Maf;
+namespace Kuroe.FlowIntegration.Maf;
 
 /// <summary>MAF 流程的装配入口。宿主在核心装配之上调用，流程实现与存档编解码一并注册。</summary>
 public static class MafServiceCollectionExtensions
