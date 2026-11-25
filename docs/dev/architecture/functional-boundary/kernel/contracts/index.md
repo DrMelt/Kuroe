@@ -8,7 +8,7 @@ flowchart TD
     Execution["执行<br>Kuroe.Kernel/Execution/{Shared,Records}"]
     Control["控制<br>Kuroe.Kernel/Control/Shared"]
     Input["输入<br>Kuroe.Kernel/Input/Shared"]
-    Presentation["表现<br>Kuroe.Kernel/Presentation/Shared"]
+    Presentation["流程表现<br>Kuroe.Kernel/Presentation/Shared"]
     Tasks --> Execution
     Control --> Tasks
     Control --> Execution
@@ -28,4 +28,4 @@ flowchart TD
 | 执行 | `Kuroe.Kernel.Execution.Records.Shared` | [kuroe-kernel-execution-records-shared](kuroe-kernel-execution-records-shared.md) |
 | 控制 | `Kuroe.Kernel.Control.Shared` | [kuroe-kernel-control-shared](kuroe-kernel-control-shared.md) |
 | 输入 | `Kuroe.Kernel.Input.Shared` | [kuroe-kernel-input-shared](kuroe-kernel-input-shared.md) |
-| 表现 | `Kuroe.Kernel.Presentation.Shared` | [kuroe-kernel-presentation-shared](kuroe-kernel-presentation-shared.md) |
+| 流程表现 | `Kuroe.Kernel.Presentation.Shared` | [kuroe-kernel-presentation-shared](kuroe-kernel-presentation-shared.md) |

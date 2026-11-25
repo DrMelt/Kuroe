@@ -6,7 +6,7 @@
 flowchart TD
     Runtime["运行期<br>Kuroe.Kernel/{Control,Input}/Runtime<br>Kuroe.Kernel/Execution/Core<br>Kuroe.Kernel/Tasks/Runtime"]
     Archive["任务存档<br>Kuroe.Kernel/Tasks/Persistence"]
-    Contracts["契约<br>Kuroe.Kernel/{Control,Input}/Shared<br>Kuroe.Kernel/Execution/{Shared,Records}<br>Kuroe.Kernel/Presentation<br>Kuroe.Kernel/Tasks/{Shared,Records,Presentation}"]
+    Contracts["契约<br>Kuroe.Kernel/{Control,Input}/Shared<br>Kuroe.Kernel/Execution/{Shared,Records}<br>Kuroe.Kernel/Presentation/Shared<br>Kuroe.Kernel/Tasks/{Shared,Records,Presentation}"]
     Runtime --> Contracts
     Runtime --> Archive
     Archive --> Contracts

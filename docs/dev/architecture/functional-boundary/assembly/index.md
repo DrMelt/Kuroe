@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart TD
-    Composition["核心装配<br>Kuroe/Composition"]
+    Composition["核心服务与装配<br>Kuroe/Composition"]
     GraphFlow["图流程装配<br>Kuroe/GraphFlow"]
     Maf["MAF 装配<br>Kuroe.Maf/{Core,NodeExecution}"]
     Assistant["内置助手<br>Kuroe/Assistant"]
@@ -14,7 +14,7 @@ flowchart TD
 
 | 子域 | 项目 | 文件 |
 | --- | --- | --- |
-| 核心装配 | `Kuroe.Composition` | [kuroe-composition](composition/kuroe-composition.md) |
+| 核心服务与装配 | `Kuroe.Composition` | [kuroe-composition](composition/kuroe-composition.md) |
 | 图流程装配 | `Kuroe.GraphFlow` | [kuroe-graph-flow](graph-flow/kuroe-graph-flow.md) |
 | MAF 装配 | `Kuroe.Maf` | [kuroe-maf](maf/kuroe-maf.md) |
 | MAF 装配 | `Kuroe.Maf.NodeExecution` | [kuroe-maf-node-execution](maf/kuroe-maf-node-execution.md) |

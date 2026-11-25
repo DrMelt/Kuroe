@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart TD
-    Core["核心<br>Kuroe/Tool/{Core,Json}"]
+    Core["工具面与工具文件<br>Kuroe/Tool/{Core,Json}"]
     FileAccess["文件访问<br>Kuroe/Tool/FileAccess"]
     CommandTools["命令工具<br>Kuroe/Tool/Implementation/{Command,Dotnet,Git}"]
     Implementation["工具实现<br>Kuroe/Tool/Implementation/{Contract,File,KuroeInfo,Source,Time}"]
@@ -16,8 +16,8 @@ flowchart TD
 
 | 子域 | 项目 | 文件 |
 | --- | --- | --- |
-| 核心 | `Kuroe.Tool` | [kuroe-tool](kuroe-tool.md) |
-| 核心 | `Kuroe.Tool.Json` | [kuroe-tool-json](kuroe-tool-json.md) |
+| 工具面与工具文件 | `Kuroe.Tool` | [kuroe-tool](kuroe-tool.md) |
+| 工具面与工具文件 | `Kuroe.Tool.Json` | [kuroe-tool-json](kuroe-tool-json.md) |
 | 文件访问 | `Kuroe.Tool.FileAccess.Shared` | [kuroe-tool-file-access-shared](kuroe-tool-file-access-shared.md) |
 | 文件访问 | `Kuroe.Tool.FileAccess` | [kuroe-tool-file-access](kuroe-tool-file-access.md) |
 | 命令工具 | `Kuroe.Tool.Implementation.Command.Shared` | [kuroe-tool-implementation-command-shared](kuroe-tool-implementation-command-shared.md) |
