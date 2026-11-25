@@ -4,10 +4,10 @@
 
 ```mermaid
 flowchart TD
-    Composition["核心服务与装配<br>Kuroe.Host/Composition"]
-    GraphFlow["图流程装配<br>Kuroe.Host/FlowIntegration/GraphFlow"]
-    Maf["MAF 装配<br>Kuroe.Host/FlowIntegration/Maf"]
-    Assistant["内置助手<br>Kuroe.Host/Assistant"]
+    Composition["核心服务与装配<br>Kuroe/Host/Composition"]
+    GraphFlow["图流程装配<br>Kuroe/Host/FlowIntegration/GraphFlow"]
+    Maf["MAF 装配<br>Kuroe/Host/FlowIntegration/Maf"]
+    Assistant["内置助手<br>Kuroe/Host/Assistant"]
     GraphFlow --> Composition
     Assistant --> Composition
 ```

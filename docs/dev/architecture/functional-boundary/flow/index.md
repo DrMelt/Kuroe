@@ -4,9 +4,9 @@
 
 ```mermaid
 flowchart TD
-    GraphFlow["图流程<br>Kuroe.Flow/{Catalog,Compilation,Control,Graph,Library,Persistence,Records}"]
-    MafFlow["MAF 流程<br>Kuroe.Maf/{Compilation,Control,Definition,Persistence,Records}"]
-    CodeFlow["代码流程存档<br>Kuroe.CodeFlow"]
+    GraphFlow["图流程<br>Kuroe/Flow/{Catalog,Compilation,Control,Graph,Library,Persistence,Records}"]
+    MafFlow["MAF 流程<br>Kuroe/Maf/{Compilation,Control,Definition,Persistence,Records}"]
+    CodeFlow["代码流程存档<br>Kuroe/CodeFlow"]
 ```
 
 | 子域 | 项目 | 文件 |

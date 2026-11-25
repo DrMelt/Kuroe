@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ApiHub.ChatClient" />
+        <PackageReference Include="ApiHub.Shared" />
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Agents.AI" />
+        <PackageReference Include="Microsoft.Extensions.AI" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\Kuroe.Host.Ability.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Tool\Core\Kuroe.Host.Ability.Tool.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Host.Ability.Runner.Llm.Tests" />
+    </ItemGroup>
+</Project>

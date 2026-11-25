@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Composition\Core\Kuroe.Host.Composition.csproj" />
+        <ProjectReference Include="..\..\Platform\Kuroe.Host.Platform.csproj" />
+        <ProjectReference Include="..\..\Ability\Node\Llm\Core\Kuroe.Host.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\Ability\Runner\Shared\Kuroe.Host.Ability.Runner.Shared.csproj" />
+        <ProjectReference Include="..\..\Ability\Runner\Llm\Core\Kuroe.Host.Ability.Runner.Llm.csproj" />
+        <ProjectReference Include="..\..\Ability\Tool\Core\Kuroe.Host.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\Ability\Tool\Json\Kuroe.Host.Ability.Tool.Json.csproj" />
+        <ProjectReference Include="..\..\Ability\Tool\Implementation\KuroeInfo\Core\Kuroe.Host.Ability.Tool.Implementation.KuroeInfo.csproj" />
+        <ProjectReference Include="..\..\Ability\Tool\Implementation\Source\Core\Kuroe.Host.Ability.Tool.Implementation.Source.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\CodeFlow\Persistence\Core\Kuroe.CodeFlow.Persistence.csproj" />
+        <ProjectReference Include="..\..\..\CodeFlow\Records\Shared\Kuroe.CodeFlow.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Files\Shared\Files.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Control\Runtime\Kuroe.Kernel.Control.Runtime.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Control\Shared\Kuroe.Kernel.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Execution\Records\Shared\Kuroe.Kernel.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Input\Shared\Kuroe.Kernel.Input.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Presentation\Shared\Kuroe.Kernel.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Persistence\Files\Shared\Kuroe.Kernel.Tasks.Persistence.Files.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Persistence\Restoring\Shared\Kuroe.Kernel.Tasks.Persistence.Restoring.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Persistence\Saving\Shared\Kuroe.Kernel.Tasks.Persistence.Saving.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Persistence\Serialization\Shared\Kuroe.Kernel.Tasks.Persistence.Serialization.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Presentation\Shared\Kuroe.Kernel.Tasks.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Records\Shared\Kuroe.Kernel.Tasks.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Host.Assistant.Tests" />
+    </ItemGroup>
+</Project>

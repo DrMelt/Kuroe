@@ -4,10 +4,10 @@
 
 ```mermaid
 flowchart TD
-    Files["文件<br>Kuroe.Kernel/Tasks/Persistence/Files"]
-    Serialization["序列化<br>Kuroe.Kernel/Tasks/Persistence/Serialization"]
-    Saving["保存<br>Kuroe.Kernel/Tasks/Persistence/Saving"]
-    Restoring["恢复<br>Kuroe.Kernel/Tasks/Persistence/Restoring"]
+    Files["文件<br>Kuroe/Kernel/Tasks/Persistence/Files"]
+    Serialization["序列化<br>Kuroe/Kernel/Tasks/Persistence/Serialization"]
+    Saving["保存<br>Kuroe/Kernel/Tasks/Persistence/Saving"]
+    Restoring["恢复<br>Kuroe/Kernel/Tasks/Persistence/Restoring"]
     Files --> Serialization
     Saving --> Files
     Restoring --> Files

@@ -29,13 +29,13 @@ dotnet test --solution Kuroe.slnx
 ### Kuroe.Console
 
 ```powershell
-dotnet run --project Source/Kuroe.Console -- -d <工作目录>
+dotnet run --project Source/Kuroe/Console -- -d <工作目录>
 ```
 
 ### Kuroe.Cli
 
 ```powershell
-dotnet run --project Source/Kuroe.Cli -- <命令> -d <工作目录>
+dotnet run --project Source/Kuroe/Cli -- <命令> -d <工作目录>
 ```
 
 ## 发布
@@ -45,13 +45,13 @@ dotnet run --project Source/Kuroe.Cli -- <命令> -d <工作目录>
 ### Console 发布
 
 ```powershell
-dotnet publish Source/Kuroe.Console -c Release -p:UseAppHost=false -o <输出目录>
+dotnet publish Source/Kuroe/Console -c Release -p:UseAppHost=false -o <输出目录>
 ```
 
 ### CLI 发布
 
 ```powershell
-dotnet publish Source/Kuroe.Cli -c Release -p:UseAppHost=false -o <输出目录>
+dotnet publish Source/Kuroe/Cli -c Release -p:UseAppHost=false -o <输出目录>
 ```
 
 两个入口可以发布到同一目录。Kuroe.Console 的产物包含 `source/`，见[导出资料](../user/reference/tools/source.md)。产物形态、目标机要求与工作目录见[安装与运行](../user/usage/install-and-run.md)。

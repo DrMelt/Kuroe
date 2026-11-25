@@ -8,10 +8,14 @@ internal static class RepositoryLayout
     internal static readonly string Root = FindRoot();
     internal static readonly string SourceRoot = Path.Combine(Root, "Source");
     internal static readonly string TestsRoot = Path.Combine(Root, "Tests");
-    internal static readonly string KernelRoot = Path.Combine(SourceRoot, "Kuroe.Kernel");
+
+    /// <summary>Kuroe 产品项目目录，通用库位于 Source 根。</summary>
+    internal static readonly string KuroeRoot = Path.Combine(SourceRoot, "Kuroe");
+
+    internal static readonly string KernelRoot = Path.Combine(KuroeRoot, "Kernel");
 
     /// <summary>执行能力目录，包含节点、运行器与工具。</summary>
-    internal static readonly string AbilityRoot = Path.Combine(SourceRoot, "Kuroe.Host", "Ability");
+    internal static readonly string AbilityRoot = Path.Combine(KuroeRoot, "Host", "Ability");
 
     internal static IReadOnlyList<string> InternalsVisibleTo(string project) =>
         [.. XDocument.Load(project)

@@ -4,10 +4,10 @@
 
 ```mermaid
 flowchart TD
-    Core["工具面与工具文件<br>Kuroe.Host/Ability/Tool/{Core,Json}"]
-    FileAccess["文件访问<br>Kuroe.Host/Ability/Tool/FileAccess"]
-    CommandTools["命令工具<br>Kuroe.Host/Ability/Tool/Implementation/{Command,Dotnet,Git}"]
-    Implementation["工具实现<br>Kuroe.Host/Ability/Tool/Implementation/{Contract,File,KuroeInfo,Source,Time}"]
+    Core["工具面与工具文件<br>Kuroe/Host/Ability/Tool/{Core,Json}"]
+    FileAccess["文件访问<br>Kuroe/Host/Ability/Tool/FileAccess"]
+    CommandTools["命令工具<br>Kuroe/Host/Ability/Tool/Implementation/{Command,Dotnet,Git}"]
+    Implementation["工具实现<br>Kuroe/Host/Ability/Tool/Implementation/{Contract,File,KuroeInfo,Source,Time}"]
     FileAccess --> Core
     CommandTools --> Core
     Implementation --> Core

@@ -10,11 +10,11 @@ public sealed class KernelControlTests
     [Fact(DisplayName = "流程运行期独立成项目")]
     public void Flow_runtime_lives_in_its_own_project()
     {
-        string runtime = Path.Combine(SourceRoot, "Kuroe.Kernel", "Control", "Runtime", "FlowRuntime.cs");
-        string project = Path.Combine(SourceRoot, "Kuroe.Kernel", "Control", "Runtime", "Kuroe.Kernel.Control.Runtime.csproj");
+        string runtime = Path.Combine(KuroeRoot, "Kernel", "Control", "Runtime", "FlowRuntime.cs");
+        string project = Path.Combine(KuroeRoot, "Kernel", "Control", "Runtime", "Kuroe.Kernel.Control.Runtime.csproj");
         string old = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Control",
             "Core",
             "Runtime",
@@ -28,9 +28,9 @@ public sealed class KernelControlTests
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core")));
+            IsUnder(reference, Path.Combine(KuroeRoot, "Flow", "Control", "Core")));
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Graph")));
+            IsUnder(reference, Path.Combine(KuroeRoot, "Flow", "Graph")));
     }
 
     [Fact(DisplayName = "流程恢复按身份解析")]
@@ -47,14 +47,14 @@ public sealed class KernelControlTests
             "Shared",
             "IFlowProviderSource.cs");
         string source = Path.Combine(
-            SourceRoot,
-            "Kuroe.Kernel",
+            KuroeRoot,
+            "Kernel",
             "Tasks",
             "Runtime",
             "FlowProviderSource.cs");
         string restore = Path.Combine(
-            SourceRoot,
-            "Kuroe.Kernel",
+            KuroeRoot,
+            "Kernel",
             "Tasks",
             "Runtime",
             "Persistence",
@@ -92,7 +92,7 @@ public sealed class KernelControlTests
 
         Assert.DoesNotContain(
             ProjectReferences(project),
-            reference => IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow")));
+            reference => IsUnder(reference, Path.Combine(KuroeRoot, "Flow")));
     }
 
     [Fact(DisplayName = "任务流程视图暴露待处理步骤")]
@@ -107,8 +107,8 @@ public sealed class KernelControlTests
     public void Flow_runtime_references_only_neutral_contracts()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Kernel",
+            KuroeRoot,
+            "Kernel",
             "Control",
             "Runtime",
             "Kuroe.Kernel.Control.Runtime.csproj");
@@ -155,7 +155,7 @@ public sealed class KernelControlTests
     [Fact(DisplayName = "流程模板目录使用提供方来源")]
     public void Flow_template_catalog_uses_provider_sources()
     {
-        string catalog = Path.Combine(SourceRoot, "Kuroe.Kernel", "Control", "Runtime", "FlowTemplateCatalog.cs");
+        string catalog = Path.Combine(KuroeRoot, "Kernel", "Control", "Runtime", "FlowTemplateCatalog.cs");
         string catalogText = File.ReadAllText(catalog);
 
         Assert.Contains("IFlowTemplateSource", catalogText, StringComparison.Ordinal);

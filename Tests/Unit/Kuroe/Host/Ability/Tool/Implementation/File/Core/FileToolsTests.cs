@@ -1,0 +1,1389 @@
+using System.Text;
+using ErrorOr;
+using Kuroe.Host.Platform;
+using Files.Shared;
+using Kuroe.TestSupport;
+using Kuroe.Host.Ability.Tool.FileAccess.Shared;
+using Kuroe.Kernel.Execution.Shared.Contract;
+using Kuroe.Kernel.Execution.Shared.Identity;
+using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Execution.Shared.Request;
+using Kuroe.Kernel.Execution.Shared.Runtime;
+using Xunit;
+
+namespace Kuroe.Host.Ability.Tool.Implementation.File.Tests;
+
+/// <summary>工作目录文件访问工具：参数解析、路径准入、结果渲染与读写效果。</summary>
+public sealed class FileToolsTests
+{
+    private static readonly string[] CsExtension = [".cs"];
+    private static readonly string[] ParentPath = [".."];
+
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+    private readonly InMemoryWorkspaceFiles _files = new();
+
+    [Fact(DisplayName = "读取默认读取整个文件并标注文件末尾")]
+    public void ReadFile_defaults_to_the_whole_file_and_notes_file_end()
+    {
+        _files.AddFile(PathOf("hello.txt"), "你好，工作目录！\n第二行");
+
+        string output = Call("ReadFile", ("path", "hello.txt"));
+
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n<<<KUROE_TEXT_BEGIN>>>1 |你好，工作目录！\n2 |第二行<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact(DisplayName = "读取保留 CRLF 行终止符")]
+    public void ReadFile_preserves_crlf_line_terminators()
+    {
+        _files.AddFile(PathOf("crlf.txt"), "一\r\n二\r\n");
+
+        string output = Call("ReadFile", ("path", "crlf.txt"), ("from", "1"), ("to", "2"));
+
+        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一\r\n2 |二\r\n<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact(DisplayName = "读取可以省略行号")]
+    public void ReadFile_can_omit_line_numbers()
+    {
+        _files.AddFile(PathOf("raw.txt"), "一\r\n二\r三\n四");
+
+        string output = Call("ReadFile", ("path", "raw.txt"), ("lineNumbers", false));
+
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 4 行）\n<<<KUROE_TEXT_BEGIN>>>一\r\n二\r三\n四<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact(DisplayName = "读取拒绝缺少路径参数")]
+    public void ReadFile_rejects_missing_path_argument()
+    {
+        Assert.Contains("缺少参数 path", Call("ReadFile"));
+    }
+
+    [Fact(DisplayName = "文件工具读取拒绝缺失文件")]
+    public void ReadFile_rejects_missing_file()
+    {
+        Assert.Contains("不存在", Call("ReadFile", ("path", "nope.txt")));
+    }
+
+    [Fact(DisplayName = "读取拒绝目录")]
+    public void ReadFile_rejects_directory()
+    {
+        _files.AddDirectory(PathOf("dir"));
+
+        string output = Call("ReadFile", ("path", "dir"));
+
+        Assert.Contains("是目录", output);
+        Assert.Contains("ListDirectory", output);
+    }
+
+    [Fact(DisplayName = "读取拒绝越出工作目录的路径")]
+    public void ReadFile_rejects_path_escaping_working_directory()
+    {
+        string relative = Path.Combine(_root, "..", "..", "outside.txt");
+
+        string output = Call("ReadFile", ("path", relative));
+
+        Assert.Contains("不在工作区内", output);
+    }
+
+    [Fact(DisplayName = "读取截断超出默认总上限的内容")]
+    public void ReadFile_truncates_content_beyond_the_default_total_limit()
+    {
+        _files.AddFile(
+            PathOf("long.txt"),
+            string.Concat(Enumerable.Repeat($"{new string('a', 200)}\n", 60)));
+
+        string output = Call("ReadFile", ("path", "long.txt"), ("to", "60"));
+
+        string notice = $"（内容超过 {ReadLimits.DefaultCharacters} 字符，已截断）\n";
+        const string Begin = "<<<KUROE_TEXT_BEGIN>>>";
+        const string End = "<<<KUROE_TEXT_END>>>";
+        Assert.StartsWith(notice + Begin, output, StringComparison.Ordinal);
+        Assert.EndsWith(End, output, StringComparison.Ordinal);
+        Assert.Equal(notice.Length + Begin.Length + ReadLimits.DefaultCharacters + End.Length, output.Length);
+    }
+
+    [Fact(DisplayName = "读取按默认行上限截断单行")]
+    public void ReadFile_truncates_a_line_at_the_default_line_limit()
+    {
+        _files.AddFile(PathOf("line.txt"), new string('a', 400));
+
+        string output = Call("ReadFile", ("path", "line.txt"), ("to", "1"));
+
+        Assert.Equal(
+            $"<<<KUROE_TEXT_BEGIN>>>1 |{new string('a', ReadLimits.DefaultLineCharacters)}（本行共 400 字符，已截断）<<<KUROE_TEXT_END>>>",
+            output);
+    }
+
+    [Fact(DisplayName = "读取把终止符计入行上限")]
+    public void ReadFile_counts_the_terminator_in_the_line_limit()
+    {
+        _files.AddFile(PathOf("line.txt"), $"{new string('a', 300)}\nnext");
+
+        string output = Call("ReadFile", ("path", "line.txt"), ("to", "2"));
+
+        Assert.Equal(
+            $"<<<KUROE_TEXT_BEGIN>>>1 |{new string('a', 300)}（本行共 301 字符，已截断）2 |next<<<KUROE_TEXT_END>>>",
+            output);
+    }
+
+    [Fact(DisplayName = "读取使用总字符与单行字符上限")]
+    public void ReadFile_uses_max_chars_and_max_line_chars()
+    {
+        _files.AddFile(PathOf("line.txt"), "abcdef");
+
+        string total = Call("ReadFile", ("path", "line.txt"), ("to", "1"), ("maxChars", "5"), ("maxLineChars", "100"));
+        string line = Call("ReadFile", ("path", "line.txt"), ("to", "1"), ("maxLineChars", "3"));
+
+        Assert.Equal(
+            "（内容超过 5 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>1 |ab<<<KUROE_TEXT_END>>>",
+            total);
+        Assert.Equal(
+            "<<<KUROE_TEXT_BEGIN>>>1 |abc（本行共 6 字符，已截断）<<<KUROE_TEXT_END>>>",
+            line);
+    }
+
+    [Fact(DisplayName = "读取接受最大总上限与更大的行上限")]
+    public void ReadFile_accepts_the_maximum_total_limit_and_a_larger_line_limit()
+    {
+        _files.AddFile(PathOf("short.txt"), "内容");
+
+        string output = Call(
+            "ReadFile",
+            ("path", "short.txt"),
+            ("maxChars", "50000"),
+            ("maxLineChars", "50001"));
+
+        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n<<<KUROE_TEXT_BEGIN>>>1 |内容<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Theory]
+    [InlineData("maxChars", "x", "要写成数字", Label = "最大字符非数字")]
+    [InlineData("maxChars", "0", "maxChars", Label = "最大字符为零")]
+    [InlineData("maxChars", "50001", "maxChars", Label = "最大字符超上限")]
+    [InlineData("maxLineChars", "x", "要写成数字", Label = "单行最大字符非数字")]
+    [InlineData("maxLineChars", "0", "maxLineChars", Label = "单行最大字符为零")]
+    public void ReadFile_rejects_invalid_limits(string name, string value, string expected)
+    {
+        string output = Call("ReadFile", ("path", "a.txt"), (name, value));
+
+        Assert.Contains(expected, output, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "读取读取精确行范围")]
+    public void ReadFile_reads_exact_line_range()
+    {
+        _files.AddFile(PathOf("lines.txt"), "一\n二\n三\n四\n五\n");
+
+        string output = Call("ReadFile", ("path", "lines.txt"), ("from", "2"), ("to", "4"));
+
+        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>2 |二\n3 |三\n4 |四\n<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact(DisplayName = "读取默认读取整个文件")]
+    public void ReadFile_defaults_to_the_whole_file()
+    {
+        _files.AddFile(
+            PathOf("many.txt"),
+            string.Concat(Enumerable.Range(1, 60).Select(line => $"L{line}\n")));
+
+        string output = Call("ReadFile", ("path", "many.txt"));
+
+        Assert.StartsWith(
+            "（已到文件结尾，实际返回第 1 到 61 行）\n<<<KUROE_TEXT_BEGIN>>> 1 |L1\n 2 |L2\n",
+            output,
+            StringComparison.Ordinal);
+        Assert.Contains("60 |L60\n", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("已截断", output, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "读取容忍超出文件末尾的结束行")]
+    public void ReadFile_tolerates_to_beyond_file_end()
+    {
+        _files.AddFile(PathOf("few.txt"), "一\n二\n");
+
+        string output = Call("ReadFile", ("path", "few.txt"), ("to", "100"));
+
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 3 行）\n<<<KUROE_TEXT_BEGIN>>>1 |一\n2 |二\n3 |<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact(DisplayName = "读取拒绝超出文件末尾的起始行")]
+    public void ReadFile_rejects_from_beyond_file_end()
+    {
+        _files.AddFile(PathOf("few.txt"), "一\n二\n");
+
+        string output = Call("ReadFile", ("path", "few.txt"), ("from", "4"), ("to", "20"));
+
+        Assert.Contains("超出文件长度", output);
+    }
+
+    [Fact(DisplayName = "读取拒绝结束行小于起始行")]
+    public void ReadFile_rejects_to_below_from()
+    {
+        string output = Call("ReadFile", ("path", "a.txt"), ("from", "5"), ("to", "3"));
+
+        Assert.Contains("to 不能小于", output);
+    }
+
+    [Fact(DisplayName = "读取拒绝非数字行号")]
+    public void ReadFile_rejects_non_numeric_line_numbers()
+    {
+        Assert.Contains("from 要写成数字", Call("ReadFile", ("path", "a.txt"), ("from", "x")));
+        Assert.Contains("to 要写成数字", Call("ReadFile", ("path", "a.txt"), ("to", "x")));
+    }
+
+    [Fact(DisplayName = "读取拒绝小于一的起始行")]
+    public void ReadFile_rejects_from_below_one()
+    {
+        string output = Call("ReadFile", ("path", "a.txt"), ("from", "0"));
+
+        Assert.Contains("from 从 1 起", output);
+    }
+
+    [Fact(DisplayName = "搜索按文件分组匹配并给出行号")]
+    public void SearchText_groups_matches_by_file_with_numbered_lines()
+    {
+        _files.AddFile(
+            PathOf("a.txt"),
+            string.Join('\n', Enumerable.Range(1, 12).Select(line => line is 3 or 12 ? "needle" : $"L{line}")));
+        _files.AddFile(PathOf("sub/b.txt"), "one\ntwo\nneedle");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        string expected = string.Join('\n',
+            "在 路径基准根 中匹配 3 处：",
+            "a.txt",
+            " 3 |needle",
+            "12 |needle",
+            Path.Combine("sub", "b.txt"),
+            "3 |needle");
+        Assert.Equal(expected, output);
+    }
+
+    [Fact(DisplayName = "搜索统计每行的每个匹配")]
+    public void SearchText_counts_each_occurrence_on_a_line()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle needle");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.Contains("在 路径基准根 中匹配 2 处：", output);
+        Assert.Contains("1 |needle needle", output);
+    }
+
+    [Fact(DisplayName = "文件工具搜索按范围与扩展名过滤")]
+    public void SearchText_filters_by_scope_and_extension()
+    {
+        _files.AddFile(PathOf("Source/a.cs"), "needle");
+        _files.AddFile(PathOf("Source/b.md"), "needle");
+        _files.AddFile(PathOf("Tests/c.cs"), "needle");
+        string[] paths = ["Source"];
+
+        string output = Call("SearchText", ("pattern", "needle"), ("paths", paths), ("extensions", CsExtension));
+
+        Assert.Contains(Path.Combine("Source", "a.cs"), output);
+        Assert.DoesNotContain("b.md", output);
+        Assert.DoesNotContain(Path.Combine("Tests", "c.cs"), output);
+    }
+
+    [Fact(DisplayName = "搜索区分大小写并接受内联大小写选项")]
+    public void SearchText_is_case_sensitive_and_accepts_inline_regex_case()
+    {
+        _files.AddFile(PathOf("a.txt"), "Needle");
+
+        Assert.Contains("没有匹配", Call("SearchText", ("pattern", "needle")));
+        Assert.Contains("Needle", Call("SearchText", ("pattern", "(?i)needle"), ("regex", true)));
+    }
+
+    [Fact(DisplayName = "搜索拒绝空模式")]
+    public void SearchText_rejects_empty_pattern()
+    {
+        Assert.Contains("pattern", Call("SearchText", ("pattern", "")));
+    }
+
+    [Fact(DisplayName = "文件工具搜索接受空白模式")]
+    public void SearchText_accepts_a_whitespace_pattern()
+    {
+        _files.AddFile(PathOf("a.txt"), "a b");
+
+        string output = Call("SearchText", ("pattern", " "));
+
+        Assert.Contains("在 路径基准根 中匹配 1 处：", output);
+    }
+
+    [Fact(DisplayName = "搜索接受正则模式")]
+    public void SearchText_accepts_a_regex_pattern()
+    {
+        _files.AddFile(PathOf("a.txt"), "L1\nL22");
+
+        string output = Call("SearchText", ("pattern", "^L\\d+$"), ("regex", true));
+
+        Assert.Contains("在 路径基准根 中匹配 2 处：", output);
+        Assert.Contains("2 |L22", output);
+    }
+
+    [Fact(DisplayName = "搜索拒绝非法正则")]
+    public void SearchText_rejects_an_invalid_regex()
+    {
+        _files.AddFile(PathOf("a.txt"), "text");
+
+        string output = Call("SearchText", ("pattern", "("), ("regex", true));
+
+        Assert.Contains("pattern", output);
+    }
+
+    [Fact(DisplayName = "搜索拒绝越出工作目录的路径")]
+    public void SearchText_rejects_path_escaping_working_directory()
+    {
+        string output = Call("SearchText", ("pattern", "x"), ("paths", ParentPath));
+
+        Assert.Contains("不在工作区内", output);
+    }
+
+    [Fact(DisplayName = "文件工具搜索跳过禁止目录")]
+    public void SearchText_skips_denied_directories()
+    {
+        _files.AddFile(PathOf(".kuroe/catalog.json"), "needle");
+        _files.AddFile(PathOf("visible.txt"), "needle");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.Contains("visible.txt", output);
+        Assert.DoesNotContain(".kuroe", output);
+    }
+
+    [Fact(DisplayName = "范围为空时搜索报告没有文件")]
+    public void SearchText_reports_no_file_when_scope_is_empty()
+    {
+        _files.AddDirectory(_root);
+
+        Assert.Contains("没有可搜索的文件", Call("SearchText", ("pattern", "needle")));
+    }
+
+    [Fact(DisplayName = "搜索接受单个路径字符串")]
+    public void SearchText_accepts_a_single_path_string()
+    {
+        _files.AddFile(PathOf("Source/a.txt"), "needle");
+        _files.AddFile(PathOf("b.md"), "needle");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("paths", "Source"));
+
+        Assert.Contains(Path.Combine("Source", "a.txt"), output);
+        Assert.DoesNotContain("b.md", output);
+        Assert.Contains("在 Source 中匹配", output);
+    }
+
+    [Fact(DisplayName = "搜索拒绝空白标量路径")]
+    public void SearchText_rejects_a_blank_scalar_path()
+    {
+        string output = Call("SearchText", ("pattern", "needle"), ("paths", " "));
+
+        Assert.Contains("paths", output);
+        Assert.Contains("不能为空", output);
+    }
+
+    [Fact(DisplayName = "搜索按字符上限截断输出")]
+    public void SearchText_truncates_output_at_the_character_limit()
+    {
+        _files.AddFile(
+            PathOf("long.txt"),
+            string.Join('\n', Enumerable.Range(1, 12).Select(_ => $"needle{new string('a', 995)}")));
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        const string Notice = "（内容超过 8000 字符，已截断）\n";
+        Assert.StartsWith(Notice, output, StringComparison.Ordinal);
+        Assert.Equal(Notice.Length + 8000, output.Length);
+        Assert.Contains("（本行共 1002 字符，展示行内容第 1 至 1000 字符）", output, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "展示达到上限行时搜索不标记")]
+    public void SearchText_does_not_mark_a_line_at_the_display_limit()
+    {
+        string line = $"needle{new string('a', 994)}";
+        _files.AddFile(PathOf("a.txt"), line);
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.EndsWith($"1 |{line}", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("（本行共", output, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "展示上限之后的匹配仍被搜索报告")]
+    public void SearchText_reports_a_match_after_the_display_limit()
+    {
+        _files.AddFile(PathOf("a.txt"), $"{new string('a', 1000)}needle");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.Contains("needle", output, StringComparison.Ordinal);
+        Assert.Contains("（本行共 1006 字符，展示行内容第 7 至 1006 字符）", output, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "搜索保留匹配行的末尾空白")]
+    public void SearchText_keeps_trailing_whitespace_of_matched_lines()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle \n");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.EndsWith("1 |needle ", output, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "唯一搜索返回唯一匹配")]
+    public void SearchText_unique_returns_the_single_occurrence()
+    {
+        _files.AddFile(PathOf("a.txt"), "before\nneedle\nafter");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("匹配 1 处", output);
+        Assert.Contains("2 |needle", output);
+    }
+
+    [Fact(DisplayName = "唯一搜索接受单个正则匹配")]
+    public void SearchText_unique_accepts_a_single_regex_occurrence()
+    {
+        _files.AddFile(PathOf("a.txt"), "before\nL22\nafter");
+
+        string output = Call("SearchText", ("pattern", @"L\d+"), ("regex", true), ("unique", true));
+
+        Assert.Contains("匹配 1 处", output);
+        Assert.Contains("2 |L22", output);
+    }
+
+    [Fact(DisplayName = "唯一搜索拒绝没有匹配")]
+    public void SearchText_unique_rejects_no_occurrence()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle");
+
+        string output = Call("SearchText", ("pattern", "other"), ("unique", true));
+
+        Assert.Equal("在 路径基准根 中 other 出现 0 次，不是唯一匹配。", output);
+    }
+
+    [Fact(DisplayName = "唯一搜索报告没有可搜索文件")]
+    public void SearchText_unique_reports_no_searchable_file()
+    {
+        _files.AddDirectory(_root);
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Equal("在 路径基准根 中没有可搜索的文件。", output);
+    }
+
+    [Fact(DisplayName = "唯一搜索拒绝跨多行")]
+    public void SearchText_unique_rejects_multiple_lines()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle\nneedle");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("至少出现 2 处", output);
+        Assert.Contains("不是唯一匹配", output);
+        Assert.Contains("1 |needle", output);
+    }
+
+    [Fact(DisplayName = "唯一搜索拒绝长行中的第二个匹配")]
+    public void SearchText_unique_rejects_a_second_occurrence_in_a_long_line()
+    {
+        _files.AddFile(
+            PathOf("a.txt"),
+            $"needle{new string('a', 9000)}\nneedle");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("至少出现 2 处", output);
+    }
+
+    [Fact(DisplayName = "唯一搜索接受长行中的单个匹配")]
+    public void SearchText_unique_accepts_a_single_occurrence_in_a_long_line()
+    {
+        _files.AddFile(PathOf("a.txt"), $"needle{new string('a', 9000)}");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("匹配 1 处", output);
+        Assert.Contains("1 |needle", output);
+    }
+
+    [Fact(DisplayName = "唯一搜索拒绝同一行的多个匹配")]
+    public void SearchText_unique_rejects_multiple_occurrences_on_one_line()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle needle");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("至少出现 2 处", output);
+        Assert.Contains("1 |needle needle", output);
+    }
+
+    [Fact(DisplayName = "省略路径时列目录列出根")]
+    public void ListDirectory_lists_root_when_path_omitted()
+    {
+        _files.AddFile(PathOf("a.txt"), "x");
+        _files.AddDirectory(PathOf("b"));
+
+        string output = Call("ListDirectory");
+
+        Assert.Contains("路径基准根 的条目（2）", output);
+        Assert.Contains("  a.txt", output);
+        Assert.Contains("  b/", output);
+    }
+
+    [Fact(DisplayName = "列目录列出子目录")]
+    public void ListDirectory_lists_subdirectory()
+    {
+        _files.AddFile(PathOf("sub/a.txt"), "x");
+
+        Assert.Contains("  a.txt", Call("ListDirectory", ("path", "sub")));
+    }
+
+    [Fact(DisplayName = "列目录拒绝缺失目录")]
+    public void ListDirectory_rejects_missing_directory()
+    {
+        Assert.Contains("不存在", Call("ListDirectory", ("path", "nope")));
+    }
+
+    [Fact(DisplayName = "列目录拒绝文件路径")]
+    public void ListDirectory_rejects_file_path()
+    {
+        _files.AddFile(PathOf("a.txt"), "x");
+
+        string output = Call("ListDirectory", ("path", "a.txt"));
+
+        Assert.Contains("是文件", output);
+        Assert.Contains("ReadFile", output);
+    }
+
+    [Fact(DisplayName = "列目录拒绝越出工作目录的路径")]
+    public void ListDirectory_rejects_path_escaping_working_directory()
+    {
+        Assert.Contains("不在工作区内", Call("ListDirectory", ("path", "..")));
+    }
+
+    [Fact(DisplayName = "写文件创建含内容的文件")]
+    public void WriteFile_creates_file_with_content()
+    {
+        string output = Call("WriteFile", ("path", "notes.txt"), ("content", "记下要点\n第二行"));
+
+        Assert.Equal("已写入 8 字符到 notes.txt。", output);
+        Assert.Equal("记下要点\n第二行", ReadText("notes.txt"));
+    }
+
+    [Fact(DisplayName = "写文件覆盖已有文件")]
+    public void WriteFile_overwrites_existing_file()
+    {
+        _files.AddFile(PathOf("notes.txt"), "旧内容");
+
+        string output = Call("WriteFile", ("path", "notes.txt"), ("content", "新内容"));
+
+        Assert.Equal("已写入 3 字符到 notes.txt。", output);
+        Assert.Equal("新内容", ReadText("notes.txt"));
+    }
+
+    [Fact(DisplayName = "写文件创建缺失的父目录")]
+    public void WriteFile_creates_missing_parent_directories()
+    {
+        string output = Call("WriteFile", ("path", "a/b/c.txt"), ("content", "x"));
+
+        Assert.Equal("已写入 1 字符到 a/b/c.txt。", output);
+        Assert.True(_files.FileExists(PathOf("a/b/c.txt")));
+    }
+
+    [Fact(DisplayName = "写文件以空内容创建空文件")]
+    public void WriteFile_creates_empty_file_with_empty_content()
+    {
+        string output = Call("WriteFile", ("path", "empty.txt"), ("content", ""));
+
+        Assert.Equal("已写入 0 字符到 empty.txt。", output);
+        Assert.True(_files.FileExists(PathOf("empty.txt")));
+        Assert.Empty(ReadText("empty.txt"));
+    }
+
+    [Fact(DisplayName = "写文件拒绝缺少参数")]
+    public void WriteFile_rejects_missing_arguments()
+    {
+        Assert.Contains("缺少参数 path", Call("WriteFile", ("content", "x")));
+        Assert.Contains("缺少参数 content", Call("WriteFile", ("path", "a.txt")));
+    }
+
+    [Fact(DisplayName = "写文件拒绝越出工作目录的路径")]
+    public void WriteFile_rejects_path_escaping_working_directory()
+    {
+        string output = Call("WriteFile", ("path", ".."), ("content", "x"));
+
+        Assert.Contains("不在工作区内", output);
+    }
+
+    [Fact(DisplayName = "写文件在目标是目录时拒绝")]
+    public void WriteFile_rejects_when_target_is_directory()
+    {
+        _files.AddDirectory(PathOf("dir"));
+
+        string output = Call("WriteFile", ("path", "dir"), ("content", "x"));
+
+        Assert.Contains("是目录", output);
+    }
+
+    [Fact(DisplayName = "写文件拒绝超出上限的内容")]
+    public void WriteFile_rejects_content_beyond_limit()
+    {
+        string output = Call("WriteFile", ("path", "big.txt"), ("content", new string('a', 40001)));
+
+        Assert.Contains("超过上限", output);
+        Assert.False(_files.FileExists(PathOf("big.txt")));
+    }
+
+    [Fact(DisplayName = "设置编码时写文件写入带 BOM 的 UTF-16")]
+    public void WriteFile_writes_utf16_with_bom_when_encoding_set()
+    {
+        string output = Call("WriteFile", ("path", "utf16.txt"), ("content", "内容"), ("encoding", "utf-16"));
+
+        Assert.Equal("已写入 2 字符到 utf16.txt。", output);
+        byte[] written = ReadBytes("utf16.txt");
+        Assert.Equal(0xFF, written[0]);
+        Assert.Equal(0xFE, written[1]);
+        Assert.Equal("内容", Encoding.Unicode.GetString(written, 2, written.Length - 2));
+    }
+
+    [Fact(DisplayName = "写文件拒绝未知编码")]
+    public void WriteFile_rejects_unknown_encoding()
+    {
+        string output = Call("WriteFile", ("path", "bad.txt"), ("content", "x"), ("encoding", "gbk"));
+
+        Assert.Contains("encoding 只支持", output);
+        Assert.False(_files.FileExists(PathOf("bad.txt")));
+    }
+
+    [Fact(DisplayName = "文件信息报告大小与时间")]
+    public void GetFileInfo_reports_size_and_times()
+    {
+        string target = PathOf("notes.txt");
+        _files.AddFile(target, "x");
+        DateTimeOffset at = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        _files.SetFacts(target, new FileFacts(42, at, at, at, FileAttributes.Archive));
+
+        string output = Call("GetFileInfo", ("path", "notes.txt"));
+
+        Assert.StartsWith("notes.txt\n", output);
+        Assert.Contains("大小：42 字节", output);
+        Assert.Contains("创建时间：2026-01-02 03:04:05", output);
+        Assert.Contains("修改时间：2026-01-02 03:04:05", output);
+        Assert.Contains("访问时间：2026-01-02 03:04:05", output);
+        Assert.Contains("属性：归档", output);
+    }
+
+    [Fact(DisplayName = "文件信息报告只读属性")]
+    public void GetFileInfo_reports_read_only_attribute()
+    {
+        string target = PathOf("notes.txt");
+        _files.AddFile(target, "x");
+        DateTimeOffset at = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        _files.SetFacts(target, new FileFacts(1, at, at, at, FileAttributes.ReadOnly));
+
+        string output = Call("GetFileInfo", ("path", "notes.txt"));
+
+        Assert.Contains("属性：", output);
+        Assert.Contains("只读", output);
+    }
+
+    [Fact(DisplayName = "文件信息拒绝缺少路径参数")]
+    public void GetFileInfo_rejects_missing_path_argument()
+    {
+        Assert.Contains("缺少参数 path", Call("GetFileInfo"));
+    }
+
+    [Fact(DisplayName = "文件信息拒绝缺失文件")]
+    public void GetFileInfo_rejects_missing_file()
+    {
+        Assert.Contains("不存在", Call("GetFileInfo", ("path", "nope.txt")));
+    }
+
+    [Fact(DisplayName = "文件信息拒绝目录")]
+    public void GetFileInfo_rejects_directory()
+    {
+        _files.AddDirectory(PathOf("dir"));
+
+        string output = Call("GetFileInfo", ("path", "dir"));
+
+        Assert.Contains("是目录", output);
+        Assert.Contains("ListDirectory", output);
+    }
+
+    [Fact(DisplayName = "文件信息拒绝越出工作目录的路径")]
+    public void GetFileInfo_rejects_path_escaping_working_directory()
+    {
+        Assert.Contains("不在工作区内", Call("GetFileInfo", ("path", "..")));
+    }
+
+    [Fact(DisplayName = "移动文件就地重命名")]
+    public void MoveFile_renames_file_in_place()
+    {
+        _files.AddFile(PathOf("old.txt"), "内容");
+
+        string output = Call("MoveFile", ("source", "old.txt"), ("target", "new.txt"));
+
+        Assert.Equal("已把 old.txt 移动到 new.txt。", output);
+        Assert.False(_files.FileExists(PathOf("old.txt")));
+        Assert.Equal("内容", ReadText("new.txt"));
+    }
+
+    [Fact(DisplayName = "移动文件并创建缺失父目录")]
+    public void MoveFile_moves_file_and_creates_missing_parent_directory()
+    {
+        _files.AddFile(PathOf("a.txt"), "A内容");
+
+        string output = Call("MoveFile", ("source", "a.txt"), ("target", "nested/dir/b.txt"));
+
+        Assert.Equal("已把 a.txt 移动到 nested/dir/b.txt。", output);
+        Assert.Equal("A内容", ReadText("nested/dir/b.txt"));
+    }
+
+    [Fact(DisplayName = "移动目录连同其条目重命名")]
+    public void MoveFile_renames_directory_with_its_entries()
+    {
+        _files.AddFile(PathOf("old/a.txt"), "A内容");
+
+        string output = Call("MoveFile", ("source", "old"), ("target", "new"));
+
+        Assert.Equal("已把 old 移动到 new。", output);
+        Assert.False(_files.DirectoryExists(PathOf("old")));
+        Assert.Equal("A内容", ReadText("new/a.txt"));
+    }
+
+    [Fact(DisplayName = "移动拒绝缺少参数")]
+    public void MoveFile_rejects_missing_arguments()
+    {
+        Assert.Contains("缺少参数 source", Call("MoveFile", ("target", "b.txt")));
+        Assert.Contains("缺少参数 target", Call("MoveFile", ("source", "a.txt")));
+    }
+
+    [Fact(DisplayName = "移动拒绝缺失来源")]
+    public void MoveFile_rejects_missing_source()
+    {
+        Assert.Contains("不存在", Call("MoveFile", ("source", "nope.txt"), ("target", "b.txt")));
+        Assert.False(_files.FileExists(PathOf("b.txt")));
+    }
+
+    [Fact(DisplayName = "移动拒绝已存在的目标")]
+    public void MoveFile_rejects_existing_target()
+    {
+        _files.AddFile(PathOf("a.txt"), "A");
+        _files.AddFile(PathOf("b.txt"), "B");
+
+        string output = Call("MoveFile", ("source", "a.txt"), ("target", "b.txt"));
+
+        Assert.Contains("已存在", output);
+        Assert.Equal("B", ReadText("b.txt"));
+        Assert.Equal("A", ReadText("a.txt"));
+    }
+
+    [Fact(DisplayName = "移动拒绝越出工作目录的路径")]
+    public void MoveFile_rejects_path_escaping_working_directory()
+    {
+        _files.AddFile(PathOf("a.txt"), "x");
+
+        Assert.Contains("不在工作区内", Call("MoveFile", ("source", ".."), ("target", "b.txt")));
+        Assert.Contains("不在工作区内", Call("MoveFile", ("source", "a.txt"), ("target", "../b.txt")));
+        Assert.True(_files.FileExists(PathOf("a.txt")));
+    }
+
+    [Fact(DisplayName = "移动拒绝把目录移入自身")]
+    public void MoveFile_rejects_moving_directory_into_itself()
+    {
+        _files.AddDirectory(PathOf("old"));
+
+        string output = Call("MoveFile", ("source", "old"), ("target", "old/sub"));
+
+        Assert.Contains("自身子目录", output);
+        Assert.True(_files.DirectoryExists(PathOf("old")));
+        Assert.False(_files.DirectoryExists(PathOf("old/sub")));
+    }
+
+    [Fact(DisplayName = "移动工具的说明提示重命名")]
+    public void MoveFile_description_hints_rename()
+    {
+        ToolDefinition definition = Face().SelectMany(tool => tool.Functions)
+            .Single(function => function.Definition.Path.Value == "file/write/MoveFile")
+            .Definition;
+
+        Assert.Contains("重命名", definition.Description);
+    }
+
+    [Fact(DisplayName = "删除工具删除文件")]
+    public void DeleteFile_deletes_file()
+    {
+        _files.AddFile(PathOf("notes.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", "notes.txt"));
+
+        Assert.Equal("已删除文件 notes.txt。", output);
+        Assert.False(_files.FileExists(PathOf("notes.txt")));
+    }
+
+    [Fact(DisplayName = "删除拒绝缺少路径参数")]
+    public void DeleteFile_rejects_missing_path_argument()
+    {
+        Assert.Contains("缺少参数 path", Call("DeleteFile"));
+    }
+
+    [Fact(DisplayName = "删除拒绝缺失路径")]
+    public void DeleteFile_rejects_missing_path()
+    {
+        string output = Call("DeleteFile", ("path", "nope.txt"));
+
+        Assert.Contains("不存在", output);
+    }
+
+    [Fact(DisplayName = "删除空目录")]
+    public void DeleteFile_deletes_empty_directory()
+    {
+        _files.AddDirectory(PathOf("empty"));
+
+        string output = Call("DeleteFile", ("path", "empty"));
+
+        Assert.Equal("已删除目录 empty。", output);
+        Assert.False(_files.DirectoryExists(PathOf("empty")));
+    }
+
+    [Fact(DisplayName = "删除拒绝非空目录除非递归")]
+    public void DeleteFile_rejects_non_empty_directory_without_recursive()
+    {
+        _files.AddFile(PathOf("dir/a.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", "dir"));
+
+        Assert.Contains("不为空", output);
+        Assert.True(_files.FileExists(PathOf("dir/a.txt")));
+    }
+
+    [Fact(DisplayName = "递归时删除含内容的目录")]
+    public void DeleteFile_deletes_directory_with_contents_when_recursive()
+    {
+        _files.AddFile(PathOf("dir/a.txt"), "x");
+        _files.AddFile(PathOf("dir/nested/b.txt"), "y");
+
+        string output = Call("DeleteFile", ("path", "dir"), ("recursive", true));
+
+        Assert.Equal("已删除目录 dir。", output);
+        Assert.False(_files.DirectoryExists(PathOf("dir")));
+    }
+
+    [Fact(DisplayName = "删除拒绝越出工作目录的路径")]
+    public void DeleteFile_rejects_path_escaping_working_directory()
+    {
+        _files.AddFile(PathOf("a.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", ".."));
+
+        Assert.Contains("不在工作区内", output);
+        Assert.True(_files.FileExists(PathOf("a.txt")));
+    }
+
+    [Fact(DisplayName = "删除拒绝路径基准本身")]
+    public void DeleteFile_rejects_the_path_base_itself()
+    {
+        _files.AddFile(PathOf("a.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", "."), ("recursive", true));
+
+        Assert.Contains("路径基准目录本身", output);
+        Assert.True(_files.FileExists(PathOf("a.txt")));
+    }
+
+    [Fact(DisplayName = "删除拒绝带末尾分隔符的路径基准")]
+    public void DeleteFile_rejects_the_path_base_with_a_trailing_separator()
+    {
+        _files.AddFile(PathOf("a.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", $".{Path.DirectorySeparatorChar}"), ("recursive", true));
+
+        Assert.Contains("路径基准目录本身", output);
+        Assert.True(_files.FileExists(PathOf("a.txt")));
+    }
+
+    [Fact(DisplayName = "根绑定带末尾分隔符时删除拒绝路径基准")]
+    public void DeleteFile_rejects_the_path_base_when_the_root_binding_has_a_trailing_separator()
+    {
+        _files.AddFile(PathOf("a.txt"), "x");
+
+        DeleteFileTool tool = new(_root + Path.DirectorySeparatorChar, _files);
+        string output = ToolResult.Render(tool.Functions.Single().Invoke(
+            new ToolArguments(new Dictionary<string, object?> { ["path"] = ".", ["recursive"] = true })));
+
+        Assert.Contains("路径基准目录本身", output);
+        Assert.True(_files.FileExists(PathOf("a.txt")));
+    }
+
+    [Fact(DisplayName = "删除拒绝禁止目录")]
+    public void DeleteFile_rejects_the_denied_directories()
+    {
+        _files.AddFile(PathOf(".kuroe/catalog.json"), "密钥");
+        _files.AddFile(PathOf(".git/config"), "仓库配置");
+
+        Assert.Contains("黑名单", Call("DeleteFile", ("path", ".kuroe/catalog.json")));
+        Assert.Contains("黑名单", Call("DeleteFile", ("path", ".git"), ("recursive", true)));
+        Assert.True(_files.FileExists(PathOf(".kuroe/catalog.json")));
+        Assert.True(_files.FileExists(PathOf(".git/config")));
+    }
+
+    [Fact(DisplayName = "替换跨文件替换并报告行")]
+    public void ReplaceText_replaces_across_files_and_reports_lines()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle\nneedle");
+        _files.AddFile(PathOf("sub/b.txt"), "needle");
+        string[] paths = ["."];
+        string[] extensions = ["txt"];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "needle"),
+            ("replacement", "x"),
+            ("extensions", extensions));
+
+        Assert.Contains("已替换 2 个文件的 3 处文本", output);
+        Assert.Contains("a.txt：2 处，第 1、2 行", output);
+        Assert.Contains(Path.Combine("sub", "b.txt") + "：1 处，第 1 行", output);
+        Assert.Equal("x\nx", ReadText("a.txt"));
+        Assert.Equal("x", ReadText("sub/b.txt"));
+    }
+
+    [Fact(DisplayName = "文件工具替换试运行不写入")]
+    public void ReplaceText_dry_run_does_not_write()
+    {
+        string file = PathOf("a.txt");
+        _files.AddFile(file, "needle");
+        string[] paths = ["."];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "needle"),
+            ("replacement", "x"),
+            ("dryRun", true));
+
+        Assert.Contains("将替换 1 个文件的 1 处文本", output);
+        Assert.Equal("needle", ReadText("a.txt"));
+    }
+
+    [Fact(DisplayName = "替换接受单个路径字符串")]
+    public void ReplaceText_accepts_a_single_path_string()
+    {
+        _files.AddFile(PathOf("Source/a.txt"), "needle");
+        _files.AddFile(PathOf("b.txt"), "needle");
+
+        string output = Call("ReplaceText", ("paths", "Source"), ("pattern", "needle"), ("replacement", "x"));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        Assert.Equal("x", ReadText("Source/a.txt"));
+        Assert.Equal("needle", ReadText("b.txt"));
+    }
+
+    [Fact(DisplayName = "同一行多个匹配时替换只报告一行")]
+    public void ReplaceText_reports_one_line_for_multiple_matches_on_the_same_line()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle needle");
+        string[] paths = ["."];
+
+        string output = Call("ReplaceText", ("paths", paths), ("pattern", "needle"), ("replacement", "x"));
+
+        Assert.Contains("已替换 1 个文件的 2 处文本", output);
+        Assert.Contains("a.txt：2 处，第 1 行", output);
+    }
+
+    [Fact(DisplayName = "设置编码时替换写入带 BOM 的 UTF-16")]
+    public void ReplaceText_writes_utf16_with_bom_when_encoding_set()
+    {
+        string file = PathOf("a.txt");
+        _files.AddFile(file, "needle");
+        string[] paths = ["."];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "needle"),
+            ("replacement", "替换"),
+            ("encoding", "utf-16"));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        byte[] bytes = ReadBytes("a.txt");
+        Assert.Equal(new byte[] { 0xFF, 0xFE }, bytes[..2]);
+        Assert.Equal("替换", Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2));
+    }
+
+    [Fact(DisplayName = "替换拒绝缺少路径")]
+    public void ReplaceText_rejects_missing_paths()
+    {
+        string output = Call("ReplaceText", ("pattern", "x"), ("replacement", "y"));
+
+        Assert.Contains("缺少参数 paths", output);
+    }
+
+    [Fact(DisplayName = "替换拒绝空模式与未知编码")]
+    public void ReplaceText_rejects_empty_pattern_and_unknown_encoding()
+    {
+        string[] paths = ["."];
+
+        Assert.Contains("pattern", Call("ReplaceText", ("paths", paths), ("pattern", ""), ("replacement", "y")));
+        Assert.Contains(
+            "encoding 只支持",
+            Call("ReplaceText", ("paths", paths), ("pattern", "x"), ("replacement", "y"), ("encoding", "gbk")));
+    }
+
+    [Fact(DisplayName = "替换接受空白模式")]
+    public void ReplaceText_accepts_a_whitespace_pattern()
+    {
+        _files.AddFile(PathOf("a.txt"), "a b");
+        string[] paths = ["a.txt"];
+
+        string output = Call("ReplaceText", ("paths", paths), ("pattern", " "), ("replacement", "_"));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        Assert.Equal("a_b", ReadText("a.txt"));
+    }
+
+    [Fact(DisplayName = "替换报告没有匹配")]
+    public void ReplaceText_reports_no_match()
+    {
+        _files.AddFile(PathOf("a.txt"), "other");
+        string[] paths = ["."];
+
+        string output = Call("ReplaceText", ("paths", paths), ("pattern", "needle"), ("replacement", "x"));
+
+        Assert.Contains("没有匹配", output);
+        Assert.Equal("other", ReadText("a.txt"));
+    }
+
+    [Fact(DisplayName = "替换拒绝禁止目录")]
+    public void ReplaceText_rejects_the_denied_directories()
+    {
+        _files.AddFile(PathOf(".kuroe/catalog.json"), "needle");
+        string[] paths = [".kuroe/catalog.json"];
+
+        string output = Call("ReplaceText", ("paths", paths), ("pattern", "needle"), ("replacement", "x"));
+
+        Assert.Contains("黑名单", output);
+    }
+
+    [Fact(DisplayName = "文件工具替换展开正则分组引用")]
+    public void ReplaceText_expands_regex_group_references()
+    {
+        _files.AddFile(PathOf("a.txt"), "abc123");
+        string[] paths = ["a.txt"];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "([a-z]+)(\\d+)"),
+            ("replacement", "$2-$1"),
+            ("regex", true));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        Assert.Equal("123-abc", ReadText("a.txt"));
+    }
+
+    [Fact(DisplayName = "替换保留未知分组引用为字面量")]
+    public void ReplaceText_keeps_unknown_group_references_literal()
+    {
+        _files.AddFile(PathOf("a.txt"), "abc");
+        string[] paths = ["a.txt"];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "(?<word>[a-z]+)"),
+            ("replacement", "${nope}"),
+            ("regex", true));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        Assert.Equal("${nope}", ReadText("a.txt"));
+    }
+
+    [Fact(DisplayName = "替换拒绝非法正则且不写入")]
+    public void ReplaceText_rejects_an_invalid_regex_without_writing()
+    {
+        _files.AddFile(PathOf("a.txt"), "text");
+        string[] paths = ["a.txt"];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "("),
+            ("replacement", "x"),
+            ("regex", true));
+
+        Assert.Contains("pattern", output);
+        Assert.Equal("text", ReadText("a.txt"));
+    }
+
+    [Fact(DisplayName = "替换把路径声明为必填路径列表")]
+    public void ReplaceText_declares_paths_as_a_required_path_list()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        ToolParameter paths = Parameter(definitions, "ReplaceText", "paths");
+
+        Assert.True(paths.Required);
+        Assert.True(paths.List);
+        Assert.True(paths.Path);
+        Assert.False(Parameter(definitions, "ReplaceText", "replacement").Path);
+    }
+
+    [Fact(DisplayName = "工具面函数拆分为读取与写入两组")]
+    public void Face_functions_split_into_read_and_write_groups()
+    {
+        Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
+            .ToDictionary(function => function.Definition.Path.Name.Value, function => function.Definition.Path.Value);
+
+        string[] readFunctions = ["ReadFile", "SearchText", "ListDirectory", "GetFileInfo"];
+        string[] writeFunctions = ["WriteFile", "ReplaceText", "MoveFile", "DeleteFile"];
+        foreach (string name in readFunctions)
+        {
+            Assert.Equal($"file/read/{name}", paths[name]);
+        }
+
+        foreach (string name in writeFunctions)
+        {
+            Assert.Equal($"file/write/{name}", paths[name]);
+        }
+    }
+
+    [Fact(DisplayName = "工具面声明路径参数")]
+    public void Face_declares_path_parameters()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        Assert.All(
+            [
+                ("ReadFile", "path"),
+                ("SearchText", "paths"),
+                ("ListDirectory", "path"),
+                ("GetFileInfo", "path"),
+                ("WriteFile", "path"),
+                ("ReplaceText", "paths"),
+                ("MoveFile", "source"),
+                ("MoveFile", "target"),
+                ("DeleteFile", "path"),
+            ],
+            entry => Assert.True(Parameter(definitions, entry.Item1, entry.Item2).Path));
+
+        Assert.False(Parameter(definitions, "WriteFile", "content").Path);
+        Assert.False(Parameter(definitions, "ReadFile", "from").Path);
+    }
+
+    [Fact(DisplayName = "读取把行号声明为可选开关")]
+    public void ReadFile_declares_line_numbers_as_an_optional_switch()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        ToolParameter lineNumbers = Parameter(definitions, "ReadFile", "lineNumbers");
+
+        Assert.True(lineNumbers.Flag);
+        Assert.False(lineNumbers.Required);
+    }
+
+    [Fact(DisplayName = "读取声明可选读取上限")]
+    public void ReadFile_declares_optional_read_limits()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        foreach (string name in new[] { "maxChars", "maxLineChars" })
+        {
+            ToolParameter limit = Parameter(definitions, "ReadFile", name);
+
+            Assert.False(limit.Required);
+            Assert.False(limit.Flag);
+            Assert.False(limit.Path);
+        }
+    }
+
+    [Fact(DisplayName = "搜索把唯一匹配声明为可选开关")]
+    public void SearchText_declares_unique_as_an_optional_switch()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        ToolParameter unique = Parameter(definitions, "SearchText", "unique");
+
+        Assert.True(unique.Flag);
+        Assert.False(unique.Required);
+    }
+
+    [Fact(DisplayName = "搜索与替换把正则声明为可选开关")]
+    public void SearchText_and_ReplaceText_declare_regex_as_an_optional_switch()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        foreach (string name in new[] { "SearchText", "ReplaceText" })
+        {
+            ToolParameter regex = Parameter(definitions, name, "regex");
+
+            Assert.True(regex.Flag);
+            Assert.False(regex.Required);
+        }
+    }
+
+    [Fact(DisplayName = "删除把递归声明为可选开关")]
+    public void DeleteFile_declares_recursive_as_an_optional_switch()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        ToolParameter recursive = Parameter(definitions, "DeleteFile", "recursive");
+
+        Assert.True(recursive.Flag);
+        Assert.False(recursive.Required);
+    }
+
+    [Fact(DisplayName = "读取拒绝 Kuroe 与 Git 目录")]
+    public void ReadFile_rejects_kuroe_and_git_directories()
+    {
+        _files.AddFile(PathOf(".kuroe/catalog.json"), "密钥");
+        _files.AddFile(PathOf(".git/config"), "仓库配置");
+
+        Assert.Contains("黑名单", Call("ReadFile", ("path", ".kuroe/catalog.json")));
+        Assert.Contains("黑名单", Call("ReadFile", ("path", ".git/config")));
+    }
+
+    [Fact(DisplayName = "列目录与文件信息拒绝禁止目录")]
+    public void ListDirectory_and_GetFileInfo_reject_the_denied_directories()
+    {
+        _files.AddFile(PathOf(".kuroe/catalog.json"), "密钥");
+
+        Assert.Contains("黑名单", Call("ListDirectory", ("path", ".kuroe")));
+        Assert.Contains("黑名单", Call("GetFileInfo", ("path", ".kuroe/catalog.json")));
+    }
+
+    [Fact(DisplayName = "写入与移动拒绝禁止目录")]
+    public void Write_and_Move_reject_the_denied_directories()
+    {
+        _files.AddFile(PathOf("a.txt"), "一\n二\n三");
+
+        Assert.Contains("黑名单", Call("WriteFile", ("path", ".git/config"), ("content", "x")));
+        Assert.Contains("黑名单", Call("MoveFile", ("source", "a.txt"), ("target", ".kuroe/a.txt")));
+        Assert.Contains("黑名单", Call("MoveFile", ("source", ".git/config"), ("target", "b.txt")));
+    }
+
+    [Fact(DisplayName = "工具面在每个路径参数上声明相同的禁止项")]
+    public void Face_declares_the_same_deny_entries_on_every_path_parameter()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        Assert.All(
+            [
+                ("ReadFile", "path"),
+                ("SearchText", "paths"),
+                ("ListDirectory", "path"),
+                ("GetFileInfo", "path"),
+                ("WriteFile", "path"),
+                ("ReplaceText", "paths"),
+                ("MoveFile", "source"),
+                ("MoveFile", "target"),
+                ("DeleteFile", "path"),
+            ],
+            entry =>
+            {
+                ToolPathAccess access =
+                    Assert.IsType<ToolPathAccess>(Parameter(definitions, entry.Item1, entry.Item2).PathAccess);
+                Assert.Equal([".kuroe", ".git"], access.Deny);
+            });
+    }
+
+    [Fact(DisplayName = "显式上下文读取映射的根端口")]
+    public void Explicit_context_reads_the_mapped_root_port()
+    {
+        _files.AddFile(PathOf("mapped.txt"), "映射内容");
+
+        ExecutionPortName port = new("工作区");
+        ToolContext context = new(
+            new FixedPortAccess(port, _root),
+            new Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>>
+            {
+                ["file/read/ReadFile"] = new Dictionary<string, ExecutionPortName>
+                {
+                    [PathVariables.RootName] = port,
+                },
+            },
+            _root,
+            new UnusedEntry(),
+            1,
+            1,
+            [new ToolPath("file/read/ReadFile")]);
+
+        string output = ToolResult.Render(new ReadFileTool(context.For("file/read/ReadFile"), _files)
+            .Functions.Single()
+            .Invoke(new ToolArguments(new Dictionary<string, object?> { ["path"] = "mapped.txt" })));
+
+        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n<<<KUROE_TEXT_BEGIN>>>1 |映射内容<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact(DisplayName = "没有映射的上下文拒绝工具调用")]
+    public void Context_without_a_mapping_rejects_the_tool_call()
+    {
+        ToolContext context = new(
+            new FixedPortAccess(new ExecutionPortName("工作区"), _root),
+            new Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>>(),
+            _root,
+            new UnusedEntry(),
+            1,
+            1,
+            []);
+
+        string output = ToolResult.Render(new ReadFileTool(context.For("file/read/ReadFile"), _files)
+            .Functions.Single()
+            .Invoke(new ToolArguments(new Dictionary<string, object?> { ["path"] = "a.txt" })));
+
+        Assert.Contains("路径变量 root 未映射或端口为空", output);
+    }
+
+    private string PathOf(string relative) => Path.Combine(_root, relative);
+
+    private string ReadText(string relative) => _files.ReadText(PathOf(relative));
+
+    private byte[] ReadBytes(string relative) => _files.ReadBytes(PathOf(relative));
+
+    /// <summary>文件工具面的全部载体，按函数名取用其中的函数。</summary>
+    private IReadOnlyList<ITool> Face() =>
+    [
+        new ReadFileTool(_root, _files),
+        new SearchTextTool(_root, _files),
+        new ListDirectoryTool(_root, _files),
+        new WriteFileTool(_root, _files),
+        new ReplaceTextTool(_root, _files),
+        new MoveFileTool(_root, _files),
+        new DeleteFileTool(_root, _files),
+        new GetFileInfoTool(_root, _files),
+    ];
+
+    private string Call(string name, params (string Key, object? Value)[] args) =>
+        ToolResult.Render(Face().SelectMany(tool => tool.Functions)
+            .Single(function => function.Definition.Path.Name.Value == name)
+            .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
+
+    /// <summary>按函数名与参数名取参数声明。</summary>
+    private static ToolParameter Parameter(IReadOnlyList<ToolDefinition> definitions, string function, string name) =>
+        definitions.Single(definition => definition.Path.Name.Value == function)
+            .Parameters.Single(parameter => parameter.Name.Value == name);
+
+    private sealed class UnusedEntry : IExecutionRequestEntry
+    {
+        public ExecutionId Id => new(1);
+
+        ExecutionRequest IExecutionRequestEntry.Request => throw new NotSupportedException();
+
+        public ExecutionStatus ReadStatus() => throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> SubmitOutputs(IReadOnlyList<ExecutionOutputValue> values) =>
+            throw new NotSupportedException();
+
+        public ErrorOr<ExecutionStatus> ReportCannotComplete(string reason) =>
+            throw new NotSupportedException();
+    }
+}

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Kernel\Tasks\Persistence\Files\Core\Kuroe.Kernel.Tasks.Persistence.Files.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Kernel\Tasks\Persistence\Files\Shared\Kuroe.Kernel.Tasks.Persistence.Files.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Kernel\Tasks\Persistence\Serialization\Json\Core\Kuroe.Kernel.Tasks.Persistence.Serialization.Json.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Kernel\Tasks\Persistence\Serialization\Shared\Kuroe.Kernel.Tasks.Persistence.Serialization.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Kernel\Execution\Records\Shared\Kuroe.Kernel.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Flow\Records\Shared\Kuroe.Flow.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Kernel\Tasks\Records\Shared\Kuroe.Kernel.Tasks.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\Support\Kuroe.Flow.TestSupport\Kuroe.Flow.TestSupport.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\Support\Kuroe.TestSupport\Kuroe.TestSupport.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Files\Shared\Files.Shared.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\..\..\Source\Kuroe\Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+    </ItemGroup>
+</Project>

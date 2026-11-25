@@ -26,7 +26,7 @@ using Kuroe.Host.Assistant.Dialogue;
 using Kuroe.Kernel.Control.Runtime;
 using Kuroe.Kernel.Tasks.Runtime;
 using Kuroe.Host.Composition.Pending;
-using Kuroe.Process;
+using Process;
 using Kuroe.Host.Ability.Tool;
 using Kuroe.Host.Ability.Tool.Implementation.Contract;
 using Kuroe.Flow.TestSupport;

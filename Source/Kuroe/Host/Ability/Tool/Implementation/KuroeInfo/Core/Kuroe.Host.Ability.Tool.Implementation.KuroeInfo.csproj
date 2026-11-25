@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\Platform\Kuroe.Host.Platform.csproj" />
+        <ProjectReference Include="..\..\..\Core\Kuroe.Host.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\Json\Kuroe.Host.Ability.Tool.Json.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+    </ItemGroup>
+
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\Kernel\Control\Shared\Kuroe.Kernel.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\Kernel\Presentation\Shared\Kuroe.Kernel.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\Kernel\Tasks\Presentation\Shared\Kuroe.Kernel.Tasks.Presentation.Shared.csproj" />
+    </ItemGroup>
+</Project>

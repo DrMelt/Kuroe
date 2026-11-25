@@ -109,6 +109,40 @@ public sealed partial class ProjectLayoutTests
         }
     }
 
+    [Fact(DisplayName = "源项目按产品与通用分组")]
+    public void Source_projects_are_grouped_into_product_and_generic_directories()
+    {
+        string[] generic = ["Files", "Process"];
+
+        foreach (string project in ProjectFiles(SourceRoot))
+        {
+            string[] segments = Segments(project);
+            bool product = segments[0] == "Kuroe";
+            bool genericRoot = segments.Length > 1 && generic.Contains(segments[0], StringComparer.Ordinal);
+
+            Assert.True(
+                product || genericRoot,
+                $"{project} 不在产品目录 Kuroe 或通用目录 Files、Process 下。");
+        }
+    }
+
+    [Fact(DisplayName = "通用项目不引用产品项目")]
+    public void Generic_projects_do_not_reference_product_projects()
+    {
+        foreach (string project in ProjectFiles(SourceRoot).Where(project => Segments(project)[0] != "Kuroe"))
+        {
+            Assert.All(
+                ProjectReferences(project),
+                reference => Assert.False(
+                    IsUnder(reference, KuroeRoot),
+                    $"{project} 引用了产品项目 {reference}。"));
+        }
+    }
+
+    private static string[] Segments(string project) =>
+        Path.GetRelativePath(SourceRoot, DirectoryOf(project))
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+
     private static string ExpectedSourceProjectName(string project)
     {
         string relative = Path.GetRelativePath(SourceRoot, DirectoryOf(project));

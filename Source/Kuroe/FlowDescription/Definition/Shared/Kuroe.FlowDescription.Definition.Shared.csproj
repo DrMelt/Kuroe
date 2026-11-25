@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\Description\Shared\Kuroe.FlowDescription.Description.Shared.csproj" />
+    </ItemGroup>
+</Project>

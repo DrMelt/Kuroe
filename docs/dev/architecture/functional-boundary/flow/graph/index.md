@@ -4,13 +4,13 @@
 
 ```mermaid
 flowchart TD
-    Records["记录<br>Kuroe.Flow/Records"]
-    GraphModel["模型<br>Kuroe.Flow/Graph"]
-    Catalog["目录契约<br>Kuroe.Flow/Catalog/Shared"]
-    Compilation["编译<br>Kuroe.Flow/Compilation"]
-    Control["控制<br>Kuroe.Flow/Control"]
-    Library["流程库<br>Kuroe.Flow/Library"]
-    Persistence["持久化<br>Kuroe.Flow/Persistence"]
+    Records["记录<br>Kuroe/Flow/Records"]
+    GraphModel["模型<br>Kuroe/Flow/Graph"]
+    Catalog["目录契约<br>Kuroe/Flow/Catalog/Shared"]
+    Compilation["编译<br>Kuroe/Flow/Compilation"]
+    Control["控制<br>Kuroe/Flow/Control"]
+    Library["流程库<br>Kuroe/Flow/Library"]
+    Persistence["持久化<br>Kuroe/Flow/Persistence"]
     Records --> GraphModel
     Catalog --> GraphModel
     Compilation --> GraphModel

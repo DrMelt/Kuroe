@@ -4,11 +4,11 @@
 
 ```mermaid
 flowchart TD
-    Definition["定义<br>Kuroe.Maf/Definition"]
-    Compilation["编译<br>Kuroe.Maf/Compilation"]
-    Control["控制<br>Kuroe.Maf/Control"]
-    Records["记录<br>Kuroe.Maf/Records"]
-    Persistence["持久化<br>Kuroe.Maf/Persistence"]
+    Definition["定义<br>Kuroe/Maf/Definition"]
+    Compilation["编译<br>Kuroe/Maf/Compilation"]
+    Control["控制<br>Kuroe/Maf/Control"]
+    Records["记录<br>Kuroe/Maf/Records"]
+    Persistence["持久化<br>Kuroe/Maf/Persistence"]
     Compilation --> Definition
     Control --> Records
     Control --> Definition

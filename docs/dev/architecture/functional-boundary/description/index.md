@@ -4,10 +4,10 @@
 
 ```mermaid
 flowchart TD
-    Description["描述<br>Kuroe.FlowDescription/Description"]
-    Definition["定义<br>Kuroe.FlowDescription/Definition"]
-    Compilation["编译<br>Kuroe.FlowDescription/Compilation"]
-    Json["文件格式<br>Kuroe.FlowDescription/Json"]
+    Description["描述<br>Kuroe/FlowDescription/Description"]
+    Definition["定义<br>Kuroe/FlowDescription/Definition"]
+    Compilation["编译<br>Kuroe/FlowDescription/Compilation"]
+    Json["文件格式<br>Kuroe/FlowDescription/Json"]
     Definition --> Description
     Compilation --> Description
     Compilation --> Definition

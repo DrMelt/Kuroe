@@ -7,7 +7,7 @@
 | 文件 | 覆盖 |
 | --- | --- |
 | `RepositoryStructureTests` | 仓库结构、`InternalsVisibleTo` 目标、共享测试工程引用、编译集成测试与宿主分离 |
-| `ProjectLayoutTests` | 源项目名与目录、测试类型目录、单元测试镜像、解决方案项目清单、命名空间根 |
+| `ProjectLayoutTests` | 源项目名与目录、产品与通用分组、通用项目引用边界、测试类型目录、单元测试镜像、解决方案项目清单、命名空间根 |
 | `KernelAreaTests` | Kernel 只引用 Kernel、输入项目边界 |
 | `KernelControlTests` | 控制共享契约、流程运行期、流程模板目录、恢复按身份解析 |
 | `KernelExecutionTests` | 执行契约与共享项目、执行状态机归属、执行记录来源 |
@@ -27,6 +27,7 @@
 `ProjectLayoutTests` 固定项目布局。
 
 - 源项目名由 `Source` 下的目录段以点连接得到，末级目录为 `Core` 时省略该段，其他层目录保留。
+- `Source/Kuroe` 放产品项目，`Source` 根的 `Files` 与 `Process` 放通用库；通用库不引用 `Source/Kuroe` 下的项目。
 - 镜像单元测试位于 `Tests/Unit`，目录按源项目目录镜像，项目名为源项目名加 `.Tests`。
 - 集成测试位于 `Tests/Integration`，架构测试位于 `Tests/Architecture`。
 - 测试支持项目位于 `Tests/Support`，项目名以 `.TestSupport` 结尾，目录名为项目名。

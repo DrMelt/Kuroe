@@ -11,8 +11,8 @@ public sealed class MafBoundaryTests
     public void Maf_control_references_only_kernel_and_maf_records()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Maf",
+            KuroeRoot,
+            "Maf",
             "Control",
             "Core",
             "Kuroe.Maf.Control.csproj");
@@ -22,8 +22,8 @@ public sealed class MafBoundaryTests
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
-        string mafRecords = Path.Combine(SourceRoot, "Kuroe.Maf", "Records", "Shared");
-        string mafDefinition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
+        string mafRecords = Path.Combine(KuroeRoot, "Maf", "Records", "Shared");
+        string mafDefinition = Path.Combine(KuroeRoot, "Maf", "Definition", "Core");
 
         ReferencesStayUnder(
             project,
@@ -43,8 +43,8 @@ public sealed class MafBoundaryTests
     public void Maf_definition_references_only_kernel_contracts()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Maf",
+            KuroeRoot,
+            "Maf",
             "Definition",
             "Core",
             "Kuroe.Maf.Definition.csproj");
@@ -59,13 +59,13 @@ public sealed class MafBoundaryTests
     {
         string[] runtime =
         [
-            Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "Maf", "Core"),
-            Path.Combine(SourceRoot, "Kuroe.Maf", "Control", "Core"),
-            Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core"),
-            Path.Combine(SourceRoot, "Kuroe.Maf", "Persistence", "Core"),
-            Path.Combine(SourceRoot, "Kuroe.Maf", "Records", "Shared"),
+            Path.Combine(KuroeRoot, "Host", "FlowIntegration", "Maf", "Core"),
+            Path.Combine(KuroeRoot, "Maf", "Control", "Core"),
+            Path.Combine(KuroeRoot, "Maf", "Definition", "Core"),
+            Path.Combine(KuroeRoot, "Maf", "Persistence", "Core"),
+            Path.Combine(KuroeRoot, "Maf", "Records", "Shared"),
         ];
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string flow = Path.Combine(KuroeRoot, "Flow");
 
         foreach (string directory in runtime)
         {
@@ -84,24 +84,24 @@ public sealed class MafBoundaryTests
     [Fact(DisplayName = "Maf 文档装配只引用流程描述")]
     public void Maf_compilation_references_only_flow_description()
     {
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Description", "Shared");
-        string definition = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
-        string descriptionCompilation = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Compilation", "Shared");
-        string mafCompilationShared = Path.Combine(SourceRoot, "Kuroe.Maf", "Compilation", "Shared");
-        string mafDefinition = Path.Combine(SourceRoot, "Kuroe.Maf", "Definition", "Core");
+        string description = Path.Combine(KuroeRoot, "FlowDescription", "Description", "Shared");
+        string definition = Path.Combine(KuroeRoot, "FlowDescription", "Definition", "Shared");
+        string descriptionCompilation = Path.Combine(KuroeRoot, "FlowDescription", "Compilation", "Shared");
+        string mafCompilationShared = Path.Combine(KuroeRoot, "Maf", "Compilation", "Shared");
+        string mafDefinition = Path.Combine(KuroeRoot, "Maf", "Definition", "Core");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string flow = Path.Combine(KuroeRoot, "Flow");
 
         string shared = Path.Combine(
-            SourceRoot,
-            "Kuroe.Maf",
+            KuroeRoot,
+            "Maf",
             "Compilation",
             "Shared",
             "Kuroe.Maf.Compilation.Shared.csproj");
         string compilation = Path.Combine(
-            SourceRoot,
-            "Kuroe.Maf",
+            KuroeRoot,
+            "Maf",
             "Compilation",
             "Core",
             "Kuroe.Maf.Compilation.csproj");
@@ -132,8 +132,8 @@ public sealed class MafBoundaryTests
     [Fact(DisplayName = "流程区域不含 Maf")]
     public void Flow_area_stays_free_of_maf()
     {
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
-        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+        string flow = Path.Combine(KuroeRoot, "Flow");
+        string maf = Path.Combine(KuroeRoot, "Maf");
 
         Assert.NotEmpty(ProjectFiles(flow));
         foreach (string project in ProjectFiles(flow))
@@ -147,8 +147,8 @@ public sealed class MafBoundaryTests
     [Fact(DisplayName = "Maf 流程实现不引用图流程区域")]
     public void Maf_flow_area_stays_free_of_graph_flow_area()
     {
-        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string maf = Path.Combine(KuroeRoot, "Maf");
+        string flow = Path.Combine(KuroeRoot, "Flow");
 
         Assert.NotEmpty(ProjectFiles(maf));
         foreach (string project in ProjectFiles(maf))
@@ -164,13 +164,13 @@ public sealed class MafBoundaryTests
     {
         string[] assembly =
         [
-            Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "Maf", "Core"),
+            Path.Combine(KuroeRoot, "Host", "FlowIntegration", "Maf", "Core"),
         ];
         string[] host =
         [
-            Path.Combine(SourceRoot, "Kuroe.Host", "Composition"),
-            Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "GraphFlow"),
-            Path.Combine(SourceRoot, "Kuroe.Host", "Assistant"),
+            Path.Combine(KuroeRoot, "Host", "Composition"),
+            Path.Combine(KuroeRoot, "Host", "FlowIntegration", "GraphFlow"),
+            Path.Combine(KuroeRoot, "Host", "Assistant"),
         ];
 
         foreach (string directory in assembly)

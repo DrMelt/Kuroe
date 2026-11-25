@@ -52,9 +52,9 @@ public sealed class RepositoryStructureTests
 
             Assert.NotEmpty(references);
             Assert.DoesNotContain(references, reference =>
-                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Host", "Composition", "Core")));
+                IsUnder(reference, Path.Combine(KuroeRoot, "Host", "Composition", "Core")));
             Assert.DoesNotContain(references, reference =>
-                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Host", "Assistant")));
+                IsUnder(reference, Path.Combine(KuroeRoot, "Host", "Assistant")));
         }
     }
 
@@ -73,7 +73,7 @@ public sealed class RepositoryStructureTests
         }
 
         List<string> directories = [];
-        string[] area = segments[0] is "Kuroe.Kernel" or "Kuroe.Host" ? segments[..2] : segments[..1];
+        string[] area = segments[0] == "Kuroe" ? segments[..2] : segments[..1];
         string component = Path.Combine([SourceRoot, .. area]);
         foreach (string directory in Directory.EnumerateDirectories(component, "Shared", SearchOption.AllDirectories))
         {
@@ -97,13 +97,13 @@ public sealed class RepositoryStructureTests
         }
 
         // 平台共享层提供路径规则与宿主视图，任何共享层都可引用
-        string platform = Path.Combine(SourceRoot, "Kuroe.Host", "Platform");
+        string platform = Path.Combine(KuroeRoot, "Host", "Platform");
         if (Directory.Exists(platform))
         {
             directories.Add(platform);
         }
 
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription");
+        string description = Path.Combine(KuroeRoot, "FlowDescription");
         if (Directory.Exists(description))
         {
             directories.AddRange(Directory
@@ -118,7 +118,7 @@ public sealed class RepositoryStructureTests
             Path.Combine("Records", "Shared"),
         })
         {
-            string directory = Path.Combine(SourceRoot, "Kuroe.Flow", relative);
+            string directory = Path.Combine(KuroeRoot, "Flow", relative);
             if (Directory.Exists(directory))
             {
                 directories.Add(directory);

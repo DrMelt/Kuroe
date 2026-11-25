@@ -65,4 +65,4 @@ MAF 流程不提供停驻面，不能等待外部输入或批准，其任务没�
 
 ## 区域约束
 
-MAF 流程实现位于 `Source/Kuroe.Maf`，装配入口位于 `Source/Kuroe.Host/FlowIntegration/Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，只引用 `Kuroe.FlowDescription.Description.Shared`、`Kuroe.FlowDescription.Definition.Shared` 与 MAF 定义，不引用图流程实现。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Host.Composition` 不引用 MAF 运行期。
+MAF 流程实现位于 `Source/Kuroe/Maf`，装配入口位于 `Source/Kuroe/Host/FlowIntegration/Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，只引用 `Kuroe.FlowDescription.Description.Shared`、`Kuroe.FlowDescription.Definition.Shared` 与 MAF 定义，不引用图流程实现。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Host.Composition` 不引用 MAF 运行期。

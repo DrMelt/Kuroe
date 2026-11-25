@@ -1,5 +1,5 @@
 using System.Text;
-using Kuroe.Files.Shared;
+using Files.Shared;
 
 namespace Kuroe.TestSupport;
 

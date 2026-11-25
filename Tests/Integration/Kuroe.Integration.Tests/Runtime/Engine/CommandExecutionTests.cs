@@ -1,6 +1,6 @@
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
-using Kuroe.Process;
+using Process;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;

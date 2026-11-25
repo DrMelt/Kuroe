@@ -14,21 +14,21 @@ public sealed partial class GlobalStateTests
     /// <summary>不可变值对象的共享实例，按源码相对路径豁免。</summary>
     private static readonly string[] InstanceAllowlist =
     [
-        "Kuroe.FlowDescription/Definition/Shared/Nodes/OutputDeclaration.cs",
-        "Kuroe.Kernel/Execution/Shared/Request/EmptyExecutionParameters.cs",
-        "Kuroe.Maf/Definition/Core/MafUpstreamInputs.cs",
+        "Kuroe/FlowDescription/Definition/Shared/Nodes/OutputDeclaration.cs",
+        "Kuroe/Kernel/Execution/Shared/Request/EmptyExecutionParameters.cs",
+        "Kuroe/Maf/Definition/Core/MafUpstreamInputs.cs",
     ];
 
     /// <summary>系统适配器与组合根，允许读取时钟、随机源与环境。</summary>
     private static readonly string[] AmbientAllowlist =
     [
-        "Kuroe.Host/Composition/Core/ServiceCollectionExtensions.cs",
-        "Kuroe.Host/FlowIntegration/GraphFlow/Core/GraphFlowServiceCollectionExtensions.cs",
-        "Kuroe.Host/Composition/Core/Configuration/Files/KuroePaths.cs",
-        "Kuroe.Cli/CliCommandLine.cs",
-        "Kuroe.Files/Core/SystemWorkspaceFiles.cs",
-        "Kuroe.Kernel/Tasks/Shared/TaskId.cs",
-        "Kuroe.Maf/Control/Core/GuidCheckpointIdSource.cs",
+        "Kuroe/Host/Composition/Core/ServiceCollectionExtensions.cs",
+        "Kuroe/Host/FlowIntegration/GraphFlow/Core/GraphFlowServiceCollectionExtensions.cs",
+        "Kuroe/Host/Composition/Core/Configuration/Files/KuroePaths.cs",
+        "Kuroe/Cli/CliCommandLine.cs",
+        "Files/Core/SystemWorkspaceFiles.cs",
+        "Kuroe/Kernel/Tasks/Shared/TaskId.cs",
+        "Kuroe/Maf/Control/Core/GuidCheckpointIdSource.cs",
     ];
 
     [Fact(DisplayName = "源码不含可变的静态字段")]

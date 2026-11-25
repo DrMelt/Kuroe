@@ -17,7 +17,7 @@ public sealed class HostAndToolBoundaryTests
 
         Assert.DoesNotContain(sharedReferences, reference => IsUnder(reference, Path.Combine(fileAccess, "Core")));
         Assert.DoesNotContain(sharedReferences, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Files")));
+            IsUnder(reference, Path.Combine(SourceRoot, "Files")));
         Assert.Contains(shared, ProjectReferences(core));
     }
 
@@ -26,8 +26,8 @@ public sealed class HostAndToolBoundaryTests
     {
         string[] projects =
         [
-            Path.Combine(SourceRoot, "Kuroe.Cli", "Kuroe.Cli.csproj"),
-            Path.Combine(SourceRoot, "Kuroe.Host", "Assistant", "Core", "Kuroe.Host.Assistant.csproj"),
+            Path.Combine(KuroeRoot, "Cli", "Kuroe.Cli.csproj"),
+            Path.Combine(KuroeRoot, "Host", "Assistant", "Core", "Kuroe.Host.Assistant.csproj"),
             Path.Combine(
                 AbilityRoot,
                 "Tool",
@@ -42,22 +42,22 @@ public sealed class HostAndToolBoundaryTests
             IReadOnlyList<string> references = ProjectReferences(project);
 
             Assert.DoesNotContain(references, reference =>
-                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core")));
+                IsUnder(reference, Path.Combine(KuroeRoot, "Flow", "Control", "Core")));
             Assert.DoesNotContain(references, reference =>
-                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared")));
+                IsUnder(reference, Path.Combine(KuroeRoot, "Flow", "Graph", "Shared")));
         }
     }
 
     [Fact(DisplayName = "Console 只额外引用图共享层与图契约层")]
     public void Console_references_only_graph_shared_and_graph_contracts_from_flow()
     {
-        string project = Path.Combine(SourceRoot, "Kuroe.Console", "Kuroe.Console.csproj");
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string project = Path.Combine(KuroeRoot, "Console", "Kuroe.Console.csproj");
+        string flow = Path.Combine(KuroeRoot, "Flow");
         string graphShared = Path.Combine(flow, "Graph", "Shared", "Kuroe.Flow.Graph.Shared.csproj");
         string control = Path.Combine(flow, "Control", "Core", "Kuroe.Flow.Control.csproj");
         string records = Path.Combine(flow, "Records", "Shared", "Kuroe.Flow.Records.Shared.csproj");
         string library = Path.Combine(flow, "Library", "Core", "Kuroe.Flow.Library.csproj");
-        string graphFlow = Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "GraphFlow", "Core", "Kuroe.Host.FlowIntegration.GraphFlow.csproj");
+        string graphFlow = Path.Combine(KuroeRoot, "Host", "FlowIntegration", "GraphFlow", "Core", "Kuroe.Host.FlowIntegration.GraphFlow.csproj");
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.Contains(graphShared, references);

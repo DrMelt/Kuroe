@@ -4,11 +4,11 @@
 
 ```mermaid
 flowchart TD
-    Tasks["任务<br>Kuroe.Kernel/Tasks/{Shared,Records,Presentation}"]
-    Execution["执行<br>Kuroe.Kernel/Execution/{Shared,Records}"]
-    Control["控制<br>Kuroe.Kernel/Control/Shared"]
-    Input["输入<br>Kuroe.Kernel/Input/Shared"]
-    Presentation["流程表现<br>Kuroe.Kernel/Presentation/Shared"]
+    Tasks["任务<br>Kuroe/Kernel/Tasks/{Shared,Records,Presentation}"]
+    Execution["执行<br>Kuroe/Kernel/Execution/{Shared,Records}"]
+    Control["控制<br>Kuroe/Kernel/Control/Shared"]
+    Input["输入<br>Kuroe/Kernel/Input/Shared"]
+    Presentation["流程表现<br>Kuroe/Kernel/Presentation/Shared"]
     Tasks --> Execution
     Control --> Tasks
     Control --> Execution

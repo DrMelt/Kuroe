@@ -1,4 +1,4 @@
-using Kuroe.Process;
+using Process;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Process;

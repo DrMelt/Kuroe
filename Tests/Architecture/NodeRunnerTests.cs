@@ -44,7 +44,7 @@ public sealed class NodeRunnerTests
     public void Graph_flow_execution_assembly_references_input_and_approval_runners()
     {
         string runnerRoot = Path.Combine(AbilityRoot, "Runner");
-        string graphFlow = Path.Combine(SourceRoot, "Kuroe.Host", "FlowIntegration", "GraphFlow", "Core", "Kuroe.Host.FlowIntegration.GraphFlow.csproj");
+        string graphFlow = Path.Combine(KuroeRoot, "Host", "FlowIntegration", "GraphFlow", "Core", "Kuroe.Host.FlowIntegration.GraphFlow.csproj");
 
         IReadOnlyList<string> flowReferences = ProjectReferences(graphFlow);
         foreach (string runner in new[] { "Input", "Approval" })
@@ -57,8 +57,8 @@ public sealed class NodeRunnerTests
     public void Shared_node_projects_stay_out_of_flow_implementations()
     {
         string nodes = Path.Combine(AbilityRoot, "Node");
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
-        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+        string flow = Path.Combine(KuroeRoot, "Flow");
+        string maf = Path.Combine(KuroeRoot, "Maf");
 
         Assert.NotEmpty(ProjectFiles(nodes));
         foreach (string project in ProjectFiles(nodes))
@@ -77,7 +77,7 @@ public sealed class NodeRunnerTests
         string[] forbidden =
         [
             Path.Combine(AbilityRoot, "Node"),
-            Path.Combine(SourceRoot, "Kuroe.Flow"),
+            Path.Combine(KuroeRoot, "Flow"),
             Path.Combine(KernelRoot, "Control"),
             Path.Combine(KernelRoot, "Tasks", "Runtime"),
         ];
@@ -94,9 +94,9 @@ public sealed class NodeRunnerTests
     [Fact(DisplayName = "进程项目是中性能力")]
     public void Process_project_is_a_neutral_capability()
     {
-        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Host", "Process")), $"{Path.Combine(SourceRoot, "Kuroe.Host", "Process")} 不应存在。");
+        Assert.False(Directory.Exists(Path.Combine(KuroeRoot, "Host", "Process")), $"{Path.Combine(KuroeRoot, "Host", "Process")} 不应存在。");
 
-        string project = Path.Combine(SourceRoot, "Kuroe.Process", "Core", "Kuroe.Process.csproj");
+        string project = Path.Combine(SourceRoot, "Process", "Core", "Process.csproj");
         Assert.True(File.Exists(project), $"{project} 不存在。");
         Assert.Empty(ProjectReferences(project));
     }

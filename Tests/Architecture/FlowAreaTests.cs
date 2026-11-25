@@ -11,8 +11,8 @@ public sealed class FlowAreaTests
     public void Graph_flow_does_not_reference_execution_core()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Host",
+            KuroeRoot,
+            "Host",
             "FlowIntegration",
             "GraphFlow",
             "Core",
@@ -29,8 +29,8 @@ public sealed class FlowAreaTests
     {
         string nodes = Path.Combine(AbilityRoot, "Node");
         string execution = Path.Combine(KernelRoot, "Execution", "Core");
-        string flow = Path.Combine(SourceRoot, "Kuroe.Kernel", "Tasks", "Runtime");
-        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records");
+        string flow = Path.Combine(KuroeRoot, "Kernel", "Tasks", "Runtime");
+        string graphRecords = Path.Combine(KuroeRoot, "Flow", "Records");
 
         Assert.NotEmpty(ProjectFiles(nodes));
         foreach (string project in ProjectFiles(nodes))
@@ -47,15 +47,15 @@ public sealed class FlowAreaTests
     public void Graph_flow_references_graph_shared()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Host",
+            KuroeRoot,
+            "Host",
             "FlowIntegration",
             "GraphFlow",
             "Core",
             "Kuroe.Host.FlowIntegration.GraphFlow.csproj");
         string graphShared = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Graph",
             "Shared",
             "Kuroe.Flow.Graph.Shared.csproj");
@@ -67,14 +67,14 @@ public sealed class FlowAreaTests
     public void Graph_shared_project_references_only_contract_layers()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Graph",
             "Shared",
             "Kuroe.Flow.Graph.Shared.csproj");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
+        string description = Path.Combine(KuroeRoot, "FlowDescription", "Definition", "Shared");
 
         ReferencesStayUnder(project, "Kuroe.Flow.Graph.Shared", "描述、契约层与执行共享层", tasks, execution, description);
     }
@@ -84,10 +84,10 @@ public sealed class FlowAreaTests
     {
         string[] areas =
         [
-            Path.Combine(SourceRoot, "Kuroe.Flow"),
-            Path.Combine(SourceRoot, "Kuroe.Maf"),
+            Path.Combine(KuroeRoot, "Flow"),
+            Path.Combine(KuroeRoot, "Maf"),
         ];
-        string host = Path.Combine(SourceRoot, "Kuroe.Host");
+        string host = Path.Combine(KuroeRoot, "Host");
 
         foreach (string area in areas)
         {
@@ -105,12 +105,12 @@ public sealed class FlowAreaTests
     public void Flow_library_stays_free_of_host_node_runner_and_tool()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Library",
             "Core",
             "Kuroe.Flow.Library.csproj");
-        string host = Path.Combine(SourceRoot, "Kuroe.Host");
+        string host = Path.Combine(KuroeRoot, "Host");
         string nodes = Path.Combine(AbilityRoot, "Node");
         string runners = Path.Combine(AbilityRoot, "Runner");
         string tools = Path.Combine(AbilityRoot, "Tool");
@@ -126,12 +126,12 @@ public sealed class FlowAreaTests
     public void Flow_library_does_not_reference_control_implementation()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Library",
             "Core",
             "Kuroe.Flow.Library.csproj");
-        string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core");
+        string control = Path.Combine(KuroeRoot, "Flow", "Control", "Core");
 
         Assert.DoesNotContain(
             ProjectReferences(project),
@@ -141,16 +141,16 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "流程区域不含任务与表现项目")]
     public void Flow_area_stays_free_of_task_and_presentation_projects()
     {
-        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks")), $"{Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks")} 不应存在。");
-        Assert.False(Directory.Exists(Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation")), $"{Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation")} 不应存在。");
+        Assert.False(Directory.Exists(Path.Combine(KuroeRoot, "Flow", "Tasks")), $"{Path.Combine(KuroeRoot, "Flow", "Tasks")} 不应存在。");
+        Assert.False(Directory.Exists(Path.Combine(KuroeRoot, "Flow", "Presentation")), $"{Path.Combine(KuroeRoot, "Flow", "Presentation")} 不应存在。");
     }
 
     [Fact(DisplayName = "图状态保存执行上下文而不是对象")]
     public void Graph_state_stores_execution_contexts_not_objects()
     {
         string file = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Control",
             "Core",
             "Runtime",
@@ -164,8 +164,8 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "流程实现按端口类别拆分文件")]
     public void Flow_implementations_split_ports_by_class()
     {
-        string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core", "Runtime", "Engine");
-        string dialogue = Path.Combine(SourceRoot, "Kuroe.Host", "Assistant", "Core", "Dialogue", "Flow");
+        string graph = Path.Combine(KuroeRoot, "Flow", "Control", "Core", "Runtime", "Engine");
+        string dialogue = Path.Combine(KuroeRoot, "Host", "Assistant", "Core", "Dialogue", "Flow");
 
         Assert.False(File.Exists(Path.Combine(graph, "GraphFlowFramework.cs")), $"{Path.Combine(graph, "GraphFlowFramework.cs")} 不应存在。");
         Assert.False(File.Exists(Path.Combine(dialogue, "DialogueFlowFramework.cs")), $"{Path.Combine(dialogue, "DialogueFlowFramework.cs")} 不应存在。");
@@ -186,8 +186,8 @@ public sealed class FlowAreaTests
     public void Graph_execution_interface_is_named_IGraphExecution()
     {
         string execution = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Graph",
             "Shared",
             "RuntimeGraph",
@@ -205,8 +205,8 @@ public sealed class FlowAreaTests
     public void Graph_sources_do_not_redefine_execution_unit_files()
     {
         string execution = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Graph",
             "Shared",
             "RuntimeGraph",
@@ -233,21 +233,21 @@ public sealed class FlowAreaTests
     public void Control_graph_references_only_contract_and_graph_layers()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Control",
             "Core",
             "Kuroe.Flow.Control.csproj");
         string control = Path.Combine(KernelRoot, "Control", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
-        string catalog = Path.Combine(SourceRoot, "Kuroe.Flow", "Catalog", "Shared");
-        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
-        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
+        string catalog = Path.Combine(KuroeRoot, "Flow", "Catalog", "Shared");
+        string graphRecords = Path.Combine(KuroeRoot, "Flow", "Records", "Shared");
+        string nodes = Path.Combine(KuroeRoot, "Flow", "Graph", "Shared");
         string presentation = Path.Combine(KernelRoot, "Presentation", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
+        string description = Path.Combine(KuroeRoot, "FlowDescription", "Definition", "Shared");
 
         ReferencesStayUnder(
             project,
@@ -268,7 +268,7 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "图控制不引用输入模块")]
     public void Graph_control_does_not_reference_input()
     {
-        string project = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Core", "Kuroe.Flow.Control.csproj");
+        string project = Path.Combine(KuroeRoot, "Flow", "Control", "Core", "Kuroe.Flow.Control.csproj");
         string input = Path.Combine(KernelRoot, "Input");
 
         Assert.DoesNotContain(ProjectReferences(project), reference => IsUnder(reference, input));
@@ -277,8 +277,8 @@ public sealed class FlowAreaTests
     [Fact(DisplayName = "流程区域不含代码流程")]
     public void Flow_area_stays_free_of_code_flow()
     {
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
-        string code = Path.Combine(SourceRoot, "Kuroe.CodeFlow");
+        string flow = Path.Combine(KuroeRoot, "Flow");
+        string code = Path.Combine(KuroeRoot, "CodeFlow");
 
         Assert.NotEmpty(ProjectFiles(flow));
         foreach (string project in ProjectFiles(flow))

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\FlowDescription\Description\Shared\Kuroe.FlowDescription.Description.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Host.Ability.Node.Approval.Tests" />
+    </ItemGroup>
+</Project>

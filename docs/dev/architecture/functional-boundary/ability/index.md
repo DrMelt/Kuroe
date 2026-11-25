@@ -4,10 +4,10 @@
 
 ```mermaid
 flowchart TD
-    NodeTypes["节点类型<br>Kuroe.Host/Ability/Node"]
-    Runners["运行器<br>Kuroe.Host/Ability/Runner"]
-    ToolDomain["工具<br>Kuroe.Host/Ability/Tool"]
-    Container["容器节点类型<br>Kuroe.Flow/NodeType"]
+    NodeTypes["节点类型<br>Kuroe/Host/Ability/Node"]
+    Runners["运行器<br>Kuroe/Host/Ability/Runner"]
+    ToolDomain["工具<br>Kuroe/Host/Ability/Tool"]
+    Container["容器节点类型<br>Kuroe/Flow/NodeType"]
     NodeTypes --> Runners
     NodeTypes --> ToolDomain
     Runners --> ToolDomain

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Core\Kuroe.Host.Ability.Tool.csproj" />
+        <ProjectReference Include="..\..\..\FileAccess\Shared\Kuroe.Host.Ability.Tool.FileAccess.Shared.csproj" />
+        <ProjectReference Include="..\..\..\FileAccess\Core\Kuroe.Host.Ability.Tool.FileAccess.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Platform\Kuroe.Host.Platform.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\..\Files\Shared\Files.Shared.csproj" />
+    </ItemGroup>
+
+</Project>

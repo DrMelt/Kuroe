@@ -10,7 +10,7 @@ public sealed class KernelAreaTests
     public void Kernel_projects_reference_only_kernel_and_file_contracts()
     {
         IReadOnlyList<string> projects = [.. ProjectFiles(KernelRoot)];
-        string filesShared = Path.Combine(SourceRoot, "Kuroe.Files", "Shared");
+        string filesShared = Path.Combine(SourceRoot, "Files", "Shared");
 
         Assert.NotEmpty(projects);
         foreach (string project in projects)
@@ -45,7 +45,7 @@ public sealed class KernelAreaTests
         string input = Path.Combine(KernelRoot, "Input");
         string[] forbidden =
         [
-            Path.Combine(SourceRoot, "Kuroe.Flow"),
+            Path.Combine(KuroeRoot, "Flow"),
             Path.Combine(AbilityRoot, "Node"),
             Path.Combine(KernelRoot, "Execution"),
             Path.Combine(KernelRoot, "Control"),

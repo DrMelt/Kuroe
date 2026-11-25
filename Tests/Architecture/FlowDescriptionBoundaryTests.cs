@@ -8,13 +8,13 @@ namespace Kuroe.Architecture.Tests;
 public sealed class FlowDescriptionBoundaryTests
 {
     private static readonly string DescriptionShared =
-        Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Description", "Shared");
+        Path.Combine(KuroeRoot, "FlowDescription", "Description", "Shared");
 
     private static readonly string DefinitionShared =
-        Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
+        Path.Combine(KuroeRoot, "FlowDescription", "Definition", "Shared");
 
     private static readonly string CompilationShared =
-        Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Compilation", "Shared");
+        Path.Combine(KuroeRoot, "FlowDescription", "Compilation", "Shared");
 
     private static readonly string Tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
 
@@ -57,13 +57,13 @@ public sealed class FlowDescriptionBoundaryTests
     public void Flow_description_compilation_references_only_shared_description_layers()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.FlowDescription",
+            KuroeRoot,
+            "FlowDescription",
             "Compilation",
             "Core",
             "Kuroe.FlowDescription.Compilation.csproj");
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
-        string maf = Path.Combine(SourceRoot, "Kuroe.Maf");
+        string flow = Path.Combine(KuroeRoot, "Flow");
+        string maf = Path.Combine(KuroeRoot, "Maf");
 
         ReferencesStayUnder(
             project,
@@ -80,8 +80,8 @@ public sealed class FlowDescriptionBoundaryTests
     public void Flow_description_json_shared_references_only_description_shared()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.FlowDescription",
+            KuroeRoot,
+            "FlowDescription",
             "Json",
             "Shared",
             "Kuroe.FlowDescription.Json.Shared.csproj");
@@ -93,13 +93,13 @@ public sealed class FlowDescriptionBoundaryTests
     public void Flow_description_json_references_only_description_shared_and_format_contracts()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.FlowDescription",
+            KuroeRoot,
+            "FlowDescription",
             "Json",
             "Core",
             "Kuroe.FlowDescription.Json.csproj");
-        string jsonShared = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Json", "Shared");
-        string flow = Path.Combine(SourceRoot, "Kuroe.Flow");
+        string jsonShared = Path.Combine(KuroeRoot, "FlowDescription", "Json", "Shared");
+        string flow = Path.Combine(KuroeRoot, "Flow");
         string definition = DefinitionShared;
 
         ReferencesStayUnder(

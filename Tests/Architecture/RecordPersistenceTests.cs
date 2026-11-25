@@ -11,16 +11,16 @@ public sealed class RecordPersistenceTests
     public void Graph_records_project_stays_free_of_runtime_and_host()
     {
         string project = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Records",
             "Shared",
             "Kuroe.Flow.Records.Shared.csproj");
-        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
+        string nodes = Path.Combine(KuroeRoot, "Flow", "Graph", "Shared");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
         string tasksRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
         string execution = Path.Combine(KernelRoot, "Execution", "Shared");
-        string description = Path.Combine(SourceRoot, "Kuroe.FlowDescription", "Definition", "Shared");
+        string description = Path.Combine(KuroeRoot, "FlowDescription", "Definition", "Shared");
 
         ReferencesStayUnder(
             project,
@@ -42,7 +42,7 @@ public sealed class RecordPersistenceTests
         string executionContracts = Path.Combine(KernelRoot, "Execution", "Shared");
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
-        string filesShared = Path.Combine(SourceRoot, "Kuroe.Files", "Shared");
+        string filesShared = Path.Combine(SourceRoot, "Files", "Shared");
 
         foreach (string project in ProjectFiles(persistence))
         {
@@ -86,8 +86,8 @@ public sealed class RecordPersistenceTests
                 "Core",
                 "Kuroe.Kernel.Tasks.Persistence.Serialization.Json.csproj"),
         ];
-        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Records", "Shared");
-        string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Shared");
+        string graphRecords = Path.Combine(KuroeRoot, "Flow", "Records", "Shared");
+        string nodeContracts = Path.Combine(KuroeRoot, "Flow", "Graph", "Shared");
 
         foreach (string project in projects)
         {
@@ -104,8 +104,8 @@ public sealed class RecordPersistenceTests
     public void Flow_record_codecs_live_outside_central_serialization()
     {
         string persistence = Path.Combine(KernelRoot, "Tasks", "Persistence", "Serialization");
-        string graphCodec = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence", "Serialization", "Graph", "Core");
-        string code = Path.Combine(SourceRoot, "Kuroe.CodeFlow", "Persistence", "Core");
+        string graphCodec = Path.Combine(KuroeRoot, "Flow", "Persistence", "Serialization", "Graph", "Core");
+        string code = Path.Combine(KuroeRoot, "CodeFlow", "Persistence", "Core");
 
         Assert.True(File.Exists(Path.Combine(graphCodec, "GraphFlowRecordCodec.cs")), $"{Path.Combine(graphCodec, "GraphFlowRecordCodec.cs")} 不存在。");
         Assert.True(File.Exists(Path.Combine(code, "CodeFlowRecordCodec.cs")), $"{Path.Combine(code, "CodeFlowRecordCodec.cs")} 不存在。");
@@ -116,14 +116,14 @@ public sealed class RecordPersistenceTests
     public void Flow_record_kind_constants_live_with_implementations()
     {
         string graph = Path.Combine(
-            SourceRoot,
-            "Kuroe.Flow",
+            KuroeRoot,
+            "Flow",
             "Records",
             "Shared",
             "GraphFlowKind.cs");
         string code = Path.Combine(
-            SourceRoot,
-            "Kuroe.CodeFlow",
+            KuroeRoot,
+            "CodeFlow",
             "Records",
             "Shared",
             "CodeFlowKind.cs");
@@ -135,8 +135,8 @@ public sealed class RecordPersistenceTests
     public void Maf_record_kind_lives_with_its_implementation()
     {
         string kind = Path.Combine(
-            SourceRoot,
-            "Kuroe.Maf",
+            KuroeRoot,
+            "Maf",
             "Records",
             "Shared",
             "MafFlowKind.cs");
