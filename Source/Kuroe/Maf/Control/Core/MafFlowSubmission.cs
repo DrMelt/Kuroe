@@ -37,12 +37,6 @@ public sealed class MafFlowSubmission(
             return [.. invalid];
         }
 
-        ErrorOr<MafStep> entry = definition.Entry();
-        if (entry.IsError)
-        {
-            return entry.ErrorsOrEmptyList;
-        }
-
         if (CheckInputs(definition, inputs) is { Count: > 0 } errors)
         {
             return errors;
@@ -94,12 +88,6 @@ public sealed class MafFlowSubmission(
         if (flow.Validate() is { Count: > 0 } invalid)
         {
             return [.. invalid];
-        }
-
-        ErrorOr<MafStep> entry = flow.Entry();
-        if (entry.IsError)
-        {
-            return entry.ErrorsOrEmptyList;
         }
 
         string model = saved.Model ?? string.Empty;
@@ -213,11 +201,11 @@ public sealed class MafFlowSubmission(
                 MafRecordSources.Display(input.Source),
                 input.Source))],
             record.Texts,
-            [.. step.Outputs.Select(port => new ExecutionOutputPort(
-                new ExecutionPortName(port.Value),
-                ExecutionPortKind.Text,
-                Required: true,
-                CarriesTrigger: false))]);
+            [.. step.OutputPorts().Select(port => new ExecutionOutputPort(
+                new ExecutionPortName(port.Name.Value),
+                port.Kind,
+                port.Required,
+                port.Trigger))]);
 
         IExecution restored = executions.Restore(
             new ExecutionRestorePlan(

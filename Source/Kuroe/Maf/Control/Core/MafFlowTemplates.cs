@@ -24,21 +24,14 @@ public sealed class MafFlowTemplates(IMafFlowSource flows) : IFlowTemplateSource
         new(
             definition.Name.Value,
             definition.Description,
-            [.. definition.StartPorts.Select(port => new FlowStartPortView(
-                port.Name.Value,
-                "Text",
-                null,
-                port.Default,
-                null,
-                FlowStartKind.Content,
-                null))],
+            [.. definition.StartPorts.Select(MafPortView.Template)],
             [.. definition.Steps.Select(step => new FlowStepView(
                 step.Id.Value,
                 step.Label,
                 "Maf",
                 FlowItemState.Pending,
                 [],
-                [.. step.Outputs.Select(port => new FlowPortView(port.Value, "Text", null))],
+                [.. step.OutputPorts().Select(MafPortView.Output)],
                 [],
                 int.MaxValue))],
             []);

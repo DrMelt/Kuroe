@@ -21,10 +21,8 @@ public sealed class MafFlowPresentation : IFlowPresentation
             state.Definition.Name.Value,
             MafFlowKind.Value,
             state.Definition.Description,
-            [.. state.Definition.StartPorts.Select(port => new FlowPortView(
-                port.Name.Value,
-                "Text",
-                state.StartTexts.Text(port.Name)))],
+            [.. state.Definition.StartPorts.Select(port =>
+                MafPortView.Start(port, state.StartTexts.Text(port.Name)))],
             [.. state.Definition.Steps.Select(step => Step(step, task))],
             []);
     }
@@ -46,7 +44,7 @@ public sealed class MafFlowPresentation : IFlowPresentation
             "Maf",
             StepState(task, executions),
             [],
-            [.. step.Outputs.Select(port => new FlowPortView(port.Value, "Text", null))],
+            [.. step.OutputPorts().Select(MafPortView.Output)],
             executions,
             int.MaxValue)
         {

@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Execution.Shared.Identity;
 using Kuroe.Maf.Definition;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Kernel.Execution.Shared.State;
@@ -112,6 +113,7 @@ internal sealed class MafFlowControl(
     public int Rerun()
     {
         CancellationTokenSource? cancel;
+        Task loop;
         lock (task.Gate)
         {
             if (!_failed || _stopped || _completed)
@@ -121,22 +123,36 @@ internal sealed class MafFlowControl(
 
             _failed = false;
             _interrupted = false;
-            _paused = false;
-            state.FreezeCheckpoint = false;
+            _paused = true;
+            state.FreezeCheckpoint = true;
             state.Checkpoint = null;
             state.PendingSteps.Clear();
             state.PendingSteps.AddRange(state.Definition.Steps.Select(step => step.Id));
             cancel = _cancel;
+            loop = Loop;
             task.AppendInfo("MAF 流程从入口重新执行。");
         }
 
         Cancel(cancel);
-        lock (task.Gate)
-        {
-            Launch();
-        }
+        _ = RestartAsync(loop);
 
         return 1;
+    }
+
+    /// <summary>等旧运行退出后启动新运行；已有新运行启动时不再介入。</summary>
+    private async Task RestartAsync(Task loop)
+    {
+        await loop.ConfigureAwait(false);
+        lock (task.Gate)
+        {
+            if (_stopped || _completed || !ReferenceEquals(Loop, loop))
+            {
+                return;
+            }
+
+            _paused = false;
+            Launch();
+        }
     }
 
     /// <summary>尚未走完的步骤，供存档捕获。</summary>
@@ -267,9 +283,8 @@ internal sealed class MafFlowControl(
         {
             runHandle = await MafWorkflowRunner.StartAsync(
                 state.Definition,
-                Entry(),
+                step => Node(run, step),
                 task.Id.Value,
-                step => Handler(run, step),
                 _checkpoints,
                 ids,
                 cancel.Token).ConfigureAwait(false);
@@ -347,23 +362,23 @@ internal sealed class MafFlowControl(
         }
     }
 
-    /// <summary>入口消息：开始端口文本作为第一步的上游产出。</summary>
-    private MafStepMessage Entry()
-    {
-        MafStep entry = state.Definition.Entry().Value;
-
-        return new MafStepMessage(
-            entry.Id,
-            [.. state.StartTexts.Texts
-                .Where(pair => pair.Key != MafFlowDefinition.ModelPort)
-                .Select(pair => new MafStepOutput(entry.Id, pair.Key, pair.Value))]);
-    }
-
     /// <summary>把一个步骤接到 Kuroe 执行网关，中断上报只对发起它的运行有效。</summary>
-    private MafStepHandler Handler(int run, MafStep step) =>
-        (message, cancellationToken) =>
-            new MafStepExecutor(task, gateway, step, state.Model, new RunControl(this, run))
-                .HandleAsync(message, cancellationToken);
+    private MafStepNode Node(int run, MafStep step) =>
+        new(
+            step,
+            upstream => Inputs(step, upstream),
+            (current, inputs, cancellationToken) =>
+                new MafStepExecutor(task, gateway, current, state.Model, new RunControl(this, run))
+                    .HandleAsync(inputs, cancellationToken));
+
+    /// <summary>按当前上游产出装配步骤输入绑定。</summary>
+    private IReadOnlyList<MafStepInput> Inputs(MafStep step, IReadOnlyList<MafStepOutput> upstream) =>
+        step.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId(task.Id.Value),
+            step.Id,
+            upstream,
+            state.StartTexts.Texts,
+            state.Model));
 
     /// <summary>流程是否已停止接收新的步骤运行。</summary>
     private bool Halted => _stopped || _paused || _interrupted;

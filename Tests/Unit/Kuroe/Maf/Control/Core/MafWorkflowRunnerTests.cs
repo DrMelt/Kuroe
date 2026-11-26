@@ -1,3 +1,4 @@
+using Kuroe.Kernel.Execution.Shared.Identity;
 using Kuroe.Maf.Definition;
 using Kuroe.Kernel.Tasks.Shared;
 using Xunit;
@@ -11,16 +12,14 @@ public sealed class MafWorkflowRunnerTests
     public async Task Runner_runs_the_definition_and_reports_step_events()
     {
         MafFlowDefinition definition = Definition();
-        MafStep entry = definition.Entry().Value;
         List<MafWorkflowEvent> events = [];
         MemoryCheckpoints checkpoints = new();
         SequenceCheckpointIds ids = new();
 
         await using IMafWorkflowRun run = await MafWorkflowRunner.StartAsync(
             definition,
-            new MafStepMessage(entry.Id, []),
+            Node,
             "test",
-            Handlers,
             checkpoints,
             ids,
             CancellationToken.None);
@@ -40,10 +39,18 @@ public sealed class MafWorkflowRunnerTests
         Assert.Equal(ids.Issued[^1], saved.Id);
     }
 
-    private static MafStepHandler Handlers(MafStep step) =>
-        (message, _) => ValueTask.FromResult(new MafStepMessage(
-            step.Id,
-            [new MafStepOutput(step.Id, new PortName("输出"), message.Step.Value)]));
+    private static MafStepNode Node(MafStep step) =>
+        new(
+            step,
+            upstream => step.Inputs.Assemble(new MafStepInputContext(
+                new ExecutionOwnerId("1"),
+                step.Id,
+                upstream,
+                new Dictionary<PortName, string>(),
+                "test-model")),
+            (current, _, _) => ValueTask.FromResult(new MafStepMessage(
+                current.Id,
+                [new MafStepOutput(current.Id, new PortName("输出"), current.Id.Value)])));
 
     private static MafFlowDefinition Definition() =>
         new(

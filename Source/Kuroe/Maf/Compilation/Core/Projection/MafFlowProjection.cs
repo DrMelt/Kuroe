@@ -4,6 +4,7 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.FlowDescription.Semantics.Shared;
+using Kuroe.Kernel.Execution.Shared.Ports;
 using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Maf.Compilation.Shared;
@@ -11,7 +12,7 @@ using Kuroe.Maf.Definition;
 
 namespace Kuroe.Maf.Compilation.Projection;
 
-/// <summary>单条流程的 MAF 投影：从语言解析结果建立步骤、连接与目标可表达性诊断。</summary>
+/// <summary>单条流程的 MAF 投影：从语言解析结果建立步骤、输入计划与连接，保留目标结构诊断。</summary>
 internal static class MafFlowProjection
 {
     private const char Segment = '·';
@@ -34,12 +35,6 @@ internal static class MafFlowProjection
         Dictionary<NodePath, MafStepPlan> plans = Plans(executables, flow, ids, errors);
         IReadOnlyList<MafStartPort> startPorts = StartPorts(flow, errors);
 
-        int entries = plans.Values.Count(plan => plan.Upstream is null);
-        if (entries > 1)
-        {
-            errors.Add(FlowErrors.Body(flow.Name.Value, "流程有多个入口步骤，MAF 步骤只支持一个入口。"));
-        }
-
         List<MafStep> steps = [];
         List<MafEdge> edges = [];
         foreach (FlowSemanticNode executable in executables)
@@ -60,18 +55,33 @@ internal static class MafFlowProjection
             }
 
             IReadOnlyList<Port> outputs = executable.Spec.Outputs;
+            NodeEmission emission = executable.Spec.Spec?.Emission ?? NodeEmission.Repeated;
             steps.Add(new MafStep(
                 id,
                 executable.Spec.Label.Value,
-                [.. PortRules.RequiringSubmission(outputs, executable.Spec.Spec?.Emission ?? NodeEmission.Repeated)
-                    .Select(port => port.Name)],
+                [.. PortRules.RequiringSubmission(outputs, emission).Select(port => port.Name)],
                 new MafStepInvocation(binder),
-                new MafStepInputAssembler(plan.Inputs)));
+                new MafStepInputAssembler(plan.Inputs))
+            {
+                OutputPlan =
+                [
+                    .. outputs.Select(port => new MafOutputPort(
+                        port.Name,
+                        KindOf(port.Type),
+                        port.Trigger,
+                        PortRules.RequiresSubmission(port, emission))),
+                ],
+            });
 
-            if (plan.Upstream is { } upstream)
+            foreach (MafStepId upstream in plan.Upstreams)
             {
                 edges.Add(new MafEdge(upstream, id));
             }
+        }
+
+        if (HasCycle(steps, edges))
+        {
+            errors.Add(FlowErrors.Body(flow.Name.Value, "流程包含环，第一阶段不支持。"));
         }
 
         if (errors.Count > 0)
@@ -126,15 +136,12 @@ internal static class MafFlowProjection
         {
             CheckShape(executable, ids, flow.Name, errors);
             List<MafInputPlan> inputs = Inputs(executable, flow, ids, errors);
-            HashSet<MafStepId> upstream = [.. inputs.Select(input => input.UpstreamStep).OfType<MafStepId>()];
+            MafStepId[] upstreams = [.. inputs
+                .Select(input => input.UpstreamStep)
+                .OfType<MafStepId>()
+                .Distinct()];
 
-            if (upstream.Count > 1)
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"步骤 {Label(executable, ids)} 有多个来源步骤，MAF 步骤只接受一个上游。"));
-            }
-
-            plans[executable.Path] = new MafStepPlan(inputs, upstream.Count == 1 ? upstream.First() : null);
+            plans[executable.Path] = new MafStepPlan(inputs, upstreams);
         }
 
         return plans;
@@ -151,37 +158,22 @@ internal static class MafFlowProjection
 
         if (shape is { AwaitsExternalInput: true })
         {
-            errors.Add(FlowErrors.Body(name.Value, $"步骤 {label} 的节点类型等待外部输入，MAF 步骤不支持。"));
+            errors.Add(FlowErrors.Body(name.Value, $"步骤 {label} 的节点类型等待外部输入，第一阶段不支持。"));
         }
 
-        foreach (InputPort input in executable.Spec.EffectiveInputs)
+        if (shape is { StartsUnaided: true })
         {
-            if (input.Type != PortTypes.Text)
-            {
-                errors.Add(FlowErrors.Body(name.Value,
-                    $"步骤 {label} 的输入端口 {input.Name} 类型 {input.Type} 不支持，MAF 只传递文本。"));
-            }
-
-            if (input.Trigger)
-            {
-                errors.Add(FlowErrors.Body(name.Value,
-                    $"步骤 {label} 的输入端口 {input.Name} 使用触发，MAF 步骤不支持触发门控。"));
-            }
+            errors.Add(FlowErrors.Body(name.Value, $"步骤 {label} 的节点类型不依赖环外来源启动，第一阶段不支持。"));
         }
 
-        foreach (Port output in executable.Spec.Outputs)
+        if (shape is { DispatchesExecutions: false })
         {
-            if (output.Type != PortTypes.Text)
-            {
-                errors.Add(FlowErrors.Body(name.Value,
-                    $"步骤 {label} 的输出端口 {output.Name} 类型 {output.Type} 不支持，MAF 只传递文本。"));
-            }
+            errors.Add(FlowErrors.Body(name.Value, $"步骤 {label} 的节点类型不派发执行，第一阶段不支持。"));
+        }
 
-            if (output.Trigger)
-            {
-                errors.Add(FlowErrors.Body(name.Value,
-                    $"步骤 {label} 的输出端口 {output.Name} 使用触发，MAF 步骤不支持触发位。"));
-            }
+        if (shape?.Outputs is OutputDeclaration.DerivedFromInputs)
+        {
+            errors.Add(FlowErrors.Body(name.Value, $"步骤 {label} 的输出从输入派生，第一阶段不支持。"));
         }
     }
 
@@ -194,65 +186,24 @@ internal static class MafFlowProjection
         List<MafInputPlan> plans = [];
         string label = Label(executable, ids);
 
-        foreach (IGrouping<PortName, FlowSemanticInput> group in executable.Inputs.GroupBy(input => input.Port.Name))
+        foreach (FlowSemanticInput input in executable.Inputs)
         {
-            InputPort port = group.First().Port;
-
-            if (port.Role == InputRole.Control)
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"步骤 {label} 的输入 {port.Name} 使用控制角色，MAF 步骤不支持控制输入。"));
-                continue;
-            }
-
-            if (port.IsStatic)
-            {
-                AddPlan(port, group.First().Source, flow, plans, errors, label, ids);
-                continue;
-            }
-
-            List<FlowSemanticInput> linked = [.. group.Where(input => input.IsLinked)];
-            if (linked.Count == 0)
-            {
-                AddPlan(port, group.First().Source, flow, plans, errors, label, ids);
-                continue;
-            }
-
-            if (linked.Select(input => input.Group).Distinct().Count() > 1)
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"步骤 {label} 的输入 {port.Name} 来自多个启动组，MAF 步骤不支持多组启动条件。"));
-                continue;
-            }
-
-            if (linked.Any(input => input.Condition != TriggerCondition.Positive))
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"步骤 {label} 的输入 {port.Name} 使用触发条件，MAF 步骤不支持。"));
-                continue;
-            }
-
-            if (linked.Count > 1)
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"步骤 {label} 的输入 {port.Name} 有多条来源，MAF 步骤不支持。"));
-                continue;
-            }
-
-            AddPlan(port, linked[0].Source, flow, plans, errors, label, ids);
+            AddPlan(input, flow, plans, errors, label, ids);
         }
 
         return plans;
     }
+
     private static void AddPlan(
-            InputPort port,
-            FlowSource source,
+            FlowSemanticInput input,
             FlowDefinition flow,
             List<MafInputPlan> plans,
             List<Error> errors,
             string label,
             IReadOnlyDictionary<NodePath, MafStepId> ids)
     {
+        InputPort port = input.Port;
+        FlowSource source = input.Source;
         switch (source.Kind)
         {
             case FlowSourceKind.StartFixed:
@@ -262,16 +213,42 @@ internal static class MafFlowProjection
                 return;
 
             case FlowSourceKind.StartInput:
-                plans.Add(MafInputPlan.Start(port, source.Port ?? port.Name));
+                plans.Add(MafInputPlan.Start(
+                    port,
+                    source.Port ?? port.Name,
+                    input.Group,
+                    ConditionOf(input.Condition)));
                 return;
 
             case FlowSourceKind.NodeOutput:
-            case FlowSourceKind.RuntimeConstant:
                 if (source.Node is { } node
                     && source.Port is { } sourcePort
                     && ids.TryGetValue(node, out MafStepId step))
                 {
-                    plans.Add(MafInputPlan.Upstream(port, step, sourcePort));
+                    plans.Add(MafInputPlan.Upstream(
+                        port,
+                        step,
+                        sourcePort,
+                        input.Group,
+                        ConditionOf(input.Condition)));
+                    return;
+                }
+
+                errors.Add(FlowErrors.Body(flow.Name.Value,
+                    $"步骤 {label} 的输入 {port.Name} 来源 {source.Display} 不是执行步骤端口。"));
+                return;
+
+            case FlowSourceKind.RuntimeConstant:
+                if (source.Node is { } constantNode
+                    && source.Port is { } constantPort
+                    && ids.TryGetValue(constantNode, out MafStepId constantStep))
+                {
+                    plans.Add(MafInputPlan.RuntimeConstant(
+                        port,
+                        constantStep,
+                        constantPort,
+                        input.Group,
+                        ConditionOf(input.Condition)));
                     return;
                 }
 
@@ -291,20 +268,6 @@ internal static class MafFlowProjection
         List<MafStartPort> ports = [];
         foreach (Port port in flow.StartPorts)
         {
-            if (port.Type != PortTypes.Text)
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"开始端口 {port.Name} 类型 {port.Type} 不支持，MAF 只传递文本。"));
-                continue;
-            }
-
-            if (port.Trigger)
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"开始端口 {port.Name} 使用触发，MAF 步骤不支持触发门控。"));
-                continue;
-            }
-
             if (port.Name == MafFlowDefinition.ModelPort)
             {
                 if (port.Value is { Length: > 0 })
@@ -314,7 +277,11 @@ internal static class MafFlowProjection
                     continue;
                 }
 
-                ports.Add(new MafStartPort(port.Name, port.Default));
+                ports.Add(new MafStartPort(port.Name, port.Default)
+                {
+                    Kind = KindOf(port.Type),
+                    Mode = ModeOf(port.Mode),
+                });
                 continue;
             }
 
@@ -323,7 +290,11 @@ internal static class MafFlowProjection
                 continue;
             }
 
-            ports.Add(new MafStartPort(port.Name, port.Default));
+            ports.Add(new MafStartPort(port.Name, port.Default)
+            {
+                Kind = KindOf(port.Type),
+                Mode = ModeOf(port.Mode),
+            });
         }
 
         if (ports.All(port => port.Name != MafFlowDefinition.ModelPort))
@@ -336,4 +307,50 @@ internal static class MafFlowProjection
 
     private static string Label(FlowSemanticNode executable, IReadOnlyDictionary<NodePath, MafStepId> ids) =>
         ids.TryGetValue(executable.Path, out MafStepId id) ? id.Value : executable.Path.Value;
+
+    private static ExecutionPortKind KindOf(PortType type) => type.Semantics switch
+    {
+        PortSemantics.Context => ExecutionPortKind.Context,
+        PortSemantics.Signal => ExecutionPortKind.Signal,
+        _ => ExecutionPortKind.Text,
+    };
+
+    private static MafPortMode ModeOf(PortMode mode) => mode switch
+    {
+        PortMode.Trigger => MafPortMode.Trigger,
+        PortMode.Constant => MafPortMode.Constant,
+        _ => MafPortMode.Plain,
+    };
+
+    private static MafTriggerCondition ConditionOf(TriggerCondition condition) =>
+        condition == TriggerCondition.Negative ? MafTriggerCondition.Negative : MafTriggerCondition.Positive;
+
+    private static bool HasCycle(List<MafStep> steps, IReadOnlyList<MafEdge> edges)
+    {
+        Dictionary<MafStepId, int> incoming = steps.ToDictionary(step => step.Id, _ => 0);
+        foreach (MafEdge edge in edges.Where(edge => incoming.ContainsKey(edge.From) && incoming.ContainsKey(edge.To)))
+        {
+            incoming[edge.To]++;
+        }
+
+        Queue<MafStepId> ready = new(incoming.Where(pair => pair.Value == 0).Select(pair => pair.Key));
+        int visited = 0;
+        while (ready.TryDequeue(out MafStepId current))
+        {
+            visited++;
+            foreach (MafStepId target in edges
+                .Where(edge => edge.From == current)
+                .Select(edge => edge.To)
+                .Where(incoming.ContainsKey))
+            {
+                incoming[target]--;
+                if (incoming[target] == 0)
+                {
+                    ready.Enqueue(target);
+                }
+            }
+        }
+
+        return visited < steps.Count;
+    }
 }

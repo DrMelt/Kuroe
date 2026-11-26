@@ -182,8 +182,8 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
-    [Fact(DisplayName = "准备拒绝多个上游")]
-    public void Prepare_rejects_multiple_upstreams()
+    [Fact(DisplayName = "准备接受多个上游")]
+    public void Prepare_accepts_multiple_upstreams()
     {
         ErrorOr<FlowSubmission> prepared = Submit(
             Definition(
@@ -195,7 +195,7 @@ public sealed class MafFlowSubmissionTests
                 [Edge("左", "汇合"), Edge("右", "汇合")]),
             [new StartInput(MafFlowDefinition.ModelPort, "test-model")]);
 
-        Assert.True(prepared.IsError);
+        Assert.False(prepared.IsError);
     }
 
     [Fact(DisplayName = "准备拒绝没有模型端口的定义")]

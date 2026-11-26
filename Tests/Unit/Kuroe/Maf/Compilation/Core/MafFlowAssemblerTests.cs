@@ -95,14 +95,36 @@ public sealed class MafFlowAssemblerTests
         Assert.Equal(step.ExecutionStepId, invocation.Value.Step);
     }
 
-    [Fact(DisplayName = "拒绝多个上游步骤")]
-    public void Rejects_multiple_upstream_steps()
+    [Fact(DisplayName = "装配多个上游步骤")]
+    public void Assembles_multiple_upstream_steps()
     {
         ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(Merge());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
 
-        Assert.True(assembled.IsError);
-        Assert.Contains(assembled.ErrorsOrEmptyList,
-            error => error.Description.Contains("多个来源步骤", StringComparison.Ordinal));
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        Assert.Equal(3, flow.Steps.Count);
+
+        MafStep first = flow.Steps.Single(step => step.Label == "甲");
+        MafStep second = flow.Steps.Single(step => step.Label == "乙");
+        MafStep merge = flow.Steps.Single(step => step.Label == "汇合点");
+        Assert.Equal(2, flow.Edges.Count(edge => edge.To == merge.Id));
+        IReadOnlyList<MafStepInput> inputs = merge.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId("1"),
+            merge.Id,
+            [
+                new MafStepOutput(first.Id, new PortName("大纲"), "甲值"),
+                new MafStepOutput(second.Id, new PortName("大纲"), "乙值"),
+            ],
+            new Dictionary<PortName, string> { [MafFlowDefinition.ModelPort] = "test-model" },
+            "test-model"));
+
+        MafStepInput[] merged = [.. inputs.Where(input => input.Port.Value is "甲纲" or "乙纲")];
+        Assert.Equal(2, merged.Length);
+        Assert.All(merged, input => Assert.Equal(-1, input.Group));
+        Assert.All(merged, input => Assert.Equal(MafTriggerCondition.Positive, input.Condition));
+        Assert.Equal("甲值", merged.Single(input => input.Port.Value == "甲纲").Text);
+        Assert.Equal("乙值", merged.Single(input => input.Port.Value == "乙纲").Text);
+        Assert.All(merged, input => Assert.True(input.UpstreamStep is not null));
     }
 
     private static MafStepInput Single(
@@ -193,6 +215,77 @@ public sealed class MafFlowAssemblerTests
     private static InputPortDescription ModelInput() =>
         new(MafFlowDefinition.ModelPort.Value, "Text", PortModeDescription.Constant);
 
+    [Fact(DisplayName = "装配多个启动组")]
+    public void Assembles_multiple_start_groups()
+    {
+        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(Groups());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
+
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        MafStep first = flow.Steps.Single(step => step.Label == "甲");
+        MafStep second = flow.Steps.Single(step => step.Label == "乙");
+        MafStep selector = flow.Steps.Single(step => step.Label == "选择");
+        MafStepInput[] inputs = [.. selector.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId("1"),
+            selector.Id,
+            [
+                new MafStepOutput(first.Id, new PortName("结果"), "甲值"),
+                new MafStepOutput(second.Id, new PortName("结果"), "乙值"),
+            ],
+            new Dictionary<PortName, string> { [MafFlowDefinition.ModelPort] = "test-model" },
+            "test-model")).Where(input => input.Port.Value == "输入")];
+
+        Assert.Equal(2, inputs.Length);
+        Assert.Equal([0, 1], [.. inputs.Select(input => input.Group).Order()]);
+        Assert.Equal("甲值", inputs.Single(input => input.Group == 0).Text);
+        Assert.Equal("乙值", inputs.Single(input => input.Group == 1).Text);
+        Assert.Equal(2, flow.Edges.Count(edge => edge.To == selector.Id));
+    }
+
+    private static FlowDescriptionSet Groups() => new(
+        [],
+        [
+            new FlowEntry("多组", null, [ModelPort()], new NodeDefinitionDescription
+            {
+                Name = "整体",
+                Kind = "Container",
+                Inputs = [ModelInput()],
+                Bindings = ModelBinding(),
+                Nodes =
+                [
+                    new NodeDefinitionDescription
+                    {
+                        Name = "甲",
+                        Kind = "Llm",
+                        Inputs = [ModelInput()],
+                        Bindings = ModelBinding(),
+                        Outputs = [new PortDescription("结果", "Text")],
+                    },
+                    new NodeDefinitionDescription
+                    {
+                        Name = "乙",
+                        Kind = "Llm",
+                        Inputs = [ModelInput()],
+                        Bindings = ModelBinding(),
+                        Outputs = [new PortDescription("结果", "Text")],
+                    },
+                    new NodeDefinitionDescription
+                    {
+                        Name = "选择",
+                        Kind = "Llm",
+                        Inputs = [new InputPortDescription("输入", "Text"), ModelInput()],
+                        Bindings = ModelBinding(),
+                        From =
+                        [
+                            new FromGroupDescription([new FromLinkDescription("输入", "甲@结果")]),
+                            new FromGroupDescription([new FromLinkDescription("输入", "乙@结果")]),
+                        ],
+                        Outputs = [new PortDescription("结果", "Text")],
+                    },
+                ],
+            }),
+        ]);
+
     private static FlowDescriptionSet Merge() => new(
         [],
         [
@@ -250,34 +343,63 @@ public sealed class MafFlowAssemblerTests
         Assert.Null(input.UpstreamStep);
     }
 
-    [Fact(DisplayName = "拒绝多个入口步骤")]
-    public void Rejects_multiple_entry_steps()
+    [Fact(DisplayName = "装配多个入口步骤")]
+    public void Assembles_multiple_entry_steps()
     {
         ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(MultipleEntries());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
 
-        Assert.True(assembled.IsError);
-        Assert.Contains(assembled.ErrorsOrEmptyList,
-            error => error.Description.Contains("多个入口步骤", StringComparison.Ordinal));
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        Assert.Equal(2, flow.Steps.Count);
+        Assert.Empty(flow.Edges);
+        Assert.Equal(2, flow.Entries().Count);
+        Assert.Contains(flow.Entries(), step => step.Label == "甲");
+        Assert.Contains(flow.Entries(), step => step.Label == "乙");
     }
 
-    [Fact(DisplayName = "拒绝控制角色输入")]
-    public void Rejects_control_inputs()
+    [Fact(DisplayName = "装配控制角色输入")]
+    public void Assembles_control_inputs()
     {
         ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(ControlInput());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
 
-        Assert.True(assembled.IsError);
-        Assert.Contains(assembled.ErrorsOrEmptyList,
-            error => error.Description.Contains("控制角色", StringComparison.Ordinal));
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        MafStep step = Assert.Single(flow.Steps);
+        MafStepInput input = step.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId("1"),
+            step.Id,
+            [],
+            new Dictionary<PortName, string>
+            {
+                [Goal] = "目标值",
+                [MafFlowDefinition.ModelPort] = "test-model",
+            },
+            "test-model")).Single(item => item.Port.Value == "控制");
+
+        Assert.Equal(ExecutionPortRole.Control, input.Role);
+        Assert.Equal(ExecutionPortKind.Text, input.Kind);
+        Assert.Equal(0, input.Group);
     }
 
-    [Fact(DisplayName = "拒绝信号端口")]
-    public void Rejects_signal_ports()
+    [Fact(DisplayName = "装配信号端口")]
+    public void Assembles_signal_ports()
     {
         ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(Signal());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
 
-        Assert.True(assembled.IsError);
-        Assert.Contains(assembled.ErrorsOrEmptyList,
-            error => error.Description.Contains("Signal", StringComparison.Ordinal));
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        MafStep producer = flow.Steps.Single(step => step.Label == "产生");
+        MafStep consumer = flow.Steps.Single(step => step.Label == "放行");
+        MafStepInput input = consumer.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId("1"),
+            consumer.Id,
+            [new MafStepOutput(producer.Id, new PortName("计划"), "计划值")],
+            new Dictionary<PortName, string> { [MafFlowDefinition.ModelPort] = "test-model" },
+            "test-model")).Single(item => item.Port.Value == "批准");
+
+        Assert.Equal(ExecutionPortKind.Signal, input.Kind);
+        Assert.Equal(ExecutionPortRole.Control, input.Role);
+        Assert.Equal("计划值", input.Text);
     }
 
     [Fact(DisplayName = "固定值开始端口只作为输入取值")]
@@ -321,6 +443,180 @@ public sealed class MafFlowAssemblerTests
             "test-model")).Single(item => item.Port == new PortName("全文"));
         Assert.Equal("全文", input.Text);
     }
+
+    [Fact(DisplayName = "装配上下文端口与输出计划")]
+    public void Assembles_context_ports_and_output_plan()
+    {
+        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(ContextFlow());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
+
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        MafStep producer = flow.Steps.Single(step => step.Label == "提供");
+        MafStep consumer = flow.Steps.Single(step => step.Label == "读取");
+        MafOutputPort output = Assert.Single(producer.OutputPlan);
+        MafStepInput input = consumer.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId("1"),
+            consumer.Id,
+            [new MafStepOutput(producer.Id, new PortName("上下文"), "上下文值")],
+            new Dictionary<PortName, string> { [MafFlowDefinition.ModelPort] = "test-model" },
+            "test-model")).Single(item => item.Port.Value == "上下文");
+
+        Assert.Equal(ExecutionPortKind.Context, output.Kind);
+        Assert.False(output.Required);
+        Assert.Equal(ExecutionPortKind.Context, input.Kind);
+        Assert.Equal(ExecutionPortRole.Content, input.Role);
+        Assert.Equal("上下文值", input.Text);
+    }
+
+    [Fact(DisplayName = "装配触发端口与反向条件")]
+    public void Assembles_trigger_ports_and_negative_condition()
+    {
+        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(Trigger());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
+
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        MafStep producer = flow.Steps.Single(step => step.Label == "产生");
+        MafStep consumer = flow.Steps.Single(step => step.Label == "放行");
+        MafOutputPort output = producer.OutputPlan.Single(port => port.Name.Value == "计划");
+        MafStepInput input = consumer.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId("1"),
+            consumer.Id,
+            [new MafStepOutput(producer.Id, new PortName("计划"), "计划值")],
+            new Dictionary<PortName, string> { [MafFlowDefinition.ModelPort] = "test-model" },
+            "test-model")).Single(item => item.Port.Value == "批准");
+
+        Assert.Equal(ExecutionPortKind.Text, output.Kind);
+        Assert.True(output.Trigger);
+        Assert.Equal(ExecutionPortKind.Text, input.Kind);
+        Assert.Equal(ExecutionPortRole.Content, input.Role);
+        Assert.Equal(MafTriggerCondition.Negative, input.Condition);
+        Assert.Equal("计划值", input.Text);
+    }
+
+    [Fact(DisplayName = "装配无固定值的开始常量端口")]
+    public void Assembles_start_constant_port_without_value()
+    {
+        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(StartConstant());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
+
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        MafStartPort constant = flow.StartPorts.Single(port => port.Name == WorkPath);
+        MafStep step = Assert.Single(flow.Steps);
+        MafStepInput input = step.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId("1"),
+            step.Id,
+            [],
+            new Dictionary<PortName, string>
+            {
+                [WorkPath] = "/tmp/work",
+                [MafFlowDefinition.ModelPort] = "test-model",
+            },
+            "test-model")).Single(item => item.Port == WorkPath);
+
+        Assert.Equal(ExecutionPortKind.Text, constant.Kind);
+        Assert.Equal(MafPortMode.Constant, constant.Mode);
+        Assert.Equal(-1, input.Group);
+        Assert.Equal("/tmp/work", input.Text);
+    }
+
+    private static FlowDescriptionSet StartConstant() => new(
+        [],
+        [
+            new FlowEntry("开始常量", null,
+                [new PortDescription(WorkPath.Value, "Text", PortModeDescription.Constant), ModelPort()],
+                new NodeDefinitionDescription
+                {
+                    Name = "整体",
+                    Kind = "Container",
+                    Inputs = [WorkPathInput(), ModelInput()],
+                    Bindings = WorkPathBinding(),
+                    Nodes =
+                    [
+                        new NodeDefinitionDescription
+                        {
+                            Name = "写入",
+                            Kind = "Llm",
+                            Inputs = [WorkPathInput(), ModelInput()],
+                            Bindings = WorkPathBinding(),
+                            Outputs = [new PortDescription(Result.Value, "Text")],
+                        },
+                    ],
+                }),
+        ]);
+
+    private static FlowDescriptionSet Trigger() => new(
+        [],
+        [
+            new FlowEntry("触发", null, [ModelPort()], new NodeDefinitionDescription
+            {
+                Name = "整体",
+                Kind = "Container",
+                Inputs = [ModelInput()],
+                Bindings = ModelBinding(),
+                Nodes =
+                [
+                    new NodeDefinitionDescription
+                    {
+                        Name = "产生",
+                        Kind = "Llm",
+                        Inputs = [ModelInput()],
+                        Bindings = ModelBinding(),
+                        Outputs = [new PortDescription("计划", "Text", PortModeDescription.Trigger)],
+                    },
+                    new NodeDefinitionDescription
+                    {
+                        Name = "放行",
+                        Kind = "Llm",
+                        Inputs =
+                        [
+                            new InputPortDescription("批准", "Text", PortModeDescription.Trigger),
+                            ModelInput(),
+                        ],
+                        Bindings = ModelBinding(),
+                        From =
+                        [
+                            new FromGroupDescription(
+                            [
+                                new FromLinkDescription("批准", "产生@计划", TriggerConditionDescription.Negative),
+                            ]),
+                        ],
+                        Outputs = [new PortDescription(Result.Value, "Text")],
+                    },
+                ],
+            }),
+        ]);
+
+    private static FlowDescriptionSet ContextFlow() => new(
+        [],
+        [
+            new FlowEntry("上下文", null, [ModelPort()], new NodeDefinitionDescription
+            {
+                Name = "整体",
+                Kind = "Container",
+                Inputs = [ModelInput()],
+                Bindings = ModelBinding(),
+                Nodes =
+                [
+                    new NodeDefinitionDescription
+                    {
+                        Name = "提供",
+                        Kind = "Llm",
+                        Inputs = [ModelInput()],
+                        Bindings = ModelBinding(),
+                        Outputs = [new PortDescription("上下文", "Context")],
+                    },
+                    new NodeDefinitionDescription
+                    {
+                        Name = "读取",
+                        Kind = "Llm",
+                        Inputs = [new InputPortDescription("上下文", "Context"), ModelInput()],
+                        Bindings = ModelBinding(),
+                        From = [new FromGroupDescription([new FromLinkDescription("上下文", "提供@上下文")])],
+                        Outputs = [new PortDescription(Result.Value, "Text")],
+                    },
+                ],
+            }),
+        ]);
 
     private static NodeDefinitionDescription Constant(string name) => new()
     {

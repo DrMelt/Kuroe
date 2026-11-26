@@ -14,14 +14,19 @@ internal sealed class MafStepInputAssembler(IReadOnlyList<MafInputPlan> plans) :
     private static MafStepInput Input(MafInputPlan plan, MafStepInputContext context) =>
         new(
             plan.Port.Name,
-            ExecutionPortKind.Text,
+            KindOf(plan.Port),
             RoleOf(plan.Port.Role),
             plan.Port.Role == InputRole.Content,
             plan.Port.Default,
             Source(plan),
             SourceKey: null,
             Text(plan, context),
-            plan.UpstreamStep);
+            plan.UpstreamStep)
+        {
+            Group = plan.Group,
+            Condition = plan.Condition,
+            UpstreamPort = plan.UpstreamPort,
+        };
 
     /// <summary>取端口文本：装配期常量直接给出，开始输入与上游端口按上下文取。</summary>
     private static string Text(MafInputPlan plan, MafStepInputContext context) => plan.Kind switch
@@ -30,7 +35,7 @@ internal sealed class MafStepInputAssembler(IReadOnlyList<MafInputPlan> plans) :
         MafInputKind.StartInput => plan.StartPort is { } port
             ? context.StartInputs.GetValueOrDefault(port) ?? string.Empty
             : string.Empty,
-        MafInputKind.Upstream => Upstream(plan, context),
+        MafInputKind.Upstream or MafInputKind.RuntimeConstant => Upstream(plan, context),
         _ => string.Empty,
     };
 
@@ -60,7 +65,17 @@ internal sealed class MafStepInputAssembler(IReadOnlyList<MafInputPlan> plans) :
         MafInputKind.Upstream => plan.UpstreamStep is { } step && plan.UpstreamPort is { } port
             ? $"步骤「{step}」的端口「{port}」产出"
             : string.Empty,
+        MafInputKind.RuntimeConstant => plan.UpstreamStep is { } step && plan.UpstreamPort is { } port
+            ? $"步骤「{step}」的运行期常量「{port}」"
+            : string.Empty,
         _ => $"输入端口「{plan.Port.Name}」的固定值",
+    };
+
+    private static ExecutionPortKind KindOf(InputPort port) => port.Type.Semantics switch
+    {
+        PortSemantics.Context => ExecutionPortKind.Context,
+        PortSemantics.Signal => ExecutionPortKind.Signal,
+        _ => ExecutionPortKind.Text,
     };
 
     private static ExecutionPortRole RoleOf(InputRole role) => role switch

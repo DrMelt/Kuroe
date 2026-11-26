@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Kernel.Execution.Shared.Ports;
 using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.Kernel.Execution.Shared.Identity;
 
@@ -17,15 +18,9 @@ public sealed record MafFlowDefinition(
     /// <summary>流程说明。</summary>
     public string? Description { get; init; }
 
-    /// <summary>入口步骤：没有入边的步骤。定义必须恰好有一个入口。</summary>
-    public ErrorOr<MafStep> Entry()
-    {
-        MafStep[] entries = [.. Steps.Where(step => Edges.All(edge => edge.To != step.Id))];
-
-        return entries.Length == 1
-            ? entries[0]
-            : Error.Validation(FlowErrorCodes.FlowComposition, "MAF 流程必须恰好有一个入口步骤。");
-    }
+    /// <summary>入口步骤：没有入边的步骤，按步骤声明序。</summary>
+    public IReadOnlyList<MafStep> Entries() =>
+        [.. Steps.Where(step => Edges.All(edge => edge.To != step.Id))];
 
     /// <summary>按步骤标识取步骤，不存在时为空。</summary>
     public MafStep? Find(MafStepId id) =>
@@ -35,7 +30,7 @@ public sealed record MafFlowDefinition(
     public MafStep? Find(string id) =>
         Steps.FirstOrDefault(step => step.Id.Value == id);
 
-    /// <summary>校验定义结构：步骤标识唯一且可作路径、连接两端存在、每个步骤至多一个上游、全部步骤从入口可达、开始端口声明完整。</summary>
+    /// <summary>校验流程结构：步骤与输出端口、连接端点、入口存在、全部步骤从任一入口可达、开始端口声明。</summary>
     public IReadOnlyList<Error> Validate()
     {
         List<Error> errors = [];
@@ -83,20 +78,15 @@ public sealed record MafFlowDefinition(
             }
         }
 
-        foreach (IGrouping<MafStepId, MafEdge> incoming in Edges.GroupBy(edge => edge.To).Where(group => group.Count() > 1))
+        IReadOnlyList<MafStep> entries = Entries();
+        if (entries.Count == 0)
         {
-            errors.Add(FlowErrors.Body(Name.Value,
-                $"步骤「{incoming.Key.Value}」有多个上游，步骤只接受一个上游。"));
+            errors.Add(FlowErrors.Body(Name.Value, "流程没有入口步骤。"));
         }
 
-        ErrorOr<MafStep> entry = Entry();
-        if (entry.IsError)
+        if (entries.Count > 0 && errors.Count == 0)
         {
-            errors.Add(entry.FirstError);
-        }
-        else if (errors.Count == 0)
-        {
-            foreach (MafStepId unreachable in Unreachable(entry.Value.Id, ids))
+            foreach (MafStepId unreachable in Unreachable(entries.Select(step => step.Id), ids))
             {
                 errors.Add(FlowErrors.Body(Name.Value, $"步骤「{unreachable.Value}」从入口不可达。"));
             }
@@ -121,9 +111,9 @@ public sealed record MafFlowDefinition(
     }
 
     /// <summary>步骤中从入口不可达的标识。</summary>
-    private IEnumerable<MafStepId> Unreachable(MafStepId entry, HashSet<MafStepId> ids)
+    private IEnumerable<MafStepId> Unreachable(IEnumerable<MafStepId> entries, HashSet<MafStepId> ids)
     {
-        HashSet<MafStepId> reached = [entry];
+        HashSet<MafStepId> reached = [.. entries];
         bool grew = true;
         while (grew)
         {
@@ -139,7 +129,14 @@ public sealed record MafFlowDefinition(
 }
 
 /// <summary>MAF 流程的开始端口。</summary>
-public sealed record MafStartPort(PortName Name, string? Default = null);
+public sealed record MafStartPort(PortName Name, string? Default = null)
+{
+    /// <summary>端口取值种类。</summary>
+    public ExecutionPortKind Kind { get; init; } = ExecutionPortKind.Text;
+
+    /// <summary>端口模式。</summary>
+    public MafPortMode Mode { get; init; } = MafPortMode.Plain;
+}
 
 /// <summary>MAF 流程的步骤：标识、标签、输出端口、执行装配工厂与输入装配。
 /// 步骤标识同时是执行步骤标识；步骤的输入由输入装配按上游产出与流程开始输入给出。</summary>
@@ -152,6 +149,15 @@ public sealed record MafStep(
 {
     /// <summary>步骤对应的执行步骤标识。</summary>
     public ExecutionStepId ExecutionStepId => Id.ToExecutionStepId();
+
+    /// <summary>输出端口计划，未给出时由 <see cref="Outputs"/> 按文本端口补齐。</summary>
+    public IReadOnlyList<MafOutputPort> OutputPlan { get; init; } = [];
+
+    /// <summary>生效的输出端口计划：未显式给出时把 <see cref="Outputs"/> 按文本端口补齐。</summary>
+    public IReadOnlyList<MafOutputPort> OutputPorts() =>
+        OutputPlan.Count > 0
+            ? OutputPlan
+            : [.. Outputs.Select(port => new MafOutputPort(port, ExecutionPortKind.Text))];
 }
 
 /// <summary>步骤之间的连接。</summary>

@@ -3,7 +3,7 @@ using Kuroe.Kernel.Tasks.Shared;
 
 namespace Kuroe.Maf.Definition;
 
-/// <summary>步骤执行的一个输入取用：目标端口、取值形状、取值与来源。</summary>
+/// <summary>步骤执行的一个输入取用：目标端口、取值形状、取值与来源。同一端口可以有多条绑定。</summary>
 /// <param name="Port">目标输入端口。</param>
 /// <param name="Kind">端口取值种类。</param>
 /// <param name="Role">执行角色，只有内容角色进入执行的内容输入。</param>
@@ -22,4 +22,14 @@ public sealed record MafStepInput(
     string? Source,
     string? SourceKey,
     string Text,
-    MafStepId? UpstreamStep);
+    MafStepId? UpstreamStep)
+{
+    /// <summary>启动组号，静态输入为负。</summary>
+    public int Group { get; init; } = -1;
+
+    /// <summary>来源触发条件。</summary>
+    public MafTriggerCondition Condition { get; init; } = MafTriggerCondition.Positive;
+
+    /// <summary>取值来自的上游端口，取值不来自步骤端口时为空。</summary>
+    public PortName? UpstreamPort { get; init; }
+}

@@ -9,31 +9,45 @@ internal static class MafWorkflowEventTranslator
     /// <summary>转换一个事件，不需要处理时为空。</summary>
     internal static MafWorkflowEvent? Translate(
         WorkflowEvent update,
-        IReadOnlyDictionary<string, MafStep> steps) =>
+        IReadOnlyDictionary<string, MafStep> steps,
+        string startId) =>
         update switch
         {
             ExecutorInvokedEvent invoked => Step(
                 steps,
                 invoked.ExecutorId,
+                startId,
                 step => new MafStepStarted(step)),
             ExecutorCompletedEvent completed => Step(
                 steps,
                 completed.ExecutorId,
+                startId,
                 step => new MafStepCompleted(step)),
+            ExecutorFailedEvent failed when failed.ExecutorId == startId => new MafWorkflowFailed(
+                failed.Data?.ToString() ?? string.Empty),
             ExecutorFailedEvent failed => Step(
                 steps,
                 failed.ExecutorId,
+                startId,
                 step => new MafStepFailed(step, failed.Data?.ToString() ?? string.Empty)),
             WorkflowErrorEvent error => new MafWorkflowFailed(
                 error.Exception?.Message ?? error.Data?.ToString() ?? string.Empty),
             _ => null,
         };
 
-    private static MafWorkflowEvent Step(
+    private static MafWorkflowEvent? Step(
         IReadOnlyDictionary<string, MafStep> steps,
         string executor,
-        Func<MafStep, MafWorkflowEvent> create) =>
-        steps.TryGetValue(executor, out MafStep? step) && step is { } found
+        string startId,
+        Func<MafStep, MafWorkflowEvent> create)
+    {
+        if (executor == startId)
+        {
+            return null;
+        }
+
+        return steps.TryGetValue(executor, out MafStep? step) && step is { } found
             ? create(found)
             : new MafWorkflowFailed($"MAF 执行器 {executor} 不在流程定义中。");
+    }
 }

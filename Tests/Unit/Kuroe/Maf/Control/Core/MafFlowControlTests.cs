@@ -62,6 +62,8 @@ public sealed class MafFlowControlTests
         Assert.Equal("测试", snapshot.View.Name);
         Assert.Equal(["第一步", "第二步"], snapshot.View.Steps.Select(step => step.Label));
         Assert.Equal(["目标", "MODEL_NAME"], snapshot.View.StartPorts.Select(port => port.Name));
+        Assert.All(snapshot.View.StartPorts, port => Assert.Equal("Text", port.Kind));
+        Assert.Equal(["输出"], snapshot.View.Steps[0].Outputs.Select(port => port.Name));
     }
 
     [Fact(DisplayName = "步骤中断暂停任务恢复后继续")]
@@ -172,6 +174,7 @@ public sealed class MafFlowControlTests
 
         Assert.Equal("测试", template.Name);
         Assert.Equal(["目标", "MODEL_NAME"], template.StartPorts.Select(port => port.Name));
+        Assert.All(template.StartPorts, port => Assert.Equal("Text", port.Kind));
         Assert.Equal(["第一步", "第二步"], template.Steps.Select(step => step.Label));
     }
 

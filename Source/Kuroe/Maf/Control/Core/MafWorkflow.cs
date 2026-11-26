@@ -4,25 +4,28 @@ using AgentWorkflow = Microsoft.Agents.AI.Workflows.Workflow;
 
 namespace Kuroe.Maf.Control;
 
-/// <summary>构建产物：workflow 与执行器标识到步骤的映射。</summary>
+/// <summary>构建产物：workflow、执行器标识到步骤的映射与开始执行器标识。</summary>
 internal sealed record MafWorkflowGraph(
     AgentWorkflow Workflow,
-    IReadOnlyDictionary<string, MafStep> Steps);
+    IReadOnlyDictionary<string, MafStep> Steps,
+    string StartId);
 
-/// <summary>把流程定义构造成 MAF workflow：步骤来自定义，连接来自定义，执行器标识来自步骤标识。</summary>
+/// <summary>把流程定义构造成 MAF workflow：开始执行器接全部入口，步骤连接来自定义。</summary>
 internal static class MafWorkflow
 {
     internal static MafWorkflowGraph Build(
         MafFlowDefinition definition,
-        MafStepMessage entry,
-        Func<MafStep, MafStepHandler> handlers)
+        Func<MafStep, MafStepNode> nodes)
     {
-        Dictionary<MafStepId, FunctionExecutor<MafStepMessage, MafStepMessage>> executors = definition.Steps
-            .ToDictionary(step => step.Id, step => Executor(step, handlers(step)));
-        MafStep entryStep = definition.Find(entry.Step)
-            ?? throw new InvalidOperationException($"步骤 {entry.Step.Value} 不在流程定义中。");
+        Dictionary<MafStepId, MafStepNode> executors = definition.Steps
+            .ToDictionary(step => step.Id, nodes);
+        MafStartExecutor start = new();
+        WorkflowBuilder builder = new(start);
+        foreach (MafStep entry in definition.Entries())
+        {
+            builder.AddEdge(start, executors[entry.Id]);
+        }
 
-        WorkflowBuilder builder = new(executors[entryStep.Id]);
         foreach (MafEdge edge in definition.Edges)
         {
             builder.AddEdge(executors[edge.From], executors[edge.To]);
@@ -30,12 +33,7 @@ internal static class MafWorkflow
 
         return new MafWorkflowGraph(
             builder.Build(),
-            definition.Steps.ToDictionary(step => step.Id.Value));
+            definition.Steps.ToDictionary(step => step.Id.Value),
+            MafStartExecutor.IdValue);
     }
-
-    /// <summary>把步骤处理器接到 MAF 执行器。</summary>
-    private static FunctionExecutor<MafStepMessage, MafStepMessage> Executor(
-        MafStep step,
-        MafStepHandler handler) =>
-        new(step.Id.Value, (message, _, cancellationToken) => handler(message, cancellationToken));
 }

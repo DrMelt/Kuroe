@@ -30,7 +30,7 @@ internal sealed class MafStepExecutor(
 {
     /// <summary>执行一次步骤，把交回的端口作为上游产出交给下游。</summary>
     internal async ValueTask<MafStepMessage> HandleAsync(
-        MafStepMessage message,
+        IReadOnlyList<MafStepInput> inputs,
         CancellationToken cancellationToken)
     {
         if (control.Halted)
@@ -40,7 +40,7 @@ internal sealed class MafStepExecutor(
 
         ExecutionStepId stepId = step.ExecutionStepId;
         int attempt = task.Executions.Count(execution => execution.Request.Step == stepId) + 1;
-        ExecutionRequest request = Request(message);
+        ExecutionRequest request = Request(inputs);
         ExecutionParameterContext context = new(
             request.Owner,
             request.Step,
@@ -95,53 +95,66 @@ internal sealed class MafStepExecutor(
         return Output(snapshot);
     }
 
-    /// <summary>本次执行的请求：输入由步骤的输入装配给出，步骤输出端口要求交回。</summary>
-    private ExecutionRequest Request(MafStepMessage message)
+    /// <summary>本次执行的请求：输入按端口聚合，步骤输出端口要求交回。</summary>
+    private ExecutionRequest Request(IReadOnlyList<MafStepInput> inputs)
     {
-        MafStepInputContext context = new(
-            new ExecutionOwnerId(task.Id.Value),
-            step.Id,
-            [.. message.Outputs],
-            MafFlowAccess.State(task).StartTexts.Texts,
-            model);
-        IReadOnlyList<MafStepInput> inputs = step.Inputs.Assemble(context);
+        ExecutionOwnerId owner = new(task.Id.Value);
+        IReadOnlyList<ExecutionInputPort> ports =
+        [
+            .. inputs
+                .GroupBy(input => input.Port)
+                .Select(group =>
+                {
+                    MafStepInput first = group.First();
 
-        return new ExecutionRequest(
-            context.Owner,
-            step.ExecutionStepId,
-            [.. inputs.Select(input => new ExecutionInputPort(
-                new ExecutionPortName(input.Port.Value),
-                input.Kind,
-                input.Role,
-                input.Required,
-                input.DefaultText))],
-            [.. inputs
+                    return new ExecutionInputPort(
+                        new ExecutionPortName(first.Port.Value),
+                        first.Kind,
+                        first.Role,
+                        group.Any(input => input.Required),
+                        first.DefaultText);
+                }),
+        ];
+        IReadOnlyList<ExecutionInputValue> values =
+        [
+            .. inputs
                 .Where(input => input.Role == ExecutionPortRole.Content)
                 .Select(input => new ExecutionInputValue(
                     new ExecutionPortName(input.Port.Value),
                     input.Text,
                     SourceText(input),
-                    RecordKey(input)))],
-            inputs.ToDictionary(
-                input => new ExecutionPortName(input.Port.Value),
-                input => input.Text),
-            [.. step.Outputs.Select(port => new ExecutionOutputPort(
-                new ExecutionPortName(port.Value),
-                ExecutionPortKind.Text,
-                Required: true,
-                CarriesTrigger: false))]);
+                    RecordKey(input))),
+        ];
+        IReadOnlyDictionary<ExecutionPortName, string> texts = inputs
+            .Where(input => input.Role != ExecutionPortRole.Control)
+            .GroupBy(input => input.Port)
+            .ToDictionary(
+                group => new ExecutionPortName(group.Key.Value),
+                group => string.Join("\n\n", group.Select(input => input.Text).Where(text => text.Length > 0)));
+
+        return new ExecutionRequest(
+            owner,
+            step.ExecutionStepId,
+            ports,
+            values,
+            texts,
+            [.. step.OutputPorts().Select(port => new ExecutionOutputPort(
+                new ExecutionPortName(port.Name.Value),
+                port.Kind,
+                port.Required,
+                port.Trigger))]);
     }
 
     /// <summary>输入取用的来源描述，未给出时按上游端口给出。</summary>
     private static string? SourceText(MafStepInput input) =>
         input.Source ?? (input.UpstreamStep is { } upstream
-            ? MafRecordSources.Display(new MafStepOutput(upstream, input.Port, input.Text))
+            ? MafRecordSources.Display(new MafStepOutput(upstream, input.UpstreamPort ?? input.Port, input.Text))
             : null);
 
     /// <summary>输入取用的记录标识，未给出时按上游端口给出。</summary>
     private static string? RecordKey(MafStepInput input) =>
         input.SourceKey ?? (input.UpstreamStep is { } upstream
-            ? MafRecordSources.Write(new MafStepOutput(upstream, input.Port, input.Text))
+            ? MafRecordSources.Write(new MafStepOutput(upstream, input.UpstreamPort ?? input.Port, input.Text))
             : null);
 
     /// <summary>本次执行交回的端口作为下游消息。</summary>
@@ -152,5 +165,8 @@ internal sealed class MafStepExecutor(
                 .Select(pair => new MafStepOutput(
                     step.Id,
                     new PortName(pair.Key.Value),
-                    pair.Value.Text ?? string.Empty))]);
+                    pair.Value.Text ?? string.Empty)
+                {
+                    Fires = pair.Value.Fires,
+                })]);
 }

@@ -8,24 +8,22 @@ internal static class MafWorkflowRunner
 {
     internal static Task<IMafWorkflowRun> StartAsync(
         MafFlowDefinition definition,
-        MafStepMessage entry,
+        Func<MafStep, MafStepNode> nodes,
         string session,
-        Func<MafStep, MafStepHandler> handlers,
         IMafWorkflowCheckpoints checkpoints,
         ICheckpointIdSource ids,
         CancellationToken cancellationToken)
     {
-        MafWorkflowGraph graph = MafWorkflow.Build(definition, entry, handlers);
+        MafWorkflowGraph graph = MafWorkflow.Build(definition, nodes);
         MafWorkflowCheckpointStore store = new(checkpoints, ids);
 
         return store.Current is { } checkpoint
             ? ResumeAsync(graph, checkpoint, store.Manager, cancellationToken)
-            : RunAsync(graph, entry, session, store.Manager, cancellationToken);
+            : RunAsync(graph, session, store.Manager, cancellationToken);
     }
 
     private static async Task<IMafWorkflowRun> RunAsync(
         MafWorkflowGraph graph,
-        MafStepMessage entry,
         string session,
         CheckpointManager checkpoints,
         CancellationToken cancellationToken)
@@ -33,13 +31,13 @@ internal static class MafWorkflowRunner
         StreamingRun run = await InProcessExecution
             .RunStreamingAsync(
                 graph.Workflow,
-                entry,
+                new MafStartMessage(),
                 checkpoints,
                 session,
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return new MafWorkflowRun(run, graph.Steps);
+        return new MafWorkflowRun(run, graph.Steps, graph.StartId);
     }
 
     private static async Task<IMafWorkflowRun> ResumeAsync(
@@ -56,6 +54,6 @@ internal static class MafWorkflowRunner
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return new MafWorkflowRun(run, graph.Steps);
+        return new MafWorkflowRun(run, graph.Steps, graph.StartId);
     }
 }
