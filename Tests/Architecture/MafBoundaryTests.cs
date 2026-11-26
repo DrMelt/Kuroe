@@ -87,6 +87,7 @@ public sealed class MafBoundaryTests
         string description = Path.Combine(KuroeRoot, "FlowDescription", "Description", "Shared");
         string definition = Path.Combine(KuroeRoot, "FlowDescription", "Definition", "Shared");
         string descriptionCompilation = Path.Combine(KuroeRoot, "FlowDescription", "Compilation", "Shared");
+        string semanticsShared = Path.Combine(KuroeRoot, "FlowDescription", "Semantics", "Shared");
         string mafCompilationShared = Path.Combine(KuroeRoot, "Maf", "Compilation", "Shared");
         string mafDefinition = Path.Combine(KuroeRoot, "Maf", "Definition", "Core");
         string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
@@ -122,6 +123,7 @@ public sealed class MafBoundaryTests
             description,
             definition,
             descriptionCompilation,
+            semanticsShared,
             mafCompilationShared,
             mafDefinition,
             tasks,

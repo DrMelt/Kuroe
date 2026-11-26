@@ -6,6 +6,7 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
+using Kuroe.FlowDescription.Semantics;
 using Kuroe.Host.Ability.Node.Llm;
 using Kuroe.Kernel.Tasks.Shared;
 using Xunit;
@@ -45,7 +46,7 @@ public sealed class FlowGraphCompilerTests
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], []);
         Assert.False(expanded.IsError, string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<FlowGraph> compiled = new FlowGraphCompiler().Compile(expanded.Value[0]);
+        ErrorOr<FlowGraph> compiled = new FlowGraphCompiler(new FlowSemanticsAnalyzer()).Compile(expanded.Value[0]);
 
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
         Assert.Single(compiled.Value.Graph.ExecutableNodes);

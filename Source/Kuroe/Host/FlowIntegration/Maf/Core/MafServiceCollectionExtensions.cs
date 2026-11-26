@@ -26,7 +26,7 @@ public static class MafServiceCollectionExtensions
     public static ErrorOr<Success> AddKuroeMafFlows(
         this IServiceCollection services,
         IFlowTemplateRegistrar registrar,
-        IFlowDescriptionCompiler compiler,
+        IFlowSemanticCompiler compiler,
         IMafNodeExecutions executions,
         FlowDescriptionSet document)
     {

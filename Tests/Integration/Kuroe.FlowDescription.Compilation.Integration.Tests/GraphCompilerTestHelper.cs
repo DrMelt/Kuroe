@@ -6,6 +6,8 @@ using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Compilation.Shared.NodeTypes;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Semantics;
+using Kuroe.FlowDescription.Semantics.Shared;
 
 namespace Kuroe.FlowDescription.Compilation.Integration.Tests;
 
@@ -17,18 +19,20 @@ internal static class GraphCompilerTestHelper
         INodeTypeDescriptionRegistry types,
         FlowDescriptionSet document)
     {
-        IFlowDescriptionCompiler descriptions = new FlowDescriptionCompiler(types, new NodeLibraryExpander());
+        IFlowSemanticsAnalyzer semantics = new FlowSemanticsAnalyzer();
+        IFlowDescriptionCompiler descriptions = new FlowDescriptionCompiler(types, new NodeLibraryExpander(), semantics);
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = descriptions.Compile(document);
         if (expanded.IsError)
         {
             return expanded.ErrorsOrEmptyList;
         }
 
+        FlowGraphCompiler graphs = new(semantics);
         List<FlowGraph> flows = [];
         List<Error> errors = [];
         foreach (FlowDefinition flow in expanded.Value)
         {
-            ErrorOr<FlowGraph> compiled = new FlowGraphCompiler().Compile(flow);
+            ErrorOr<FlowGraph> compiled = graphs.Compile(flow);
             if (compiled.IsError)
             {
                 errors.AddRange(compiled.ErrorsOrEmptyList);

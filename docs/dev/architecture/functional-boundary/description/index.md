@@ -6,11 +6,14 @@
 flowchart TD
     Description["描述<br>Kuroe/FlowDescription/Description"]
     Definition["定义<br>Kuroe/FlowDescription/Definition"]
+    Semantics["语义<br>Kuroe/FlowDescription/Semantics"]
     Compilation["编译<br>Kuroe/FlowDescription/Compilation"]
     Json["文件格式<br>Kuroe/FlowDescription/Json"]
     Definition --> Description
+    Semantics --> Definition
     Compilation --> Description
     Compilation --> Definition
+    Compilation --> Semantics
     Json --> Description
 ```
 
@@ -18,6 +21,8 @@ flowchart TD
 | --- | --- | --- |
 | 描述 | `Kuroe.FlowDescription.Description.Shared` | [kuroe-flow-description-description-shared](flow-description/kuroe-flow-description-description-shared.md) |
 | 定义 | `Kuroe.FlowDescription.Definition.Shared` | [kuroe-flow-description-definition-shared](flow-description/kuroe-flow-description-definition-shared.md) |
+| 语义 | `Kuroe.FlowDescription.Semantics.Shared` | [kuroe-flow-description-semantics-shared](semantics/kuroe-flow-description-semantics-shared.md) |
+| 语义 | `Kuroe.FlowDescription.Semantics` | [kuroe-flow-description-semantics](semantics/kuroe-flow-description-semantics.md) |
 | 编译 | `Kuroe.FlowDescription.Compilation.Shared` | [kuroe-flow-description-compilation-shared](flow-description/kuroe-flow-description-compilation-shared.md) |
 | 编译 | `Kuroe.FlowDescription.Compilation` | [kuroe-flow-description-compilation](flow-description/kuroe-flow-description-compilation.md) |
 | 文件格式 | `Kuroe.FlowDescription.Json.Shared` | [kuroe-flow-description-json-shared](flow-description/kuroe-flow-description-json-shared.md) |

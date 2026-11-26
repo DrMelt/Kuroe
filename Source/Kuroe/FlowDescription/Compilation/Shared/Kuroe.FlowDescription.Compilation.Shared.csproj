@@ -12,5 +12,6 @@
         <ProjectReference Include="..\..\..\Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
         <ProjectReference Include="..\..\Description\Shared\Kuroe.FlowDescription.Description.Shared.csproj" />
         <ProjectReference Include="..\..\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
+        <ProjectReference Include="..\..\Semantics\Shared\Kuroe.FlowDescription.Semantics.Shared.csproj" />
     </ItemGroup>
 </Project>

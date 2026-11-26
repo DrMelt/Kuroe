@@ -2,6 +2,7 @@ using Kuroe.Flow.Compilation;
 using Kuroe.FlowDescription.Compilation;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Json;
+using Kuroe.FlowDescription.Semantics;
 using Kuroe.Host.Ability.Node.Container;
 
 using Kuroe.Kernel.Tasks.Shared;
@@ -56,9 +57,10 @@ public sealed class FlowLibraryTests
         NodeTypeDescriptionRegistry types = new();
         ContainerNodeTypeDescriptions.RegisterInto(types);
         LlmNodeTypeDescriptions.RegisterInto(types);
+        FlowSemanticsAnalyzer semantics = new();
         FlowCompilation compiler = new(
-            new FlowDescriptionCompiler(types, new NodeLibraryExpander()),
-            new FlowGraphCompiler());
+            new FlowDescriptionCompiler(types, new NodeLibraryExpander(), semantics),
+            new FlowGraphCompiler(semantics));
         JsonNodeFormat nodeFormat = new();
         JsonFlowFormat flowFormat = new();
         JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);

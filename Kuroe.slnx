@@ -36,6 +36,8 @@
     <Project Path="Source/Kuroe/FlowDescription/Definition/Shared/Kuroe.FlowDescription.Definition.Shared.csproj" />
     <Project Path="Source/Kuroe/FlowDescription/Compilation/Shared/Kuroe.FlowDescription.Compilation.Shared.csproj" />
     <Project Path="Source/Kuroe/FlowDescription/Compilation/Core/Kuroe.FlowDescription.Compilation.csproj" />
+    <Project Path="Source/Kuroe/FlowDescription/Semantics/Shared/Kuroe.FlowDescription.Semantics.Shared.csproj" />
+    <Project Path="Source/Kuroe/FlowDescription/Semantics/Core/Kuroe.FlowDescription.Semantics.csproj" />
     <Project Path="Source/Kuroe/Kernel/Tasks/Runtime/Kuroe.Kernel.Tasks.Runtime.csproj" />
     <Project Path="Source/Kuroe/Kernel/Control/Runtime/Kuroe.Kernel.Control.Runtime.csproj" />
     <Project Path="Source/Kuroe/Kernel/Execution/Core/Kuroe.Kernel.Execution.csproj" />
@@ -120,6 +122,8 @@
     <Project Path="Tests/Unit/Kuroe/Maf/Control/Core/Kuroe.Maf.Control.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe/Maf/Compilation/Core/Kuroe.Maf.Compilation.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe/FlowDescription/Compilation/Core/Kuroe.FlowDescription.Compilation.Tests.csproj" />
+    <Project Path="Tests/Unit/Kuroe/FlowDescription/Semantics/Shared/Kuroe.FlowDescription.Semantics.Shared.Tests.csproj" />
+    <Project Path="Tests/Unit/Kuroe/FlowDescription/Semantics/Core/Kuroe.FlowDescription.Semantics.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe/Flow/Graph/Shared/Kuroe.Flow.Graph.Shared.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe/FlowDescription/Json/Core/Kuroe.FlowDescription.Json.Tests.csproj" />
     <Project Path="Tests/Unit/Kuroe/FlowDescription/Definition/Shared/Kuroe.FlowDescription.Definition.Shared.Tests.csproj" />

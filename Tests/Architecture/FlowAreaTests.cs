@@ -79,6 +79,34 @@ public sealed class FlowAreaTests
         ReferencesStayUnder(project, "Kuroe.Flow.Graph.Shared", "描述、契约层与执行共享层", tasks, execution, description);
     }
 
+    [Fact(DisplayName = "图编译引用语义层与描述契约")]
+    public void Flow_compilation_references_description_semantics()
+    {
+        string project = Path.Combine(
+            KuroeRoot,
+            "Flow",
+            "Compilation",
+            "Core",
+            "Kuroe.Flow.Compilation.csproj");
+        string description = Path.Combine(KuroeRoot, "FlowDescription", "Description", "Shared");
+        string definition = Path.Combine(KuroeRoot, "FlowDescription", "Definition", "Shared");
+        string compilation = Path.Combine(KuroeRoot, "FlowDescription", "Compilation", "Core");
+        string semantics = Path.Combine(KuroeRoot, "FlowDescription", "Semantics", "Shared");
+        string graph = Path.Combine(KuroeRoot, "Flow", "Graph", "Shared");
+        string tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
+
+        ReferencesStayUnder(
+            project,
+            "Kuroe.Flow.Compilation",
+            "图共享、描述契约与语义共享层",
+            graph,
+            description,
+            definition,
+            compilation,
+            semantics,
+            tasks);
+    }
+
     [Fact(DisplayName = "流程项目不引用宿主目录")]
     public void Flow_projects_do_not_reference_host_root()
     {

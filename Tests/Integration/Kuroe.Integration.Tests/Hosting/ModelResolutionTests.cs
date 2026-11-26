@@ -110,5 +110,19 @@ public sealed class ModelResolutionTests
             Outputs = [],
             MaxExecutions = ExecutableSpec.DefaultMaxExecutions,
         },
-    ], []);
+    ], [],
+    staticInputs: declare && bind
+        ? new Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>>
+        {
+            [NodePath.Of("干活")] = new Dictionary<PortName, StaticResolution>
+            {
+                [LlmNodeTypes.ModelPort] = ModelResolution(value),
+            },
+        }
+        : null);
+
+    private static StaticResolution ModelResolution(string? value) =>
+        value is { Length: > 0 }
+            ? StaticResolution.StartFixed(LlmNodeTypes.ModelPort, value)
+            : StaticResolution.StartInjected(LlmNodeTypes.ModelPort);
 }

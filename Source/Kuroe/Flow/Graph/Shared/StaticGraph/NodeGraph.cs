@@ -12,17 +12,19 @@ namespace Kuroe.Flow.Graph.Shared.StaticGraph;
 public sealed class NodeGraph
 {
     private readonly IReadOnlyList<GraphNode> _roots;
-    private readonly Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _staticInputs = [];
-    private readonly Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _constantOutputs = [];
+    private readonly IReadOnlyDictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _staticInputs;
+    private readonly IReadOnlyDictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _constantOutputs;
     private readonly Dictionary<NodePath, IReadOnlyList<NodePath>> _dependents = [];
     private readonly Dictionary<NodePath, NodeInputPlan> _plans = [];
 
     /// <summary>构造执行视图：节点按路径落在同一棵树上，同层节点标签必须唯一，节点来源的绑定两端必须落在节点表里。
-    /// 与节点相关的绑定在构造时挂到节点上：来源侧落在来源，驱动绑定落在执行节点。树检查通过后解析静态来源并生成输入侧方案。</summary>
+    /// 与节点相关的绑定在构造时挂到节点上：来源侧落在来源，驱动绑定落在执行节点。静态输入与常量输出的解析结果由编译期给出。</summary>
     public NodeGraph(
         IReadOnlyList<Port> startPorts,
         IReadOnlyList<GraphNode> nodes,
-        IReadOnlyList<InputBinding> bindings)
+        IReadOnlyList<InputBinding> bindings,
+        IReadOnlyDictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>>? staticInputs = null,
+        IReadOnlyDictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>>? constantOutputs = null)
     {
         if (nodes.Count == 0)
         {
@@ -31,6 +33,10 @@ public sealed class NodeGraph
 
         StartPorts = startPorts;
         Bindings = [.. bindings];
+        _staticInputs = staticInputs
+            ?? new Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>>();
+        _constantOutputs = constantOutputs
+            ?? new Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>>();
         StartOutgoing = [.. Bindings.Where(binding => binding.Drives && binding.Source.IsStart)];
         _roots = [.. nodes.Where(node => node.Path.Parent is null).Select(root => Finalize(root, Bindings))];
         Nodes = [.. _roots.SelectMany(Flattened)];
@@ -147,16 +153,17 @@ public sealed class NodeGraph
         _ => node,
     };
 
-    /// <summary>按静态绑定链找出运行期常量条件，并登记每个静态输入与常量输出的结构解析结果。</summary>
+    /// <summary>按静态绑定链找出运行期常量条件，解析结果由编译期给出。</summary>
     private IReadOnlyList<InputBinding> ResolveStaticBindings()
     {
         List<InputBinding> staticBindings = [];
         foreach (ExecutableNode executable in ExecutableNodes)
         {
-            Dictionary<PortName, StaticResolution> inputs = executable.Inputs
-                .Where(port => port.IsStatic)
-                .Select(input => (input.Name, Resolution: StaticSources.ResolveInput(this, executable.Path, input.Name)))
-                .ToDictionary(entry => entry.Name, entry => entry.Resolution);
+            if (!_staticInputs.TryGetValue(executable.Path, out IReadOnlyDictionary<PortName, StaticResolution>? inputs))
+            {
+                continue;
+            }
+
             staticBindings.AddRange(inputs
                 .Where(pair => pair.Value.Kind == StaticSourceKind.RuntimeConstant)
                 .Select(pair => new InputBinding(
@@ -165,23 +172,6 @@ public sealed class NodeGraph
                     pair.Key,
                     executable.FindInput(pair.Key)?.Type,
                     Role: BindingRole.Static)));
-
-            if (inputs.Count > 0)
-            {
-                _staticInputs[executable.Path] = inputs;
-            }
-        }
-
-        foreach (GraphNode node in Nodes)
-        {
-            Dictionary<PortName, StaticResolution> constants = node.Outputs
-                .Where(port => port.IsConstant)
-                .ToDictionary(port => port.Name, port => StaticSources.ResolveOutput(this, node.Path, port.Name));
-
-            if (constants.Count > 0)
-            {
-                _constantOutputs[node.Path] = constants;
-            }
         }
 
         return [.. staticBindings.Distinct()];

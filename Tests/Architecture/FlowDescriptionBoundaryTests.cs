@@ -16,6 +16,12 @@ public sealed class FlowDescriptionBoundaryTests
     private static readonly string CompilationShared =
         Path.Combine(KuroeRoot, "FlowDescription", "Compilation", "Shared");
 
+    private static readonly string SemanticsShared =
+        Path.Combine(KuroeRoot, "FlowDescription", "Semantics", "Shared");
+
+    private static readonly string Semantics =
+        Path.Combine(KuroeRoot, "FlowDescription", "Semantics", "Core");
+
     private static readonly string Tasks = Path.Combine(KernelRoot, "Tasks", "Shared");
 
     [Fact(DisplayName = "流程描述共享层只引用任务契约")]
@@ -47,9 +53,10 @@ public sealed class FlowDescriptionBoundaryTests
         ReferencesStayUnder(
             project,
             "Kuroe.FlowDescription.Compilation.Shared",
-            "描述与定义共享层",
+            "描述、定义、语义共享层与任务契约",
             DescriptionShared,
             DefinitionShared,
+            SemanticsShared,
             Tasks);
     }
 
@@ -68,12 +75,40 @@ public sealed class FlowDescriptionBoundaryTests
         ReferencesStayUnder(
             project,
             "Kuroe.FlowDescription.Compilation",
-            "描述、定义、编译共享层与任务契约",
+            "描述、定义、语义共享、编译共享层与任务契约",
             DescriptionShared,
             DefinitionShared,
+            SemanticsShared,
             CompilationShared,
             Tasks);
         ReferencesExclude(project, "Kuroe.FlowDescription.Compilation", "流程与 MAF 区域", flow, maf);
+    }
+
+    [Fact(DisplayName = "流程语义共享层只引用定义共享层与任务契约")]
+    public void Semantics_shared_references_only_definition_shared_and_task_contracts()
+    {
+        string project = Project(SemanticsShared, "Kuroe.FlowDescription.Semantics.Shared.csproj");
+
+        ReferencesStayUnder(
+            project,
+            "Kuroe.FlowDescription.Semantics.Shared",
+            "定义共享层与任务契约",
+            DefinitionShared,
+            Tasks);
+    }
+
+    [Fact(DisplayName = "流程语义层只引用定义与语义共享层")]
+    public void Semantics_references_only_shared_definition_layers()
+    {
+        string project = Project(Semantics, "Kuroe.FlowDescription.Semantics.csproj");
+
+        ReferencesStayUnder(
+            project,
+            "Kuroe.FlowDescription.Semantics",
+            "定义、语义共享层与任务契约",
+            DefinitionShared,
+            SemanticsShared,
+            Tasks);
     }
 
     [Fact(DisplayName = "流程描述 JSON 共享层只引用描述共享层")]

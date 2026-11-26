@@ -216,15 +216,15 @@ public sealed class FlowDescriptionSetTests
     public void Referenced_container_port_missing_is_rejected() =>
         Assert.Equal(
         [
-            "流程 默认 的节点 整体/复盘：节点 整体/交付 没有输出端口 不存在。",
+            "流程 默认 的节点 整体/交付：节点 整体/交付 没有输出端口 不存在。",
         ], Errors(ContainerOutPortMissing));
 
     [Fact(DisplayName = "跨容器成员引用被拒绝")]
     public void Cross_container_member_reference_is_rejected() =>
         Assert.Equal(
             [
-                "流程 默认 的节点 整体：From 引用的节点 交付.实施 不在流程里。",
-                "流程 默认 的节点 整体/复盘：From 引用的节点 交付.实施 不在流程里。",
+                "流程 默认 的节点 整体：引用的节点 交付.实施 不在流程里。",
+                "流程 默认 的节点 整体/复盘：引用的节点 交付.实施 不在流程里。",
             ],
             Errors(ContainerOutCrossContainer));
 
@@ -800,7 +800,7 @@ public sealed class FlowDescriptionSetTests
     [Fact(DisplayName = "根容器的传入端口只能引用流程开始端口")]
     public void Root_container_in_cannot_reference_a_non_start_node() =>
         Assert.Equal(
-            ["流程 默认 的节点 整体：From 引用的节点 自造 不在流程里。"],
+            ["流程 默认 的节点 整体：引用的节点 自造 不在流程里。"],
             Errors("""
                 {
                   "Flows": [

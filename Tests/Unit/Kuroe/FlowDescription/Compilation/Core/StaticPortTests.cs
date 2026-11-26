@@ -7,6 +7,7 @@ using Kuroe.Host.Ability.Node.Container;
 using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Ports;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Semantics;
 
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
@@ -23,6 +24,7 @@ public sealed class StaticPortTests
     private static readonly PortName Plan = new("计划");
     private static readonly PortName Result = new("结论");
     private static readonly PortName Model = TestExecutableNodeType.StaticPort;
+    private static readonly FlowGraphCompiler Compiler = new(new FlowSemanticsAnalyzer());
 
     [Fact(DisplayName = "容器常量输出转发成员常量输出，下游节点运行期解析出开始端口的值")]
     public void Container_static_output_forwards_member_static_output()
@@ -41,11 +43,11 @@ public sealed class StaticPortTests
         NodeSpec delivery = tree.RootNode.Nodes.Single(node => node.Label.Value == "交付");
         Assert.True(delivery.Outputs.Single(port => port.Name == Model).IsConstant);
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(tree);
+        ErrorOr<FlowGraph> compiled = Compiler.Compile(tree);
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
-        Assert.Equal("fake", StaticText(compiled.Value, check, Model));
+        ExecutableNode check = compiled.Value.Graph.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        Assert.Equal("fake", StaticText(compiled.Value.Graph, check, Model));
     }
 
     [Fact(DisplayName = "静态端口视图只含静态输入，动态输入不进入视图")]
@@ -60,11 +62,11 @@ public sealed class StaticPortTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
+        ErrorOr<FlowGraph> compiled = Compiler.Compile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
-        IPortTexts view = new StaticPortValues(compiled.Value, PortTexts.Empty).For(check);
+        ExecutableNode check = compiled.Value.Graph.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        IPortTexts view = new StaticPortValues(compiled.Value.Graph, PortTexts.Empty).For(check);
 
         Assert.Equal("fake", view.Text(Model));
         Assert.Null(view.Text(Goal));
@@ -172,22 +174,22 @@ public sealed class StaticPortTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
+        ErrorOr<FlowGraph> compiled = Compiler.Compile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        ExecutableNode check = compiled.Value.Graph.ExecutableNodes.Single(node => node.Label.Value == "检查");
         Assert.NotNull(check.InputBindings);
         InputBinding binding = check.InputBindings[Model];
         Assert.True(binding.Source.IsStart);
         Assert.Equal(Model, binding.Source.Port);
         Assert.Equal(Model, binding.SourcePort);
         Assert.Equal("提交值", StaticText(
-            compiled.Value,
+            compiled.Value.Graph,
             check,
             Model,
             new PortTexts(new Dictionary<PortName, string> { [Model] = "提交值" })));
         Assert.Equal("另一个值", StaticText(
-            compiled.Value,
+            compiled.Value.Graph,
             check,
             Model,
             new PortTexts(new Dictionary<PortName, string> { [Model] = "另一个值" })));
@@ -353,7 +355,7 @@ public sealed class StaticPortTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
+        ErrorOr<FlowGraph> compiled = Compiler.Compile(Assert.Single(expanded.Value));
         Assert.True(compiled.IsError);
         Assert.Contains(compiled.ErrorsOrEmptyList,
             error => error.Description.Contains($"静态输入端口 {Model} 没有绑定来源"));
@@ -377,13 +379,13 @@ public sealed class StaticPortTests
                 ],
             });
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
+        ErrorOr<FlowGraph> compiled = Compiler.Compile(flow);
         Assert.False(compiled.IsError,
             string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        ExecutableNode check = compiled.Value.Graph.ExecutableNodes.Single(node => node.Label.Value == "检查");
         Assert.Null(check.InputBindings);
-        Assert.Equal("执行者", StaticText(compiled.Value, check, TestExecutableNodeType.StaticPort));
+        Assert.Equal("执行者", StaticText(compiled.Value.Graph, check, TestExecutableNodeType.StaticPort));
     }
 
     [Fact(DisplayName = "运行期常量输出要求节点没有动态输入，带 From 的执行节点声明常量输出时报错")]
@@ -464,10 +466,10 @@ public sealed class StaticPortTests
                 ],
             });
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
+        ErrorOr<FlowGraph> compiled = Compiler.Compile(flow);
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        ExecutableNode check = compiled.Value.Graph.ExecutableNodes.Single(node => node.Label.Value == "检查");
         Assert.Equal(2, check.RequiredPorts.Count);
     }
 
@@ -512,12 +514,12 @@ public sealed class StaticPortTests
                 ],
             });
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
+        ErrorOr<FlowGraph> compiled = Compiler.Compile(flow);
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        ExecutableNode check = compiled.Value.Graph.ExecutableNodes.Single(node => node.Label.Value == "检查");
         Assert.Equal(5, check.MaxExecutions);
-        Assert.True(compiled.Value.PlanOf(check.Path) is { StaticOnly: true });
+        Assert.True(compiled.Value.Graph.PlanOf(check.Path) is { StaticOnly: true });
     }
 
 
@@ -675,10 +677,10 @@ public sealed class StaticPortTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
+        ErrorOr<FlowGraph> compiled = Compiler.Compile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ContainerNode container = compiled.Value.Containers.Single(node => node.InputBindings?.ContainsKey(gate) == true);
+        ContainerNode container = compiled.Value.Graph.Containers.Single(node => node.InputBindings?.ContainsKey(gate) == true);
         Assert.NotNull(container.InputBindings);
         Assert.Equal(BindingRole.Static, container.InputBindings[Model].Role);
         Assert.Equal(BindingRole.Gate, container.InputBindings[gate].Role);
@@ -748,5 +750,5 @@ public sealed class StaticPortTests
         new([new FromLink(Goal, PortRef.Start(Goal))]);
 
     private static IReadOnlyList<string> Errors(FlowDefinition flow) =>
-        [.. FlowCompiler.Compile(flow).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. Compiler.Compile(flow).ErrorsOrEmptyList.Select(error => error.Description)];
 }

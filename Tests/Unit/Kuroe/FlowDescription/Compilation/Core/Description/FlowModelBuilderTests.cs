@@ -3,6 +3,7 @@ using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Semantics;
 using Kuroe.Host.Ability.Node.Container;
 using Xunit;
 using Kuroe.FlowDescription.Compilation.Library;
@@ -17,7 +18,7 @@ public sealed class FlowModelBuilderTests
     {
         NodeTypeDescriptionRegistry types = new();
         ContainerNodeTypeDescriptions.RegisterInto(types);
-        IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(types, new NodeLibraryExpander());
+        IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(types, new NodeLibraryExpander(), new FlowSemanticsAnalyzer());
         FlowDescriptionSet document = new(
             [],
             [

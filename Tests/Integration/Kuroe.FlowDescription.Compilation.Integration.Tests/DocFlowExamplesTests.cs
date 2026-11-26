@@ -4,6 +4,7 @@ using Kuroe.FlowDescription.Compilation.NodeTypes;
 using Kuroe.FlowDescription.Compilation.Shared;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Semantics;
 using Kuroe.Host.Ability.Node.Container;
 using Kuroe.Host.Ability.Node.Approval;
 using Kuroe.Host.Ability.Node.File;
@@ -28,7 +29,7 @@ public sealed class DocFlowExamplesTests
         ApprovalNodeTypeDescriptions.RegisterInto(files);
         FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath());
 
-        IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
+        IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander(), new FlowSemanticsAnalyzer());
         return compiler.Compile(document);
     }
 

@@ -6,6 +6,7 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
+using Kuroe.FlowDescription.Semantics;
 using Kuroe.Kernel.Tasks.Shared;
 using Xunit;
 using Kuroe.FlowDescription.Compilation.Library;
@@ -77,10 +78,10 @@ public sealed class FlowRulesLimitTests
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], []);
         Assert.False(expanded.IsError, string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(Assert.Single(expanded.Value));
+        ErrorOr<FlowGraph> compiled = new FlowGraphCompiler(new FlowSemanticsAnalyzer()).Compile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        return compiled.Value;
+        return compiled.Value.Graph;
     }
 
     private static FlowDefinition Flow(NodeSpec root) =>

@@ -7,6 +7,7 @@ using Kuroe.Kernel.Execution.Shared.Runtime;
 using Kuroe.FlowDescription.Compilation;
 using Kuroe.FlowDescription.Compilation.Library;
 using Kuroe.FlowDescription.Description.Shared;
+using Kuroe.FlowDescription.Semantics;
 using Kuroe.Maf.Definition;
 using Kuroe.TestSupport;
 using Kuroe.Kernel.Tasks.Shared;
@@ -60,7 +61,7 @@ public sealed class MafFlowAssemblerTests
     [Fact(DisplayName = "文档来源按名提供装配结果")]
     public void Document_source_finds_assembled_flows()
     {
-        MafFlowAssembler assembler = new(new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander()), Executions());
+        MafFlowAssembler assembler = new(new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander(), new FlowSemanticsAnalyzer()), Executions());
         ErrorOr<MafDocumentFlowSource> created = MafDocumentFlowSource.Create(assembler, Chain());
 
         Assert.False(created.IsError, Describe(created.ErrorsOrEmptyList));
@@ -121,7 +122,7 @@ public sealed class MafFlowAssemblerTests
 
     private static ErrorOr<IReadOnlyList<MafFlowDefinition>> Assemble(FlowDescriptionSet document)
     {
-        FlowDescriptionCompiler compiler = new(TestTypeFiles.Registry(), new NodeLibraryExpander());
+        FlowDescriptionCompiler compiler = new(TestTypeFiles.Registry(), new NodeLibraryExpander(), new FlowSemanticsAnalyzer());
 
         return new MafFlowAssembler(compiler, Executions()).Assemble(document);
     }
@@ -230,6 +231,45 @@ public sealed class MafFlowAssemblerTests
             }),
         ]);
 
+    [Fact(DisplayName = "静态输入取装配期常量输出")]
+    public void Static_input_takes_literal_constant_output()
+    {
+        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(Literal());
+        Assert.False(assembled.IsError, Describe(assembled.ErrorsOrEmptyList));
+
+        MafFlowDefinition flow = Assert.Single(assembled.Value);
+        MafStep reader = flow.Steps.Single(step => step.Label == "读取");
+        MafStepInput input = reader.Inputs.Assemble(new MafStepInputContext(
+            new ExecutionOwnerId("1"),
+            reader.Id,
+            [new MafStepOutput(flow.Steps[0].Id, new PortName("结果"), "动态产出")],
+            new Dictionary<PortName, string> { [MafFlowDefinition.ModelPort] = "test-model" },
+            "test-model")).Single(item => item.Port == Input);
+
+        Assert.Equal("固定值", input.Text);
+        Assert.Null(input.UpstreamStep);
+    }
+
+    [Fact(DisplayName = "拒绝多个入口步骤")]
+    public void Rejects_multiple_entry_steps()
+    {
+        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(MultipleEntries());
+
+        Assert.True(assembled.IsError);
+        Assert.Contains(assembled.ErrorsOrEmptyList,
+            error => error.Description.Contains("多个入口步骤", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "拒绝控制角色输入")]
+    public void Rejects_control_inputs()
+    {
+        ErrorOr<IReadOnlyList<MafFlowDefinition>> assembled = Assemble(ControlInput());
+
+        Assert.True(assembled.IsError);
+        Assert.Contains(assembled.ErrorsOrEmptyList,
+            error => error.Description.Contains("控制角色", StringComparison.Ordinal));
+    }
+
     [Fact(DisplayName = "拒绝信号端口")]
     public void Rejects_signal_ports()
     {
@@ -327,6 +367,118 @@ public sealed class MafFlowAssemblerTests
                         Bindings = ModelBinding(),
                         From = [new FromGroupDescription([new FromLinkDescription("批准", "产生@计划")])],
                         Outputs = [new PortDescription(Result.Value, "Text")],
+                    },
+                ],
+            }),
+        ]);
+
+    private static FlowDescriptionSet Literal() => new(
+        [],
+        [
+            new FlowEntry("常量来源", null, [ModelPort()], new NodeDefinitionDescription
+            {
+                Name = "整体",
+                Kind = "Container",
+                Inputs = [ModelInput()],
+                Bindings = ModelBinding(),
+                Nodes =
+                [
+                    new NodeDefinitionDescription
+                    {
+                        Name = "提供",
+                        Kind = "Llm",
+                        Inputs = [ModelInput()],
+                        Bindings = ModelBinding(),
+                        Outputs =
+                        [
+                            new PortDescription("常量", "Text", PortModeDescription.Constant, Value: "固定值"),
+                            new PortDescription("结果", "Text"),
+                        ],
+                    },
+                    new NodeDefinitionDescription
+                    {
+                        Name = "读取",
+                        Kind = "Llm",
+                        Inputs =
+                        [
+                            new InputPortDescription(
+                                Input.Value,
+                                "Text",
+                                PortModeDescription.Constant,
+                                Role: InputRoleDescription.Content),
+                            new InputPortDescription("动态", "Text"),
+                            ModelInput(),
+                        ],
+                        Bindings = new Dictionary<string, string>
+                        {
+                            [Input.Value] = "提供@常量",
+                            [MafFlowDefinition.ModelPort.Value] = $"@{MafFlowDefinition.ModelPort.Value}",
+                        },
+                        From = [new FromGroupDescription([new FromLinkDescription("动态", "提供@结果")])],
+                        Outputs = [new PortDescription("结论", "Text")],
+                    },
+                ],
+            }),
+        ]);
+
+    private static FlowDescriptionSet MultipleEntries() => new(
+        [],
+        [
+            new FlowEntry("多入口", null, [ModelPort()], new NodeDefinitionDescription
+            {
+                Name = "整体",
+                Kind = "Container",
+                Inputs = [ModelInput()],
+                Bindings = ModelBinding(),
+                Nodes =
+                [
+                    new NodeDefinitionDescription
+                    {
+                        Name = "甲",
+                        Kind = "Llm",
+                        Inputs = [ModelInput()],
+                        Bindings = ModelBinding(),
+                        Outputs = [new PortDescription("结果", "Text")],
+                    },
+                    new NodeDefinitionDescription
+                    {
+                        Name = "乙",
+                        Kind = "Llm",
+                        Inputs = [ModelInput()],
+                        Bindings = ModelBinding(),
+                        Outputs = [new PortDescription("结果", "Text")],
+                    },
+                ],
+            }),
+        ]);
+
+    private static FlowDescriptionSet ControlInput() => new(
+        [],
+        [
+            new FlowEntry("控制输入", null, [new PortDescription(Goal.Value, "Text"), ModelPort()], new NodeDefinitionDescription
+            {
+                Name = "整体",
+                Kind = "Container",
+                Inputs = [new InputPortDescription(Goal.Value, "Text"), ModelInput()],
+                Bindings = new Dictionary<string, string>
+                {
+                    [MafFlowDefinition.ModelPort.Value] = $"@{MafFlowDefinition.ModelPort.Value}",
+                },
+                From = [new FromGroupDescription([new FromLinkDescription(Goal.Value, $"@{Goal.Value}")])],
+                Nodes =
+                [
+                    new NodeDefinitionDescription
+                    {
+                        Name = "甲",
+                        Kind = "Llm",
+                        Inputs =
+                        [
+                            new InputPortDescription("控制", "Text", Role: InputRoleDescription.Control),
+                            ModelInput(),
+                        ],
+                        Bindings = ModelBinding(),
+                        From = [new FromGroupDescription([new FromLinkDescription("控制", $"@{Goal.Value}")])],
+                        Outputs = [new PortDescription("结果", "Text")],
                     },
                 ],
             }),

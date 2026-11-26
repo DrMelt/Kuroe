@@ -52,7 +52,17 @@ public sealed class GraphExecutionInputBuilderTests
         ExecutableNode executable = StaticExecutable(
             new InputPort(target, PortTypes.Text, mode: PortMode.Constant, role: InputRole.Content),
             new InputBinding(NodePath.Of("节点"), BindingSource.ForStart(start), target, Role: BindingRole.Static));
-        NodeGraph graph = new([new Port(start, PortTypes.Text, mode: PortMode.Constant)], [executable], []);
+        NodeGraph graph = new(
+            [new Port(start, PortTypes.Text, mode: PortMode.Constant)],
+            [executable],
+            [],
+            staticInputs: new Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>>
+            {
+                [executable.Path] = new Dictionary<PortName, StaticResolution>
+                {
+                    [target] = StaticResolution.StartFixed(start, "来源值"),
+                },
+            });
 
         InputValue value = Build(executable, graph, target, "来源值");
 
@@ -77,7 +87,17 @@ public sealed class GraphExecutionInputBuilderTests
         ExecutableNode executable = StaticExecutable(
             new InputPort(target, PortTypes.Text, mode: PortMode.Constant, role: InputRole.Content),
             new InputBinding(NodePath.Of("节点"), BindingSource.ForNode(upstream.Path, output), target, Role: BindingRole.Static));
-        NodeGraph graph = new([], [upstream, executable], []);
+        NodeGraph graph = new(
+            [],
+            [upstream, executable],
+            [],
+            staticInputs: new Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>>
+            {
+                [executable.Path] = new Dictionary<PortName, StaticResolution>
+                {
+                    [target] = StaticResolution.Literal(upstream.Path, output, "固定值"),
+                },
+            });
 
         InputValue value = Build(executable, graph, target, "固定值");
 
@@ -92,7 +112,17 @@ public sealed class GraphExecutionInputBuilderTests
         PortName target = new("目标");
         ExecutableNode executable = StaticExecutable(
             new InputPort(target, PortTypes.Text, defaultValue: "兜底", mode: PortMode.Constant, role: InputRole.Content));
-        NodeGraph graph = new([], [executable], []);
+        NodeGraph graph = new(
+            [],
+            [executable],
+            [],
+            staticInputs: new Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>>
+            {
+                [executable.Path] = new Dictionary<PortName, StaticResolution>
+                {
+                    [target] = StaticResolution.Default(executable.Path, target, "兜底"),
+                },
+            });
 
         InputValue value = Build(executable, graph, target, "兜底");
 

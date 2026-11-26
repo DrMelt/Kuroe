@@ -16,6 +16,8 @@ using Kuroe.Flow.Library;
 using Kuroe.Flow.Library.Files;
 using Kuroe.Host.FlowIntegration.GraphFlow.HostInputs;
 using Kuroe.FlowDescription.Json;
+using Kuroe.FlowDescription.Semantics;
+using Kuroe.FlowDescription.Semantics.Shared;
 using Kuroe.Flow.Graph.Shared.RuntimeGraph.Execution;
 using Kuroe.Host.FlowIntegration.GraphFlow.NodeExecution;
 using Kuroe.Host.Ability.Node.Container;
@@ -103,8 +105,10 @@ public static class GraphFlowServiceCollectionExtensions
         JsonFlowFormat flowFormat = new();
         JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
         IFlowExpander expander = new NodeLibraryExpander();
-        IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
-        IFlowCompiler flowCompiler = new FlowCompilation(descriptionCompiler, new FlowGraphCompiler());
+        IFlowSemanticsAnalyzer semantics = new FlowSemanticsAnalyzer();
+        FlowDescriptionCompiler descriptionCompiler = new(typeFiles, expander, semantics);
+        IFlowGraphCompiler graphCompiler = new FlowGraphCompiler(semantics);
+        IFlowCompiler flowCompiler = new FlowCompilation(descriptionCompiler, graphCompiler);
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
         LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
         FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
@@ -145,7 +149,10 @@ public static class GraphFlowServiceCollectionExtensions
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
-        services.AddSingleton<IFlowGraphCompiler>(new FlowGraphCompiler());
+        services.AddSingleton<IFlowDescriptionCompiler>(descriptionCompiler);
+        services.AddSingleton<IFlowSemanticCompiler>(descriptionCompiler);
+        services.AddSingleton(semantics);
+        services.AddSingleton(graphCompiler);
         services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
         services.AddSingleton<IExecutionNodeDeclarationResolver>(sp => new ExecutionNodeDeclarationResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));

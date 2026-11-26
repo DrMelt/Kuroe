@@ -3,7 +3,7 @@ using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Graph.Shared.StaticGraph;
 using Kuroe.FlowDescription.Description.Shared;
 using Kuroe.FlowDescription.Compilation.Shared;
-using Kuroe.FlowDescription.Definition.Shared.Flow;
+using Kuroe.FlowDescription.Semantics.Shared;
 
 namespace Kuroe.Flow.Library;
 
@@ -16,13 +16,13 @@ public interface IFlowCompiler
 
 /// <summary>描述编译与图编译的组合。</summary>
 public sealed class FlowCompilation(
-    IFlowDescriptionCompiler descriptions,
+    IFlowSemanticCompiler descriptions,
     IFlowGraphCompiler graphs) : IFlowCompiler
 {
     /// <inheritdoc/>
     public ErrorOr<IReadOnlyList<FlowGraph>> Compile(FlowDescriptionSet descriptionSet)
     {
-        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = descriptions.Compile(descriptionSet);
+        ErrorOr<IReadOnlyList<FlowSemantics>> expanded = descriptions.CompileWithSemantics(descriptionSet);
         if (expanded.IsError)
         {
             return expanded.ErrorsOrEmptyList;
@@ -30,9 +30,9 @@ public sealed class FlowCompilation(
 
         List<FlowGraph> flows = [];
         List<Error> errors = [];
-        foreach (FlowDefinition flow in expanded.Value)
+        foreach (FlowSemantics result in expanded.Value)
         {
-            ErrorOr<FlowGraph> compiled = graphs.Compile(flow);
+            ErrorOr<FlowGraph> compiled = graphs.Compile(result);
             if (compiled.IsError)
             {
                 errors.AddRange(compiled.ErrorsOrEmptyList);

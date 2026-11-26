@@ -63,6 +63,34 @@ services.AddKuroeMafFlows(
 
 MAF 流程不提供停驻面，不能等待外部输入或批准，其任务没有等待步骤。
 
+## 文档装配与来源语义
+
+MAF 文档装配消费流程描述编译与流程语义。流程描述编译保证语言合法，流程语义给出来源终点与接线结果，MAF 只做目标适配：按来源终点决定步骤输入取常量、开始输入还是上游交回，按目标模型判定不能表达的结构。
+
+装配入口位于 `Kuroe.Host.FlowIntegration.Maf`，文档装配实现在 `Kuroe.Maf.Compilation`，语言规则与来源解析不在 MAF 侧。
+
+## 可装配子集
+
+MAF 目标模型只承载文本步骤与单上游连接。以下语言能力可装配：
+
+- 单入口流程。
+- 每步骤至多一个上游步骤。
+- 文本输入与文本输出。
+- 开始端口注入、输入默认值与装配期常量。
+- 运行期常量与上游端口交回。
+- 容器作为命名空间，成员提升为步骤，容器输出映射到成员端口。
+
+以下语言能力不可装配，由 MAF 装配给出目标不可表达诊断：
+
+- 等待外部输入的节点类型。
+- 多上游汇合与容器多成员汇合。
+- 多入口流程。
+- 触发端口与触发条件。
+- 上下文端口与信号端口。
+- 需要环外入口的环推进。环推进在入口处形成多上游，由多上游约束拒绝。
+
+执行上限与多次发布不单独判定：MAF 每步骤执行一次，线性流程中逐次发布与首次发布行为一致。
+
 ## 区域约束
 
-MAF 流程实现位于 `Source/Kuroe/Maf`，装配入口位于 `Source/Kuroe/Host/FlowIntegration/Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，只引用 `Kuroe.FlowDescription.Description.Shared`、`Kuroe.FlowDescription.Definition.Shared` 与 MAF 定义，不引用图流程实现。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Host.Composition` 不引用 MAF 运行期。
+MAF 流程实现位于 `Source/Kuroe/Maf`，装配入口位于 `Source/Kuroe/Host/FlowIntegration/Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，引用流程描述的定义、编译与语义契约，不引用图流程实现。语言规则与来源解析由流程描述承担，MAF 只做目标适配与可表达性判定。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Host.Composition` 不引用 MAF 运行期。

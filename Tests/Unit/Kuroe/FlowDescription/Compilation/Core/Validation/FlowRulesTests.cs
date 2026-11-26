@@ -4,6 +4,7 @@ using Kuroe.FlowDescription.Definition.Shared.Model;
 using Kuroe.FlowDescription.Definition.Shared.Flow;
 using Kuroe.FlowDescription.Definition.Shared.Nodes;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
+using Kuroe.FlowDescription.Semantics;
 using Kuroe.Kernel.Tasks.Shared;
 using Xunit;
 
@@ -184,7 +185,7 @@ public sealed class FlowRulesTests
     [Fact(DisplayName = "引用缺失节点被拒绝")]
     public void Reference_to_missing_node_is_rejected() =>
         Assert.Equal(
-            [MemberError("容器/内部", "From 引用的节点 不存在 不在流程里。")],
+            [MemberError("容器/内部", "引用的节点 不存在 不在流程里。")],
             Errors(Flow(
                 Container("整体",
                     Plan("制定计划"),
@@ -193,7 +194,7 @@ public sealed class FlowRulesTests
     [Fact(DisplayName = "信号来自缺失节点被拒绝")]
     public void Signal_from_missing_node_is_rejected() =>
         Assert.Equal(
-            [NodeError("触发", "From 引用的节点 不存在 不在流程里。")],
+            [NodeError("触发", "引用的节点 不存在 不在流程里。")],
             Errors(Flow(Text("触发") with { From = [Signal("不存在", "结论")] })));
 
     [Fact(DisplayName = "引用缺失端口被拒绝")]
@@ -221,7 +222,7 @@ public sealed class FlowRulesTests
     public void Context_input_from_bound_port_is_rejected() =>
         Assert.Equal(
             [
-                MemberError("实施", "From 引用 @输入 没有绑定来源。"),
+                MemberError("实施", "引用 @输入 没有绑定来源。"),
             ],
             Errors(Flow(Container("整体", Text("实施") with { Inputs = [In("输入", PortTypes.Context)], From = [BoundContext("输入")] }))));
 
@@ -664,5 +665,5 @@ public sealed class FlowRulesTests
 
     /// <summary>校验流程，取错误说明。类型规则按引擎内置类型注册表判定。</summary>
     private static IReadOnlyList<string> Errors(FlowDefinition flow) =>
-        [.. FlowCompiler.Compile(flow).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. new FlowGraphCompiler(new FlowSemanticsAnalyzer()).Compile(flow).ErrorsOrEmptyList.Select(error => error.Description)];
 }
