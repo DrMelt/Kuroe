@@ -7,5 +7,5 @@ namespace Kuroe.Console.Tests.Support;
 internal static class TaskBrowserSubmission
 {
     public static void Submit(this TaskBrowser browser, FlowName flow, string goal) =>
-        browser.Submit(flow, StartInputs.Single(new PortName("目标"), goal));
+        browser.Submit(flow, new FlowImplementation("graph"), StartInputs.Single(new PortName("目标"), goal));
 }

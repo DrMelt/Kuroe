@@ -46,6 +46,23 @@ public sealed class TaskActions(
         return Submit(resolved.Value, flowName, inputs, title, observer);
     }
 
+    /// <summary>按流程名与实现提交：取该实现的提供者，再按实现提交。</summary>
+    public ErrorOr<TaskSnapshot> Submit(
+        FlowName flowName,
+        FlowImplementation implementation,
+        StartInputs inputs,
+        string? title,
+        ProcessObserver? observer = null)
+    {
+        ErrorOr<FlowProvider> resolved = _providers.Resolve(flowName, implementation);
+        if (resolved.IsError)
+        {
+            return resolved.ErrorsOrEmptyList;
+        }
+
+        return Submit(resolved.Value, flowName, inputs, title, observer);
+    }
+
     /// <summary>按已选定的流程实现提交：分配任务号、由实现准备状态、占用任务键，再建任务并启动推进。</summary>
     public ErrorOr<TaskSnapshot> Submit(
         FlowProvider provider,

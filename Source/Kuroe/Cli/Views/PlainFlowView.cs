@@ -21,10 +21,10 @@ internal static class PlainFlowView
 
         if (flows.Count > 0)
         {
-            output.Line("流程\t执行节点\t容器\t说明");
+            output.Line("流程\t引擎\t执行节点\t容器\t说明");
             foreach (FlowTemplateView flow in flows)
             {
-                output.Line($"{flow.Name}\t{flow.Steps.Count}\t{flow.Groups.Count}\t{flow.Description ?? string.Empty}");
+                output.Line($"{flow.Name}\t{flow.Engine ?? string.Empty}\t{flow.Steps.Count}\t{flow.Groups.Count}\t{flow.Description ?? string.Empty}");
             }
         }
 
@@ -48,6 +48,7 @@ internal static class PlainFlowView
     public static void Show(CliOutput output, FlowTemplateView flow)
     {
         output.Line($"流程\t{flow.Name}");
+        output.Line($"引擎\t{flow.Engine ?? "—"}");
         output.Line($"执行节点\t{flow.Steps.Count}");
         output.Line($"容器\t{flow.Groups.Count}");
         output.Line($"说明\t{flow.Description ?? "—"}");

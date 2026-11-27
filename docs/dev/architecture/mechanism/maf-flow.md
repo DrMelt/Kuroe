@@ -1,6 +1,6 @@
 # MAF 流程
 
-MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，步骤的每次运行仍是一次 Kuroe 执行。流程定义由宿主以代码给出，或由流程描述装配，不写入 `.kuroe` 目录。流程定义类型位于 `Kuroe.Maf.Definition`，运行实例创建与任务控制位于 `Kuroe.Maf.Control`，文档装配位于 `Kuroe.Maf.Compilation`，装配入口 `AddKuroeMafFlows` 位于 `Kuroe.Host.FlowIntegration.Maf`。
+MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，步骤的每次运行仍是一次 Kuroe 执行。流程定义由宿主以代码给出，或由 `.kuroe/flows.json` 的流程描述装配，MAF 流程定义不写回工作目录。图流程与 MAF 各自装配同一份流程描述，装配成功的实现各提供一个流程变体，提交时按实现选择。流程定义类型位于 `Kuroe.Maf.Definition`，运行实例创建与任务控制位于 `Kuroe.Maf.Control`，文档装配位于 `Kuroe.Maf.Compilation`，装配入口 `AddKuroeMafFlows` 位于 `Kuroe.Host.FlowIntegration.Maf`。
 
 ## 宿主装配
 
@@ -71,19 +71,23 @@ MAF 流程不提供停驻面，不能等待外部输入或批准，其任务没�
 
 MAF 文档装配消费流程描述编译与流程语义。流程描述编译保证语言合法，流程语义给出来源终点与接线结果，MAF 只做目标适配：按来源终点决定步骤输入取常量、开始输入还是上游交回，并保留目标结构诊断。
 
-装配入口位于 `Kuroe.Host.FlowIntegration.Maf`，文档装配实现在 `Kuroe.Maf.Compilation`，语言规则与来源解析不在 MAF 侧。
+文档装配逐流程进行。某个流程编译失败时只淘汰该流程的 MAF 变体，其他流程继续装配并进入 MAF 来源。图流程同时装配同一份文档，装配成功的图流程变体不受影响。两个实现都失败的流程由宿主在启动时给出两份原因，单个实现失败只影响对应变体。
+
+装配入口位于 `Kuroe.Host.FlowIntegration.Maf`，文档装配实现在 `Kuroe.Maf.Compilation`，语言规则与来源解析不在 MAF 侧。图流程与 MAF 的共同装配由 `Kuroe.Host.FlowIntegration.Flows` 的入口完成：先建立图流程装配结果，再把同一份文档交给 MAF 逐流程装配，两个实现各自登记流程模板。
 
 ## 第一阶段验证子集
 
 目标模型与文档装配当前承载以下描述构造：
 
-- 端口种类：`Context`、`Signal`、按语义映射的自定义类型。
+- 端口种类：`Context`、`Signal`、按语义映射的自定义类型。`Context` 输出按执行输入内容合并透传，来源描述随内容保留，执行器交回的 `Context` 端口内容不采用。
 - 端口模式与条件：触发模式、常量模式、控制角色、正向条件、反向条件。
-- 开始端口：无固定值的常量开始端口。
+- 开始端口：承载内容的开始端口需要提交或由宿主给值，不承载内容的开始端口自动放行，固定值开始端口作为装配期常量。
+- 模型：节点类型声明的模型端口决定流程是否需要 `MODEL_NAME`，不需要模型的流程不要求提交模型；需要模型时由宿主当前模型补入开始输入。
 - 连接与取值：同端口多来源、组内 AND、组间 OR、运行期常量、静态依赖链、多入口。
 - 执行声明：`Emission.Once` 决定运行期常量端口是否要求交回。
+- 容器：成员提升为独立步骤，容器输出解析到成员端口。
 
-开始触发端口由流程描述语言拒绝，不属于 MAF 目标支持范围。
+开始触发端口由流程描述语言拒绝，不属于 MAF 目标支持范围。固定模型由 MAF 目标拒绝，模型由提交给出。
 
 以下构造仍后置：
 
@@ -93,8 +97,8 @@ MAF 文档装配消费流程描述编译与流程语义。流程描述编译保�
 - 容器成员齐备与容器输入接线。容器仍按现有成员提升方式处理。
 - 环推进与多次执行。步骤在一次运行内只执行一次，`MaxExecutions` 与重复发布随环推进接入。
 
-上述构造已接入文档装配与控制运行路径，但尚未进入生产宿主。容器、等待、结构节点、环与多次执行仍不进入第一阶段。
+上述构造已接入文档装配与控制运行路径，Console 与 CLI 已接入。图流程与 MAF 同时装配流程描述，两个实现都支持的流程在流程目录中生成两个变体。容器整体推进、等待、结构节点、环与多次执行仍不进入第一阶段。
 
 ## 区域约束
 
-MAF 流程实现位于 `Source/Kuroe/Maf`，装配入口位于 `Source/Kuroe/Host/FlowIntegration/Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。文档装配位于 `Kuroe.Maf.Compilation`，引用流程描述的定义、编译与语义契约，不引用图流程实现。语言规则与来源解析由流程描述承担，MAF 只做目标适配与可表达性判定。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Host.Composition` 不引用 MAF 运行期。
+MAF 流程实现位于 `Source/Kuroe/Maf`，装配入口位于 `Source/Kuroe/Host/FlowIntegration/Maf`，不属于 `Kuroe.Flow` 区域，对 `Kuroe.Flow` 没有项目引用。图流程与 MAF 的共同装配入口位于 `Kuroe.Host.FlowIntegration.Flows`，它引用两个实现并为每条流程登记变体。文档装配位于 `Kuroe.Maf.Compilation`，引用流程描述的定义、编译与语义契约，不引用图流程实现。语言规则与来源解析由流程描述承担，MAF 只做目标适配与可表达性判定。Workflows 包只出现在 `Kuroe.Maf.Control`，`Kuroe.Host.Composition` 不引用 MAF 运行期。

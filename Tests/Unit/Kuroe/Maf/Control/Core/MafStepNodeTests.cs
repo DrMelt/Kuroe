@@ -61,6 +61,25 @@ public sealed class MafStepNodeTests
         Assert.Equal(1, recorder.Count("选择"));
     }
 
+    [Fact(DisplayName = "Context 输出透传到下游输入")]
+    public async Task Context_output_reaches_downstream_input()
+    {
+        RunRecorder recorder = new(context: [new MafContextValue(Output, "上下文值", "开始")]);
+        MafStep first = Step("甲", new EmptyPlans(), recorder, ExecutionPortKind.Context);
+        MafStep second = Step("乙", new ContextPlans(first.Id), recorder);
+        MafFlowDefinition definition = Definition(
+            [first, second],
+            [Edge(first.Id, second.Id)]);
+
+        await RunAsync(definition, recorder);
+
+        MafStepInput input = Assert.Single(Assert.Single(recorder.Inputs("乙")));
+        Assert.Equal("上下文值", input.Text);
+        MafContextValue value = Assert.Single(input.Context);
+        Assert.Equal("上下文值", value.Text);
+        Assert.Equal("开始", value.Source);
+    }
+
     [Fact(DisplayName = "反向触发条件接受未触发的来源")]
     public async Task Negative_condition_accepts_a_source_that_does_not_fire()
     {
@@ -83,7 +102,11 @@ public sealed class MafStepNodeTests
             input => Assert.Equal(MafTriggerCondition.Negative, input.Condition));
     }
 
-    private static MafStep Step(string id, IMafStepInputAssembler inputs, RunRecorder recorder)
+    private static MafStep Step(
+        string id,
+        IMafStepInputAssembler inputs,
+        RunRecorder recorder,
+        ExecutionPortKind kind = ExecutionPortKind.Text)
     {
         _ = recorder;
 
@@ -94,7 +117,7 @@ public sealed class MafStepNodeTests
             TestFlow.Invocation(TestFlow.Factory),
             inputs)
         {
-            OutputPlan = [new MafOutputPort(Output, ExecutionPortKind.Text)],
+            OutputPlan = [new MafOutputPort(Output, kind)],
         };
     }
 
@@ -142,24 +165,31 @@ public sealed class MafStepNodeTests
             {
                 recorder.Record(current.Id, inputs);
 
+                string text = current.OutputPlan is [var first, ..] && first.Kind == ExecutionPortKind.Context
+                    ? string.Join("\n\n", recorder.Context.Select(value => value.Text))
+                    : current.Id.Value;
+
                 return ValueTask.FromResult(new MafStepMessage(
                     current.Id,
                     [
-                        new MafStepOutput(current.Id, Output, current.Id.Value)
+                        new MafStepOutput(current.Id, Output, text)
                         {
                             Fires = recorder.Fires,
+                            Context = recorder.Context,
                         },
                     ]));
             });
 
     private static void Consume(MafWorkflowEvent update) => _ = update;
 
-    private sealed class RunRecorder(bool fires = true)
+    private sealed class RunRecorder(bool fires = true, IReadOnlyList<MafContextValue>? context = null)
     {
         private readonly Lock _gate = new();
         private readonly Dictionary<string, List<IReadOnlyList<MafStepInput>>> _runs = [];
 
         internal bool Fires { get; } = fires;
+
+        internal IReadOnlyList<MafContextValue> Context { get; } = context ?? [];
 
         internal void Record(MafStepId step, IReadOnlyList<MafStepInput> inputs)
         {
@@ -197,6 +227,34 @@ public sealed class MafStepNodeTests
     private sealed class EmptyPlans : IMafStepInputAssembler
     {
         public IReadOnlyList<MafStepInput> Assemble(MafStepInputContext context) => [];
+    }
+
+    private sealed class ContextPlans(MafStepId source) : IMafStepInputAssembler
+    {
+        public IReadOnlyList<MafStepInput> Assemble(MafStepInputContext context)
+        {
+            MafStepOutput? output = context.Upstream.FirstOrDefault(candidate =>
+                candidate.Step == source && candidate.Port == Output);
+
+            return
+            [
+                new MafStepInput(
+                    InputName,
+                    ExecutionPortKind.Context,
+                    ExecutionPortRole.Content,
+                    Required: true,
+                    DefaultText: null,
+                    Source: "开始",
+                    SourceKey: null,
+                    output?.Text ?? string.Empty,
+                    source)
+                {
+                    Group = 0,
+                    UpstreamPort = Output,
+                    Context = output?.Context ?? [],
+                },
+            ];
+        }
     }
 
     private sealed class JoinPlans(

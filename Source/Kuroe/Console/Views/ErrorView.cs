@@ -17,6 +17,15 @@ internal sealed class ErrorView(Terminal terminal)
         }
     }
 
+    /// <summary>不阻断启动的流程诊断：逐个给出流程装配提示。</summary>
+    public void Warn(IEnumerable<Error> errors)
+    {
+        foreach (Error error in errors)
+        {
+            terminal.Hint(error.Description);
+        }
+    }
+
     /// <summary>模型不可用时给出可用操作：未选择时给出注册流程，名称合法但未注册时给出该模型的注册命令。
     /// 空或全空白的名称不给指引，按这样的名字注册无从下手。</summary>
     public void GuideModelRegistration(ModelService models, string? model)

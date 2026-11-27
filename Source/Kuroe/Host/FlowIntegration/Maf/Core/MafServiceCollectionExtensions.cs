@@ -28,7 +28,8 @@ public static class MafServiceCollectionExtensions
         IFlowTemplateRegistrar registrar,
         IFlowSemanticCompiler compiler,
         IMafNodeExecutions executions,
-        FlowDescriptionSet document)
+        FlowDescriptionSet document,
+        Func<IServiceProvider, string?>? currentModel = null)
     {
         ErrorOr<MafDocumentFlowSource> source = MafDocumentFlowSource.Create(
             new MafFlowAssembler(compiler, executions),
@@ -38,7 +39,7 @@ public static class MafServiceCollectionExtensions
             return source.ErrorsOrEmptyList;
         }
 
-        services.AddKuroeMafFlows(registrar, source.Value);
+        services.AddKuroeMafFlows(registrar, source.Value, currentModel);
 
         return Result.Success;
     }
@@ -47,16 +48,20 @@ public static class MafServiceCollectionExtensions
     public static IServiceCollection AddKuroeMafFlows(
         this IServiceCollection services,
         IFlowTemplateRegistrar registrar,
-        IMafFlowSource flows)
+        IMafFlowSource flows,
+        Func<IServiceProvider, string?>? currentModel = null)
     {
-        MafFlowTemplates templates = new(flows);
+        MafFlowTemplates templates = new(flows, hostModel: currentModel is not null);
         registrar.Register(templates);
         services.AddSingleton<ICheckpointIdSource, GuidCheckpointIdSource>();
         services.AddSingleton(flows);
         services.AddSingleton<IFlowTemplateSource>(templates);
         services.AddSingleton(sp => new FlowProvider(
             new MafFlowIdentity(flows),
-            new MafFlowSubmission(flows, sp.GetRequiredService<ITaskExecutionGateway>()),
+            new MafFlowSubmission(
+                flows,
+                sp.GetRequiredService<ITaskExecutionGateway>(),
+                currentModel is null ? null : () => currentModel(sp)),
             null,
             new MafFlowControlFactory(
                 sp.GetRequiredService<ITaskExecutionGateway>(),

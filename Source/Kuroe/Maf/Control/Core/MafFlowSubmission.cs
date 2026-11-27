@@ -20,7 +20,8 @@ namespace Kuroe.Maf.Control;
 /// <summary>MAF 流程的提交与恢复：校验开始输入，建立流程状态，从存档重建执行。</summary>
 public sealed class MafFlowSubmission(
     IMafFlowSource flows,
-    ITaskExecutionGateway executions) : IFlowSubmission
+    ITaskExecutionGateway executions,
+    Func<string?>? currentModel = null) : IFlowSubmission
 {
     /// <inheritdoc/>
     public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title)
@@ -37,13 +38,22 @@ public sealed class MafFlowSubmission(
             return [.. invalid];
         }
 
-        if (CheckInputs(definition, inputs) is { Count: > 0 } errors)
+        StartInputs effective = FillDefaults(definition, inputs);
+        if (definition.RequiresModel
+            && effective.Text(MafFlowDefinition.ModelPort) is null or { Length: 0 }
+            && currentModel?.Invoke() is { Length: > 0 } current)
+        {
+            effective = new StartInputs(
+                [.. effective.Values, new StartInput(MafFlowDefinition.ModelPort, current)]);
+        }
+
+        if (CheckInputs(definition, effective) is { Count: > 0 } errors)
         {
             return errors;
         }
 
-        StartInputs effective = FillDefaults(definition, inputs);
-        if (effective.Text(MafFlowDefinition.ModelPort) is not { Length: > 0 } model)
+        string model = effective.Text(MafFlowDefinition.ModelPort) ?? string.Empty;
+        if (definition.RequiresModel && model.Length == 0)
         {
             return [Error.Validation(FlowErrorCodes.TaskInput,
                 $"开始端口 {MafFlowDefinition.ModelPort} 没有给出模型。")];
@@ -91,7 +101,7 @@ public sealed class MafFlowSubmission(
         }
 
         string model = saved.Model ?? string.Empty;
-        if (model.Length == 0)
+        if (flow.RequiresModel && model.Length == 0)
         {
             return [Error.Failure(FlowErrorCodes.RecordFormat, "MAF 流程状态缺少模型。")];
         }
@@ -288,7 +298,7 @@ public sealed class MafFlowSubmission(
             .Where(input => definition.StartPorts.All(port => port.Name != input.Port))
             .Select(input => UnknownInput(input.Port)),
         .. definition.StartPorts
-            .Where(port => port.Default is null && inputs.Text(port.Name) is null)
+            .Where(port => port.RequiresInput && port.Default is null && inputs.Text(port.Name) is null)
             .Select(port => MissingInput(port.Name)),
     ];
 
@@ -298,7 +308,9 @@ public sealed class MafFlowSubmission(
         List<StartInput> values = [.. inputs.Values];
         foreach (MafStartPort port in definition.StartPorts)
         {
-            if (port.Default is { Length: > 0 } value && inputs.Text(port.Name) is null)
+            if (port.RequiresInput
+                && port.Default is { Length: > 0 } value
+                && inputs.Text(port.Name) is null)
             {
                 values.Add(new StartInput(port.Name, value));
             }

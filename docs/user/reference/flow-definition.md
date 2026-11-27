@@ -1,6 +1,6 @@
 # 流程定义
 
-节点库存工作目录 `.kuroe/` 的 `nodes.json`，流程模板存 `flows.json`，宿主给值的开始端口存 `hostStartInputs.json`，三个文件都可以手工编辑，文件不存在时对应部分为空。导入或启动时校验流程与节点库，非法项一次给出。完整示例见[流程示例](flow-examples.md)。
+节点库存工作目录 `.kuroe/` 的 `nodes.json`，流程模板存 `flows.json`，宿主给值的开始端口存 `hostStartInputs.json`，三个文件都可以手工编辑，文件不存在时对应部分为空。流程实现由装配结果决定，见[流程实现](flow-implementation.md)。导入或启动时校验流程与节点库，非法项一次给出。完整示例见[流程示例](flow-examples.md)。
 
 ## 文件结构
 

@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
+using Kuroe.Kernel.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Runtime;
 using Kuroe.Kernel.Tasks.Presentation.Shared;
 using Kuroe.Kernel.Tasks.Shared;
@@ -14,7 +15,10 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
     /// <summary>等待任务状态的轮询间隔。</summary>
     private const int PollMilliseconds = 50;
 
-    public async Task<int> RunAsync(string flowName, string? title, IReadOnlyList<string> inputs)
+    /// <summary>图流程的实现标识，用于取图流程编译失败原因。</summary>
+    private const string GraphImplementation = "graph";
+
+    public async Task<int> RunAsync(string flowName, string? engine, string? title, IReadOnlyList<string> inputs)
     {
         ErrorOr<StartInputs> parsed = ParseInputs(inputs);
         if (parsed.IsError)
@@ -32,14 +36,37 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
             return ExitCodes.Failure;
         }
 
+        ErrorOr<FlowTemplateView> selected = Select(flow.Value, engine);
+        if (selected.IsError)
+        {
+            output.Report(selected.ErrorsOrEmptyList);
+
+            return ExitCodes.Failure;
+        }
+
+        if (selected.Value.Implementation is not { } implementation)
+        {
+            output.Report([Error.Validation(FlowErrorCodes.FlowAssembly, "流程没有实现标识。")]);
+
+            return ExitCodes.Failure;
+        }
+
         void report(ExecutionNotice notice) => output.Hint(notice.Text);
         session.Registry.Notified += report;
         try
         {
-            ErrorOr<TaskSnapshot> submitted = session.Tasks.Submit(parsed.Value, flow.Value, title, new ProcessObserver(output.Content, output.Entry));
+            ErrorOr<TaskSnapshot> submitted = session.Tasks.Submit(
+                parsed.Value,
+                flow.Value,
+                implementation,
+                title,
+                new ProcessObserver(output.Content, output.Entry));
             if (submitted.IsError)
             {
-                FlowFailure? failure = session.Library.Failures.FirstOrDefault(candidate => candidate.Name == flow.Value);
+                FlowFailure? failure =
+                    implementation.Value == GraphImplementation
+                        ? session.Library.Failures.FirstOrDefault(candidate => candidate.Name == flow.Value)
+                        : null;
                 output.Report(failure is null ? submitted.ErrorsOrEmptyList : failure.Errors);
 
                 return ExitCodes.Failure;
@@ -51,6 +78,43 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
         {
             session.Registry.Notified -= report;
         }
+    }
+
+    /// <summary>按流程名与可选实现选出唯一变体。</summary>
+    private ErrorOr<FlowTemplateView> Select(FlowName flow, string? engine)
+    {
+        IReadOnlyList<FlowTemplateView> all = session.Templates.FindAll(flow);
+        if (engine is { Length: > 0 } text)
+        {
+            FlowImplementation implementation = new(text.Trim());
+            FlowTemplateView? found = all.FirstOrDefault(
+                candidate => candidate.Implementation == implementation);
+            if (found is null)
+            {
+                return [Error.Validation(
+                    FlowErrorCodes.FlowName,
+                    $"流程 {flow} 没有实现 {implementation}。")];
+            }
+
+            return found;
+        }
+
+        return all.Count switch
+        {
+            0 => Failure(flow),
+            1 => all[0],
+            _ => Error.Validation(
+                FlowErrorCodes.FlowName,
+                $"流程 {flow} 由多个实现提供：{string.Join('、', all.Select(flow => flow.Implementation))}。用 --engine 选择。"),
+        };
+    }
+
+    /// <summary>没有可提交变体时取图流程编译失败原因。</summary>
+    private ErrorOr<FlowTemplateView> Failure(FlowName flow)
+    {
+        FlowFailure? failure = session.Library.Failures.FirstOrDefault(candidate => candidate.Name == flow);
+
+        return failure is null ? FlowErrors.FlowNotFound(flow.Value) : [.. failure.Errors];
     }
 
     /// <summary>把 端口=值 形式的参数解析成开始输入表。</summary>

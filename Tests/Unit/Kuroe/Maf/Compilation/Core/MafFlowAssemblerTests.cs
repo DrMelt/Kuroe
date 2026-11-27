@@ -70,6 +70,31 @@ public sealed class MafFlowAssemblerTests
         Assert.True(created.Value.Find(new FlowName("缺少")).IsError);
     }
 
+    [Fact(DisplayName = "流程级编译失败不阻止其他流程")]
+    public void Document_source_keeps_valid_flows_when_another_flow_fails()
+    {
+        MafFlowAssembler assembler = new(
+            new FlowDescriptionCompiler(TestTypeFiles.Registry(), new NodeLibraryExpander(), new FlowSemanticsAnalyzer()),
+            Executions());
+        FlowDescriptionSet document = new(
+            [],
+            [
+                Chain().Flows[0],
+                new FlowEntry("坏流程", null, [], new NodeDefinitionDescription
+                {
+                    Name = "坏",
+                    Kind = "Unknown",
+                }),
+            ]);
+
+        ErrorOr<MafDocumentFlowSource> created = MafDocumentFlowSource.Create(assembler, document);
+
+        Assert.False(created.IsError, Describe(created.ErrorsOrEmptyList));
+        Assert.Single(created.Value.All());
+        Assert.NotEmpty(created.Value.Failures);
+        Assert.Contains(created.Value.Rejected, failure => failure.Name.Value == "坏流程");
+    }
+
     [Fact(DisplayName = "步骤装配给出执行调用")]
     public void Steps_create_execution_invocations()
     {
@@ -466,6 +491,7 @@ public sealed class MafFlowAssemblerTests
         Assert.Equal(ExecutionPortKind.Context, input.Kind);
         Assert.Equal(ExecutionPortRole.Content, input.Role);
         Assert.Equal("上下文值", input.Text);
+        Assert.Equal("上下文值", Assert.Single(input.Context).Text);
     }
 
     [Fact(DisplayName = "装配触发端口与反向条件")]

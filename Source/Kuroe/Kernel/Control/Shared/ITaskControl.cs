@@ -16,6 +16,14 @@ public interface ITaskControl
         string? title,
         ProcessObserver? observer = null);
 
+    /// <summary>按流程名与实现提交任务。<paramref name="observer"/> 收到该任务全部执行的过程事件。</summary>
+    ErrorOr<TaskSnapshot> Submit(
+        StartInputs inputs,
+        FlowName flowName,
+        FlowImplementation implementation,
+        string? title,
+        ProcessObserver? observer = null);
+
     /// <summary>暂停任务。</summary>
     ErrorOr<Success> Pause(TaskId id);
 

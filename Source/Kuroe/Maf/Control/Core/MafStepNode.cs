@@ -17,6 +17,7 @@ internal sealed class MafStepNode(
 {
     private const string TextPrefix = "text:";
     private const string FiresPrefix = "fires:";
+    private const string ContextPrefix = "context:";
     private const string SeenPrefix = "seen:";
     private const string DoneKey = "done";
     private const char KeySeparator = '|';
@@ -56,8 +57,10 @@ internal sealed class MafStepNode(
             }
 
             string key = Key(input);
+            MafContextValue[] values = [.. output.Context];
             await context.QueueStateUpdateAsync(TextKey(key), output.Text, InputScope, cancellationToken).ConfigureAwait(false);
             await context.QueueStateUpdateAsync(FiresKey(key), output.Fires, InputScope, cancellationToken).ConfigureAwait(false);
+            await context.QueueStateUpdateAsync(ContextKey(key), values, InputScope, cancellationToken).ConfigureAwait(false);
             await context.QueueStateUpdateAsync(SeenKey(key), true, InputScope, cancellationToken).ConfigureAwait(false);
         }
     }
@@ -178,8 +181,15 @@ internal sealed class MafStepNode(
         string text = await context
             .ReadStateAsync<string>(TextKey(Key(input)), InputScope, cancellationToken)
             .ConfigureAwait(false) ?? input.Text;
+        MafContextValue[]? values = await context
+            .ReadStateAsync<MafContextValue[]>(ContextKey(Key(input)), InputScope, cancellationToken)
+            .ConfigureAwait(false);
 
-        return input with { Text = text };
+        return input with
+        {
+            Text = text,
+            Context = values is { Length: > 0 } ? values : input.Context,
+        };
     }
 
     private async ValueTask<bool> DoneAsync(IWorkflowContext context, CancellationToken cancellationToken) =>
@@ -198,6 +208,8 @@ internal sealed class MafStepNode(
     private static string TextKey(string binding) => $"{TextPrefix}{binding}";
 
     private static string FiresKey(string binding) => $"{FiresPrefix}{binding}";
+
+    private static string ContextKey(string binding) => $"{ContextPrefix}{binding}";
 
     private static string SeenKey(string binding) => $"{SeenPrefix}{binding}";
 }

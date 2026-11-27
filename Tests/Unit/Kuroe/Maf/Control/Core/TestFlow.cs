@@ -61,7 +61,10 @@ internal static class TestFlow
         [Edge("起点", "左"), Edge("起点", "右")]);
 
     internal static MafStep Step(string id, FakeRunnerFactory factory) =>
-        new(new MafStepId(id), id, [new PortName("输出")], Invocation(factory), MafUpstreamInputs.Instance);
+        new(new MafStepId(id), id, [new PortName("输出")], Invocation(factory), MafUpstreamInputs.Instance)
+        {
+            ModelPort = MafFlowDefinition.ModelPort,
+        };
 
     internal static MafEdge Edge(string from, string to) =>
         new(new MafStepId(from), new MafStepId(to));

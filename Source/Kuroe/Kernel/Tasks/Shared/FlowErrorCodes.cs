@@ -15,6 +15,9 @@ public static class FlowErrorCodes
     /// <summary>流程名不存在。</summary>
     public const string FlowNotFound = "Flow.NotFound";
 
+    /// <summary>不可用的流程名或实现冲突。</summary>
+    public const string FlowAssembly = "Flow.Assembly";
+
     /// <summary>流程条目库或流程文件不是合法 JSON 或结构不符。</summary>
     public const string FlowFormat = "Flow.Format";
 

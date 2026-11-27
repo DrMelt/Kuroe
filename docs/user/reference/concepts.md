@@ -12,7 +12,7 @@
 
 节点图流程写在 `.kuroe/flows.json`，由节点组成，每条流程有且只有一个根节点，根节点可以是执行节点或容器。开始入口声明流程接收的输入，写在顶层 `Ports`。
 
-代码流程与 MAF 流程由宿主以代码给出，不进入 `.kuroe` 目录。MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，每个步骤的运行仍是一次执行。
+代码流程由宿主以代码给出，不进入 `.kuroe` 目录。MAF 流程可以由宿主以代码给出，也可以由 `.kuroe/flows.json` 装配，MAF 流程定义不写回工作目录。`flows.json` 的每条流程由图流程与 MAF 各装配一次，两个实现都支持时流程目录出现两个变体。MAF 流程把步骤推进交给 Microsoft Agent Framework 运行期，每个步骤的运行仍是一次执行。实现规则见[流程实现](flow-implementation.md)。
 
 节点库写在 `.kuroe/nodes.json`，存放具名的节点定义，流程用 `Use` 引用。节点定义与引用的字段见[流程定义](flow-definition.md)。
 

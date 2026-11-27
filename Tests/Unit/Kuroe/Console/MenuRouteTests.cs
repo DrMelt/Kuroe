@@ -292,7 +292,7 @@ public sealed class MenuRouteTests
     {
         using ConsoleSession cli = new();
 
-        cli.Flows.PrintDetail(new FlowName("默认"));
+        cli.Flows.PrintDetail(new FlowName("默认"), new FlowImplementation("graph"));
 
         Assert.Contains("开始端口", cli.Output.Output);
         Assert.Contains("制定计划", cli.Output.Output);

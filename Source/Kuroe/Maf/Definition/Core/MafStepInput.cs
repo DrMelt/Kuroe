@@ -32,4 +32,7 @@ public sealed record MafStepInput(
 
     /// <summary>取值来自的上游端口，取值不来自步骤端口时为空。</summary>
     public PortName? UpstreamPort { get; init; }
+
+    /// <summary>Context 输入携带的内容，非 Context 输入为空。</summary>
+    public IReadOnlyList<MafContextValue> Context { get; init; } = [];
 }

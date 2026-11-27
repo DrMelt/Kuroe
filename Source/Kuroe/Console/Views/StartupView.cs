@@ -1,5 +1,6 @@
 using ApiHub.Shared.Models;
 using Kuroe.Kernel.Control.Shared;
+using Kuroe.Kernel.Presentation.Shared;
 using Kuroe.Host.Ability.Runner.Llm.Tools;
 using Kuroe.Host.Composition.Catalogs;
 using Kuroe.Kernel.Tasks.Persistence.Restoring.Shared;
@@ -20,12 +21,14 @@ internal sealed class StartupView(
     {
         CatalogContents contents = catalog.Snapshot();
         string model = models.Current?.Value ?? "未选择";
+        IReadOnlyList<FlowTemplateView> templates = flows.All();
+        int flowCount = templates.Select(flow => flow.Name).Distinct(StringComparer.Ordinal).Count();
 
         List<IRenderable> lines =
         [
             new Text($"Kuroe 已启动，当前模型 {model}。"),
             new Text($"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型，"
-                + $"流程模板 {flows.All().Count} 条。", Styles.Hint),
+                + $"流程模板 {flowCount} 条。", Styles.Hint),
         ];
 
         if (report is { } load && load.Busy.Count > 0)

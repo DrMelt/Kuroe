@@ -16,13 +16,16 @@ public sealed class FlowKuroeInfoTool : ITool
 
     private static readonly ToolDefinition ListFlows = new(
         new ToolPath("KuroeInfo/ListFlows"),
-        "列出流程模板：流程名、执行节点路径与说明。",
+        "列出流程模板：流程名、引擎、执行节点路径与说明。",
         []);
 
     private static readonly ToolDefinition GetFlow = new(
         new ToolPath("KuroeInfo/GetFlow"),
         "查看指定流程的展开节点表：模型、节点类型名与要求。",
-        [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)]);
+        [
+            new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true),
+            new ToolParameter(new ToolName("engine"), "流程实现，如 graph 或 maf；省略时列出全部实现", Required: false),
+        ]);
 
     /// <summary>用流程模板目录建立载体。</summary>
     public FlowKuroeInfoTool(IFlowTemplateCatalog flows)
@@ -41,7 +44,7 @@ public sealed class FlowKuroeInfoTool : ITool
         foreach (FlowTemplateView flow in _flows.All())
         {
             string nodes = string.Join(" → ", flow.Steps.Select(step => step.Label));
-            text.AppendLine($"{flow.Name} · {nodes} · {flow.Description ?? string.Empty}");
+            text.AppendLine($"{flow.Name} · {flow.Engine ?? "未知"} · {nodes} · {flow.Description ?? string.Empty}");
         }
 
         return text.ToString().TrimEnd();
@@ -61,19 +64,45 @@ public sealed class FlowKuroeInfoTool : ITool
             return flowName.ErrorsOrEmptyList;
         }
 
-        ErrorOr<FlowTemplateView> found = _flows.Find(flowName.Value);
-        if (found.IsError)
+        var text = new StringBuilder();
+        if (arguments.Text(new ToolName("engine")) is { Length: > 0 } engine)
         {
-            return found.ErrorsOrEmptyList;
+            ErrorOr<FlowTemplateView> found =
+                _flows.Find(flowName.Value, new FlowImplementation(engine.Trim()));
+            if (found.IsError)
+            {
+                return found.ErrorsOrEmptyList;
+            }
+
+            Append(text, found.Value);
+        }
+        else
+        {
+            IReadOnlyList<FlowTemplateView> all = _flows.FindAll(flowName.Value);
+            if (all.Count == 0)
+            {
+                return FlowErrors.FlowNotFound(flowName.Value.Value);
+            }
+
+            foreach (FlowTemplateView flow in all)
+            {
+                if (text.Length > 0)
+                {
+                    text.AppendLine();
+                }
+
+                Append(text, flow);
+            }
         }
 
-        FlowTemplateView flow = found.Value;
-        var text = new StringBuilder();
-        text.AppendLine($"流程「{flow.Name}」· {flow.Description ?? string.Empty}");
+        return text.ToString().TrimEnd();
+    }
+
+    private static void Append(StringBuilder text, FlowTemplateView flow)
+    {
+        text.AppendLine($"流程「{flow.Name}」· {flow.Engine ?? "未知"} · {flow.Description ?? string.Empty}");
         text.AppendLine($"开始 {string.Join("、", flow.StartPorts.Select(port => port.Label))}");
         Walk(text, flow, null, 0);
-
-        return text.ToString().TrimEnd();
     }
 
     private static void Walk(StringBuilder text, FlowTemplateView flow, string? parent, int depth)

@@ -10,6 +10,7 @@ using Xunit;
 using Kuroe.Kernel.Execution.Shared.Identity;
 using Kuroe.Kernel.Execution.Shared.Request;
 using Kuroe.Kernel.Execution.Shared.Runtime;
+using Kuroe.Kernel.Presentation.Shared;
 
 namespace Kuroe.Maf.Control.Tests;
 
@@ -74,6 +75,33 @@ public sealed class MafFlowSubmissionTests
         ]);
 
         Assert.True(prepared.IsError);
+    }
+
+    [Fact(DisplayName = "准备用当前模型补入模型开始端口")]
+    public void Prepare_fills_the_model_from_the_current_model()
+    {
+        ErrorOr<FlowSubmission> prepared = Submit(
+            Definition([Step("唯一")], []),
+            [new StartInput(new PortName("目标"), "做点事")],
+            () => "current-model");
+
+        Assert.False(prepared.IsError);
+        Assert.Equal("current-model", prepared.Value.State.Inputs.Text(MafFlowDefinition.ModelPort));
+        Assert.Equal("current-model", prepared.Value.StartTexts.Texts[MafFlowDefinition.ModelPort]);
+    }
+
+    [Fact(DisplayName = "模板把模型端口标为宿主给值")]
+    public void Template_marks_the_model_port_as_host_supplied()
+    {
+        MafFlowDefinition definition = Definition([Step("唯一")], []);
+        FlowTemplateView template = new MafFlowTemplates(new MafFlowCatalog([definition]), hostModel: true)
+            .Find(definition.Name).Value;
+        FlowStartPortView port = Assert.Single(
+            template.StartPorts,
+            candidate => candidate.Name == MafFlowDefinition.ModelPort.Value);
+
+        Assert.Equal(FlowStartKind.Host, port.InputKind);
+        Assert.Equal("当前模型", port.HostInput);
     }
 
     [Fact(DisplayName = "记录编解码往返定义与状态")]
@@ -212,6 +240,46 @@ public sealed class MafFlowSubmissionTests
         Assert.True(prepared.IsError);
     }
 
+    [Fact(DisplayName = "无模型步骤的流程不要求模型")]
+    public void Prepare_allows_a_flow_without_model()
+    {
+        MafStep step = new(
+            new MafStepId("唯一"),
+            "唯一",
+            [new PortName("输出")],
+            Invocation(),
+            MafUpstreamInputs.Instance);
+        MafFlowDefinition definition = new(
+            new FlowName("测试"),
+            [new MafStartPort(new PortName("目标"), "默认目标")],
+            [step],
+            []);
+
+        ErrorOr<FlowSubmission> prepared = Submit(definition, []);
+
+        Assert.False(prepared.IsError);
+    }
+
+    [Fact(DisplayName = "不承载内容的开始端口不要求提交")]
+    public void Prepare_does_not_require_an_automatic_start_port()
+    {
+        MafStep step = new(
+            new MafStepId("唯一"),
+            "唯一",
+            [new PortName("输出")],
+            Invocation(),
+            MafUpstreamInputs.Instance);
+        MafFlowDefinition definition = new(
+            new FlowName("测试"),
+            [new MafStartPort(new PortName("放行")) { RequiresInput = false }],
+            [step],
+            []);
+
+        ErrorOr<FlowSubmission> prepared = Submit(definition, []);
+
+        Assert.False(prepared.IsError);
+    }
+
     [Fact(DisplayName = "准备拒绝从入口不可达的步骤")]
     public void Prepare_rejects_steps_unreachable_from_the_entry()
     {
@@ -251,8 +319,11 @@ public sealed class MafFlowSubmissionTests
 
     private static ErrorOr<FlowSubmission> Submit(StartInput[] values) => Submit(Definition(), values);
 
-    private static ErrorOr<FlowSubmission> Submit(MafFlowDefinition definition, StartInput[] values) =>
-        new MafFlowSubmission(new MafFlowCatalog([definition]), new UnusedGateway())
+    private static ErrorOr<FlowSubmission> Submit(
+        MafFlowDefinition definition,
+        StartInput[] values,
+        Func<string?>? currentModel = null) =>
+        new MafFlowSubmission(new MafFlowCatalog([definition]), new UnusedGateway(), currentModel)
             .Prepare(new TaskId(1), definition.Name, new StartInputs(values), "标题");
 
     private static MafFlowDefinition Definition(
@@ -274,7 +345,10 @@ public sealed class MafFlowSubmissionTests
         [Edge("第一步", "第二步")]);
 
     private static MafStep Step(string id, string? label = null) =>
-        new(new MafStepId(id), label ?? id, [new PortName("输出")], Invocation(), MafUpstreamInputs.Instance);
+        new(new MafStepId(id), label ?? id, [new PortName("输出")], Invocation(), MafUpstreamInputs.Instance)
+        {
+            ModelPort = MafFlowDefinition.ModelPort,
+        };
 
     private static MafEdge Edge(string from, string to) =>
         new(new MafStepId(from), new MafStepId(to));

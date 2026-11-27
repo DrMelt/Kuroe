@@ -33,7 +33,8 @@ internal static class MafFlowProjection
 
         Dictionary<NodePath, MafStepId> ids = StepIds(executables, flow.Name, errors);
         Dictionary<NodePath, MafStepPlan> plans = Plans(executables, flow, ids, errors);
-        IReadOnlyList<MafStartPort> startPorts = StartPorts(flow, errors);
+        bool requiresModel = executables.Any(executable => executable.Spec.Type?.ModelPort is not null);
+        IReadOnlyList<MafStartPort> startPorts = StartPorts(flow, requiresModel, errors);
 
         List<MafStep> steps = [];
         List<MafEdge> edges = [];
@@ -63,6 +64,7 @@ internal static class MafFlowProjection
                 new MafStepInvocation(binder),
                 new MafStepInputAssembler(plan.Inputs))
             {
+                ModelPort = type.ModelPort,
                 OutputPlan =
                 [
                     .. outputs.Select(port => new MafOutputPort(
@@ -263,13 +265,21 @@ internal static class MafFlowProjection
         }
     }
 
-    private static List<MafStartPort> StartPorts(FlowDefinition flow, List<Error> errors)
+    private static List<MafStartPort> StartPorts(
+        FlowDefinition flow,
+        bool requiresModel,
+        List<Error> errors)
     {
         List<MafStartPort> ports = [];
         foreach (Port port in flow.StartPorts)
         {
             if (port.Name == MafFlowDefinition.ModelPort)
             {
+                if (!requiresModel)
+                {
+                    continue;
+                }
+
                 if (port.Value is { Length: > 0 })
                 {
                     errors.Add(FlowErrors.Body(flow.Name.Value,
@@ -281,6 +291,7 @@ internal static class MafFlowProjection
                 {
                     Kind = KindOf(port.Type),
                     Mode = ModeOf(port.Mode),
+                    RequiresInput = true,
                 });
                 continue;
             }
@@ -294,10 +305,11 @@ internal static class MafFlowProjection
             {
                 Kind = KindOf(port.Type),
                 Mode = ModeOf(port.Mode),
+                RequiresInput = PortRules.CarriesContent(port.Type),
             });
         }
 
-        if (ports.All(port => port.Name != MafFlowDefinition.ModelPort))
+        if (requiresModel && ports.All(port => port.Name != MafFlowDefinition.ModelPort))
         {
             ports.Add(new MafStartPort(MafFlowDefinition.ModelPort));
         }

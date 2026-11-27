@@ -11,6 +11,9 @@ internal sealed class DialogueFlowIdentity : IFlowIdentity
     public string DisplayName => "代码流程";
 
     /// <inheritdoc/>
+    public string Implementation => DialogueFlow.Implementation;
+
+    /// <inheritdoc/>
     public bool Handles(FlowName name) => name == DialogueFlow.Name;
 
     /// <inheritdoc/>

@@ -17,6 +17,8 @@
         <ProjectReference Include="..\Host\Composition\Core\Kuroe.Host.Composition.csproj" />
         <ProjectReference Include="..\Host\Assistant\Core\Kuroe.Host.Assistant.csproj" />
         <ProjectReference Include="..\Host\Ability\Node\Llm\Core\Kuroe.Host.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\Host\Ability\Node\Command\Core\Kuroe.Host.Ability.Node.Command.csproj" />
+        <ProjectReference Include="..\Host\Ability\Node\File\Core\Kuroe.Host.Ability.Node.File.csproj" />
         <ProjectReference Include="..\Host\Ability\Runner\Llm\Core\Kuroe.Host.Ability.Runner.Llm.csproj" />
         <ProjectReference Include="..\Host\Ability\Node\Input\Core\Kuroe.Host.Ability.Node.Input.csproj" />
         <ProjectReference Include="..\Host\Ability\Node\Approval\Core\Kuroe.Host.Ability.Node.Approval.csproj" />
@@ -24,7 +26,16 @@
         <ProjectReference Include="..\Host\Ability\Tool\Core\Kuroe.Host.Ability.Tool.csproj" />
         <ProjectReference Include="..\Host\Ability\Tool\Json\Kuroe.Host.Ability.Tool.Json.csproj" />
         <ProjectReference Include="..\Host\FlowIntegration\GraphFlow\Core\Kuroe.Host.FlowIntegration.GraphFlow.csproj" />
+        <ProjectReference Include="..\Host\FlowIntegration\Maf\Core\Kuroe.Host.FlowIntegration.Maf.csproj" />
+        <ProjectReference Include="..\Host\FlowIntegration\Flows\Core\Kuroe.Host.FlowIntegration.Flows.csproj" />
+        <ProjectReference Include="..\Maf\Compilation\Core\Kuroe.Maf.Compilation.csproj" />
+        <ProjectReference Include="..\Maf\Compilation\Shared\Kuroe.Maf.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\Maf\Definition\Core\Kuroe.Maf.Definition.csproj" />
+        <ProjectReference Include="..\FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
+        <ProjectReference Include="..\FlowDescription\Description\Shared\Kuroe.FlowDescription.Description.Shared.csproj" />
+        <ProjectReference Include="..\Kernel\Control\Runtime\Kuroe.Kernel.Control.Runtime.csproj" />
         <ProjectReference Include="..\Flow\Library\Core\Kuroe.Flow.Library.csproj" />
+        <ProjectReference Include="..\..\Files\Shared\Files.Shared.csproj" />
         <ProjectReference Include="..\Kernel\Tasks\Runtime\Kuroe.Kernel.Tasks.Runtime.csproj" />
         <ProjectReference Include="..\Kernel\Tasks\Persistence\Restoring\Shared\Kuroe.Kernel.Tasks.Persistence.Restoring.Shared.csproj" />
         <ProjectReference Include="..\Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />

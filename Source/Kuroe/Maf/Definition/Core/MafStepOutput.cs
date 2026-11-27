@@ -7,4 +7,7 @@ public sealed record MafStepOutput(MafStepId Step, PortName Port, string Text)
 {
     /// <summary>本次产出是否触发。</summary>
     public bool Fires { get; init; } = true;
+
+    /// <summary>Context 端口透传的内容，非 Context 端口为空。</summary>
+    public IReadOnlyList<MafContextValue> Context { get; init; } = [];
 }

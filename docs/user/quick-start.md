@@ -4,11 +4,11 @@
 
 ## 准备流程
 
-按[流程示例](reference/flow-examples.md#单线撰写)把节点库写入 `.kuroe/nodes.json`，流程写入 `.kuroe/flows.json`，宿主开始输入写入 `.kuroe/hostStartInputs.json`，`.kuroe/` 不存在时先建立。这三个文件在 Console 启动时读取。
+按[流程示例](reference/flow-examples.md#单线撰写)把节点库写入 `.kuroe/nodes.json`，流程写入 `.kuroe/flows.json`，宿主开始输入写入 `.kuroe/hostStartInputs.json`，`.kuroe/` 不存在时先建立。这些文件在 Console 启动时读取。
 
 流程示例含「单线撰写」与「容器引用两次」两个示例，本页使用前者；宿主开始输入表照抄示例即可，其中没有对应流程的表项不会被用到。
 
-Console 运行中改动节点库或流程，从「流程」菜单的「导入流程」分别导入 `.kuroe/nodes.json` 与 `.kuroe/flows.json`，先节点库后流程；重启 Console 也会重新读取。宿主开始输入表只在启动时读取，改动后必须重启。
+Console 运行中改动节点库或流程，从「流程」菜单的「导入流程」分别导入 `.kuroe/nodes.json` 与 `.kuroe/flows.json`，先节点库后流程；重启 Console 也会重新读取。MAF 变体只在启动时装配，改动流程后需要重启才能看到新的 MAF 变体。
 
 ## 启动
 

@@ -18,9 +18,9 @@ dotnet Kuroe.Cli.dll <命令> [-d <工作目录>]
 
 | 命令                                                        | 说明                               |
 | ----------------------------------------------------------- | ---------------------------------- |
-| `run --flow <流程> [--title <标题>] --input <端口>=<值>...` | 提交任务并在本进程内执行到结束     |
-| `flow list`                                                 | 列出流程与规模                     |
-| `flow show <流程>`                                          | 打印流程字段与节点树               |
+| `run --flow <流程> [--engine <实现>] [--title <标题>] --input <端口>=<值>...` | 提交任务并在本进程内执行到结束 |
+| `flow list`                                                 | 列出流程变体、引擎与规模           |
+| `flow show <流程> [--engine <实现>]`                        | 打印流程字段与节点树               |
 | `flow add <文件>`                                           | 导入节点库或流程，可用的同名项覆盖 |
 | `model list`                                                | 列出已注册模型并标记当前模型       |
 | `model use <模型>`                                          | 切换模型，要求已注册               |
@@ -64,9 +64,11 @@ dotnet Kuroe.Cli.dll <命令> [-d <工作目录>]
 
 ## 流程支持范围
 
-CLI 只支持 `Container`、`Llm`、`FileRead`、`FileWrite` 与 `Command` 节点。包含 `Input` 或 `Approval` 的流程仍可出现在 `.kuroe/flows.json`，`flow list` 把它们列在「不可用流程」下并给出原因，`flow show` 与 `run` 返回不可用原因。节点库写在 `.kuroe/nodes.json`。
+CLI 只支持 `Container`、`Llm`、`FileRead`、`FileWrite` 与 `Command` 节点。包含 `Input` 或 `Approval` 的流程仍可出现在 `.kuroe/flows.json`，`flow list` 把它们列在「不可用流程」下并给出原因，`flow show` 与 `run` 返回不可用原因。每条流程由图流程与 MAF 各装配一次，装配成功的实现各提供一个变体。`flow list` 显示全部变体与引擎，两个实现都支持时同一流程出现两行。需要模型的 MAF 流程使用当前模型，`run` 不需要写 `MODEL_NAME`。节点库写在 `.kuroe/nodes.json`。
 
-`flow add` 按文件顶层字段判定导入节点库还是流程。流程导入只保存可用的流程，不可用的流程不导入，逐条写到 stderr，不影响同一文件里的其他流程；与已有流程同名但不可用时保留原流程。节点库导入要求节点库本身合法且不破坏当前可用的流程，否则整个导入不生效。
+流程有多个变体时，`run` 与 `flow show` 用 `--engine graph` 或 `--engine maf` 选择实现。只有一个变体时可以省略。存在多个变体且未给 `--engine` 时命令返回可用实现列表。
+
+`flow add` 按文件顶层字段判定导入节点库还是流程。图流程导入只保存可用的流程，不可用的流程不导入，逐条写到 stderr，不影响同一文件里的其他流程；与已有流程同名但不可用时保留原流程。MAF 变体在下次启动重新装配。节点库导入要求节点库本身合法且不破坏当前可用的流程，否则整个导入不生效。
 
 ## 输出
 

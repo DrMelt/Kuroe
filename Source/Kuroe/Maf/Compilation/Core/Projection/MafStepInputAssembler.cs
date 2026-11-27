@@ -1,4 +1,5 @@
 using Kuroe.Kernel.Execution.Shared.Ports;
+using Kuroe.Kernel.Tasks.Shared;
 using Kuroe.FlowDescription.Definition.Shared.Ports;
 using Kuroe.Maf.Definition;
 
@@ -11,8 +12,11 @@ internal sealed class MafStepInputAssembler(IReadOnlyList<MafInputPlan> plans) :
     public IReadOnlyList<MafStepInput> Assemble(MafStepInputContext context) =>
         [.. plans.Select(plan => Input(plan, context))];
 
-    private static MafStepInput Input(MafInputPlan plan, MafStepInputContext context) =>
-        new(
+    private static MafStepInput Input(MafInputPlan plan, MafStepInputContext context)
+    {
+        MafStepOutput? upstream = Upstream(plan, context);
+
+        return new MafStepInput(
             plan.Port.Name,
             KindOf(plan.Port),
             RoleOf(plan.Port.Role),
@@ -20,42 +24,81 @@ internal sealed class MafStepInputAssembler(IReadOnlyList<MafInputPlan> plans) :
             plan.Port.Default,
             Source(plan),
             SourceKey: null,
-            Text(plan, context),
+            Text(plan, context, upstream),
             plan.UpstreamStep)
         {
             Group = plan.Group,
             Condition = plan.Condition,
             UpstreamPort = plan.UpstreamPort,
+            Context = Context(plan, context, upstream),
         };
+    }
 
     /// <summary>取端口文本：装配期常量直接给出，开始输入与上游端口按上下文取。</summary>
-    private static string Text(MafInputPlan plan, MafStepInputContext context) => plan.Kind switch
-    {
-        MafInputKind.Constant => plan.Text ?? string.Empty,
-        MafInputKind.StartInput => plan.StartPort is { } port
-            ? context.StartInputs.GetValueOrDefault(port) ?? string.Empty
-            : string.Empty,
-        MafInputKind.Upstream or MafInputKind.RuntimeConstant => Upstream(plan, context),
-        _ => string.Empty,
-    };
+    private static string Text(
+        MafInputPlan plan,
+        MafStepInputContext context,
+        MafStepOutput? upstream) => plan.Kind switch
+        {
+            MafInputKind.Constant => plan.Text ?? string.Empty,
+            MafInputKind.StartInput => plan.StartPort is { } port
+                ? context.StartInputs.GetValueOrDefault(port) ?? string.Empty
+                : string.Empty,
+            MafInputKind.Upstream or MafInputKind.RuntimeConstant => upstream?.Text ?? string.Empty,
+            _ => string.Empty,
+        };
 
-    /// <summary>按步骤标识与端口取上游交回的文本，未交回时为空。</summary>
-    private static string Upstream(MafInputPlan plan, MafStepInputContext context)
+    /// <summary>Context 输入的内容：上游产出携带的内容优先，否则按来源构造单条内容。</summary>
+    private static IReadOnlyList<MafContextValue> Context(
+        MafInputPlan plan,
+        MafStepInputContext context,
+        MafStepOutput? upstream)
+    {
+        if (plan.Port.Type.Semantics != PortSemantics.Context)
+        {
+            return [];
+        }
+
+        if (upstream is { Context.Count: > 0 } output)
+        {
+            return output.Context;
+        }
+
+        string text = plan.Kind switch
+        {
+            MafInputKind.Constant => plan.Text ?? string.Empty,
+            MafInputKind.StartInput => plan.StartPort is { } port
+                ? context.StartInputs.GetValueOrDefault(port) ?? string.Empty
+                : string.Empty,
+            _ => upstream?.Text ?? string.Empty,
+        };
+        PortName name = plan.Kind switch
+        {
+            MafInputKind.StartInput => plan.StartPort ?? plan.Port.Name,
+            MafInputKind.Upstream or MafInputKind.RuntimeConstant => plan.UpstreamPort ?? plan.Port.Name,
+            _ => plan.Port.Name,
+        };
+
+        return text.Length == 0 ? [] : [new MafContextValue(name, text, Source(plan))];
+    }
+
+    /// <summary>按步骤标识与端口取上游产出，未交回时为空。</summary>
+    private static MafStepOutput? Upstream(MafInputPlan plan, MafStepInputContext context)
     {
         if (plan.UpstreamStep is not { } step || plan.UpstreamPort is not { } port)
         {
-            return string.Empty;
+            return null;
         }
 
         foreach (MafStepOutput output in context.Upstream)
         {
             if (output.Step == step && output.Port == port)
             {
-                return output.Text;
+                return output;
             }
         }
 
-        return string.Empty;
+        return null;
     }
 
     /// <summary>输入取用的来源描述。</summary>

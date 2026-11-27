@@ -19,7 +19,7 @@ public sealed class RunArchiveTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
         RunCommand command = new(environment.Session, new CliOutput(new StringWriter(), new StringWriter()));
 
-        int code = await command.RunAsync("默认", null, ["目标=目标"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Success, code);
         TaskId id = Assert.Single(environment.Session.Registry.Snapshots()).Id;
@@ -44,7 +44,7 @@ public sealed class RunArchiveTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Blocked);
         RunCommand command = new(environment.Session, new CliOutput(new StringWriter(), new StringWriter()));
 
-        int code = await command.RunAsync("默认", null, ["目标=目标"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Blocked, code);
         TaskId id = Assert.Single(environment.Session.Registry.Snapshots()).Id;

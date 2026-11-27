@@ -16,11 +16,12 @@ internal sealed class CliApplication(
     public Task<int> RunAsync(
         string? directory,
         string flow,
+        string? engine,
         string? title,
         string[] inputs) =>
         ExecuteAsync(directory, (session, commandOutput) =>
             new RunCommand(session, commandOutput)
-                .RunAsync(flow, title, inputs));
+                .RunAsync(flow, engine, title, inputs));
 
     /// <summary>执行一个同步命令。</summary>
     public Task<int> ExecuteAsync(string? directory, Func<CliSession, CliOutput, int> action) =>
@@ -54,7 +55,6 @@ internal sealed class CliApplication(
         try
         {
             await using CliSession session = created.Value;
-
             return await action(session).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

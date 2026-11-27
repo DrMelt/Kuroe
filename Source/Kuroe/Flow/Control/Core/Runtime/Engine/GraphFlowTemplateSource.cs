@@ -27,5 +27,9 @@ public sealed class GraphFlowTemplateSource(
     }
 
     private FlowTemplateView Project(FlowDefinition flow) =>
-        FlowTemplateProjection.Project(flow, hostInputs.Bindings(flow.Name));
+        FlowTemplateProjection.Project(flow, hostInputs.Bindings(flow.Name)) with
+        {
+            Engine = "图流程",
+            Implementation = new FlowImplementation(GraphFlowIdentity.Implementation),
+        };
 }

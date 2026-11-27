@@ -12,6 +12,9 @@ public sealed class MafFlowIdentity(IMafFlowSource flows) : IFlowIdentity
     public const string Implementation = "maf";
 
     /// <inheritdoc/>
+    string IFlowIdentity.Implementation => Implementation;
+
+    /// <inheritdoc/>
     public string DisplayName => "MAF 流程";
 
     /// <inheritdoc/>

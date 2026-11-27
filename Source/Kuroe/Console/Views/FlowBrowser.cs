@@ -60,10 +60,10 @@ internal sealed class FlowBrowser(
         }
     }
 
-    /// <summary>打印流程、开始端口与节点树。</summary>
-    public void PrintDetail(FlowName name)
+    /// <summary>打印指定实现的流程、开始端口与节点树。</summary>
+    public void PrintDetail(FlowName name, FlowImplementation implementation)
     {
-        ErrorOr<FlowTemplateView> found = templates.Find(name);
+        ErrorOr<FlowTemplateView> found = templates.Find(name, implementation);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -71,11 +71,13 @@ internal sealed class FlowBrowser(
         }
 
         FlowTemplateView flow = found.Value;
-        terminal.Page("主菜单", "流程", flow.Name);
+        terminal.Page("主菜单", "流程",
+            flow.Engine is { Length: > 0 } engine ? $"{flow.Name} · {engine}" : flow.Name);
         terminal.Write(Blocks.Section(
             BoxKind.View,
             $"流程 {flow.Name}",
             Blocks.Fields(
+                ("引擎", new Text(flow.Engine ?? "—", Styles.Hint)),
                 ("执行节点", new Text(flow.Steps.Count.ToString())),
                 ("容器", new Text(flow.Groups.Count.ToString())),
                 ("说明", new Text(
@@ -128,9 +130,16 @@ internal sealed class FlowBrowser(
 
     private void Show(IReadOnlyList<FlowTemplateView> all)
     {
-        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Name)]) is { } index)
+        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Label)]) is { } index)
         {
-            ViewPage.Browse(terminal, "流程详情", () => PrintDetail(new FlowName(all[index].Name)));
+            if (all[index].Implementation is not { } implementation)
+            {
+                results.Reject([Error.Validation(FlowErrorCodes.FlowAssembly, "流程没有实现标识。")]);
+                return;
+            }
+
+            ViewPage.Browse(terminal, "流程详情",
+                () => PrintDetail(new FlowName(all[index].Name), implementation));
         }
     }
 
@@ -152,6 +161,7 @@ internal sealed class FlowBrowser(
 
         Table table = Blocks.Table(
             ("流程", false),
+            ("引擎", false),
             ("执行节点", false),
             ("容器", false),
             ("说明", true));
@@ -160,12 +170,14 @@ internal sealed class FlowBrowser(
         {
             table.AddRow(
                 new Text(flow.Name, Styles.Key),
+                new Text(flow.Engine ?? "—", Styles.Hint),
                 new Text(flow.Steps.Count.ToString()),
                 new Text(flow.Groups.Count.ToString()),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
-        terminal.Write(Blocks.Section(BoxKind.View, $"流程 {all.Count} 条", table));
+        int flowCount = all.Select(flow => flow.Name).Distinct(StringComparer.Ordinal).Count();
+        terminal.Write(Blocks.Section(BoxKind.View, $"流程 {flowCount} 条，实现 {all.Count} 个", table));
     }
 
     private static Paragraph GroupLine(FlowGroupView group)

@@ -26,7 +26,11 @@ public sealed class FlowKuroeInfoToolTests
             },
         ],
         [],
-        []);
+        [])
+    {
+        Engine = "图流程",
+        Implementation = new FlowImplementation("graph"),
+    };
 
     [Fact(DisplayName = "流程清单渲染流程名与说明")]
     public void ListFlows_renders_the_flow_name_and_description()
@@ -37,6 +41,7 @@ public sealed class FlowKuroeInfoToolTests
 
         Assert.Contains("默认", output, StringComparison.Ordinal);
         Assert.Contains("示例", output, StringComparison.Ordinal);
+        Assert.Contains("图流程", output, StringComparison.Ordinal);
     }
 
     [Fact(DisplayName = "流程查询渲染展开后的流程")]
@@ -46,7 +51,7 @@ public sealed class FlowKuroeInfoToolTests
 
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
-        Assert.Contains("流程「默认」· 示例", output, StringComparison.Ordinal);
+        Assert.Contains("流程「默认」· 图流程 · 示例", output, StringComparison.Ordinal);
         Assert.Contains("开始", output, StringComparison.Ordinal);
     }
 
@@ -76,7 +81,12 @@ public sealed class FlowKuroeInfoToolTests
     {
         public IReadOnlyList<FlowTemplateView> All() => [Flow];
 
-        public ErrorOr<FlowTemplateView> Find(FlowName name) =>
-            name.Value == Flow.Name ? Flow : Error.NotFound("Flow.NotFound", $"没有流程 {name}。");
+        public IReadOnlyList<FlowTemplateView> FindAll(FlowName name) =>
+            name.Value == Flow.Name ? [Flow] : [];
+
+        public ErrorOr<FlowTemplateView> Find(FlowName name, FlowImplementation implementation) =>
+            name.Value == Flow.Name && Flow.Implementation == implementation
+                ? Flow
+                : Error.NotFound("Flow.NotFound", $"没有流程 {name}。");
     }
 }

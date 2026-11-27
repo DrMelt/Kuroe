@@ -222,7 +222,7 @@ public sealed class WorkTaskTests
     {
         public string DisplayName => "测试";
 
-
+        public string Implementation => "test";
 
         public bool Handles(FlowName name) => false;
 

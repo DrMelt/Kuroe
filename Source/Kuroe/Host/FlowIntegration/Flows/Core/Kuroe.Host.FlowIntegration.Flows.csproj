@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Composition\Core\Kuroe.Host.Composition.csproj" />
+        <ProjectReference Include="..\..\GraphFlow\Core\Kuroe.Host.FlowIntegration.GraphFlow.csproj" />
+        <ProjectReference Include="..\..\Maf\Core\Kuroe.Host.FlowIntegration.Maf.csproj" />
+        <ProjectReference Include="..\..\..\Ability\Node\Llm\Core\Kuroe.Host.Ability.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\Ability\Node\File\Core\Kuroe.Host.Ability.Node.File.csproj" />
+        <ProjectReference Include="..\..\..\Ability\Node\Command\Core\Kuroe.Host.Ability.Node.Command.csproj" />
+        <ProjectReference Include="..\..\..\..\FlowDescription\Description\Shared\Kuroe.FlowDescription.Description.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\FlowDescription\Definition\Shared\Kuroe.FlowDescription.Definition.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\FlowDescription\Compilation\Shared\Kuroe.FlowDescription.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Flow\Graph\Shared\Kuroe.Flow.Graph.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Flow\Library\Core\Kuroe.Flow.Library.csproj" />
+        <ProjectReference Include="..\..\..\..\Kernel\Control\Shared\Kuroe.Kernel.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Kernel\Control\Runtime\Kuroe.Kernel.Control.Runtime.csproj" />
+        <ProjectReference Include="..\..\..\..\Kernel\Execution\Shared\Kuroe.Kernel.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Kernel\Tasks\Shared\Kuroe.Kernel.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Maf\Compilation\Core\Kuroe.Maf.Compilation.csproj" />
+        <ProjectReference Include="..\..\..\..\Maf\Compilation\Shared\Kuroe.Maf.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Maf\Definition\Core\Kuroe.Maf.Definition.csproj" />
+    </ItemGroup>
+</Project>

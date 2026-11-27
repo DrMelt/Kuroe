@@ -170,6 +170,8 @@ internal sealed class CodeIdentity : IFlowIdentity
 
     public string DisplayName => "代码流程";
 
+    public string Implementation => Id;
+
     public bool Handles(FlowName name) => name.Value == "目标";
 
     public bool Handles(FlowIdentity identity) =>

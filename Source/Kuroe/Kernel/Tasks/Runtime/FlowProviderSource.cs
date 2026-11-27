@@ -32,16 +32,40 @@ public sealed class FlowProviderSource(IEnumerable<FlowProvider> providers) : IF
     }
 
     /// <inheritdoc/>
+    public IReadOnlyList<FlowProvider> FindAll(FlowName name) =>
+        [.. _providers.Where(provider => provider.Identity.Handles(name))];
+
+    /// <inheritdoc/>
     public ErrorOr<FlowProvider> Resolve(FlowName name)
     {
-        FlowProvider[] found =
-            [.. _providers.Where(provider => provider.Identity.Handles(name))];
+        FlowProvider[] found = [.. FindAll(name)];
 
         return found.Length switch
         {
             1 => found[0],
             0 => FlowErrors.FlowNotFound(name.Value),
-            _ => Error.Failure(FlowErrorCodes.FlowName, $"多个流程实现同时负责流程 {name.Value}。"),
+            _ => Error.Failure(
+                FlowErrorCodes.FlowName,
+                $"流程 {name.Value} 由多个实现提供：{string.Join('、', found.Select(provider => provider.Identity.Implementation))}。"),
+        };
+    }
+
+    /// <inheritdoc/>
+    public ErrorOr<FlowProvider> Resolve(FlowName name, FlowImplementation implementation)
+    {
+        FlowProvider[] found =
+        [
+            .. FindAll(name).Where(provider =>
+                string.Equals(provider.Identity.Implementation, implementation.Value, StringComparison.Ordinal)),
+        ];
+
+        return found.Length switch
+        {
+            1 => found[0],
+            0 => FlowErrors.FlowNotFound(name.Value),
+            _ => Error.Failure(
+                FlowErrorCodes.FlowName,
+                $"流程 {name.Value} 有多个 {implementation} 实现。"),
         };
     }
 }

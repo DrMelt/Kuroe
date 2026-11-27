@@ -19,6 +19,15 @@ public sealed class TaskService(TaskActions actions) : ITaskControl
         ProcessObserver? observer = null) =>
         _actions.Submit(flowName, inputs, title, observer);
 
+    /// <summary>提交任务：按流程名与实现取提供者，建立任务并启动执行。<paramref name="observer"/> 收到该任务全部执行的过程事件。</summary>
+    public ErrorOr<TaskSnapshot> Submit(
+        StartInputs inputs,
+        FlowName flowName,
+        FlowImplementation implementation,
+        string? title,
+        ProcessObserver? observer = null) =>
+        _actions.Submit(flowName, implementation, inputs, title, observer);
+
     /// <summary>暂停任务：停止新的推进与派发，在跑的执行就地中断。</summary>
     public ErrorOr<Success> Pause(TaskId id) => _actions.Pause(id);
 

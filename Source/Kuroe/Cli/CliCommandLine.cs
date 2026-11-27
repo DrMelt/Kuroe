@@ -35,6 +35,10 @@ internal static class CliCommandLine
             Description = "流程名",
             Required = true,
         };
+        Option<string?> engine = new("--engine", "-e")
+        {
+            Description = "流程实现，如 graph 或 maf；流程只有一个实现时省略",
+        };
         Option<string?> title = new("--title", "-t") { Description = "任务标题，未指定时取第一个开始输入的首行" };
         Option<string[]> input = new("--input", "-i")
         {
@@ -70,6 +74,7 @@ internal static class CliCommandLine
         });
 
         command.Options.Add(flow);
+        command.Options.Add(engine);
         command.Options.Add(title);
         command.Options.Add(input);
         command.Options.Add(answer);
@@ -77,6 +82,7 @@ internal static class CliCommandLine
         command.SetAction(parseResult => application.RunAsync(
             parseResult.GetValue(workDirectory),
             parseResult.GetValue(flow) ?? string.Empty,
+            parseResult.GetValue(engine),
             parseResult.GetValue(title),
             parseResult.GetValue(input) ?? []));
 
@@ -94,10 +100,17 @@ internal static class CliCommandLine
 
         Command show = new("show", "打印流程字段与节点树。");
         Argument<string> name = new("流程") { Description = "流程名" };
+        Option<string?> showEngine = new("--engine", "-e")
+        {
+            Description = "流程实现，如 graph 或 maf；省略时打印全部实现",
+        };
         show.Arguments.Add(name);
+        show.Options.Add(showEngine);
         show.SetAction(parseResult => application.ExecuteAsync(
             parseResult.GetValue(workDirectory),
-            (session, output) => new FlowCommands(session, output).Show(parseResult.GetValue(name) ?? string.Empty)));
+            (session, output) => new FlowCommands(session, output).Show(
+                parseResult.GetValue(name) ?? string.Empty,
+                parseResult.GetValue(showEngine))));
 
         Command add = new("add", "导入流程与节点库，同名覆盖。");
         Argument<string> file = new("文件") { Description = "流程文件，相对工作目录解析" };

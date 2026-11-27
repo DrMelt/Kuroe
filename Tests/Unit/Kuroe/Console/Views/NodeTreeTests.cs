@@ -28,7 +28,9 @@ public sealed class NodeTreeTests
     public void Node_tree_renders_hierarchy_and_details()
     {
         using ConsoleSession cli = new();
-        FlowTemplateView flow = cli.Environment.Templates.Find(new FlowName("默认")).ThrowIfError();
+        FlowTemplateView flow = cli.Environment.Templates
+            .Find(new FlowName("默认"), new FlowImplementation("graph"))
+            .ThrowIfError();
 
         cli.Terminal.Write(NodeTree.Build(
             flow,

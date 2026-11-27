@@ -62,6 +62,18 @@ public sealed class FlowProviderSourceTests
         Assert.Same(second, found.Value);
     }
 
+    [Fact(DisplayName = "同名多实现按实现解析")]
+    public void Same_name_resolves_the_selected_implementation()
+    {
+        FlowProvider first = Provider("共享", "graph");
+        FlowProvider second = Provider("共享", "maf");
+        FlowProviderSource source = new([first, second]);
+
+        Assert.True(source.Resolve(new FlowName("共享")).IsError);
+        Assert.Same(second, source.Resolve(new FlowName("共享"), new FlowImplementation("maf")).Value);
+        Assert.Equal(2, source.FindAll(new FlowName("共享")).Count);
+    }
+
     [Fact(DisplayName = "恢复使用身份选中的提供方")]
     public void Restore_uses_the_provider_selected_by_the_identity()
     {
@@ -81,9 +93,12 @@ public sealed class FlowProviderSourceTests
         Assert.Equal("second", snapshot.View.Name);
     }
 
-    private static FlowProvider Provider(string implementation)
+    private static FlowProvider Provider(string implementation) =>
+        Provider(implementation, implementation);
+
+    private static FlowProvider Provider(string name, string implementation)
     {
-        TestIdentity identity = new(implementation);
+        TestIdentity identity = new(name, implementation);
         return new FlowProvider(
             identity,
             new TestSubmission(),
@@ -115,11 +130,13 @@ public sealed class FlowProviderSourceTests
             []);
     }
 
-    private sealed class TestIdentity(string implementation) : IFlowIdentity
+    private sealed class TestIdentity(string flowName, string implementation) : IFlowIdentity
     {
         public string DisplayName => implementation;
 
-        public bool Handles(FlowName name) => name.Value == implementation;
+        public string Implementation => implementation;
+
+        public bool Handles(FlowName name) => name.Value == flowName;
 
         public bool Handles(FlowIdentity identity) =>
             identity.Kind == CodeFlowKind.Value

@@ -58,11 +58,18 @@ public sealed record GraphFlowOptions
     public FlowNodeExecutionRunners? ExecutionRunners { get; init; }
 }
 
+/// <summary>图流程装配结果：流程库、流程目录、流程描述编译器与执行运行器，供同一宿主装配其他流程实现。</summary>
+public sealed record GraphFlowComposition(
+    FlowLibrary Library,
+    FlowCatalog Catalog,
+    IFlowSemanticCompiler Compiler,
+    FlowNodeExecutionRunners Runners);
+
 /// <summary>图流程装配入口：注册流程库、节点类型、图流程实现与图记录编解码。</summary>
 public static class GraphFlowServiceCollectionExtensions
 {
-    /// <summary>在核心装配之后并入图流程。核心不引用图流程实现。</summary>
-    public static ErrorOr<Success> AddKuroeGraphFlows(
+    /// <summary>在核心装配之后并入图流程，返回流程库与描述编译器。</summary>
+    public static ErrorOr<GraphFlowComposition> AddKuroeGraphFlowsComposition(
         this IServiceCollection services,
         KuroeComposition composition,
         GraphFlowOptions? options = null)
@@ -179,6 +186,17 @@ public static class GraphFlowServiceCollectionExtensions
             new GraphFlowPresentation(),
             new GraphFlowRecordSource()));
 
-        return Result.Success;
+        return new GraphFlowComposition(flows.Value, catalog, descriptionCompiler, runners);
+    }
+
+    /// <summary>在核心装配之后并入图流程。核心不引用图流程实现。</summary>
+    public static ErrorOr<Success> AddKuroeGraphFlows(
+        this IServiceCollection services,
+        KuroeComposition composition,
+        GraphFlowOptions? options = null)
+    {
+        ErrorOr<GraphFlowComposition> graph = services.AddKuroeGraphFlowsComposition(composition, options);
+
+        return graph.IsError ? graph.ErrorsOrEmptyList : Result.Success;
     }
 }

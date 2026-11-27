@@ -16,7 +16,11 @@ public sealed class FlowLibrary : IFlowLibrary
     private readonly Lock _gate = new();
     private FlowLibraryState _state;
 
-    private FlowLibrary(FlowStore store, IFlowCompiler compiler, bool tolerateFailures, FlowLibraryState state)
+    private FlowLibrary(
+        FlowStore store,
+        IFlowCompiler compiler,
+        bool tolerateFailures,
+        FlowLibraryState state)
     {
         _store = store;
         _compiler = compiler;
@@ -49,7 +53,9 @@ public sealed class FlowLibrary : IFlowLibrary
         }
 
         FlowDescriptionSet document = loaded.Value ?? new FlowDescriptionSet([], []);
-        ErrorOr<FlowSetCompilation.CompileResult> compiled = FlowSetCompilation.Compile(document, compiler);
+        FlowLibrary library = new(store, compiler, tolerateFailures, new FlowLibraryState(document, [], []));
+        ErrorOr<FlowSetCompilation.CompileResult> compiled =
+            FlowSetCompilation.Compile(document, compiler);
         if (compiled.IsError)
         {
             return compiled.ErrorsOrEmptyList;
@@ -60,12 +66,13 @@ public sealed class FlowLibrary : IFlowLibrary
             return [.. compiled.Value.Failures.SelectMany(failure => failure.Errors)];
         }
 
-        return new FlowLibrary(
-            store,
-            compiler,
-            tolerateFailures,
-            new FlowLibraryState(document, compiled.Value.Flows, compiled.Value.Failures));
+        library._state = new FlowLibraryState(document, compiled.Value.Flows, compiled.Value.Failures);
+
+        return library;
     }
+
+    /// <summary>当前流程描述文档，未经编译选择裁剪。</summary>
+    public FlowDescriptionSet Document => Current.Document;
 
     /// <summary>不可用流程：流程名与编译错误，按文件顺序。</summary>
     public IReadOnlyList<FlowFailure> Failures => Current.Failures;

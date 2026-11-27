@@ -46,7 +46,11 @@ public sealed class FlowLibraryTests
         });
     }
 
-    private static void WithLibrary(Action<FlowStore, IFlowCompiler> check)
+    private static void WithLibrary(Action<FlowStore, IFlowCompiler> check) =>
+        WithLibraryFiles((store, compiler, _, _) => check(store, compiler));
+
+    private static void WithLibraryFiles(
+        Action<FlowStore, IFlowCompiler, TestSupport.InMemoryWorkspaceFiles, string> check)
     {
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-isolation-{Guid.NewGuid():N}");
         string nodesFile = Path.Combine(root, "nodes.json");
@@ -75,7 +79,7 @@ public sealed class FlowLibraryTests
             importFormat,
             files);
 
-        check(store, compiler);
+        check(store, compiler, files, root);
     }
 
     private const string Mixed = """

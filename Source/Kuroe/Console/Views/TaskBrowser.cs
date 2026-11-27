@@ -44,10 +44,10 @@ internal sealed class TaskBrowser(
         }
     }
 
-    /// <summary>按流程与开始输入提交任务。</summary>
-    public void Submit(FlowName flow, StartInputs inputs)
+    /// <summary>按流程、实现与开始输入提交任务。</summary>
+    public void Submit(FlowName flow, FlowImplementation implementation, StartInputs inputs)
     {
-        ErrorOr<TaskSnapshot> submitted = tasks.Submit(inputs, flow, null);
+        ErrorOr<TaskSnapshot> submitted = tasks.Submit(inputs, flow, implementation, null);
         if (submitted.IsError)
         {
             results.Reject(submitted.ErrorsOrEmptyList);
@@ -143,14 +143,20 @@ internal sealed class TaskBrowser(
             return;
         }
 
-        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Name)]) is not { } index)
+        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Label)]) is not { } index)
         {
             return;
         }
 
         if (AskInputs(all[index]) is { } inputs)
         {
-            Submit(new FlowName(all[index].Name), inputs);
+            if (all[index].Implementation is not { } implementation)
+            {
+                terminal.Hint("流程没有实现标识，不能提交。");
+                return;
+            }
+
+            Submit(new FlowName(all[index].Name), implementation, inputs);
         }
     }
 
@@ -163,6 +169,7 @@ internal sealed class TaskBrowser(
         List<FormInfo> info =
         [
             new("流程", flow.Name),
+            new("引擎", flow.Engine ?? "—"),
             .. flow.StartPorts
                 .Where(port => port.InputKind == FlowStartKind.Fixed)
                 .Select(port => new FormInfo(port.Name, port.Value ?? string.Empty)),

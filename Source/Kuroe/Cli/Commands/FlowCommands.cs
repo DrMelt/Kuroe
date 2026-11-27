@@ -11,12 +11,18 @@ internal sealed class FlowCommands(CliSession session, CliOutput output)
 {
     public int List()
     {
-        PlainFlowView.List(output, session.Templates.All(), session.Library.Failures);
+        IReadOnlyList<FlowTemplateView> all = session.Templates.All();
+        HashSet<string> available = [.. all.Select(flow => flow.Name)];
+        FlowFailure[] failures =
+        [
+            .. session.Library.Failures.Where(failure => !available.Contains(failure.Name.Value)),
+        ];
+        PlainFlowView.List(output, all, failures);
 
         return ExitCodes.Success;
     }
 
-    public int Show(string name)
+    public int Show(string name, string? engine)
     {
         ErrorOr<FlowName> parsed = FlowName.Create(name);
         if (parsed.IsError)
@@ -26,15 +32,34 @@ internal sealed class FlowCommands(CliSession session, CliOutput output)
             return ExitCodes.Failure;
         }
 
-        ErrorOr<FlowTemplateView> found = session.Templates.Find(parsed.Value);
-        if (found.IsError)
+        if (engine is { Length: > 0 } implementation)
         {
-            output.Report(found.ErrorsOrEmptyList);
+            ErrorOr<FlowTemplateView> found =
+                session.Templates.Find(parsed.Value, new FlowImplementation(implementation.Trim()));
+            if (found.IsError)
+            {
+                output.Report(found.ErrorsOrEmptyList);
+
+                return ExitCodes.Failure;
+            }
+
+            PlainFlowView.Show(output, found.Value);
+
+            return ExitCodes.Success;
+        }
+
+        IReadOnlyList<FlowTemplateView> all = session.Templates.FindAll(parsed.Value);
+        if (all.Count == 0)
+        {
+            output.Report([Error.Validation(FlowErrorCodes.FlowName, $"流程 {parsed.Value} 不存在。")]);
 
             return ExitCodes.Failure;
         }
 
-        PlainFlowView.Show(output, found.Value);
+        foreach (FlowTemplateView flow in all)
+        {
+            PlainFlowView.Show(output, flow);
+        }
 
         return ExitCodes.Success;
     }

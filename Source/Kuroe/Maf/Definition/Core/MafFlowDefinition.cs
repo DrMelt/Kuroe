@@ -18,6 +18,9 @@ public sealed record MafFlowDefinition(
     /// <summary>流程说明。</summary>
     public string? Description { get; init; }
 
+    /// <summary>流程是否需要模型：任一步骤声明模型端口时需要。</summary>
+    public bool RequiresModel => Steps.Any(step => step.ModelPort is not null);
+
     /// <summary>入口步骤：没有入边的步骤，按步骤声明序。</summary>
     public IReadOnlyList<MafStep> Entries() =>
         [.. Steps.Where(step => Edges.All(edge => edge.To != step.Id))];
@@ -102,7 +105,7 @@ public sealed record MafFlowDefinition(
             errors.Add(FlowErrors.Body(Name.Value, "开始端口重复。"));
         }
 
-        if (StartPorts.All(port => port.Name != ModelPort))
+        if (RequiresModel && StartPorts.All(port => port.Name != ModelPort))
         {
             errors.Add(FlowErrors.Body(Name.Value, $"没有开始端口「{ModelPort}」。"));
         }
@@ -136,6 +139,9 @@ public sealed record MafStartPort(PortName Name, string? Default = null)
 
     /// <summary>端口模式。</summary>
     public MafPortMode Mode { get; init; } = MafPortMode.Plain;
+
+    /// <summary>提交时是否要求给出取值。不承载内容的开始端口自动放行。</summary>
+    public bool RequiresInput { get; init; } = true;
 }
 
 /// <summary>MAF 流程的步骤：标识、标签、输出端口、执行装配工厂与输入装配。
@@ -152,6 +158,9 @@ public sealed record MafStep(
 
     /// <summary>输出端口计划，未给出时由 <see cref="Outputs"/> 按文本端口补齐。</summary>
     public IReadOnlyList<MafOutputPort> OutputPlan { get; init; } = [];
+
+    /// <summary>步骤使用的模型端口，类型不需要模型时为空。</summary>
+    public PortName? ModelPort { get; init; }
 
     /// <summary>生效的输出端口计划：未显式给出时把 <see cref="Outputs"/> 按文本端口补齐。</summary>
     public IReadOnlyList<MafOutputPort> OutputPorts() =>

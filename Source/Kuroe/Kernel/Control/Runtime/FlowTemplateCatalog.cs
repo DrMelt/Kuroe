@@ -19,14 +19,25 @@ public sealed class FlowTemplateCatalog(IEnumerable<IFlowTemplateSource> sources
         [.. _sources.SelectMany(source => source.All())];
 
     /// <inheritdoc/>
-    public ErrorOr<FlowTemplateView> Find(FlowName name)
-    {
-        FlowTemplateView? found = _sources
-            .Select(source => source.Find(name))
-            .Where(result => result.IsSuccess)
-            .Select(result => (FlowTemplateView?)result.Value)
-            .FirstOrDefault();
+    public IReadOnlyList<FlowTemplateView> FindAll(FlowName name) =>
+        [.. All().Where(flow => flow.Name == name.Value)];
 
-        return found is null ? FlowErrors.FlowNotFound(name.Value) : found;
+    /// <inheritdoc/>
+    public ErrorOr<FlowTemplateView> Find(FlowName name, FlowImplementation implementation)
+    {
+        FlowTemplateView[] found =
+        [
+            .. All().Where(flow =>
+                flow.Name == name.Value && flow.Implementation == implementation),
+        ];
+
+        return found.Length switch
+        {
+            1 => found[0],
+            0 => FlowErrors.FlowNotFound(name.Value),
+            _ => Error.Validation(
+                FlowErrorCodes.FlowName,
+                $"流程 {name.Value} 有多个 {implementation} 实现。"),
+        };
     }
 }

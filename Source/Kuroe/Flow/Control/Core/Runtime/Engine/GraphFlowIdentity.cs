@@ -12,6 +12,9 @@ public sealed class GraphFlowIdentity(IFlowRuntimeCatalog flows) : IFlowIdentity
     public const string Implementation = "graph";
 
     /// <inheritdoc/>
+    string IFlowIdentity.Implementation => Implementation;
+
+    /// <inheritdoc/>
     public string DisplayName => "图流程";
 
     /// <inheritdoc/>

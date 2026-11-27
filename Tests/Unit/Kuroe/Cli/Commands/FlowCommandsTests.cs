@@ -63,7 +63,7 @@ public sealed class FlowCommandsTests
         StringWriter output = new();
         StringWriter error = new();
 
-        int code = new FlowCommands(environment.Session, new CliOutput(output, error)).Show("默认");
+        int code = new FlowCommands(environment.Session, new CliOutput(output, error)).Show("默认", null);
 
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("执行节点", output.ToString());
@@ -78,7 +78,7 @@ public sealed class FlowCommandsTests
         StringWriter output = new();
         StringWriter error = new();
 
-        int code = new FlowCommands(environment.Session, new CliOutput(output, error)).Show("默认");
+        int code = new FlowCommands(environment.Session, new CliOutput(output, error)).Show("默认", null);
 
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("启动路径←WORKSPACE_PATH", output.ToString(), StringComparison.Ordinal);

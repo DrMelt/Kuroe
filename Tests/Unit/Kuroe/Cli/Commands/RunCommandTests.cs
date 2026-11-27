@@ -13,7 +13,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
         (RunCommand command, StringWriter output, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=目标"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("输出", output.ToString());
@@ -29,7 +29,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(flowsJson);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=目标"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Failure, code);
         Assert.Contains(kind, error.ToString());
@@ -42,7 +42,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Blocked);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=目标"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Blocked, code);
         Assert.Contains("已阻塞", error.ToString());
@@ -54,7 +54,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.MultiStart);
         (RunCommand command, StringWriter output, _) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=写致辞", "风格=口语"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=写致辞", "风格=口语"]);
 
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("输出", output.ToString());
@@ -66,7 +66,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.MultiStart);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=写致辞"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=写致辞"]);
 
         Assert.Equal(ExitCodes.Failure, code);
         Assert.Contains("开始端口 风格 没有输入。", error.ToString());
@@ -78,7 +78,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.HostInput);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=目标", "启动路径=."]);
+        int code = await command.RunAsync("默认", null, null, ["目标=目标", "启动路径=."]);
 
         Assert.Equal(ExitCodes.Failure, code);
         Assert.Contains("开始端口 启动路径 由宿主提供，不接受提交输入。", error.ToString());
@@ -90,7 +90,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标"]);
+        int code = await command.RunAsync("默认", null, null, ["目标"]);
 
         Assert.Equal(ExitCodes.Failure, code);
         Assert.Contains("端口=值", error.ToString());
@@ -109,7 +109,7 @@ public sealed class RunCommandTests
         };
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=目标"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("请求 2 次", error.ToString());
@@ -129,7 +129,7 @@ public sealed class RunCommandTests
             Kuroe.Kernel.Execution.Shared.Usage.TokenUsage.None);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=目标"]);
+        int code = await command.RunAsync("默认", null, null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("请求 1 次（均未返回用量）", error.ToString());

@@ -92,7 +92,7 @@ internal sealed class MafStepExecutor(
             throw new InvalidOperationException($"步骤 {step.Id} 失败：{reason}");
         }
 
-        return Output(snapshot);
+        return Output(snapshot, inputs);
     }
 
     /// <summary>本次执行的请求：输入按端口聚合，步骤输出端口要求交回。</summary>
@@ -145,11 +145,22 @@ internal sealed class MafStepExecutor(
                 port.Trigger))]);
     }
 
-    /// <summary>输入取用的来源描述，未给出时按上游端口给出。</summary>
-    private static string? SourceText(MafStepInput input) =>
-        input.Source ?? (input.UpstreamStep is { } upstream
+    /// <summary>输入取用的来源描述，Context 输入合并内容来源，未给出时按上游端口给出。</summary>
+    private static string? SourceText(MafStepInput input)
+    {
+        if (input.Kind == ExecutionPortKind.Context && input.Context.Count > 0)
+        {
+            string[] sources = [.. input.Context.Select(value => value.Source).OfType<string>().Distinct()];
+            if (sources.Length > 0)
+            {
+                return string.Join("；", sources);
+            }
+        }
+
+        return input.Source ?? (input.UpstreamStep is { } upstream
             ? MafRecordSources.Display(new MafStepOutput(upstream, input.UpstreamPort ?? input.Port, input.Text))
             : null);
+    }
 
     /// <summary>输入取用的记录标识，未给出时按上游端口给出。</summary>
     private static string? RecordKey(MafStepInput input) =>
@@ -157,16 +168,74 @@ internal sealed class MafStepExecutor(
             ? MafRecordSources.Write(new MafStepOutput(upstream, input.UpstreamPort ?? input.Port, input.Text))
             : null);
 
-    /// <summary>本次执行交回的端口作为下游消息。</summary>
-    private MafStepMessage Output(ExecutionSnapshot snapshot) =>
-        new(
-            step.Id,
-            [.. (snapshot.Contract.Outputs ?? new Dictionary<ExecutionPortName, ExecutionOutputValue>())
-                .Select(pair => new MafStepOutput(
-                    step.Id,
-                    new PortName(pair.Key.Value),
-                    pair.Value.Text ?? string.Empty)
+    /// <summary>本次执行交回的端口与 Context 透传内容作为下游消息。</summary>
+    private MafStepMessage Output(ExecutionSnapshot snapshot, IReadOnlyList<MafStepInput> inputs)
+    {
+        IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> outputs =
+            snapshot.Contract.Outputs ?? new Dictionary<ExecutionPortName, ExecutionOutputValue>();
+        List<MafStepOutput> values = [];
+        foreach (MafOutputPort port in step.OutputPorts())
+        {
+            if (port.Kind == ExecutionPortKind.Context)
+            {
+                List<MafContextValue> context = ContextValues(inputs);
+                values.Add(new MafStepOutput(step.Id, port.Name, ContextText(context))
                 {
-                    Fires = pair.Value.Fires,
-                })]);
+                    Context = context,
+                });
+                continue;
+            }
+
+            if (Output(outputs, port.Name) is not { } output)
+            {
+                continue;
+            }
+
+            values.Add(new MafStepOutput(step.Id, port.Name, output.Text ?? string.Empty)
+            {
+                Fires = output.Fires,
+            });
+        }
+
+        return new MafStepMessage(step.Id, values);
+    }
+
+    /// <summary>Context 输出从执行输入的 Context 内容透传，来源随内容保留。</summary>
+    private static List<MafContextValue> ContextValues(IReadOnlyList<MafStepInput> inputs)
+    {
+        List<MafContextValue> values = [];
+        foreach (MafStepInput input in inputs.Where(input => input.Kind == ExecutionPortKind.Context))
+        {
+            if (input.Context.Count > 0)
+            {
+                values.AddRange(input.Context);
+                continue;
+            }
+
+            if (input.Text.Length > 0)
+            {
+                values.Add(new MafContextValue(input.Port, input.Text, input.Source));
+            }
+        }
+
+        return values;
+    }
+
+    private static string ContextText(IReadOnlyList<MafContextValue> context) =>
+        string.Join("\n\n", context.Select(value => value.Text).Where(text => text.Length > 0));
+
+    private static ExecutionOutputValue? Output(
+        IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> outputs,
+        PortName name)
+    {
+        foreach ((ExecutionPortName port, ExecutionOutputValue value) in outputs)
+        {
+            if (string.Equals(port.Value, name.Value, StringComparison.Ordinal))
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
 }

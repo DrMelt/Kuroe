@@ -7,7 +7,10 @@ flowchart TD
     Composition["核心服务与装配<br>Kuroe/Host/Composition"]
     GraphFlow["图流程装配<br>Kuroe/Host/FlowIntegration/GraphFlow"]
     Maf["MAF 装配<br>Kuroe/Host/FlowIntegration/Maf"]
+    Flows["流程实现共同装配<br>Kuroe/Host/FlowIntegration/Flows"]
     Assistant["内置助手<br>Kuroe/Host/Assistant"]
+    Flows --> GraphFlow
+    Flows --> Maf
     GraphFlow --> Composition
     Assistant --> Composition
 ```
@@ -17,4 +20,5 @@ flowchart TD
 | 核心服务与装配 | `Kuroe.Host.Composition` | [kuroe-host-composition](composition/kuroe-host-composition.md) |
 | 图流程装配 | `Kuroe.Host.FlowIntegration.GraphFlow` | [kuroe-host-flow-integration-graph-flow](graph-flow/kuroe-host-flow-integration-graph-flow.md) |
 | MAF 装配 | `Kuroe.Host.FlowIntegration.Maf` | [kuroe-host-flow-integration-maf](maf/kuroe-host-flow-integration-maf.md) |
+| 流程实现共同装配 | `Kuroe.Host.FlowIntegration.Flows` | [kuroe-host-flow-integration-flows](flows/kuroe-host-flow-integration-flows.md) |
 | 内置助手 | `Kuroe.Host.Assistant` | [kuroe-host-assistant](assistant/kuroe-host-assistant.md) |

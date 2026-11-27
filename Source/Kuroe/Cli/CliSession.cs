@@ -5,6 +5,7 @@ using Kuroe.Host.Composition.Configuration;
 using Kuroe.Host.Composition.Configuration.Files;
 using Kuroe.Kernel.Control.Shared;
 using Kuroe.Host.FlowIntegration.GraphFlow;
+using Kuroe.Host.FlowIntegration.Flows;
 using Kuroe.Flow.Library;
 using Kuroe.Kernel.Tasks.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,13 +74,12 @@ internal sealed class CliSession : IAsyncDisposable
             return composition.ErrorsOrEmptyList;
         }
 
-        GraphFlowOptions options = (graphOptions ?? new GraphFlowOptions()) with { AllowFlowFailures = true };
-        ErrorOr<Success> graph = services.AddKuroeGraphFlows(
+        ErrorOr<FlowIntegrationResult> flows = services.AddKuroeFlowImplementations(
             composition.Value,
-            options);
-        if (graph.IsError)
+            graphOptions);
+        if (flows.IsError)
         {
-            return graph.ErrorsOrEmptyList;
+            return flows.ErrorsOrEmptyList;
         }
 
         configure?.Invoke(services);
